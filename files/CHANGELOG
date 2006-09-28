@@ -1,0 +1,984 @@
+
+#################################################################################
+#
+# CHANGELOG
+#
+#################################################################################
+
+ !! Important notices !!:
+
+ - Dates in this file are formatted as DD/MM/YYYY (European format)
+ - With the release of version 1.0.9, the installer has been changed
+   to make Rootkit Hunter less static. It now CAN use some different
+   paths than before (although it will install to the default location
+   when no additional options are given). To be sure you have a clean
+   install, delete the directory /usr/local/rkhunter, delete the file
+   /usr/local/etc/rkhunter.conf, delete the file /usr/local/bin/rkhunter
+   and reinstall the tool.
+ - The rkhunter configuration file (default /usr/local/etc/rkhunter.conf)
+   will not be overwritten by default (when using the rkhunter installer).
+   Be sure you compare your configuration file against the one delivered
+   in this package, to optimize this file for your machine
+
+
+ -- 
+
+ * 1.2.9 (xx/09/2006)
+
+ Changes:
+ - Check for packet capture applications (+whitelisting: see rkhunter.conf)
+ - Check for processes using deleted files (+whitelisting: see rkhunter.conf)
+ - Layout fixes
+ - AIX rc.sysinit test
+ - AIX uses netstat now
+ - Add HIDDEN examples in conf
+ - Add SuSE 10 detection
+ - Add and expand CaOS detection
+ - Error message correction "group" file
+ - Added logfile specification and checks
+ - Change time to perl epoch
+ - Change contact information
+ - Correct skdet args usage
+ - use skdet FOUND check
+ - Promiscuous mode check #2
+ - Expanded prelinking test with binary FOUND
+ - Expanded binaries FOUND check
+ - Fix SF tracker issue 1449701
+ - Typos, grammatical changes, and several formatting/display corrections
+ - Improved MD5 check and application scan
+ - Ksh 'shift' fix
+ - SunOS backdoor testing enabled
+ - Better FreeBSD/AIX grepping (FP's)
+ - Solaris grep/ifconfig fixes
+ - Add Fedora Core 5 detection
+ - Improved –reportmode –report-warnings-only
+ - Enable the backdoor ports test for SunOS
+ - Fix typo's and grammatical errors
+ - permitrootlogin forced-commands-only
+ - Improved logfile testing
+ - Specific Solaris changes (grep, ifconfig)
+ - Improved passwordless user accounts test
+ - Correct displaying and formatting
+ - Improved file/module name checks (FP)
+ - Improved check-update: DBDIR vs temp dir, preserve DAC rights
+ - Improved script replacements (Solaris)
+ - Improved SSH configuration check
+ - Removed stale mirrors
+ - Added support for RHEL WS/AS/ES 3, Taroon update 8
+ --
+
+ * 1.2.8 (24/02/2006)
+
+ New:
+ - Added '-sk' alias (instead of --skip-keypress)
+ - Added support for Fedora core 4
+ - Added support for FreeBSD 4.11, 5.2, 5.3, 5.4, 6.0
+ - Added support for CentOS 3.3 ('final' and 'Final')
+ - Added support for CentOS 3.5, 4.1 and 4.2
+ - Added support for Debian 3.1 (AMD64)
+ - Added support for RHEL WS/AS/ES 3, Taroon update 6
+ - Added support for RHEL WS 4, Nahant Update 1 and 2
+ - Added support for Slackware 10.2
+ 
+ Changes:
+ - Updated RHEL hashes
+ - Updated Fedora Core 3 hashes
+ - Updated SuSE 9.1 hashes
+ - Updated software database
+ - Update copyright line
+ 
+ --
+
+ * 1.2.7 (24/05/2005)
+ 
+ New:
+ - Added support for CentOS 4.0
+ - Added support for Mandrake 10.2
+ - Added support for Gentoo (sparc/sparc64/x86)
+ - Added additional support for E-smith (SME 6.0.1)
+ - Added support for FreeBSD 4.5 and 4.6
+
+ Changes:
+ - Improved support for Bind (thanks to Craig)
+ - Improved support for RHEL AS release 3
+ - Updated hashes for SuSE 9.1 (core-utils)
+
+ Bugfixes:
+ - Fixed problem with the updater (file was retrieved, but not placed within
+   the correct directory)
+ 
+ --
+
+ * 1.2.6 (10/05/2005)
+ 
+ New:
+ - Added support for Tao Linux
+ - Added support for Trustix 2.2 (Sunchild)
+ 
+ Bugfixes:
+ - Fixed problem with updater
+ 
+ --
+
+ * 1.2.5 (03/05/2005)
+ 
+ New:
+ - Added support for FreeBSD 4.11 (i386)
+ - Added support for RHEL AS release 3
+ - Added support for Cobalt (6.5.1)
+
+ Changes:
+ - Fixed permissions of check_update.sh
+ - Fixed typo in help
+ - Improved detection for some unknown rootkits/backdoors
+ - Improved messages/logging
+ - Some code cleanups
+ - Important: fixed a security issue, related to temporary files
+ 
+ --
+
+ * 1.2.4 (25/04/2005)
+ 
+ New:
+ - Added support for E-smith (SME 6.0)
+ 
+ Changes:
+ - Updated hashes for Fedora core 2
+ - Improved documentation of tools (see tools directory)
+ - Removed logging from installer
+  
+ Bugfixes:
+ - Fixed problem when using --allow-ssh-root-user (option was overwritten
+   by configuration file option) 
+ 
+ --
+
+ * 1.2.3 (21/03/2005)
+
+ New:
+ - Added option to allow/whitelist hidden files and directories. See
+   configuration file
+ - Added support for SuSE 9.2 (x86-64)
+
+ Changes:
+ - Updated configuration file, to give more information about
+   whitelisting of hidden files/directories
+ - Updated Fedora core 3 hashes (procps package)
+ - Updated packages: OpenSSH
+ - Updated manpage
+ - Improved logging
+ - Added debugging info for named
+ - Strip off patch version with PHP port (Debian)
+ - Extended support for Fink (MacOS), added /sw/bin to BINPATHS in
+   check_update.sh
+ - Improved installer when /usr/local/bin is missing
+  
+ Bugfixes:
+ - Fixed problem with unquoted variable (passwordless accounts)
+
+ --
+
+ * 1.2.2 (18/03/2005)
+ 
+ New:
+ - Added support for Mandrake 10.1
+ - Added hashes for Mandrake 10.1. Thanks to Roderick B. Greening
+ - Added support for RHEL WS release 3
+ - Added support for NIS when looking for passwordless accounts
+ - Added support for beX2 (evil code)
+ 
+ Changes:
+ - Updated Debian hashes
+ - Changed permissions of installer (0755 instead of 0750)
+ - Changed installer so normal users can install rkhunter. This is
+   experimental, so check is commented in installer
+ - Updated packages: Bind, Exim, OpenSSL
+ - Improved logging
+ - Small layout fixes
+ - Code cleanup
+ - Updated mirror list
+ - Updated copyright message (2005)
+ 
+ Bugfixes:
+ - Changed symbols when one or more groups are added/removed
+
+ --
+
+ * 1.2.1 (21/02/2005)
+ 
+ New:
+ - Added support for Mandrake 8.1 (i586, no hashes)
+ - Added support for FreeBSD 5.3 (i386, with hashes for release version)
+ - Added support for Slackware 10.1
+ - Added Turkish translation to installer (note: language support
+   temporarily disabled)
+ - Added support for Fink (MacOS), added /sw/bin to BINPATHS
+ - Added contrib directory
+ - Added script (contrib) run_rkhunter, by Andy Spiegel
+ 
+ Changes: 
+ - Updated hashes for SuSE 9.1, Mandrake 10.0
+ - Updated installer (changed copyright line, comments and disabled
+   version number, because it can be confusing when installer version
+   is another version than main version.)
+ - Perform extra check before checking configuration file (to see if
+   it exists)
+ - Improved logging (show temporary directory, improve output when
+   scanning for default rootkit files/directories)
+ - Improved output when system is unsupported
+ - Stop program when temporary directory doesn't exist instead of
+   creating it
+ - Updated packages: Apache, Bind, GnuPG, OpenSSL
+ - Fixed some typos
+
+ Bugfixes:
+ - BINPATHS got overwritten when performing software version check
+ - Fixed bug when checking for ssh root user. Thanks to Andy Spiegel
+ - Clean up temporary prelink file
+
+ Website:
+ - Added notification list
+ - Fixed some XHTML bugs
+
+ --
+ 
+ 
+ * 1.2.0 (10/02/2005)
+
+ New:
+ - Added support for CentOS 3.4
+ - Added new configuration option 'ALLOW_SSH_ROOT_USER' and program
+   parameter '--allow-ssh-root-user' to allow directly login of a
+   `root` user, in your SSH configuration file.
+ 
+ Changes:
+ - Updated hashes for Fedora Core 1, Core 2, Core 3
+ - Changed RHEL 3, so taroon 4 uses the hashes of taroon 3
+ - Updated Debian hashes
+ - Removed ClamAV from application scan. It warns the user now when
+   it runs an too old version.
+ - Updated manpage  
+ - Changed detection for SuSE versions. SuSE Linux Enterprise Server
+   didn't work, because of the capitals (instead of the usual name)
+ - Warn if user uses /tmp as temporary directory (possible security
+   issue)
+ - Updated wishlist/todo and manpage.
+   
+ Bugfixes:
+ - Fixed wrong message when group was added/deleted from /etc/groups
+ 
+ --
+ 
+ * 1.1.9 (28/12/2004)
+
+ New:
+ - Added RH-Sharpe's rootkit (rootkit)
+ - Added SHV5 rootkit (rootkit)
+ - Added special test for tripwire
+ - Added support for metalog (syslog daemon) 
+ - Added support for ALTLinux 2.2 and 2.4
+ - Added support for CentOS 3.3
+ - Added support for Gentoo 1.6
+ - Added support for FreeBSD 4.10 (alpha platform)
+ - Added support for SuSE SLES8. Thanks to Mario Lenz
+ - Added support for SuSE 9.2 (i586)
+ - Added support for Fedora Core 3
+ - Added support for Red Hat Enterprise Linux ES/WS release 4
+ - Added hashes for Fedora Core 3. Thanks to Steph
+ - Official port is now available for ALTLinux
+ - Change text when an old software package has been found. This
+   will happen with backporting operating systems (Red Hat,
+   Fedora etc)
+ 
+ Changes:
+ - Improved logging for lsof test
+ - Updated hashes for Fedora Core 1
+ - Updated hashes for Debian woody
+ - Updated hashes for Red Hat Enterprise Linux ES/WS release 3
+ - Updated hashes for Slackware 9
+ - Updated hashes for Slackware 10
+ - Updated hashes for SuSE 9.1
+ - Updated wishlist/todo, updated readme and manpage.
+ - Code cleanup (added more remarks, cleanup of old/buggy things)..
+ - Improved logging
+ 
+ Bugfixes:
+ - Changed binary search path due typo. Thanks to Bertrand
+
+ --
+
+ * 1.1.8 (12/09/2004)
+ 
+ New:
+ - Added support for Red Hat 6.2 and hashes. Thanks to Sebastian Herbszt
+ - Added support for Red Hat Enterprise Linux ES 3, Taroon update 3
+ - Added support for Red Hat Enterprise Linux AS 3, Taroon update 1
+ 
+ Changes:
+ - Improved Suckit detection
+ - Improved FreeBSD version detection. It now will skip MD5 check if sysctl
+   contains 'release', but patches for primary binaries are installed (like
+   ls, ps, top etc)
+ - Added error redirection when performing lsattr checks
+ - Added `find` to path search
+ - Updated installer with portogues/brazilian language. Thanks to Douglas
+ - Updated hashes for Red Hat Enterprise Linux 3
+ - Updated hashes for Slackware 10
+ - Cleaned up logging when checking for passwordless accounts
+ - Show message when bad hashes are found. Some scared people began to worry
+   inmediately after they found several bad hashes, without understanding the
+   reason of it (reason: updated packages).
+ - Improved output in logging which deals with updated packages / hashes
+ - Improved logging (informational logging)
+ - Improved output of hidden directories/files. Thanks to Greg Houlette
+ - Corrected some parts of logging
+ - Code cleanup
+ 
+ Bugfixes:
+ - Forgot to initialise LSATTRFOUND
+ 
+ --
+
+ * 1.1.7 (29/08/2004)
+ 
+ New:
+ - Added support for ADM Worm
+ - Added support for MzOzD and spwn backdoor
+ - Added LKM filename check (experimental)
+ - Added passwordless user account test
+ 
+ Changes:
+ - Updated Mandrake 9.2 hashes. Thanks to Eric Gerbier
+ - Updated application version list
+ - Extended inetd.conf test (searches for shells)
+ - Added total of vulnerable applications at report, if application scan was
+   performed.
+ 
+ Bugfixes:
+ - Fixed a major bug in the installer when you install version 1.1.5 or newer. The
+   sample configuration won't be copied and the due to that, the --update function
+   won't work.
+
+ --
+ 
+ * 1.1.6 (18/08/2004)
+
+ New:
+ - Added support for RSHA's rootkit (rootkit)
+ - Inspect files attributes (immutable detection)
+ - Added '--update' to help text. Updater seems to be stable
+ - Added FreeBSD packages database test (pkgdb). It performs an automatic
+   fixup of the database and displays an error when problems were found.
+ - Added '--skip-application-check' option. This skips the program version
+   check. On some systems it's half useless, because they use patched
+   (old) version numbers.
+ 
+ Changes:
+ - Improved report at end (hide line when no rootkits are found)
+ - Updated hashes for SuSE 9.1 (i586)
+ - Fixed double hash in database
+ - Updated database with program versions
+ - Added more help and informational messages
+
+ Bugfixes:
+ - Improved installer (when last line contains no newline char, the INSTALLDIR
+   option was added on the wrong place)
+   
+ --
+ 
+ * 1.1.5 (11/08/2004)
+ 
+ New:
+ - Added support for Ni0 Rootkit (rootkit)
+ - Added 'open files' check
+ - Added OpenSSL check
+ - Added Solaris 9 support
+
+ Changes:
+ - Improved logging of application scan check
+ - Improved xinetd.conf tests (disabled some parts, due false positives)
+ - Improved logging on different places (more breaks etc)
+ - Improved SunOS support. Thanks to Michael Gueting
+ - Improved (POSIX compatible) applications support for SunOS
+ - Fixed a typo (application version check)
+ - Fixed a typo (SSH check)
+ - Fixed small layout issue at application scan check
+ - Removed an double declared variable (WARNING=0)
+ 
+ Bugfixes:
+ - Fixed missing lines in rkhunter.spec file
+ - Installation script shouldn't be overwriting rkhunter.conf file..
+ 
+ --
+   
+ * 1.1.4 (07/08/2004)
+ 
+ New:
+ - Added support for FreeBSD 4.10
+ - Added support for White Box Enterprise Linux 3.0 
+ - Added support for Debian 3.1 (Sid)
+ - Added support for OpenBSD 3.5 (i386 and sparc64)
+ - Added support for SunOS. Thanks to Michael Gueting
+ - Added boot.local test for SuSE 9.x
+ - Added Apache test
+ - Added support for mod_rootme module (apache backdoor)
+ - Added option '--display-logfile'. It displays the logfile you specified
+   at the end of the output (don't forget to use --create-logfile)
+ - Added application version checker
+ 
+ Changes:
+ - Don't quit when wget cannot be found during install   
+ - Updated installer (for new update function)
+ - Updated MD5 hashes for Mandrake 9.1
+ - Updated MD5 hashes for Slackware 9.1
+ - Updated MD5 hashes for FreeBSD 5.2.1
+ - Improved logging in quiet mode
+ - Improved key pauses when in 'interactive' mode
+ - Improved xinetd check
+ - Improved report-mode option (--report-mode). If you want a small amount of
+   information (ie. if you scan a lot of servers), use this option.
+ - Updated document location in installer   
+ - Updated the wishlist. A lot of issues are solved now.
+ - Updated changelog (had some little typos)
+   
+ Bugfixes:
+ - Fixed false positive when using Debian 
+ - Fixed support for PLD Linux and CPUBuilders Linux
+ - Fixed a typo in the installer
+ 
+ --  
+   
+ * 1.1.3 (20/07/2004)
+ 
+ New:
+ - Added support for SuSE Linux Enterprise Server 8. Thanks to Daniel Berlin
+ - Added support for SuSE Linux Openexchange Server 4.1.1. Thanks to Daniel Berlin
+ - Added support for Fedora Core 2 with 64 bits support
+ - Added support for TDB database (/dev related)
+ - Added hashes for FreeBSD 5.2.1
+ * Added tools directory in tarball with a experimal auto-updater. Use it on your
+   own risk and check the script before you run it!
+ 
+ Changes:
+ - Improved Suckit support (rootkit)
+ - Improved user detection (the check will now handle NIS users fine when
+   checking for UID 0 alike users)
+ - Improved logging on multiple sections
+ - Updated parameter list (--help), to reflect changes (--quiet)
+ - Updated hashes for Mandrake 10
+ - Updated installer. With a SunOS improvement by Michael Gueting.
+ 
+ Bugfixes:
+ - Quiet-option is now really quiet (xinetd line still appeared when running in
+   quiet mode)
+ - Fixed a problem with the binary UPX scan (multiple error lines appeared)
+ 
+ --
+ 
+ * 1.1.2 (14/05/2004)
+
+ New:
+ - Added string check. This checks some binaries which often get trojaned.
+ - Added '--quiet' option. Very usefull when running Rootkit Hunter as a cronjob
+   and don't want to see all the output (EXCEPT when warnings/errors has been
+   found)
+ - Added xinet daemon test. Thanks to unSpawn and Andrea
+ - Added test for binaries (UPX)
+ - Added alias '--create-logfile' for '--createlogfile'  
+ - Added support for Mandrake 8.2
+ - Added support for Mandrake 9.0
+ - Added support for Mandrake 9.1
+ - Added support for Redhat Enterprise Linux AS (Taroon update 2). Thanks to Yann Le Guennec
+ - Added support for Slackware 10. Thanks to Fred Bulthuis
+ - Added support for Gentoo 1.5. Thanks to Nicolas Kaiser
+ - Added support for some Gentoo ppc versions
+ - Added hashes for Slackware 10
+
+ Changes:
+ - Improved support for AIX and OpenBSD. Thanks to Iain Roberts
+ - Improved support for rootkits (Dica, Dreams, Fuckit, MRK, Ohhara, Sin, SunOS Rootkit
+   and TBD Rootkit)
+ - Updated hashes for Fedora Core 2 
+ - Updated hashes for SuSE 8.2. Thanks to Jack Denman
+ - Updated installer
+  
+ Bugfixes:
+ - Fixed another problem in the installer
+ - Fixed a problem with the updater (not yet in use)
+ - Changed output of `ps` when checking for syslog daemon (should fix a problem on some
+   systems where the output was too long)
+ 
+ --
+ 
+ * 1.1.1
+ 
+ Bugfixes:
+ - Fixed a problem with the installer.. (wrong shell)  
+   
+ --
+
+ * 1.1.0
+
+ New:
+ - Added support for Red Hat Linux Advanced Server 2.1
+ - Added support for Slackware 9.0. Thanks to Stan Cosmin
+ - Added support for Slackware 9.1. Thanks to Fred Bulthuis
+ - Added support for Trustix 2.0. Thanks to Agung Ud
+ - Added support for Debian with sparc64 architecture (testing/unstable)
+ - Added hashes for Slackware 9.0
+ - Added hashes for Slackware 9.1
+
+ Changes:
+ - Updated SuSE 9.1 hashes
+ - Updated Mandrake 10 hashes
+ - Updated Fedora Core 1 hashes
+ - Updated Fedora Core 2 hashes
+ - Updated OpenBSD 3.3 hashes
+ - Updated Suckit (rootkit), multiple improvements
+ - Updated rkhunter.spec file. Thanks to Craig Orsinger
+ - Updated installer. Thanks to Iain Roberts
+ - Added mirrors.dat to file checks
+  
+ Bugfixes:
+ - Fixed WHITELIST option again (it stripped the wrong characters: when a hash
+   contains a '5', it got stripped)
+ - Updated sockstat/netstat check for FreeBSD
+ - Skipping of MD5 didn't work anymore (due a forcefully check when Perl module
+   Digest::MD5 was found). Thanks to Zac
+
+ -- 
+
+ * 1.0.9
+ 
+ New:
+ - Added support for Balaur Rootkit (rootkit)
+ - Added installdir option to the installer
+ - Added INSTALLDIR option to configuration file
+ - Added support for SuSE 9.1 (pro)
+ - Added support for Fedora Core 2
+ - Added support for RHEL 3 Taroon update 2 
+ - Added support for PCLinuxOS (HD-install) 
+ - Added hashes for SuSE 9.1
+ - Added hashes for Fedora Core 2
+ - Added hashes for Mandrake 10
+ 
+ Changes:
+ - Updated hashes for Fedora Core 1 (updating prelinked hashes is no good
+   idea..) Thanks to Doncho.
+ - Updated hashes for SuSE 8.2
+ - Updated hashes for Mandrake 9.2
+ - Updated hashes for RHEL 3 Taroon update 1 and update 2. Thanks to Tom and Eilko
+ - Improved hidden file detection
+   
+ Bugfixes:
+ - Added prelink check, to resolve some problems with a few Fedora Core 1
+   installations. Thanks to Mike Haslam for pointing out this problem.
+ - Changed detection of syslog daemon 
+ - Fixed a problem with the MD5WHITELIST option (see rkhunter.conf). Thanks to
+   John P. New
+ - Updated installer (added /usr/local/etc to directory check, because some
+   systems don't have this directory by default)
+ 
+ --
+
+ * 1.0.8
+
+ New:
+ - Added support for Mandrake 10 (official release). Thanks to Dave Edwards
+ - Added support for Slackware 9.1.0. Thanks to Zebul666
+ - Added hashes for Red Hat Enterprise Linux 2.1 (Panama). Thanks to Duke
+   (mastre). (+1 beer for me)
+ 
+ Changes:
+ - Updated hashes for Red Hat Enterprise Linux 3
+ - Updated hashes for Fedora Core 1. Thanks to Greg Houlette
+ - Updated rkhunter.spec file by Doncho
+ - Improved extra Suckit tests. Check the presence of `stat`, before performing
+   the scans. Reported by Pasi.
+ 
+ -- 
+
+ * 1.0.7
+
+ New:
+ - Added support for Irix Rootkit (rootkit)
+ - Added support for URK (Universal Root Kit) (rootkit)
+ - Added 'whitelist support' for MD5 hashes. See configuration file for more
+   information about this new option.
+ - Added improved support for Yellowdog 3.0 (Sirius). Thanks to P. Hopkins
+ 
+ Changes:
+ - Improved Suckit detection (multiple improvements). Thanks to unSpawn!
+ - Fixed problem when running a special listener under FreeBSD (i.e. a DHCP
+   daemon). Thanks to Yann Nottara
+ - Fixed wrong text with 'rootdir' option. Thanks to Doncho N. Gunchev
+ - Fixed typo with '--dbdir' parameter. Thanks to unSpawn.
+ - Fixed rkhunter.spec file. md5blacklist.dat was missing. Thanks to Masanari
+   Iida
+ - Fixed a problem with the $rootdir
+ - Improved rkhunter.spec file. Thanks to Doncho N. Gunchev
+ - Improved Perl version detection. Thanks to Doncho N. Gunchev
+ - Updated installer to support dynamic paths soon.
+ - Layout improvements for installer 
+ - Changed copyright text in main binary and installer (as required/suggested
+   by GPL)
+ - Updated website (FAQ, documentation)
+
+ --
+
+ * 1.0.6
+ 
+ New:
+ - Added support for FreeBSD 4.9 and 5.2.1
+ - Added support for SuSE 9.0 (i386 and i586). Thanks to multiple people
+ - Added support for Trustix. Thanks to Joachim Holst
+ - Added support for Whitebox Enterprise Linux 3.0. Thanks to Fire
+ - Added support for CentOS 3.1. Thanks to Fire
+ - Added support for Mandrake 10 (community release). Thanks to Ted Kline
+ - Added support for CPUBuilders Linux. Thanks to Chris Locke
+ - Added support for Gentoo's 'rc.local' file (local.start)
+ - Added parameter '--bindir' to use another (binary) directory than the default
+   ones (to select which binaries will be used to perform the tests). Requested
+   by Joel.
+ - Added parameter '--configfile' to use another configuration file.
+ - Added parameter '--dbdir' to use another (dynamic) database directory
+ - Added a check when dynamic parameters are used (like --dbdir, --bindir) to
+   check the existance of these paths/files.
+ - Added lsmod check (/proc/modules) for Linux distros. Thanks to Micah Anderson
+
+ Changes:
+ - Updated hashes for Mandrake 9.2. Thanks to John P. New and others.
+ - Updated hashes for Red Hat Enterprise Linux Update 1. Thanks to Eilko
+ - Added informational message, when 'PermitRootLogin' or SSH protocol 1 is found,
+   into the logfile
+ - Renamed .spec file to rkhunter.spec  
+ - Updated installer. Thanks to Uwe Hermann
+ - Improved LKM check. Thanks to Joe Croft 
+ - Improved logging
+ - Fixed a problem with ifconfig
+ 
+ --
+
+ * 1.0.5
+
+ New:
+ - Added 'ignoKit' (rootkit)
+ - Added support for Red Hat Linux 8.0 (Psyche)
+ - Added option '--disable-passwd-check', to disable passwd/group check. Suggested
+   by Michael Niehren
+ - Added option '--scan-knownbad-files', to scan besides the 'known good' MD5 checks,
+   a lot of system binaries against a 'known bad' database.
+ - Added option '--tmpdir', to specify a temporary directory instead of the static
+   one (see below, at 'tmpdir' option within the configuration file).
+ - Added a 'known bad' database with a lot of 'blacklisted' binaries and tools
+   (like sniffers, rootkits, backdoored binaries, IRC tools etc)
+ - Added hashes for Red Hat Enterprise Linux ES release 3 (unpatched). Thanks
+   to Nico Morrison
+ - Added a 'mail-on-warning' option to the configuration file. When the checker finds
+   one or more warnings, it will send a warning to the system administrator (see the
+   configuration file for more information)
+ - Added 'tmpdir' option to the configuration. This optional value can be used instead
+   of the default (/usr/local/rkhunter/tmp) directory and is one of the first steps
+   to make rkhunter less static.   
+ - Rootkit Hunter now exists with an exit code of 1 when a rootkit is found or
+   a MD5 checksum failed. Suggested by Michael Niehren
+
+ Changes:
+ - Updated support for Red Hat Enterprise Linux. Thanks to Nico Morrison
+ - Improved/updated .spec file for RPM creation (improved cronjob script, updated
+   file version, corrected packager value). Thanks to Joe Klemmer and Michael Niehren
+ - Improved cronjob check (it contained a little bug, so it wasn't always non-
+   interactive..)
+ - Improved logging of sockstat/netstat tests
+ - Fixed message when parameters are provided, but 'check' option is missing
+ - Updated installer (0.0.6)
+
+ --
+
+ * 1.0.4
+ 
+ New:
+ - Added 'AjaKit' (rootkit)
+ - Added 'Legion of Doom (LoD)' (rootkit) (note: uses almost every same file
+   as AjaKit)
+ - Added support for Red Hat Enterprise Linux. Thanks to Kevin Jarnot
+ 
+ Changes:
+ - Updated 'NSDAP' (rootkit)
+ - Updated 'Dica' (rootkit)
+ - Updated 'X-Org SunOS Rootkit' (rootkit)
+ - Changed message 'not found' into 'OK' when no file redirection has been found.
+   Thanks to Jens Gutzeit
+ - Improved check for hidden files (empty files will be skipped, more directories
+   added)
+ - Corrected file scan counter.
+ - Improved logging
+ - Cleaned up tarball
+ 
+ --
+
+ * 1.0.3
+
+ New:
+ - Added support for SuSE Linux 8.1.
+ 
+ Changes:
+ - Updated 'Flea Linux Rootkit', because /lib/security is a legal path name.
+   Thanks to Moritz Bunkus
+ - Updated syslog-ng checking (checking remote logging in the configuration file).
+   Thanks to Juri Memmert for reporting the problem
+ 
+ --
+
+ * 1.0.2
+ 
+ New:
+ - Added 'aPa Kit' (rootkit)
+ - Added 'Danny-Boy's Abuse Kit' (rootkit)
+ - Added 'Duarawkz' (rootkit)
+ - Added 'Flea Linux Rootkit' (rootkit)
+ - Added 'HjC kit' (rootkit)
+ - Added 'Kitko' (rootkit)
+ - Added 'R3dstorm Toolkit' (rootkit)
+ - Added 'TeLeKiT' (rootkit)
+ - Added 'VcKit' (rootkit)
+ - Added support for Aurora Linux 1.0 (SPARC, named 'Ansel')
+ - Added support for Red Hat Linux 7.0
+ - Added support for Mac OS X (Darwin kernel)
+ - Added option '--report-mode' to remove footer and location of logfile
+ - Added alias parameter '--createlog' for '--createlogfile'
+ - Added alias parameter '--skipkeypress' for '--skip-keypress'
+ - Added informational message when a user doesn't use '--checkall' or '--cronjob'
+
+ Changes:
+ - Updated hashes for Fedora Core 1. Thanks to Doncho N. Gunchev
+ - Improved output of logfile
+ - Changed warning message when a part of a rootkit has been found (show correct
+   logfile instead of default file)
+ - Changed footer message (and tell you guys you have to submit your undetected
+   rootkits)
+   
+ Website:
+ - Updated articles: Hyperlinks, Scanning Techniques
+ 
+ --
+
+ * 1.0.1
+
+ New:
+ - Added parameter '-h' (or --help, -?) to display the usage syntax (same thing
+   when you give no options at all). Reported by Arthur E. Groen
+ - Support for Linux SuSE 8.2 (i586 platform)
+ 
+ Changes:
+ - Improved scan for 'Suckit' (rootkit)
+ - Updates hashes for Mandrake 9.2
+ - Fixed a problem with the installer (wrong function declaration).
+ - Had to strip down all colors in the installer, because of the complaints :-)
+ - Changed installer so it could be used as a non-interactive installer (like it
+   was before).. Languages are still usuable, but will be used in later versions
+   (with a interactive switch)
+ - Fixed the LANG function (renamed it, because of the reserved name).
+ - Added Swedish translation for the installer. Thanks to Daniel Olsson
+ - Improved logging when Perl has been found
+ - Undo 'skip MD5 test' (MD5CHECK_SKIP=0) when Digest::MD5 available, but
+   md5(sum) isn't, so we can still scanning.
+ - Fixed a wrong path name (deleting of temporary passwd file)
+ 
+ Website / Documentation:
+ - Updated FAQ
+ - Updated Project information (updated supported OSes, rootkits, added date of
+   last modification)
+ - Updated README
+ 
+ --
+
+ * 1.0.0
+ 
+ Special remarks:
+ - New developer: Stephane Dudzinski (a.k.a. FRLinux)
+
+ New:
+ * Operating system support
+ - Added support for Fedora (tested with Core 1, Yarrow)
+ - Added support for Gentoo (tested with 1.4 release)
+ - Added support for Red Hat 7.3 (Valhalla)
+ - Added support for Sun Solaris (not working yet..)
+ - Added OpenBSD 3.3 (i386) hashes
+ - Added Fedora Core 1 (i386) hashes
+ - Added special verify section when prelinked binaries are found (like Fedora
+   Core 1 uses). Thanks to Michael G. Rozman
+ - Added support for IBM AIX. A big thanks to Iain Roberts!
+   Versions 4.3.2, 4.3.3, 5.1, 5.2, 5.3, 5.4
+
+ * Rootkit / backdoor support
+ - Added 'Dreams' (rootkit). Thanks to Joshua Levitsky
+ - Added 'Heroin' (LKM rootkit)
+ - Added 'Sin' (rootkit)
+ - Added 'Shutdown' (rootkit)
+ - Added 'Sneakin' (rootkit)
+ - Added 'Superkit' (rootkit)
+ - Added 'T0rn' (rootkit)
+ - Added 'Trojanit Kit' (rootkit)
+ - Added 'zaRwT.KiT' (rootkit)
+ - Added 'Volc' (rootkit)
+
+ * Linux support
+ - Added extra kernel check (2.4/2.6) when OS is Linux
+ - Added Linux 2.6 kernel support.
+ - Added extra check when using a RPM based distro, to display the package name
+   in the logfile when filehashes are different. Thanks to Michael G. Rozman
+
+ * Rootkit Hunter options
+ - Added option '--quick'. Can be used with newly added scans and will use
+   some tweaks to scan quicker (be carefull: can hide some usefull information
+   at first scan, i.e. hidden files with trojaned binaries)
+ - Added option '--skip-keypress'. Make rkhunter non-interactive, so you don't
+   have to press [enter] after every test. Requested by Michael G. Rozman
+ - Added option '--version'. Displays version and quits.
+ - Added extra check for promiscuous interfaces, when 'ip' command is available
+ - Added check for (rootdir)etc/conf.d/local.start file (Gentoo)
+ - Added ksyms check to rootkitscan section
+ - Added check for binaries like nmap, ls, lsof, ps (for future use)
+ - Added Perl Digest::SHA1 module check
+ - Added SSH 'PermitRootLogin without-password' (as an unsafe option). Thanks
+   to Doncho
+ - Added check for sniffer logfiles detection
+ - Added support for grsec enabled Linux kernel. Thanks Steph ;-)
+
+ Changes:
+ - Improved installation
+ - Splitted version number (from 1.00 --> 1.0.0) due future minor releases
+ - Updated 'Ambient'
+ - Updated 'BOBkit'
+ - Updated 'Knark'
+ - Updated 'Sebek'
+ - Updated hashes for Red Hat 7.1 (fileutils, util-linux, SysVinit and xinetd).
+   Thanks to Michael G. Rozman
+ - Updated hashes for Debian 3.0 (IPv6 enabled version of tcpd). Thanks to Steph
+ - Changed LKM check when kernelversion of Linux is the new 2.6
+ - Improved support for other rootdirs (instead of '/')
+ - Added check for empty files when searching for hidden files
+ - Added check for real device fiels when searching for hidden files
+ - Added colored layout, when performing file checks (for i.e. hidden files)
+ - Little bugfix when perform LKM checking
+ - Bugfix when scanning sshd_config for file if file isn't available in /etc/ssh
+ - Improved logging for selftests
+ - Improved logging when performing MD5 hash test
+ - Improved logging for scanning of rootkits and malware
+ - Improved logging of rootkitscan section (files and directories)
+ - Improved logging for detection of binaries and Perl modules
+ - Improved SSH 'root login allowed', to decrease false positives
+ - Changed detection of users with an UID of 0 (zero)
+ - Improved rootkitscan section for files and directories with spaces
+ - Fixed wrong detection of Debian version (unstable/testing). Thanks to Daniel
+   Olsson
+ - Fixed wrong use of parameters when using --quick option, but not using -c.
+   Thanks to Joost Peters
+ - Added missing 'full OS' string, when RH doesn't recognise the operating
+   system.
+ - Fixed bad logging of rootkits (and files)
+ - Fixed a problem when using --skip-keypress and a rootkit was found (skip
+   keypress didn't work, and user input was required).   
+ - Fixed installer for NetBSD and MacOS X, by commenting whereis functions (will
+   be soon replaced)
+ - A lot of code cleanups..
+
+ Website:
+ - Updated website (FAQ / Changelog, Project information)
+ - Fixed a problem with the contact form (-moz-opacity CSS property failed with
+   some browsers).
+
+
+ --
+
+ * 1.00 RC3
+
+ New:
+ - Added option --disable-md5-check to skip checking MD5 hashes (if you run 
+   customized binaries/tools)
+ - Added option --rootdir (or -r), to use with chrooted systems. Note: not
+   completely integrated yet. Requested by Henk Wevers
+ - Added functions logtext and displaytext to make script more powerfull and
+   easier to use (for example with a new 'quiet' option)
+ - Added support for OpenBSD 3.3 and OpenBSD 3.4 (MD5 fix added, due the
+   missing of the -q (quiet) option of MD5). Thanks to Stefan
+
+ Changes:
+ - Updated 'Beastkit'
+ - Updated 'BOBkit'
+ - Updated hashes for Red Hat 9.0 (coreutils update). Thanks to Andrew Matthews
+ - Fixed a little problem with support for multiple file hashes (see 1.00 RC2).
+   When more than one hash was available, only the first one was checked. Thanks
+   to Andrew Matthews for testing.
+ - Solved two little issues with netstat check. Check reported possible backdoor
+   if portnumber was present in another portnumber (like string '2001' is
+   available in '20010'). Also the portnumber was found when the remote connection
+   had the same portnumber as a possible backdoor (like a dynamic port 2001 was
+   assigned to a SSH client). Thanks to Michael Firkins
+ - Changed text when a possible backdoored file is found (because --debug option
+   is not a valid). Thanks to Anton Pirnat
+ - Changed check for OpenSSH sshd_config file (it will search now for more than
+   1 place). Thanks to Jeroen Griede
+ - Added extra check for file retrieval utilities (i.e. to do version checking)
+ - Changed string at beginning of RH output (Determing OS... Ready)
+ - Made some tweaks to the layout of the logfile (with --createlogfile option)
+
+ --
+
+ * 1.00 RC2
+ 
+ New:
+ - Added check for syslog-ng (instead of only checking for the presence of
+   syslogd). Thanks to Chris Vaughan
+ - Added check to allow more than one MD5/SHA1 for a single file. When a 'base'
+   file will be updated, it's possible to add a second hash. Thanks to
+   James Clark and Greg Bell
+ - Added AIX check. Thanks to Val Baranov
+ - Added hashes for SuSE 8.2 (i386)
+ - Added hashes for Red Hat 9.0
+ - Added hashes for Mandrake 9.2
+ - Added hashes for Debian 3.0 (tested with release 2)
+ - Added support for Mandrake (i.e. /dev/.devfsd file)
+ - Added section to check the file type of every hidden file found
+ - Added parameter 'nocolors' to disable colored output
+ - Added support to run RH as a cronjob (parameter '--cronjob')
+ - Added check to removed layout when running as cronjob
+ - Added option to create a logfile (parameter '--createlogfile')
+ - Added changelog on website (rootkit.nl)
+ 
+ Changes:
+ - Updated hashes for Red Hat 7.2
+ - Cleanup logfile at startup
+ - Just check /dev directory once for hidden files
+ - Deleted unused consistency check (on Debian it showed several warnings)
+ - Fixed a little problem with querying the default hashes database (added a
+   slash to the query, to resolve the problem)
+ - Layout fix for Linux distros
+ - Fixed an error for Debian (where /etc/rc.d files not always exists..) by
+   adding an extra check for the presence of this files.
+ - Tweaked section to scan /dev directory. Scan is faster now (scan for
+   unknown shellscripts and files)
+ - Some little layout changes
+ - Updated 'Beastkit' due false positive. Thanks to Dunay
+ - Updated 'Suckit' (more checks added)
+ - Changed FAQ
+
+ --
+ 
+ * 1.00 RC1
+
+ Remarks:
+ First release
+ 
+ New:
+ - Database: backdoor ports (DB:backdoorports.dat)
+ - Added filtering for network connections
+ - Added OS support for SuSE Linux:
+ - Added OS support for Debian: 2.2/3.0/testing
+ - Added OS support for FreeBSD 5.x: version 5.0/5.1
+ - Added OS support for FreeBSD 4.x: version 4.3/4.7
+ - Added OS support for Red Hat Linux 7.1/7.2
+ - Added KLD tests (FreeBSD)
+ - All other options...
+ 

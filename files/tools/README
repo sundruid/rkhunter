@@ -1,0 +1,29 @@
+################################################################
+#
+# Remarks:
+# 
+# * This tools are experimental and are GPL licensed (expect the ones with a special remark)
+# * Files are copyright by the owners of the scripts
+# * All dates are in European format (date/month/year)
+#
+# Last updated: 24/03/2005
+#
+################################################################
+
+* update_server.sh
+
+    Author:
+    - Michael Boelen (michael AT rootkit DOT nl)
+    Description:
+    - Serves Rootkit Hunter distribution for your internal network / customers etc
+    Remarks:
+    - You NEED to change the script to your needs, or it will not work!
+    
+* update_client.sh
+
+    Author:
+    - Michael Boelen (michael AT rootkit DOT nl)
+    Description:
+    - Updates Rootkit Hunter from your internal distribution server
+    Remarks:
+    - You NEED to change the script to your needs, or it will not work!

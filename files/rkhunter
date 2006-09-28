@@ -1,0 +1,5404 @@
+#!/bin/sh
+
+#################################################################################
+#
+#  Rootkit Hunter 
+# ----------------
+#
+# Copyright Michael Boelen ( michael AT rootkit DOT nl )
+#
+# This software is GPL and free to use. See LICENSE file for
+# use of this software.
+#
+#################################################################################
+# [More info at the end of this file]
+#################################################################################
+#
+# Program information
+PROGRAM_NAME="Rootkit Hunter"
+PROGRAM_version="1.2.9"
+PROGRAM_releasedate="30 Sep 2006"
+PROGRAM_author="Michael Boelen"
+PROGRAM_copyright="Copyright 2003-2006, ${PROGRAM_author}"
+PROGRAM_license="
+${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
+
+${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under the terms of the GNU General
+Public License. See LICENSE for details.
+"
+
+PROGRAM_extrainfo=""
+
+# Run as cronjob?
+CRONJOB=0
+CHECK=0
+
+# Debugging
+DEBUG=1
+DEBUGLOG=0
+CATLOGFILE=0
+
+VERSIONCHECK=0
+UPDATE=0
+NOARGS=1
+NOCOLORS=0
+
+# Skip MD5 check
+MD5OPT=0
+MD5CHECK_SKIP=0
+# Skip passwd/group check
+PASSWDCHECK_SKIP=0
+# Application check
+APPLICATION_CHECK=1
+VULNERABLE_ITEM_COUNT=0
+
+# Patched software versions?
+USE_PATCHED_SOFTWARE=0
+
+PREVIOUSTEXT=""
+
+# SunOS improvement
+if [ "`uname`" = "SunOS" ]; then
+  if [ "$RANDOM" = "$RANDOM" ]; then
+    echo "WARN: Found Bourne-Shell -> Switching now to /b"
+    exec /bin/ksh $0 $*
+    exit 0
+  fi
+fi
+
+# echo alias for AIX/OpenBSD/SunOS
+case `uname` in
+        AIX|OpenBSD|SunOS)
+        # What is the default shell
+        if print >/dev/null 2>&1
+          then
+            alias echo='print'
+            E=""
+            ECHOOPT="--"
+            MYSHELL=ksh
+          else
+            E="-e"
+            ECHOOPT=""
+            MYSHELL=bash
+        fi
+        ;;
+        *) E="-e" ; ECHOOPT="" ; MYSHELL=bash ;;
+esac
+
+# Be quiet (only show warnings)
+QUIET=0
+
+# Show only warnings
+SHOWWARNINGSONLY=0
+PERFORMKNOWNBAD=0
+
+# Almost every system has a root of '/', but just in case of..
+ROOTDIR="/"
+
+# One way to detect our active directory (autoconf based)
+#MYDIR=`dirname "$0" 2>/dev/null` || 
+#echo X$0 | sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{ s//\1/; q; }
+#          /^X\(\/\/\)[^/].*/{ s//\1/; q; }
+#          /^X\(\/\/\)$/{ s//\1/; q; }
+#          /^X\(\/\).*/{ s//\1/; q; }
+#          s/.*/./; q'
+
+# Quick scanning (instead of full scan)
+QUICKSCAN=0
+
+# Report mode (do not show footer and make a 'professional' report)
+REPORTMODE=0
+
+# Set prefix for binaries (useful when using chrooted enviroments)
+BINPREFIX=""
+
+# Wait after every test
+PAUSEAFTERTESTS=1
+
+# Wait after warning (--skip-keypress will deactive this)
+WAITONWARNING=1
+
+# Operating system is Gentoo? (check will be performed later)
+GENTOO=0
+
+# Allow SSH root login (default: NOT allowed)
+ALLOW_SSH_ROOT_USER="0"
+
+# Check parameters
+PARAMCOUNT=$#
+if [ $# -ge 1 ]; then
+  NOARGS=0
+ else
+  NOARGS=1
+fi
+
+while [ $# -ge 1 ]; do
+  case $1 in
+      --allow-ssh-root-user)
+          ALLOW_SSH_ROOT_USER="1"
+	  ;;
+      -c | --checkall) 
+	  CHECK=1
+	  ;;
+      --bindir)
+          shift
+	  BINPATHS=$1
+          ;;
+      --configfile)
+          shift
+	  CONFIGFILE=$1
+	  ;;
+      --cronjob)
+          CHECK=1
+	  CRONJOB=1
+          PAUSEAFTERTESTS=0
+	  WAITONWARNING=0
+	  ;;
+      --createlogfile | --createlog | --create-log | --create-logfile)
+	  DEBUG=1
+          DEBUGLOG=1
+	  case "$2" in
+           "") ;;
+           -*) ;;
+           *) shift; LOGFILE="$1";;
+          esac 
+	  ;;
+      --dbdir)
+          shift
+	  DB_PATH=$1
+	  ;;
+      --disable-md5-check | --disable-md5check | --dmc)
+	  MD5OPT=1
+          MD5CHECK_SKIP=1
+	  ;;
+      --disable-passwd-check | --dpc)
+          PASSWDCHECK_SKIP=1
+          ;;
+      --display-logfile|displaylogfile|display-log|displaylog)
+          CATLOGFILE=1
+          ;;
+      -h | --help | -?)
+          NOARGS=1
+          ;;
+      --nocolors)
+          NOCOLORS=1
+	  ;;
+      -q | --quiet)
+          QUIET=1
+          ;;
+      --quick)
+          QUICKSCAN=1
+          ;;
+      --report-mode | --reportmode)
+          QUIET=1
+          REPORTMODE=1
+	  ;;
+      --report-warnings-only)
+          SHOWWARNINGSONLY=1
+          QUIET=1
+	  DEBUG=1
+	  DEBUGLOG=1
+          ;;
+      -r | --rootdir)
+          shift
+	  ROOTDIR=$1
+          ;;
+      --scan-knownbad-files)
+          PERFORMKNOWNBAD=1
+          ;;
+      --skip-application-check | --skipapplicationcheck | --skip-applicationcheck)
+          APPLICATION_CHECK=0
+          ;;
+      --skip-keypress | --skipkeypress | -sk)
+          # Don't wait after every test
+          PAUSEAFTERTESTS=0
+	  # Don't wait after warnings
+	  WAITONWARNING=0
+	  ;;
+      --tmpdir)
+          shift
+	  TMPDIR=$1
+          ;;
+      --version)
+          echo $ECHOOPT "${PROGRAM_NAME} ${PROGRAM_version}"
+          exit 0
+          ;;
+      --update)
+          UPDATE=1
+          ;;
+      --versioncheck)
+          VERSIONCHECK=1
+	  ;;
+      *)
+          echo "Fatal: Invalid option $1"
+	  exit 1
+	  ;;
+  esac
+  shift
+done
+
+if [ "${DEBUGLOG}" -eq 0 ]; then
+	# Through the drain...
+	DEBUGFILE="/dev/null"
+else
+	if [ -n "${LOGFILE}" ]; then
+		LOGDIR=`echo "X${LOGFILE}" | sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{ s//\1/; q; }'`
+		if [ "${LOGDIR}" = "X" ]; then
+			echo "No logfile given: using default."
+			DEBUGFILE=/var/log/rkhunter.log
+		elif [ "${LOGDIR}" = "X${LOGFILE}" ]; then
+			DEBUGFILE="${LOGFILE}"
+		elif [ -d "${LOGDIR}" ]; then
+			if [ -w "${LOGDIR}" ]; then
+				DEBUGFILE="${LOGFILE}"
+			else
+				echo "Unwritable logdir: using default."
+				DEBUGFILE=/var/log/rkhunter.log
+			fi
+		elif [ ! -d "${LOGDIR}" ]; then
+			echo "Nonexistent logdir: using default."
+			DEBUGFILE=/var/log/rkhunter.log
+		else
+			echo "No logfile given: using default."
+			DEBUGFILE=/var/log/rkhunter.log
+		fi
+	else
+		echo "No logfile given: using default."
+		DEBUGFILE=/var/log/rkhunter.log
+	fi
+
+	if [ "${DEBUGFILE}" = "/var/log/rkhunter.log" ]; then
+		if [ ! -d "/var/log" ]; then
+			echo "Nonexistent /var/log: no log file created"
+			DEBUGFILE="/dev/null"
+		elif [ ! -w "/var/log" ]; then
+			echo "Nonwritable /var/log: no log file created"
+			DEBUGFILE="/dev/null"
+		fi
+	fi
+
+	# Clear debug file
+	if [ -f ${DEBUGFILE} ]; then
+		rm -f ${DEBUGFILE}
+	fi
+fi
+
+if [ "${DEBUGFILE}" = "" ]; then
+	DEBUGFILE="/dev/null"
+fi
+
+INFECTED_COUNT=0
+INFECTED_NAMES=""
+SCANNED_COUNT=0
+MD5_COUNT=0
+MD5_DIFFERENT=0
+
+FOUNDFILE=0
+FOUNDRCSIGNS=0
+
+# Initialize grsec (grsec check)
+GRSECINSTALLED=0
+
+# Warnings
+WARNING=0
+
+if [ "${CRONJOB}" -eq 1 ]; then
+  COLORS=0
+  # Do not wait in cronjob mode
+  PAUSEAFTERTESTS=0
+  WAITONWARNING=0
+ else
+  if [ "${NOCOLORS}" -eq 1 ]
+    then
+      COLORS=0
+    else
+      COLORS=1
+  fi
+fi
+
+if [ ${QUICKSCAN} -eq 1 -a "${CHECK}" -eq 0 ]
+  then
+    echo "Wrong parameter use: Quickscan option active, but scan option (-c) is missing..."
+fi
+
+# Integrity tests
+STRINGSFAILED=0
+
+if [ "${COLORS}" -eq 1 ]; then
+  # Colors
+  NORMAL="[0;39m" 
+  warning="[33;55;1m"		# warning (red)
+  YELLOW="[1;33m"		# yellow
+  WHITE="[1;37m"		# white
+  OK="[1;32m"			# green (OK)
+  BAD="[1;31m"		# red (BAD)
+  DARKGRAY="[1;30m"
+  green="[1;32m"		# green
+  red="[1;31m"		# red
+fi
+
+# Checking hostname
+hostname=`hostname`
+
+# Check timestamp (start)
+#case `uname` in
+#  AIX|SunOS)
+#      BEGINTIME=$SECONDS
+#      ;;
+#  *)
+      BEGINTIME=`perl -e 'printf "%d\n", time;'`
+#      ;;
+#esac
+
+filelist="/bin/ps /bin/ls"
+
+# Messages
+FOUNDTRACES="
+             --------------------------------------------------------------------------------
+	     Found parts of this rootkit/trojan by checking the default files and directories
+	     Please inspect the available files, by running this check with the parameter
+	     --createlogfile and check the log file (current file: $DEBUGFILE).
+	     --------------------------------------------------------------------------------
+	     "
+
+# Default column width
+defaultcolumn="60"
+
+# Use parameters
+arg1="$1"
+arg2="$2"
+arg3="$3"
+
+# Initialise default status
+STATUS="0"
+
+
+##################################################################################################
+#
+# Global functions
+#
+##################################################################################################
+
+    # Jump: set position
+    jump()
+      {
+        counter=${SIZE}
+      }
+
+    # Waitkeypress: wait for a keypress after some events
+    waitkeypress()
+      {
+        if [ "${WAITONWARNING}" -eq 1 -o "${PAUSEAFTERTESTS}" -eq 1 ]; then
+	  if [ ${QUIET} -eq 0 ]
+	    then 
+	      echo ""
+	      echo "[Press <ENTER> to continue]"
+	      read a
+	  fi
+	fi
+      }
+
+    # Debugdate: insert date/time
+    debugdate()
+      {
+        sdate=`date "+[%H:%M:%S] "`
+        echo -n "${sdate}"
+      }
+
+    # Keypresspause: wait for a keypress, only if option is set
+    keypresspause()
+      {
+        if [ "${PAUSEAFTERTESTS}" -eq 1 -a "${QUIET}" -eq 0 ]; then
+	  echo ""
+	  echo "[Press <ENTER> to continue]"
+	  read a
+
+	fi
+      }
+
+    # Logtext: add text to logfile
+    logtext()
+      {
+        # Add date/time to logfile
+        if [ ! "$1" = "--nodate" ]; then
+          debugdate >> ${DEBUGFILE}
+        fi
+
+        NE1="n"
+        [ "$1" = "-n" ] && NE1="y"
+        [ "$1" = "-e" ] && NE1="y"
+
+        if [ "$NE1" = "y" ]
+          then
+            if [ "$MYSHELL" = "ksh" ]
+              then
+                [ "$1" = "-n" ] &&  echo -n "$2" >> $DEBUGFILE || echo $ECHOOPT $2 >> $DEBUGFILE
+              else
+                echo $1 "$2" >> $DEBUGFILE
+            fi
+          else
+            if [ "$1" = "--nodate" ]
+              then
+                  echo $ECHOOPT "$2" >> ${DEBUGFILE}
+              else
+                  echo $ECHOOPT "$1" >> ${DEBUGFILE}
+            fi
+        fi
+      }
+
+    # Displaytext: display text to STDOUT
+    displaytext()
+      {
+	DODISPLAY=0
+	FOUNDWARNING=0
+
+        FOUNDWARNING1=`echo $ECHOOPT $1 | egrep 'BAD|Warning|WARNING|Watch'`
+	FOUNDWARNING2=`echo $2 | egrep 'BAD|Warning|WARNING|Watch'`
+	FOUNDWARNING3=`echo $3 | egrep 'BAD|Warning|WARNING|Watch'`
+
+	if [ ! "${FOUNDWARNING1}" = "" -o ! "${FOUNDWARNING2}" = "" -o ! "${FOUNDWARNING3}" = "" ]
+	  then
+	    FOUNDWARNING=1
+	    WARNING=1
+	fi
+
+	[ $QUIET -eq 0 -o $FOUNDWARNING -eq 1 ] && DODISPLAY=1
+
+	if [ "$1" = "-n" -o "$1" = "-e" ]; then
+		if [ $DODISPLAY -eq 1 ]; then
+			if [ -n "$PREVIOUSTEXT" ]; then
+				echo -n "${PREVIOUSTEXT}"
+				PREVIOUSTEXT=""
+			fi
+			if [ "$MYSHELL" = "ksh" ]; then
+				[ "$1" = "-n" ] && echo -n "$2" || echo $ECHOOPT "$2"
+			else
+				echo $ECHOOPT $1 "$2"
+			fi
+		else
+			[ "$1" = "-n" ] && PREVIOUSTEXT=`echo "$2" | sed 's/^ \+//'`
+		fi
+	else
+		if [ $DODISPLAY -eq 1 ]; then
+			if [ -n "$PREVIOUSTEXT" ]; then
+				echo -n "${PREVIOUSTEXT}"
+				PREVIOUSTEXT=""
+			fi
+			echo $ECHOOPT "$1"
+		fi
+	fi
+      }
+
+    insertlayout()
+      {
+        if [ "${CRONJOB}" -eq 0 ]; then
+	    LAYOUT="\033[${jump}C"
+	  else
+	    LAYOUT="  "
+	fi
+      }
+      
+    scanrootkit()
+      {
+	if [ "${ROOTKIT_TESTS}" = "" ]
+	  then
+	    ROOTKIT_TESTS="${SCAN_ROOTKIT}"
+	  else
+	    ROOTKIT_TESTS="${ROOTKIT_TESTS}, ${SCAN_ROOTKIT}"
+	fi
+        SCAN_STATUS=0
+	JUMPCOL=`expr ${defaultcolumn} - 12`
+	SIZE=`echo \'${SCAN_ROOTKIT}\' | wc -c | tr -s ' ' | tr -d ' '`
+	jump=`expr ${JUMPCOL} - ${SIZE}`
+	displaytext -n "   Rootkit '${SCAN_ROOTKIT}'... "
+	logtext "*** Start scan ${SCAN_ROOTKIT} ***"
+
+        for I in $SCAN_FILES; do
+	  SCANNED_COUNT=`expr ${SCANNED_COUNT} + 1`
+	  I=`echo ${I} | tr -s '%' ' '`	
+	  logtext -n "  - File ${I}... " >> ${DEBUGFILE}
+	  if [ -f "${I}" ]; then
+	      logtext --nodate "WARNING! Exists." >> ${DEBUGFILE}        
+	      SCAN_STATUS=1
+	      # Set warning value, to exit the with a nonzero state
+	      WARNING=1
+	    else
+	      logtext --nodate "OK. Not found." >> ${DEBUGFILE}
+	  fi        
+        
+        done
+
+	for I in $SCAN_DIRS; do
+	  I=`echo ${I} | tr -s '%' ' '`
+	  logtext -n "  - Directory ${I}... "
+	  if [ -d "${I}" ]; then
+	      logtext --nodate "WARNING! Exists."
+	      SCAN_STATUS=1
+	    else
+	      logtext --nodate "OK. Not found."
+	  fi        
+	done
+
+	# Scan ksyms file
+	if [ ! "${SCAN_KSYMS}" = "" -a -f ${ROOTDIR}proc/ksyms ]
+	  then
+	    SEARCHTEXT=`cat ${ROOTDIR}proc/ksyms | grep ${SCAN_KSYMS}`
+	    if [ ! "${SEARCHTEXT}" = "" ]
+	      then
+	        logtext "WARNING! Found ${SCAN_KSYMS}"
+	      else
+	        logtext "ksyms file seems to be clean"
+	    fi
+
+	fi
+
+        if [ "${SCAN_STATUS}" -eq 1 ]
+	  then
+	    insertlayout
+	    displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	    INFECTED_COUNT=`expr ${INFECTED_COUNT} + 1`
+	    INFECTED_NAMES="${INFECTED_NAMES}${SCAN_ROOTKIT} "
+	    displaytext "${FOUNDTRACES}"
+	    
+    	    # Run routine
+	    waitkeypress
+
+          else
+	    insertlayout
+	    displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	fi
+      }
+
+    scanrootkit_suckit_extra_checks()
+      {
+        if [ "${OPERATING_SYSTEM}" = "Linux" ]
+	  then
+	    if [ ${STATFOUND} -eq 1 ]
+	      then
+    	        # Let's check the amount of links /sbin/init has
+		unset i;
+	        i=`stat -t /sbin/init | cut -d ' ' -f9`
+	        case ${i} in
+		       1) ;;
+		       *) logtext "WARNING! ${SCAN_ROOTKIT} /sbin/init linkage"
+		          SCAN_STATUS=1;;
+	        esac
+	        # Let's check xrk or mem hiding
+		# Easiest way to define random?
+		__RANDOM=$$$(date +%s)
+	        umask 027
+	        for ext in xrk mem; do
+	               randf="${TMPDIR}/${__RANDOM}.${ext}"
+	               test -f ${randf} || \
+	               ( touch ${randf} && test -f ${randf} && rm -f ${randf} ||\
+	                logtext "WARNING! ${SCAN_ROOTKIT} ${ext} hiding" )
+	        done
+	        # If we've got skdet (check Debian), let's use it too
+	        if [ "$SKDETFOUND" = "1" ]; then skdet -a 2>&1 | tr -s " " | grep -i 'invis'; fi
+	     else
+	      logtext "Info: Extended suckit tests skipped, due to missing stat binary"       
+	   fi
+	  else
+	    logtext "Info: Extended suckit tests skipped for this operating system (no Linux architecture)"
+	fi
+     }
+
+
+logtext "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${hostname}"
+logtext "${PROGRAM_license}"
+
+
+##################################################################################################
+#
+# Configuration file
+#
+##################################################################################################
+
+
+
+# Check configuration file
+if [ "${CONFIGFILE}" = "" ]
+  then
+    if [ -f /etc/rkhunter.conf ]
+      then
+        CONFIGFILE="/etc/rkhunter.conf"
+      else
+        CONFIGFILE="/usr/local/etc/rkhunter.conf"
+    fi
+fi
+
+# Can we found the configuration file?
+if [ ! -f ${CONFIGFILE} ]
+  then
+    echo "Fatal error: can't find configuration file (${CONFIGFILE})"
+    exit 1
+fi
+
+# Is the installation directory available in the configuration file? 
+MYDIR=`cat ${CONFIGFILE} | grep '^INSTALLDIR=' | sed s/INSTALLDIR=//`
+if [ "${MYDIR}" = "" ]
+  then
+    echo "Fatal error: can't find INSTALLDIR option in configuration file (${CONFIGFILE})"
+    exit 1
+fi
+
+logtext "Info: Shell ${SHELL}"
+
+logtext "------------------------ Configuration check --------------------------"
+logtext "Parsing configuration file (${CONFIGFILE})"
+
+MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | sed s/MAIL-ON-WARNING=//`
+
+if [ "${MAILONWARNING}" = "" ]
+  then
+    logtext "Info: No mail-on-warning address configured"
+  else
+    logtext "Info: Sending warnings to ${MAILONWARNING}"
+fi  
+
+if [ "${TMPDIR}" = "" ]
+  then
+    # Search in configuration file
+    TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | sed s/TMPDIR=//`
+    
+    # If not available in configuration file, make it static
+    if [ "${TMPDIR}" = "" ]
+      then
+        TMPDIR="${MYDIR}/lib/rkhunter/tmp"
+    fi
+    
+fi
+
+logtext "Info: Using ${TMPDIR} as temporary directory"
+
+if [ "${TMPDIR}" = "/tmp" ]
+  then
+    logtext "Warning: using /tmp as your temporary directory is a very bad idea, because"
+    logtext "it will contain some important system files! Please choose another directory in"
+    logtext "your configuration file, or as TMPDIR parameter!"
+    displaytext "Warning! Using /tmp as your temporary directory can be a security risk!"
+    displaytext "See logfile for more information about this issue."
+fi
+
+
+##################################################################################################
+
+
+# Place where database files can be found
+if [ "${DB_PATH}" = "" ]
+  then
+    # Search in configuration file
+    DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | sed s/DBDIR=//`
+    
+    # If not available in configuration file, make it static
+    if [ "${DB_PATH}" = "" ]
+      then
+        DB_PATH="${MYDIR}/lib/rkhunter/db"
+    fi
+fi
+
+logtext "Info: Using ${DB_PATH} as database directory"
+
+
+##################################################################################################
+
+# Don't read configuration file if parameter has been used
+if [ ! "${ALLOW_SSH_ROOT_USER}" = "1" ]
+  then
+    ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | sed s/ALLOW_SSH_ROOT_USER=//`
+    if [ "${ALLOW_SSH_ROOT_USER}" = "" ]; then
+      ALLOW_SSH_ROOT_USER="0"
+    fi
+fi    
+
+if [ "${ALLOW_SSH_ROOT_USER}" = "1" ]
+  then
+    logtext "Info: Explicit option set to allow root logins within SSH (don't mark test BAD when"
+    logtext "rkhunter finds it in the SSH configuration file)"
+fi
+
+# Places where all binaries are stored
+# If binary path is empty (no --bindir parameter used), fill in a static value
+if [ "${BINPATHS}" = "" ]
+  then
+    BINPATHS="/usr/sbin /usr/bin /usr/local/bin /usr/local/sbin /bin /sbin /sw/bin /usr/local/libexec /usr/libexec"
+fi
+logtext "Info: Using '${BINPATHS}' as binary directory"
+
+
+# File with mirrors
+MIRRORFILE="${DB_PATH}/mirrors.dat"
+
+
+##################################################################################################
+#
+# Application checks
+#
+##################################################################################################
+
+FINDFOUND=0; IFCONFIGFOUND=0; IPFOUND=0; LYNXFOUND=0; 
+LSATTRFOUND=0; LSFOUND=0; LSMODFOUND=0; LSOFFOUND=0;
+MD5FOUND=0; NMAPFOUND=0; PERLFOUND=0; PRELINKFOUND=0; 
+PSFOUND=0; STATFOUND=0; STRINGSFOUND=0; WGETFOUND=0; 
+SKDETFOUND=0; READLINKFOUND=0;
+
+
+logtext "-------------------------- Application scan ---------------------------"
+
+for I in ${BINPATHS}; do
+
+
+  J=${I}"/find";      	if [ -x ${J} ]; then logtext "Found ${J}"; FINDFOUND=1;    	 FINDBINARY=${J};      	fi
+  J=${I}"/ip";      	if [ -x ${J} ]; then logtext "Found ${J}"; IPFOUND=1;    	 IPBINARY=${J};      	fi
+  J=${I}"/ifconfig";	if [ -x ${J} ]; then logtext "Found ${J}"; IFCONFIGFOUND=1;      IFCONFIGBINARY=${J};   fi
+  J=${I}"/lynx";    	if [ -x ${J} ]; then logtext "Found ${J}"; LYNXFOUND=1;	 	 LYNXBINARY=${J};       fi
+  J=${I}"/ls";      	if [ -x ${J} ]; then logtext "Found ${J}"; LSFOUND=1;   	 LSBINARY=${J};         fi
+  J=${I}"/lsattr";     	if [ -x ${J} ]; then logtext "Found ${J}"; LSATTRFOUND=1;  	 LSATTRBINARY=${J};     fi
+  J=${I}"/lsmod";      	if [ -x ${J} ]; then logtext "Found ${J}"; LSMODFOUND=1;    	 LSMODBINARY=${J};      fi
+  J=${I}"/lsof";    	if [ -x ${J} ]; then logtext "Found ${J}"; LSOFFOUND=1;    	 LSOFBINARY=${J};       fi
+  J=${I}"/md5";     	if [ -x ${J} ]; then logtext "Found ${J}"; MD5FOUND=1;     	 MD5BINARY=${J};        fi
+  J=${I}"/md5sum";  	if [ -x ${J} ]; then logtext "Found ${J}"; MD5FOUND=1;     	 MD5BINARY=${J};        fi
+  J=${I}"/nmap";    	if [ -x ${J} ]; then logtext "Found ${J}"; NMAPFOUND=1;    	 NMAPBINARY=${J};       fi
+  J=${I}"/prelink";   	if [ -x ${J} ]; then logtext "Found ${J}"; PRELINKFOUND=1; 	 PRELINKBINARY=${J};    fi
+  J=${I}"/ps";      	if [ -x ${J} ]; then logtext "Found ${J}"; PSFOUND=1;      	 PSBINARY=${J};         fi
+  J=${I}"/stat"; 	if [ -x ${J} ]; then logtext "Found ${J}"; STATFOUND=1;	   	 STATBINARY=${J};       fi
+  J=${I}"/strings"; 	if [ -x ${J} ]; then logtext "Found ${J}"; STRINGSFOUND=1; 	 STRINGSBINARY=${J};    fi
+  J=${I}"/wget";    	if [ -x ${J} ]; then logtext "Found ${J}"; WGETFOUND=1;    	 WGETBINARY=${J};       fi
+  J=${I}"/skdet";    	if [ -x ${J} ]; then logtext "Found ${J}"; SKDETFOUND=1;    	 SKDETBINARY=${J};      fi
+  J=${I}"/readlink";    if [ -x ${J} ]; then logtext "Found ${J}"; READLINKFOUND=1;    	 READLINKBINARY=${J};   fi
+  
+  # Perl
+  J=${I}"/perl";
+  if [ -x ${J} ]; then
+    PERLFOUND=1
+    PERLBINARY=${J}
+    #PERLVERSION=`${J} -V:version | tr -d "version" | tr -d '=' | tr -d "'" | tr -d ";" `
+    PERLVERSION=`${J} -V:version | ${J} -pi -e "s/^version='(.*)';$/\1/"`
+    logtext "Found ${J} (version ${PERLVERSION})"
+  fi
+
+done
+
+
+if [ "${WGETFOUND}" -eq 1 ]; then
+  logtext "Info: WGET found" >> ${DEBUGFILE}
+ else
+  logtext "Info: WGET not found" >> ${DEBUGFILE}
+fi
+
+if [ "${NMAPFOUND}" -eq 1 ]; then
+  logtext "Info: NMAP found" >> ${DEBUGFILE}
+ else
+  logtext "Info: NMAP not found" >> ${DEBUGFILE}
+fi
+
+if [ "${LSOFFOUND}" -eq 1 ]; then
+  logtext "Info: LSOF found" >> ${DEBUGFILE}
+ else
+  logtext "Info: LSOF not found" >> ${DEBUGFILE}
+fi
+
+if [ "${IPFOUND}" -eq 1 ]; then
+  logtext "Info: ip found" >> ${DEBUGFILE}
+ else
+  logtext "Info: ip not found" >> ${DEBUGFILE}
+fi
+
+
+
+logtext "Application scan ended"
+
+if [ ! "${MD5BINARY}" = "" ]
+  then
+    md5=${MD5BINARY}
+fi
+
+
+BACKDOORPORTS="2006"
+
+#################################################################################
+#
+# Default rootkit files and directories
+#
+#################################################################################
+#
+
+# 55808 Variant A
+W55808A_FILES="${ROOTDIR}tmp/.../r ${ROOTDIR}tmp/.../a"
+
+# AjaKit
+AJAKIT_FILES="
+${ROOTDIR}dev/tux/.addr
+${ROOTDIR}dev/tux/.proc
+${ROOTDIR}dev/tux/.file
+${ROOTDIR}lib/.libgh-gh/cleaner
+${ROOTDIR}lib/.libgh-gh/Patch/patch
+${ROOTDIR}lib/.libgh-gh/sb0k
+"
+
+AJAKIT_DIRS="
+${ROOTDIR}dev/tux
+${ROOTDIR}lib/.libgh-gh
+"
+
+AJAKIT_KSYMS=""
+
+# aPa Kit
+APAKIT_FILES="${ROOTDIR}usr/share/.aPa"
+APAKIT_DIRS=""
+APAKIT_KSYMS=""
+
+# Apache Worm
+APACHEWORM_FILES="${ROOTDIR}bin/.log"
+
+# Ambient (ark) Rootkit
+ARK_FILES="${ROOTDIR}usr/lib/.ark? ${ROOTDIR}dev/ptyxx/.log ${ROOTDIR}dev/ptyxx/.file"
+ARK_DIRS="${ROOTDIR}dev/ptyxx"
+
+# Balaur Rootkit 2.0 (LRK5 based)
+BALAUR_FILES="
+${ROOTDIR}usr/lib/liblog.o
+"
+BALAUR_DIRS="
+${ROOTDIR}usr/lib/.kinetic
+${ROOTDIR}usr/lib/.egcs
+${ROOTDIR}usr/lib/.wormie
+"
+
+BALAUR_KSYMS=""
+
+# Beastkit
+BEASTKIT_FILES="${ROOTDIR}usr/sbin/arobia ${ROOTDIR}usr/sbin/idrun ${ROOTDIR}usr/lib/elm/arobia/elm ${ROOTDIR}usr/lib/elm/arobia/elm/hk ${ROOTDIR}usr/lib/elm/arobia/elm/hk.pub ${ROOTDIR}usr/lib/elm/arobia/elm/sc ${ROOTDIR}usr/lib/elm/arobia/elm/sd.pp ${ROOTDIR}usr/lib/elm/arobia/elm/sdco ${ROOTDIR}usr/lib/elm/arobia/elm/srsd"
+BEASTKIT_DIRS="${ROOTDIR}lib/ldd.so/bktools"
+
+# beX2
+BEX_FILES=""
+BEX_DIRS="${ROOTDIR}/usr/include/bex"
+BEX_KSYMS=""
+
+# BOBkit
+BOBKIT_FILES="
+${ROOTDIR}usr/sbin/ntpsx
+${ROOTDIR}usr/lib/.../ls
+${ROOTDIR}usr/lib/.../netstat
+${ROOTDIR}usr/lib/.../lsof
+${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shdcfg
+${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shhk
+${ROOTDIR}usr/lib/.../bkit-ssh/bkit-pw
+${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shrs
+${ROOTDIR}usr/lib/.../uconf.inv
+${ROOTDIR}usr/lib/.../psr
+${ROOTDIR}usr/lib/.../find
+${ROOTDIR}usr/lib/.../pstree
+${ROOTDIR}usr/lib/.../slocate
+${ROOTDIR}usr/lib/.../du
+${ROOTDIR}usr/lib/.../top
+"
+
+BOBKIT_DIRS="
+${ROOTDIR}usr/lib/...
+${ROOTDIR}usr/lib/.../bkit-ssh
+${ROOTDIR}usr/lib/.bkit-
+${ROOTDIR}tmp/.bkp
+"
+
+# CiNIK Worm (Slapper.B variant)
+CINIK_DIRS="${ROOTDIR}tmp/.font-unix/.cinik"
+CINIK_FILES="${ROOTDIR}tmp/.cinik"
+
+# Danny-Boy's Abuse Kit
+DANNYBOY_FILES="${ROOTDIR}dev/mdev ${ROOTDIR}usr/lib/libX.a"
+DANNYBOY_DIRS=""
+DANNYBOY_KSYMS=""
+
+# Devil
+DEVIL_FILES="
+${ROOTDIR}var/lib/games/.src
+${ROOTDIR}dev/dsx
+${ROOTDIR}dev/caca
+"
+
+# Dica (T0rn variant)
+DICA_FILES="
+${ROOTDIR}lib/.sso
+${ROOTDIR}lib/.so
+${ROOTDIR}var/run/...dica/clean
+${ROOTDIR}var/run/...dica/xl
+${ROOTDIR}var/run/...dica/xdr
+${ROOTDIR}var/run/...dica/psg
+${ROOTDIR}var/run/...dica/secure
+${ROOTDIR}var/run/...dica/rdx
+${ROOTDIR}var/run/...dica/va
+${ROOTDIR}var/run/...dica/cl.sh
+${ROOTDIR}usr/bin/.etc
+"
+
+DICA_DIRS="
+${ROOTDIR}var/run/...dica
+${ROOTDIR}var/run/...dica/mh
+${ROOTDIR}var/run/...dica/scan
+"
+
+DICA_KSYMS=""
+
+# Dreams
+DREAMS_FILES="
+${ROOTDIR}dev/ttyoa
+${ROOTDIR}dev/ttyof
+${ROOTDIR}dev/ttyop
+${ROOTDIR}usr/bin/sense
+${ROOTDIR}usr/bin/sl2
+${ROOTDIR}usr/bin/logclear
+${ROOTDIR}usr/bin/(swapd)
+${ROOTDIR}usr/bin/snfs
+${ROOTDIR}usr/lib/libsss
+"
+
+DREAMS_DIRS="${ROOTDIR}dev/ida/.hpd"
+DREAMS_KSYMS=""
+
+# Duarawkz
+DUARAWKZ_FILES="${ROOTDIR}usr/bin/duarawkz/loginpass"
+DUARAWKZ_DIRS="${ROOTDIR}usr/bin/duarawkz"
+DUARAWKZ_KSYMS=""
+
+# Flea Linux rootkit
+FLEA_FILES="
+${ROOTDIR}etc/ld.so.hash
+${ROOTDIR}lib/security/.config/ssh/ssh_host_key
+${ROOTDIR}lib/security/.config/ssh/ssh_host_key.pub
+${ROOTDIR}lib/security/.config/ssh/ssh_random_seed
+${ROOTDIR}usr/bin/ssh2d
+${ROOTDIR}usr/lib/ldlibns.so
+${ROOTDIR}usr/lib/ldlibpst.so
+${ROOTDIR}usr/lib/ldlibdu.so
+${ROOTDIR}usr/lib/ldlibct.so
+"
+
+FLEA_DIRS="${ROOTDIR}lib/security/.config/ssh ${ROOTDIR}dev/..0 ${ROOTDIR}dev/..0/backup"
+FLEA_KSYMS=""
+
+# FreeBSD Rootkit
+FREEBSD_RK_FILES="
+${ROOTDIR}usr/lib/.fx/sched_host.2
+${ROOTDIR}usr/lib/.fx/random_d.2
+${ROOTDIR}usr/lib/.fx/set_pid.2
+${ROOTDIR}usr/lib/.fx/cons.saver
+${ROOTDIR}usr/lib/.fx/adore/adore/adore.ko
+${ROOTDIR}bin/sysback
+${ROOTDIR}usr/local/bin/sysback
+"
+
+FREEBSD_RK_DIRS="${ROOTDIR}usr/lib/.fx ${ROOTDIR}usr/lib/.fx/adore"
+
+# Fuckit Rootkit
+FUCKIT_FILES="
+${ROOTDIR}dev/proc/fuckit/hax0r
+${ROOTDIR}dev/proc/fuckit/hax0rshell
+${ROOTDIR}dev/proc/fuckit/config/lports
+${ROOTDIR}dev/proc/fuckit/config/rports
+${ROOTDIR}dev/proc/fuckit/config/rkconf
+${ROOTDIR}dev/proc/fuckit/config/password
+${ROOTDIR}dev/proc/fuckit/config/progs
+${ROOTDIR}dev/proc/system-bins/init
+"
+
+# GasKit Rootkit
+GASKIT_FILES="${ROOTDIR}dev/dev/gaskit/sshd/sshdd"
+GASKIT_DIRS="${ROOTDIR}dev/dev ${ROOTDIR}dev/dev/gaskit ${ROOTDIR}dev/dev/gaskit/sshd"
+
+# Heroin LKM
+HEROIN_FILES=""
+HEROIN_DIRS=""
+HEROIN_KSYMS="heroin"
+
+# HjC Kit
+HJCKIT_FILES=""
+HJCKIT_DIRS="${ROOTDIR}dev/.hijackerz"
+HJCKIT_KSYMS=""
+
+# ignoKit
+IGNOKIT_FILES="
+${ROOTDIR}lib/defs/p
+${ROOTDIR}lib/defs/q
+${ROOTDIR}lib/defs/r
+${ROOTDIR}lib/defs/s
+${ROOTDIR}lib/defs/t
+${ROOTDIR}usr/lib/defs/p
+${ROOTDIR}usr/lib/defs/p
+${ROOTDIR}usr/lib/defs/p
+${ROOTDIR}usr/lib/defs/p
+${ROOTDIR}usr/lib/defs/p
+${ROOTDIR}usr/lib/.libigno/pkunsec
+${ROOTDIR}usr/lib/.libigno/.igno/psybnc/psybnc
+"
+
+IGNOKIT_DIRS="
+${ROOTDIR}usr/lib/.libigno
+${ROOTDIR}usr/lib/.libigno/.igno/
+"
+
+IGNOKIT_KSYMS=""
+
+# ImperalsS-FBRK (FreeBSD Rootkit)
+IMPFRB_DIRS="${ROOTDIR}dev/fd/.88 ${ROOTDIR}dev/fd/.99"
+
+# Irix Rootkit (for Irix 6.x)
+IRIXRK_FILES=""
+IRIXRK_DIRS="
+${ROOTDIR}dev/pts/01
+${ROOTDIR}dev/pts/01/backup
+${ROOTDIR}dev/pts/01/etc
+${ROOTDIR}dev/pts/01/tmp
+"
+IRIXRK_KSYMS=""
+
+# Kitko
+KITKO_FILES=""
+KITKO_DIRS="${ROOTDIR}usr/src/redhat/SRPMS/..."
+KITKO_KSYMS=""
+
+# Knark
+KNARK_FILES="${ROOTDIR}proc/knark/pids"
+KNARK_DIRS="${ROOTDIR}proc/knark"
+KNARK_KSYMS=""
+
+# Lion Worm
+LION_FILES="
+${ROOTDIR}bin/in.telnetd
+${ROOTDIR}bin/mjy
+${ROOTDIR}usr/man/man1/man1/lib/.lib/mjy
+${ROOTDIR}usr/man/man1/man1/lib/.lib/in.telnetd
+${ROOTDIR}usr/man/man1/man1/lib/.lib/.x
+${ROOTDIR}dev/.lib/lib/scan/1i0n.sh
+${ROOTDIR}dev/.lib/lib/scan/hack.sh
+${ROOTDIR}dev/.lib/lib/scan/bind
+${ROOTDIR}dev/.lib/lib/scan/randb
+${ROOTDIR}dev/.lib/lib/scan/scan.sh
+${ROOTDIR}dev/.lib/lib/scan/pscan
+${ROOTDIR}dev/.lib/lib/scan/star.sh
+${ROOTDIR}dev/.lib/lib/scan/bindx.sh
+${ROOTDIR}dev/.lib/lib/scan/bindname.log
+${ROOTDIR}dev/.lib/lib/1i0n.sh
+${ROOTDIR}dev/.lib/lib/lib/netstat
+${ROOTDIR}dev/.lib/lib/lib/dev/.1addr
+${ROOTDIR}dev/.lib/lib/lib/dev/.1logz
+${ROOTDIR}dev/.lib/lib/lib/dev/.1proc
+${ROOTDIR}dev/.lib/lib/lib/dev/.1file
+"
+
+# Lockit (a.k.a. LJK2)
+LOCKIT_FILES="
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_config
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_host_key
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_random_seed*
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/sshd_config
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/du
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ifconfig
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/inetd.conf
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/locate
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/login
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ls
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/netstat
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ps
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/pstree
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/rc.sysinit
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/syslogd
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/tcpd
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/top
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/clean/RK1sauber
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/clean/RK1wted
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/hack/RK1parser
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/hack/RK1sniff
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1addr
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1dir
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1log
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1proc
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/RK1phidemod.c
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/README.modules
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/RK1hidem.c
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/RK1phide
+${ROOTDIR}usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh
+"
+
+LOCKIT_DIRS="${ROOTDIR}usr/lib/libmen.oo/.LJK2"
+LOCKIT_KSYMS=""
+
+# MRK (MiCrobul RootKit?, based on Devil RootKit )
+MRK_FILES="
+${ROOTDIR}dev/ida/.inet/pid
+${ROOTDIR}dev/ida/.inet/ssh_host_key
+${ROOTDIR}dev/ida/.inet/ssh_random_seed
+${ROOTDIR}dev/ida/.inet/tcp.log
+"
+
+MRK_DIRS="
+${ROOTDIR}dev/ida/.inet
+${ROOTDIR}var/spool/cron/.sh
+"
+
+# Ni0 Rootkit
+NIO_FILES="
+${ROOTDIR}var/lock/subsys/...datafile.../...net...
+${ROOTDIR}var/lock/subsys/...datafile.../...port...
+${ROOTDIR}var/lock/subsys/...datafile.../...ps...
+${ROOTDIR}var/lock/subsys/...datafile.../...file...
+"
+
+NIO_DIRS="
+${ROOTDIR}tmp/waza
+${ROOTDIR}var/lock/subsys/...datafile...
+${ROOTDIR}usr/sbin/es
+"
+
+NIO_KSYMS=""
+
+# RootKit for SunOS / NSDAP
+NSDAP_FILES="
+${ROOTDIR}usr/lib/vold/nsdap/.kit
+${ROOTDIR}usr/lib/vold/nsdap/defines
+${ROOTDIR}usr/lib/vold/nsdap/patcher
+${ROOTDIR}usr/lib/vold/nsdap/pg
+${ROOTDIR}usr/lib/vold/nsdap/cleaner
+${ROOTDIR}usr/lib/vold/nsdap/utime
+${ROOTDIR}usr/lib/vold/nsdap/crypt
+${ROOTDIR}usr/lib/vold/nsdap/findkit
+${ROOTDIR}usr/lib/vold/nsdap/sn2
+${ROOTDIR}usr/lib/vold/nsdap/sniffload
+${ROOTDIR}usr/lib/vold/nsdap/runsniff
+${ROOTDIR}usr/lib/lpset
+"
+NSDAP_DIRS="${ROOTDIR}usr/lib/vold/nsdap"
+NSDAP_KSYMS=""
+
+# Ohhara Rootkit
+OHHARA_FILES="${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../in.smbd.log"
+OHHARA_DIRS="
+${ROOTDIR}var/lock/subsys/...datafile...
+${ROOTDIR}var/lock/subsys/...datafile.../...datafile...
+${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../bin
+${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../usr/bin
+${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../usr/sbin
+${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../lib/security
+"
+
+# Optic Kit (Tux variant)
+OPTICKIT_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}usr/bin/xchk ${ROOTDIR}usr/bin/xsf ${ROOTDIR}usr/bin/ssh2d"
+
+# Oz Rootkit
+OZ_FILES="${ROOTDIR}dev/.oz/.nap/rkit/terror"
+OZ_DIRS="${ROOTDIR}dev/.oz"
+
+PORTACELO_FILES="
+/var/lib/.../.ak
+/var/lib/.../.hk
+/var/lib/.../.rs
+/var/lib/.../.p
+/var/lib/.../getty
+/var/lib/.../lkt.o
+/var/lib/.../show
+/var/lib/.../nlkt.o
+/var/lib/.../ssshrc
+/var/lib/.../sssh_equiv
+/var/lib/.../sssh_known_hosts
+/var/lib/.../sssh_pid
+~/.sssh/known_hosts
+"
+
+# R3dstorm Toolkit
+REDSTORM_FILES="
+/var/log/tk02/see_all
+/bin/.../sshd/sbin/sshd1
+/bin/.../hate/sk
+/bin/.../see_all
+"
+
+REDSTORM_DIRS="
+/var/log/tk02
+/var/log/tk02/old
+/bin/...
+"
+
+REDSTORM_KSYMS=""
+
+# RH-Sharpe's rootkit
+RHSHARPES_FILES="
+${ROOTDIR}bin/lps
+${ROOTDIR}usr/bin/lpstree
+${ROOTDIR}usr/bin/ltop
+${ROOTDIR}usr/bin/lkillall
+${ROOTDIR}usr/bin/ldu
+${ROOTDIR}usr/bin/lnetstat
+${ROOTDIR}usr/bin/wp
+${ROOTDIR}usr/bin/shad
+${ROOTDIR}usr/bin/vadim
+${ROOTDIR}usr/bin/slice
+${ROOTDIR}usr/bin/cleaner
+${ROOTDIR}usr/include/rpcsvc/du
+"
+RHSHARPES_DIRS=""
+RHSHARPES_KSYMS=""
+
+# RSHA's rootkit
+RSHA_FILES="
+${ROOTDIR}bin/kr4p
+${ROOTDIR}usr/bin/n3tstat
+${ROOTDIR}usr/bin/chsh2
+${ROOTDIR}usr/bin/slice2
+${ROOTDIR}usr/src/linux/arch/alpha/lib/.lib/.1proc
+${ROOTDIR}etc/rc.d/arch/alpha/lib/.lib/.1addr
+"
+
+RSHA_DIRS="
+${ROOTDIR}etc/rc.d/rsha
+${ROOTDIR}etc/rc.d/arch/alpha/lib/.lib
+"
+
+RSHA_KSYMS=""
+
+# Shutdown
+SHUTDOWN_DIRS="${ROOTDIR}usr/man/man5/..%%/.dir/ ${ROOTDIR}usr/man/man5/..%%/.dir/scannah ${ROOTDIR}etc/rc.d/rc0.d/..%%/.dir"
+SHUTDOWN_FILES="${ROOTDIR}usr/man/man5/..%%/.dir/scannah/asus ${ROOTDIR}usr/man/man5/..%%/.dir/see ${ROOTDIR}usr/man/man5/..%%/.dir/nscd ${ROOTDIR}usr/man/man5/..%%/.dir/alpd ${ROOTDIR}etc/rc.d/rc.local%%"
+
+# Scalper (FreeBSD.Scalper.Worm)
+SCALPER_FILES="${ROOTDIR}tmp/.a ${ROOTDIR}tmp/.uua"
+
+# SHV4
+SHV4_FILES="
+${ROOTDIR}etc/ld.so.hash
+${ROOTDIR}lib/libext-2.so.7
+${ROOTDIR}lib/lidps1.so
+${ROOTDIR}usr/sbin/xntps
+"
+
+SHV4_DIRS="${ROOTDIR}lib/security/.config ${ROOTDIR}lib/security/.config/ssh"
+
+# SHV5
+SHV5_FILES="
+${ROOTDIR}etc/sh.conf
+${ROOTDIR}dev/srd0
+"
+
+SHV5_DIRS="/usr/lib/libsh"
+SHV5_KSYMS=""
+
+# Sin Rootkit
+SINROOTKIT_FILES="
+${ROOTDIR}dev/.haos/haos1/.f/Denyed
+${ROOTDIR}dev/ttyoa
+${ROOTDIR}dev/ttyof
+${ROOTDIR}dev/ttyop
+${ROOTDIR}dev/ttyos
+${ROOTDIR}usr/lib/.lib 
+${ROOTDIR}usr/lib/sn/.X
+${ROOTDIR}usr/lib/sn/.sys
+${ROOTDIR}usr/lib/ld/.X
+${ROOTDIR}usr/man/man1/...
+${ROOTDIR}usr/man/man1/.../.m
+${ROOTDIR}usr/man/man1/.../.w
+"
+
+SINROOTKIT_DIRS="${ROOTDIR}usr/lib/sn ${ROOTDIR}usr/lib/man1/... ${ROOTDIR}dev/.haos"
+
+# Slapper
+SLAPPER_FILES="${ROOTDIR}tmp/.bugtraq ${ROOTDIR}tmp/.uubugtraq ${ROOTDIR}tmp/.bugtraq.c ${ROOTDIR}tmp/httpd ${ROOTDIR}tmp/.unlock ${ROOTDIR}tmp/update ${ROOTDIR}tmp/.cinik ${ROOTDIR}tmp/.b"
+
+# Sneakin Rootkit
+SNEAKIN_DIRS="${ROOTDIR}tmp/.X11-unix/.../rk"
+
+# Suckit Rootkit
+SUCKIT_FILES="
+${ROOTDIR}sbin/initsk12
+${ROOTDIR}sbin/initxrk
+${ROOTDIR}usr/bin/null
+${ROOTDIR}usr/share/locale/sk/.sk12/sk
+${ROOTDIR}etc/rc.d/rc0.d/S23kmdac
+${ROOTDIR}etc/rc.d/rc1.d/S23kmdac
+${ROOTDIR}etc/rc.d/rc2.d/S23kmdac
+${ROOTDIR}etc/rc.d/rc3.d/S23kmdac
+${ROOTDIR}etc/rc.d/rc4.d/S23kmdac
+${ROOTDIR}etc/rc.d/rc5.d/S23kmdac
+${ROOTDIR}etc/rc.d/rc6.d/S23kmdac
+"
+
+SUCKIT_DIRS="
+${ROOTDIR}dev/sdhu0/tehdrakg
+${ROOTDIR}etc/.MG
+${ROOTDIR}usr/share/locale/sk/.sk12
+${ROOTDIR}usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist
+"
+
+# SunOS Rootkit
+SUNOSROOTKIT_FILES="
+${ROOTDIR}etc/ld.so.hash
+${ROOTDIR}lib/libext-2.so.7
+${ROOTDIR}usr/bin/ssh2d
+${ROOTDIR}bin/xlogin
+${ROOTDIR}usr/lib/crth.o
+${ROOTDIR}usr/lib/crtz.o
+${ROOTDIR}sbin/login
+${ROOTDIR}lib/security/.config/sn
+${ROOTDIR}lib/security/.config/lpsched
+${ROOTDIR}dev/kmod
+${ROOTDIR}dev/dos
+"
+
+# Superkit
+SUPERKIT_FILES="${ROOTDIR}usr/man/.sman/sk"
+SUPERKIT_DIRS=""
+SUPERKIT_KSYMS=""
+
+# Telnet Backdoor
+TBD_FILES="${ROOTDIR}usr/lib/.tbd"
+
+# TeLeKiT 
+TELEKIT_FILES="
+${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/sniff
+${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/telnetd
+${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/teleulo
+${ROOTDIR}usr/man/man3/.../cl
+${ROOTDIR}dev/ptyr
+${ROOTDIR}dev/ptyp
+${ROOTDIR}dev/ptyq
+${ROOTDIR}dev/hda06
+${ROOTDIR}usr/info/libc1.so
+"
+
+TELEKIT_DIRS="${ROOTDIR}usr/man/man3/... ${ROOTDIR}usr/man/man3/.../lsniff ${ROOTDIR}usr/man/man3/.../TeLeKiT"
+TELEKIT_KSYMS=""
+
+# Torn (and misc)
+TORN_FILES="
+${ROOTDIR}dev/.lib/lib/lib/t0rns
+${ROOTDIR}dev/.lib/lib/lib/du
+${ROOTDIR}dev/.lib/lib/lib/ls
+${ROOTDIR}dev/.lib/lib/lib/t0rnsb
+${ROOTDIR}dev/.lib/lib/lib/ps
+${ROOTDIR}dev/.lib/lib/lib/t0rnp
+${ROOTDIR}dev/.lib/lib/lib/find
+${ROOTDIR}dev/.lib/lib/lib/ifconfig
+${ROOTDIR}dev/.lib/lib/lib/pg
+${ROOTDIR}dev/.lib/lib/lib/ssh.tgz
+${ROOTDIR}dev/.lib/lib/lib/top
+${ROOTDIR}dev/.lib/lib/lib/sz
+${ROOTDIR}dev/.lib/lib/lib/login
+${ROOTDIR}dev/.lib/lib/lib/in.fingerd
+${ROOTDIR}dev/.lib/lib/lib/1i0n.sh
+${ROOTDIR}dev/.lib/lib/lib/pstree
+${ROOTDIR}dev/.lib/lib/lib/in.telnetd
+${ROOTDIR}dev/.lib/lib/lib/mjy
+${ROOTDIR}dev/.lib/lib/lib/sush
+${ROOTDIR}dev/.lib/lib/lib/tfn
+${ROOTDIR}dev/.lib/lib/lib/name
+${ROOTDIR}dev/.lib/lib/lib/getip.sh
+${ROOTDIR}usr/info/.torn/sh*
+${ROOTDIR}usr/src/.puta/                                                                                      
+${ROOTDIR}usr/src/.puta/.1addr
+${ROOTDIR}usr/src/.puta/.1file
+${ROOTDIR}usr/src/.puta/.1proc
+${ROOTDIR}usr/src/.puta/.1logz
+${ROOTDIR}usr/info/.t0rn/                  
+"
+
+TORN_DIRS="
+${ROOTDIR}dev/.lib/
+${ROOTDIR}dev/.lib/lib/
+${ROOTDIR}dev/.lib/lib/lib/
+${ROOTDIR}dev/.lib/lib/lib/dev/
+${ROOTDIR}dev/.lib/lib/scan/
+${ROOTDIR}usr/src/.puta/
+${ROOTDIR}usr/man/man1/man1/
+${ROOTDIR}usr/man/man1/man1/lib/
+${ROOTDIR}usr/man/man1/man1/lib/.lib/
+${ROOTDIR}usr/man/man1/man1/lib/.lib/.backup/
+"
+
+TROJANIT_FILES="
+${ROOTDIR}bin/.ls
+${ROOTDIR}bin/.ps
+${ROOTDIR}bin/.netstat
+${ROOTDIR}usr/bin/.nop
+${ROOTDIR}usr/bin/.who
+"
+
+TPACK_FILES=""
+TPACK_DIRS=""
+
+# Tuxtendo (Tuxkit)
+TUXTENDO_FILES="
+${ROOTDIR}dev/tux/.addr
+${ROOTDIR}dev/tux/.cron
+${ROOTDIR}dev/tux/.file
+${ROOTDIR}dev/tux/.log
+${ROOTDIR}dev/tux/.proc
+${ROOTDIR}dev/tux/backup/crontab
+${ROOTDIR}dev/tux/backup/df
+${ROOTDIR}dev/tux/backup/dir
+${ROOTDIR}dev/tux/backup/find
+${ROOTDIR}dev/tux/backup/ifconfig
+${ROOTDIR}dev/tux/backup/locate
+${ROOTDIR}dev/tux/backup/netstat
+${ROOTDIR}dev/tux/backup/ps
+${ROOTDIR}dev/tux/backup/pstree
+${ROOTDIR}dev/tux/backup/syslogd
+${ROOTDIR}dev/tux/backup/tcpd
+${ROOTDIR}dev/tux/backup/top
+${ROOTDIR}dev/tux/backup/updatedb
+${ROOTDIR}dev/tux/backup/vdir
+"
+
+TUXTENDO_DIRS="
+${ROOTDIR}dev/tux
+${ROOTDIR}dev/tux/ssh2
+${ROOTDIR}dev/tux/backup
+"
+
+TUXTENDO_KSYMS=""
+
+# URK (Universal Root Kit)
+URK_FILES="
+${ROOTDIR}usr/man/man1/xxxxxxbin/find
+${ROOTDIR}usr/man/man1/xxxxxxbin/du
+${ROOTDIR}usr/man/man1/xxxxxxbin/ps
+${ROOTDIR}tmp/conf.inf
+"
+
+URK_DIRS="
+${ROOTDIR}usr/man/man1/xxxxxxbin
+"
+# VcKit
+VCKIT_FILES=""
+VCKIT_DIRS="${ROOTDIR}usr/include/linux/modules/lib.so ${ROOTDIR}usr/include/linux/modules/lib.so/bin"
+
+# Volc Rootkit
+VOLC_FILES=""
+VOLC_DIRS="
+${ROOTDIR}var/spool/.recent
+${ROOTDIR}var/spool/.recent/.files
+${ROOTDIR}usr/lib/volc
+${ROOTDIR}usr/lib/volc/backup
+"
+
+# X-Org SunOS Rootkit
+XORGSUNOS_FILES="
+${ROOTDIR}usr/lib/libX.a/bin/tmpfl
+${ROOTDIR}usr/lib/libX.a/bin/rps
+${ROOTDIR}usr/bin/srload
+${ROOTDIR}usr/lib/libX.a/bin/sparcv7/rps
+${ROOTDIR}usr/sbin/modcheck
+"
+
+XORGSUNOS_DIRS="
+${ROOTDIR}usr/lib/libX.a
+${ROOTDIR}usr/lib/libX.a/bin
+${ROOTDIR}usr/lib/libX.a/bin/sparcv7
+${ROOTDIR}usr/share/man...
+"
+
+
+# zaRwT.KiT
+ZARWT_FILES="
+${ROOTDIR}dev/rd/s/sendmeil
+${ROOTDIR}dev/ttyf
+${ROOTDIR}dev/ttyp
+${ROOTDIR}dev/ttyn
+${ROOTDIR}rk/tulz
+"
+
+ZARWT_DIRS="
+${ROOTDIR}rk
+${ROOTDIR}dev/rd/s
+"
+
+ZARWT_LOGS="
+.zarwt.
+sendmeil
+:60922
+cky.
+"
+
+# Miscellaneous login backdoors
+LOGIN_BACKDOOR_FILES="${ROOTDIR}bin/.login ${ROOTDIR}sbin/.login"
+
+# Misc Apache Backdoors
+APACHEBDOORS_STRINGS="gotcha"
+
+# Suspicious files in /dev
+# v1rootkit does use some files here to hide processes, UIDs en GIDs.
+# Files: /dev/ttyp, /dev/ttypr, /dev/ttypp, /dev/ttypq (Checked: FreeBSD and RedHat doesn't have this files by default)
+# Files: /dev/ptyxx/.list /dev/ptyxx/.proc
+# Files: ${ROOTDIR}tmp/tr/td:
+
+SUSPICIOUS1_FILES="
+.list:Unknown file:
+.proc:Unknown file:
+psybnc:IRC%%bouncer:
+td:Unknown file:
+ttyp:Unknown file:
+ttypr:Unknown file:
+ttypp:Unknown file:
+ttypq:Unknown file:
+"
+
+# Suspicious directories
+SUSPICIOUS1_DIRS="/usr/X11R6/bin/.,/copy/ /dev/rd"
+
+
+# Evil strings
+STRINGSCAN="
+bin:test2:abc:Test
+bin:init:/dev/proc/fuckit:Fuckit%%Rootkit
+bin:init:FUCK:Possible%%Suckit%%Rootkit%%found
+bin:init:backdoor:Possible%%backdoored%%init%%file%%(Suckit)
+bin:login:vt200:Possible%%Linux%%Rootkit
+bin:login:/usr/bin/xstat:Possible%%Linux%%Rootkit
+bin:login:/bin/envpc:Unknown
+bin:login:l4m3r0x:Unknown
+bin:login:/usr/lib/.tbd:TBD%%Rootkit
+bin:ls:/dev/ptyxx/.file:Dica%%(T0rn%%variant)
+bin:ls:/dev/sgk:Unknown
+bin:ls:/var/lock/subsys/...datafile...:Ohhara%%Rootkit
+bin:ls:/usr/lib/.tbd:TBD%%Rootkit
+bin:netstat:/dev/proc/fuckit:Fuckit%%Rootkit
+bin:netstat:/lib/.sso:Dica%%(T0rn%%variant)
+bin:netstat:/var/lock/subsys/...datafile...:Ohhara%%Rootkit
+bin:netstat:/dev/caca:MRK
+bin:netstat:/dev/ttyoa:Sin%%Rootkit
+bin:netstat:syg:Possible%%trojaned%%netstat
+bin:nscd:sshd_config:Possible%%backdoor%%shell%%installed%%(SSH)
+bin:ps:/dev/pts/01:SunOS%%Rootkit
+bin:ps:tw33dl3:SunOS%%Rootkit
+bin:ps:psniff:SunOS%%Rootkit
+bin:ps:/var/lock/subsys/...datafile...:Ohhara%%Rootkit%%or%%Ni0%%Rootkit
+bin:rpc.nfsd:cant%%open%%log:Possible%%sniffer%%installed
+bin:rpc.nfsd:sniff.pid:Possible%%sniffer%%installed
+bin:rpc.nfsd:tcp.log:Possible%%sniffer%%installed
+bin:sshd:/dev/ptyxx:OpenBSD%%Rootkit
+bin:syslogd:promiscuous:Possible%%sniffer%%installed
+bin:syslogd:/usr/lib/.tbd:TBD%%Rootkit
+bin:tcpd:/dev/xdta:Dica%%(T0rn%%variant)
+bin:top:/usr/lib/.tbd:TBD%%Rootkit
+bin:xtty:/bin/sh:Possible%%backdoor%%shell%%installed
+etc:passwd:r00t:Possible%%GasKit
+etc:passwd:t00r:Possible%%GasKit
+libs:libproc.so.2.0.7:/dev/proc/fuckit:Fuckit%%Rootkit
+rc.d:boot:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
+rc.d:functions:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
+rc.inet1:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
+"
+
+# bin: /bin, /usr/bin, /usr/local/bin, /usr/sbin, /usr/local/sbin
+# etc: /etc
+# rc.d: /etc/rc.d /etc/rc.d/init.d
+# rc.sysinit: /etc/rc.d
+
+# Slackware /etc/rc.d/sysvinit
+
+RCSTRINGS="
+sshdu:Possible%%trojaned%%SSH%%Daemon
+sshd1:Possible%%trojaned%%SSH%%Daemon
+linsniffer:Possible%%keyboard%%sniffer%%found
+startadore:Possible%%Adore%%rootkit%%found
+ava:Possible%%PID%%hider%%found
+.lsd:Torn%%based%%part%%found
+/usr/bin/hdparm%%-t1%%-X53%%-p:MRK%%part%%found
+"
+
+BASHPROFILESTRINGS="
+/dev/proc/fucking/config:Possible%%Rootkit%%found
+/dev/proc/toolz/scan:Possible%%Rootkit%%found
+/script:Possible%%background%%logger%%found
+"
+
+# Files
+FILESCAN="
+file:${ROOTDIR}dev/sdr0:Possible%%MD5%%hash%%database
+file:${ROOTDIR}tmp/.syshackfile:Trojaned%%syslog%%daemon
+file:${ROOTDIR}tmp/.bash_history:Possible%%Lite5-r%%rootkit
+file:${ROOTDIR}usr/info/.clib:Possible%%backdoor
+file:${ROOTDIR}usr/sbin/tcp.log:Possible%%sniffer
+file:${ROOTDIR}usr/bin/take/pid:Trojaned%%SSH%%daemon
+file:${ROOTDIR}sbin/create:MzOzD%%Local%%backdoor%%found
+file:${ROOTDIR}dev/ttypz:Found%%spwn%%login%%backdoor
+dir:${ROOTDIR}usr/bin/take:Trojaned%%SSH%%daemon
+dir:${ROOTDIR}usr/src/.lib:Unusual%%directory
+dir:${ROOTDIR}usr/share/man/man1/.1c:Possible%%Eggdrop%%installed
+dir:${ROOTDIR}lib/lblip.tk:Directory%%with%%backdoored%%SSH-configuration
+dir:${ROOTDIR}usr/sbin/...:Unusual%%directory
+dir:${ROOTDIR}usr/share/.gun:Unusual%%directory
+"
+
+
+# Evil strings for *BSD KLD (Dynamic Kernel Linker modules)
+KLDSTATKEYWORDS="backd00r backdoor"
+
+# New:
+#KLDSTATKEYWORDS="
+#backd00r:Unknown%%backdoor
+#backdoor:Unknown%%backdoor
+#r00tkit:Unknown%%backdoor
+#rootkit:Unknown%%backdoor
+#darkside:Darkside%%KLD
+#hide_link_file:Darkside%%KLD
+#"
+
+LKMSCAN="
+LuCe%%LKM:LuCe%%LKM-module
+"
+
+LKMSTRINGS="
+pass.log|thc.org:THC%%Vlogger:Keylogger/sniffer
+"
+
+RCLOCAL_STRINGS="
+/usr/bin/rpc.wall:Unknown
+sshdd:Possible%%GasKit
+hidef:Possible%%part%%of%%Knark%%found
+"
+
+# Integrity tests
+STRINGS_INTEGRITY="${BOBKIT_FILES} ${BOBKIT_DIRS} ${CINIK_FILES} ${CINIK_DIRS} ${DICA_FILES} ${FREEBSD_RK_FILES}
+${TBD_FILES} ${TORN_FILES} ${TORN_DIRS}"
+
+SNIFFER_FILES="
+${ROOTDIR}usr/lib/libice.log
+"
+
+APACHE_MOD_ROOTME="
+${ROOTDIR}usr/local/apache/libexec/mod_rootme.so
+${ROOTDIR}usr/lib/apache/1.3/mod_rootme.so
+${ROOTDIR}usr/lib/apache2/modules/mod_rootme2.so
+${ROOTDIR}usr/local/apache2/modules/mod_rootme2.so
+"
+
+HTTPDCONFS="
+${ROOTDIR}usr/local/apache/conf/httpd.conf
+${ROOTDIR}usr/local/etc/apache/httpd.conf
+${ROOTDIR}etc/apache/httpd.conf
+"
+
+
+BAD_PROCESSES="
+31337:Linsniffer
+"
+
+##################################################################################################
+#
+# Initialisation
+#
+##################################################################################################
+
+    # Detect OS
+    OPERATING_SYSTEM=`uname`
+
+    # We don't know OS yet
+    valid_os="0"
+
+    # Clear screen for a clean start
+    #clear
+      
+      
+# Begin parameters
+      
+##################################################################################################
+#
+# check complete system
+#
+##################################################################################################
+
+logtext "---------------------------- System checks ----------------------------"
+
+if [ "${CHECK}" -eq 1 ]
+  then
+    displaytext ""; displaytext "";
+    displaytext "${PROGRAM_NAME} ${PROGRAM_version} is running"
+    displaytext ""
+    displaytext -n "Determining OS... "
+
+    if [ "${OPERATING_SYSTEM}" = "Darwin" ]
+      then
+        # No major/minor version support for Macintosh yet..
+        valid_os="1"
+	full_osname="Mac OS X"
+    fi	
+
+    if [ "${OPERATING_SYSTEM}" = "AIX" ]
+      then
+        valid_os="1"
+	OPERATING_VERSIONTMP=`oslevel`
+         
+        case ${OPERATING_VERSIONTMP} in
+          4.3.2.0)
+		OPERATING_VERSION="4.3.2"
+		;;
+          4.3.3.0)
+		OPERATING_VERSION="4.3.3"
+		;;
+	  5.1.0.0)
+		OPERATING_VERSION="5.1"
+		;;
+	  5.2.0.0)
+		OPERATING_VERSION="5.2"
+		;;
+	  5.3.0.0)
+		OPERATING_VERSION="5.3"  # Planned release for 2004
+		;;
+	  5.4.0.0)
+		OPERATING_VERSION="5.4"  # Planned release for 2006
+		;;
+	  *)
+		OPERATING_VERSION="unknown"
+		;;
+	esac
+	full_osname="IBM AIX ${OPERATING_VERSION}"
+    fi
+    
+    # Sun
+    if [ "${OPERATING_SYSTEM}" = "SunOS" ]
+      then
+        valid_os="1"
+	full_osname="Sun Solaris"
+	OPERATING_VERSIONTMP=`uname -r`
+	OPERATING_ARCH=`uname -p`
+	
+	case ${OPERATING_VERSIONTMP} in
+	  4.1.3)
+	     OPERATING_VERSION="1.1"
+	     ;;
+	  5.6)
+	     OPERATING_VERSION="2.6"    
+	     ;;
+	  5.8)
+	     OPERATING_VERSION="8"
+	     ;;
+	  5.9)
+	     OPERATING_VERSION="9"
+	     ;;
+	  5.10)
+	     OPERATING_VERSION="10"
+	     ;;
+	  *)
+	     OPERATING_VERSION="Unknown"
+	     ;;
+	esac
+	full_osname="Sun Solaris ${OPERATING_VERSION} (${OPERATING_ARCH})"
+	
+	# Solaris has POSIX compatible binaries in /usr/xpg4/bin, but doesn't
+	# use them by default..
+	BINPREFIX="${ROOTDIR}usr/xpg4/bin/"
+	
+    fi
+    
+    if [ "${OPERATING_SYSTEM}" = "Linux" ]
+      then
+        # Ok, so this OS is one of the many Linux members :/
+        valid_os="0"	
+	
+	KERNELVERSION=`uname -r | cut -d '.' -f1,2`
+	logtext "Info: kernel is ${KERNELVERSION}"
+
+	GRSEC=`uname -a | grep 'grsec'`
+	if [ ! "${GRSEC}" = "" ]; then
+	  GRSECINSTALLED=1
+	  else
+	  GRSECINSTALLED=0
+	fi
+
+	# First we check it's the one with the red cap
+	if [ -e "/etc/redhat-release" ]
+	  then
+	    # Mandrake uses the redhat-release file as a link to mandrake-release...
+	    if [ -e "/etc/mandrake-release" ]
+	      then
+	        if [ -e "/etc/pclinuxos-release" ]
+		  then
+		    # It's pclinuxos (it has 3 release files..)
+		    full_osname=`cat /etc/pclinuxos-release`
+		    valid_os="1"
+		    logtext "Info: Found /etc/pclinuxos-release"
+		  else
+		    # No, it's not Red Hat, but Mandrake
+		    full_osname=`cat /etc/mandrake-release`
+		    valid_os="1"
+		    logtext "Info: Found /etc/mandrake-release"
+		fi
+	    fi
+
+	    # And Fedora too...
+	    if [ -e "/etc/fedora-release" ]
+	      then
+		full_osname=`cat /etc/redhat-release`
+		valid_os="1"
+		logtext "Info: Found /etc/fedora-release"
+		uname_model=`uname -m`
+		case $uname_model in
+		    i[0-9]86) architecture=i386; ;;
+		    x86_64)   architecture=x86_64; ;;
+		esac
+		logtext "Architecture ${uname_model} (->${architecture})"
+		full_osname="${full_osname} (${architecture})"
+		USE_PATCHED_SOFTWARE=1
+	    fi
+
+	    # And Aurora (SPARC) too...
+	    if [ -e "/etc/aurora-release" ]
+	      then
+		full_osname=`cat /etc/aurora-release`
+		valid_os="1"
+		logtext "Info: Found /etc/aurora-release"
+		uname_model=`uname -m`
+		logtext "Architecture ${uname_model}"
+	    fi
+
+	    # And Trustix too...	    
+	    if [ -e "/etc/release" ]
+	      then
+	        TRUSTIX=`cat /etc/release | grep 'Trustix'`
+		if [ ! "${TRUSTIX}" = "" ]
+		  then
+		    full_osname=`cat /etc/release`
+		    valid_os="1"
+		    logtext "Info: Found /etc/release"
+		fi
+	    fi
+
+	    # And Tao Linux too...	    
+	    if [ -e "/etc/tao-release" ]
+	      then
+	        TAOREL=`cat /etc/tao-release | grep 'Tao Linux'`
+		if [ ! "${TAOREL}" = "" ]
+		  then
+		    full_osname=`cat /etc/tao-release`
+		    valid_os="1"
+		    logtext "Info: Found /etc/tao-release"
+		fi
+	    fi
+
+	    # cAos?
+	    if [ -e "/etc/caos-release" ]
+	      then
+		full_osname=`cat /etc/caos-release | sed 's/^cAos: //'`
+		valid_os="1"
+		logtext "Info: Found /etc/caos-release"
+		uname_model=`uname -m`
+		case $uname_model in
+		 i[0-9]86) architecture=i386;;
+		 x86_64)   architecture=x86_64;;
+		esac
+	     logtext "Architecture ${uname_model} (->${architecture})"
+	     full_osname="${full_osname} (${architecture})"
+	     USE_PATCHED_SOFTWARE=1
+	    fi
+	    
+	    # Still found no valid OS
+	    if [ "${valid_os}" -eq 0 ]
+	      then
+		# Yes, it's Red Hat Linux (or a clone without an extra release file).
+		# The name and version is in there..
+		full_osname=`cat /etc/redhat-release`
+		valid_os="1"
+		logtext "Info: Found /etc/redhat-release"
+		USE_PATCHED_SOFTWARE=1
+	    fi
+	fi
+
+
+	# Debian?
+	if [ -e "/etc/debian_version" ]
+	  then
+	    version=`cat /etc/debian_version`
+
+	    uname_model=`uname -m`
+	    case $uname_model in
+		i[0-9]86)		architecture=i386; ;;
+		sun4u|sparc64)		architecture=sparc64; ;;
+		arm*)     		architecture=arm; ;;
+		ppc)			architecture=powerpc; ;;
+		x86_64)			architecture=x86_64; ;;		
+	    esac
+
+	    if [ "${version}" = "" ]; then
+	        valid_os="0"
+	      else
+	        if [ "${architecture}" = "" ]; then
+		    valid_os="0"
+		  else
+		    full_osname="Debian ${version} (${architecture})"
+		    valid_os="1"
+		fi
+	    fi
+	    logtext "Info: Found /etc/debian_version"
+	    USE_PATCHED_SOFTWARE=1
+	fi
+
+	# PLD Linux?
+	if [ -e "/etc/pld-release" ]
+	  then
+	    version=`cat /etc/pld-release`
+
+	    uname_model=`uname -m`
+	    case $uname_model in
+		i[0-9]86) 	architecture=i386; ;;
+		sun4u|sparc64)  architecture=sparc64; ;;
+		arm*)     	architecture=arm; ;;
+		ppc)      	architecture=powerpc; ;;
+	    esac
+
+	    if [ "${version}" = "" ]; then
+	        valid_os="0"
+	      else
+	        if [ "${architecture}" = "" ]; then
+		    valid_os="0"
+		  else
+		    full_osname="${version} (${architecture})"
+		    valid_os="1"
+		fi
+	    fi
+	    logtext "Info: Found /etc/pld-release"
+	fi
+
+	# Cobalt
+	if [ -e "/etc/cobalt-release" ]
+	  then
+	    # We ignore the /etc/vendor-release
+	    version=`cat /etc/cobalt-release`	  
+	    full_osname="${version}"
+	    valid_os="1"
+	    logtext "Info: Found /etc/cobalt-release"
+	fi
+
+	# CPUBuilders Linux?
+	if [ -e "/etc/cpub-release" ]
+	  then
+	    version=`cat /etc/cpub-release`	  
+	    full_osname="${version}"
+	    valid_os="1"
+	    logtext "Info: Found /etc/cpub-release"
+	fi
+
+	# E-smith
+	if [ -e "/etc/e-smith-release" ]
+	  then
+	    version=`cat /etc/e-smith-release`	  
+	    full_osname="${version}"
+	    valid_os="1"
+	    logtext "Info: Found /etc/e-smith-release"
+	fi
+
+	# SuSE?
+	if [ -e "/etc/SuSE-release" ]
+	  then
+	    # Grep for 'SuSE Linux' because this file contains multiple lines
+	    # NOT case sensitive, because of Suse Linux enterprise server
+	    version=`cat /etc/SuSE-release | grep -i "SuSE Linux"`	  
+	    full_osname="${version}"
+	    valid_os="1"
+	    logtext "Info: Found /etc/SuSE-release"
+	fi
+
+	# SuSE (Linux Openexchange Server)
+	if [ -e "/etc/SLOX-release" ]
+	  then
+	    # Grep for 'SuSE Linux' because this file contains multiple lines
+	    version=`cat /etc/SLOX-release | grep "SuSE Linux"`
+	    full_osname="${version}"
+	    valid_os="1"
+	    logtext "Info: Found /etc/SLOX-release"
+	fi
+
+	# Turbo Linux?
+	if [ -e "/etc/turbolinux-release" ]
+	  then
+	    full_osname=`cat /etc/turbolinux-release`
+	    valid_os="1"
+
+	    logtext "Info: Found /etc/turbolinux-release"
+	fi
+
+	# Slackware?
+	if [ -e "/etc/slackware-version" ]
+	  then
+	    full_osname=`cat /etc/slackware-version`
+	    valid_os="1"
+
+	    logtext "Info: Found /etc/slackware-version"
+	fi
+
+	# YellowDog?
+	if [ -e "/etc/yellowdog-release" ]
+	  then
+	    full_osname=`cat /etc/yellowdog-release`
+	    valid_os="1"
+
+	    logtext "Info: Found /etc/yellowdog-release"
+	fi
+
+	# Gentoo?
+	if [ -e "/etc/gentoo-release" ]
+	  then
+	    GENTOO=1
+	    version=`cat /etc/gentoo-release | awk '{ print $5 }' | cut -d '.' -f1,2`
+	    uname_model=`uname -m`
+		case $uname_model in
+		    i[0-9]86) architecture=i386;    ;;
+		    ppc)      architecture=powerpc; ;;
+		    sparc)    architecture=sparc;   ;;
+		    sparc64)  architecture=sparc64; ;;
+		    x86_64)   architecture=x86_64;  ;;
+		esac	  
+		logtext "Architecture ${uname_model} (->${architecture})"
+
+	    full_osname="Gentoo Linux ${version} (${architecture})"
+	    valid_os="1"
+
+	    logtext "Info: Found /etc/gentoo-release"
+	fi
+    fi
+
+    
+    if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]
+      then
+        valid_os="1"
+	version=`sysctl -n kern.osrelease | cut -d "-" -f 1`
+	architecture=`sysctl -n hw.machine_arch`
+	SUBVERSION=`sysctl -n kern.osrelease | cut -d "-" -f 2 | tr -d ' '`
+	SUBVERSION2=`uname -a | grep "RELEASE #0"`
+	full_osname="FreeBSD ${version} (${architecture})"	
+	
+	logtext "Info: Found FreeBSD ${version}"
+
+	# Check FreeBSD version (release, stable, current)
+        if [ "${SUBVERSION}" = "RELEASE" -a ! "${SUBVERSION2}" = "" ]
+	  then
+	    logtext "Debug: You have a 'RELEASE' version of FreeBSD" >> ${DEBUGFILE}
+	  else
+	    logtext "Debug: You do not have a 'RELEASE' version of FreeBSD: MD5 scan will be skipped" >> ${DEBUGFILE}
+	    MD5CHECK_SKIP=1
+	fi
+    fi
+
+    if [ "${OPERATING_SYSTEM}" = "OpenBSD" ]
+      then
+        valid_os="1"
+	version=`uname -r`
+	# uname -m (i.e. i386)
+	architecture=`uname -m`
+	full_osname="OpenBSD ${version} (${architecture})"	
+    fi
+
+    if [ "${OPERATING_SYSTEM}" = "NetBSD" ]
+      then
+        valid_os="1"
+    fi
+    # Extract information from Operating System database
+    fos_name=`echo "${full_osname}" | sed 's/\./\\\./g'`
+    os_string=`cat ${DB_PATH}/os.dat | grep "${fos_name}:"`
+    os_id=`echo ${os_string} | cut -d ":" -f1`
+    md5=`echo ${os_string} | cut -d ":" -f3`
+    if [ -z "${md5}" ]; then
+      md5="${MD5BINARY}"
+    fi
+    binroot=`echo ${os_string} | cut -d ":" -f4`
+    
+    if [ "${os_id}" = "" ]
+      then
+        valid_os="0"
+    fi
+
+    if [ ${valid_os} -eq 0 ]
+      then
+        displaytext "Unknown"
+	displaytext "Warning: This operating system is not fully supported!"
+	logtext "Warning: This operating system is not fully supported!"
+	os_id="NA"
+	MD5CHECK_SKIP=1
+	if [ ${MD5OPT} -eq 0 ]; then
+		displaytext "All MD5 checks will be skipped!"
+		logtext "All MD5 checks will be skipped!"
+	fi
+      else
+        displaytext "Ready"
+    fi
+
+    logtext "Info: Full OS name = ${full_osname}"
+    logtext "Info: OS ID = ${os_id}"
+
+    if [ $MD5CHECK_SKIP -eq 0 ]; then
+	    if [ -n "${md5}" ]; then
+		if [ -e `echo ${md5} | cut -d " " -f1` ]; then
+			logtext "Info: Found MD5 command ${md5}" 
+		else
+			logtext "Warning: Cannot find MD5 command ${md5}"
+			md5=
+		fi
+	    fi
+    fi
+
+	if [ "${PERLFOUND}" -eq 1 ]
+	  then
+	    logtext "Info: Perl version ${PERLVERSION} found"
+	    
+	    if [ $MD5CHECK_SKIP -eq 0 ]; then
+		# Only use Perl MD5 module if we have it installed
+		# If we can find it then skip the md5(sum) utility
+		perlmd5installed=`${MYDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
+		perlsha1installed=`${MYDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::SHA1 installed'`
+
+		if [ ! "${perlmd5installed}" = "" ]; then
+			logtext "Info: Perl module ${perlmd5installed}"
+			md5="${MYDIR}/lib/rkhunter/scripts/filehashmd5.pl"
+		fi
+
+		if [ ! "${perlsha1installed}" = "" ]; then
+			logtext "Info: Perl module ${perlsha1installed}"
+			sha1="${MYDIR}/lib/rkhunter/scripts/filehashsha1.pl"
+		fi
+	    fi
+	  else
+	    logtext "Info: Perl not found"
+	fi
+
+	if [ $MD5CHECK_SKIP -eq 0 ]; then
+		if [ -n "${md5}" ]; then
+			if [ "${md5}" = "${MYDIR}/lib/rkhunter/scripts/filehashmd5.pl" ]; then
+				logtext "Info: Using perl module Digest::MD5 to verify MD5 hashes"
+			else
+				logtext "Info: Using command ${md5} to verify MD5 hashes"
+			fi
+		else
+			MD5CHECK_SKIP=1
+			logtext "Warning: Cannot find any MD5 command: All MD5 checks will be skipped"
+			displaytext "Warning: Cannot find any MD5 command: All MD5 checks will be skipped"
+		fi
+	fi
+
+	if [ -d ${TMPDIR} ]
+	  then
+	    logtext "Info: using ${TMPDIR} as temporary directory"
+	  else
+	    logtext "Fatal: temporary directory ${TMPDIR} doesn't exist." >> ${DEBUGFILE}
+	    exit 1
+	fi
+
+	if [ `${BINPREFIX}id -u` = "0" ]
+	  then
+	    logtext "Info: UID is zero (root)" >> ${DEBUGFILE}
+	  else
+	    displaytext "Fatal error: root rights needed to perform a full scan"
+	    exit 1
+	fi
+
+    if [ ! -f "${ROOTDIR}proc/ksyms" ]; then
+      logtext "Info: ksyms file check will be skipped (${ROOTDIR}proc/ksyms not available on this system)"
+    fi
+    
+    
+
+    logtext "---------------------------- File checks -----------------------------"
+
+
+NEEDEDFILES="
+${DB_PATH}/md5blacklist.dat
+${DB_PATH}/mirrors.dat
+${DB_PATH}/programs_bad.dat
+${DB_PATH}/programs_good.dat
+"
+
+    for I in ${NEEDEDFILES}; do
+      logtext -n "Checking ${I}... "
+      if [ -f "${I}" ]
+        then
+          logtext --nodate "OK"
+        else
+	  logtext --nodate "Error. Doesn't exists!"
+	  displaytext "Fatal error: file ${I} doesn't exists. Please check your paths and/or parameters."
+	  exit 1
+      fi
+    done
+    
+    
+    displaytext ""; displaytext ""
+    displaytext "${YELLOW}Checking binaries${NORMAL}"
+    displaytext "${test}* Selftests${NORMAL}"    
+
+    logtext "------------------------------ Selftests ------------------------------"
+
+    # Self check
+
+	SIZE=23
+	displaytext -n "     Strings (command)"
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+	STRINGSFAILED=0
+
+	if [ "${STRINGSFOUND}" -eq 1 ]
+	  then
+    	    for I in ${STRINGS_INTEGRITY}; do
+	      echo "${I}" > ${TMPDIR}/stringstest.dat
+	      logtext -n "Strings selftest: scanning for string ${I}... "
+	      STRINGNAME=`echo "${I}" | sed 's/\./\\\./g'`
+	      STRINGFOUND=`strings ${TMPDIR}/stringstest.dat | grep "${STRINGNAME}" | tr -d ' '`
+	      if [ "${STRINGFOUND}" = "" ]
+		then
+	          STRINGSFAILED=1
+	          FAILEDSTRINGS="${FAILEDSTRINGS} ${I}"
+		  logtext --nodate "WARNING!"
+		else
+		  logtext --nodate "OK"
+	      fi
+	    done
+	
+	    if [ "${STRINGSFAILED}" -eq 1 ]
+	      then
+		  insertlayout
+		  displaytext $E "   ${file}${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+		  displaytext ""
+		  displaytext "-----------------------------------------------------------------------------------"
+		  displaytext "Expected (but not found) strings:"
+		  displaytext "${FAILEDSTRINGS}"
+		  displaytext "-----------------------------------------------------------------------------------"
+	    else
+		  jump=`expr ${defaultcolumn} - ${SIZE}`
+		  insertlayout
+		  displaytext $E "   ${file}${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	    fi
+	    displaytext "${NORMAL}"
+	  else
+	    insertlayout
+	    displaytext $E "   ${file}${LAYOUT}[ ${WHITE}Skipped!${NORMAL} ]"
+	fi
+
+	# Clean up temporary file
+	if [ -f ${TMPDIR}/stringstest.dat ]; then
+	  rm -f ${TMPDIR}/stringstest.dat
+	fi
+	
+    displaytext ""
+
+
+
+    logtext "---------------------------- MD5 hash tests ---------------------------"
+
+    # Binary check
+    
+    displaytext "${test}* System tools${NORMAL}"    
+
+    if [ $MD5CHECK_SKIP -eq 0 ]
+      then    
+	logtext "Starting MD5 checksum test (${md5})"
+	
+	PRELINKING=0
+	if [ -e ${ROOTDIR}etc/prelink.cache ]
+	  then
+	    PRELINKING=1
+	    logtext "Found cache file of prelinked files"
+	    logtext "Using prelink binary: ${PRELINKBINARY}"
+	    displaytext "Info: prelinked files found"
+	    
+	fi
+
+	# Check if we have any 'known good' checksums for this operating system
+	# If not, we perform a 'known bad' check.
+	DBMD5COUNT=`cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:/"`
+	if [ "${DBMD5COUNT}" = "" -o ${PERFORMKNOWNBAD} -eq 1 ]
+	  then
+	  
+	    displaytext "  ${WHITE}Performing 'known bad' check...${NORMAL}"
+
+	    # Files to check	  
+	    CHECKFILES="${ROOTDIR}bin/cat ${ROOTDIR}bin/chmod ${ROOTDIR}bin/chown ${ROOTDIR}bin/csh ${ROOTDIR}bin/date ${ROOTDIR}bin/df ${ROOTDIR}bin/dmesg ${ROOTDIR}bin/echo ${ROOTDIR}bin/ed ${ROOTDIR}bin/egrep ${ROOTDIR}bin/env ${ROOTDIR}bin/fgrep ${ROOTDIR}bin/grep ${ROOTDIR}bin/id ${ROOTDIR}bin/kill ${ROOTDIR}bin/login ${ROOTDIR}bin/ls ${ROOTDIR}bin/md5 ${ROOTDIR}bin/more ${ROOTDIR}bin/mount ${ROOTDIR}bin/netstat ${ROOTDIR}bin/ps ${ROOTDIR}bin/sh ${ROOTDIR}bin/sha1 ${ROOTDIR}bin/sort ${ROOTDIR}bin/su ${ROOTDIR}sbin/checkproc ${ROOTDIR}sbin/chkconfig ${ROOTDIR}sbin/depmod ${ROOTDIR}sbin/dmesg ${ROOTDIR}sbin/ifconfig ${ROOTDIR}sbin/ifdown ${ROOTDIR}sbin/ifstatus ${ROOTDIR}sbin/ifup ${ROOTDIR}sbin/init ${ROOTDIR}sbin/insmod ${ROOTDIR}sbin/ip ${ROOTDIR}sbin/kldload ${ROOTDIR}sbin/kldstat ${ROOTDIR}sbin/kldunload ${ROOTDIR}sbin/ksyms ${ROOTDIR}sbin/lsmod ${ROOTDIR}sbin/md5 ${ROOTDIR}sbin/modinfo ${ROOTDIR}sbin/modload ${ROOTDIR}sbin/modprobe ${ROOTDIR}sbin/modunload ${ROOTDIR}sbin/nologin ${ROOTDIR}sbin/rmmod ${ROOTDIR}sbin/runlevel ${ROOTDIR}sbin/sulogin ${ROOTDIR}sbin/sysctl ${ROOTDIR}sbin/syslogd ${ROOTDIR}usr/bin/basename ${ROOTDIR}usr/bin/chattr ${ROOTDIR}usr/bin/du ${ROOTDIR}usr/bin/egrep ${ROOTDIR}usr/bin/fgrep ${ROOTDIR}usr/bin/file ${ROOTDIR}usr/bin/find ${ROOTDIR}usr/bin/groups ${ROOTDIR}usr/bin/head ${ROOTDIR}usr/bin/kill ${ROOTDIR}usr/bin/killall ${ROOTDIR}usr/bin/last ${ROOTDIR}usr/bin/lastlog ${ROOTDIR}usr/bin/less ${ROOTDIR}usr/bin/locate ${ROOTDIR}usr/bin/logger ${ROOTDIR}usr/bin/login ${ROOTDIR}usr/bin/lsattr ${ROOTDIR}usr/bin/md5sum ${ROOTDIR}usr/bin/modstat ${ROOTDIR}usr/bin/more ${ROOTDIR}usr/bin/netstat ${ROOTDIR}usr/bin/newsyslog ${ROOTDIR}usr/bin/passwd ${ROOTDIR}usr/bin/pstree ${ROOTDIR}usr/bin/sha1sum ${ROOTDIR}usr/bin/size ${ROOTDIR}usr/bin/slocate ${ROOTDIR}usr/bin/sockstat ${ROOTDIR}usr/bin/sort ${ROOTDIR}usr/bin/stat ${ROOTDIR}usr/bin/strace ${ROOTDIR}usr/bin/strings ${ROOTDIR}usr/bin/su ${ROOTDIR}usr/bin/systat ${ROOTDIR}usr/bin/test ${ROOTDIR}usr/bin/top ${ROOTDIR}usr/bin/touch ${ROOTDIR}usr/bin/uname ${ROOTDIR}usr/bin/users ${ROOTDIR}usr/bin/vmstat ${ROOTDIR}usr/bin/w ${ROOTDIR}usr/bin/watch ${ROOTDIR}usr/bin/wc ${ROOTDIR}usr/bin/wget ${ROOTDIR}usr/bin/whatis ${ROOTDIR}usr/bin/whereis ${ROOTDIR}usr/bin/which ${ROOTDIR}usr/bin/who ${ROOTDIR}usr/bin/whoami ${ROOTDIR}usr/sbin/adduser ${ROOTDIR}usr/sbin/amd ${ROOTDIR}usr/sbin/chroot ${ROOTDIR}usr/sbin/cron ${ROOTDIR}usr/sbin/inetd ${ROOTDIR}usr/sbin/kudzu ${ROOTDIR}usr/sbin/syslogd ${ROOTDIR}usr/sbin/tcpd ${ROOTDIR}usr/sbin/useradd ${ROOTDIR}usr/sbin/usermod ${ROOTDIR}usr/sbin/vipw ${ROOTDIR}usr/sbin/xinetd"
+
+	    for I in ${CHECKFILES}; do
+	      if [ -f ${I} ]
+	        then
+	          displaytext -n "   ${I}"
+		  SIZE=`echo "${I}" | wc -c | tr -d ' '`	  
+	          ISBAD=""
+	          MD5SUM=`${md5} ${I}`
+
+	          ISBAD=`cat ${DB_PATH}/md5blacklist.dat | grep ${MD5SUM}`
+
+	          if [ "${ISBAD}" = "" ]
+	  	    then
+		      jump=`expr ${defaultcolumn} - ${SIZE}`
+		      insertlayout
+		      displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		    else
+		      jump=`expr ${defaultcolumn} - ${SIZE}`
+		      insertlayout
+		      displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+		      logtext "Possible backdoored or harmful file found ${I}" >> ${DEBUGFILE}
+		      WARNING=1
+	          fi
+	      fi
+	    done
+	fi
+
+
+	displaytext "  ${WHITE}Performing 'known good' check...${NORMAL}"	    
+
+	for i in `cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:/"`
+	do
+	  file=`echo ${i} | cut -d : -f 2`		
+	  SIZE=`echo "${file}" | wc -c | tr -d ' '`	  
+	  MD5_COUNT=`expr ${MD5_COUNT} + 1`
+	  FOUND=0
+	  if [ ! "${file}" = "${lastfile}" ]
+	    then
+	      if [ -e "${file}"  ]
+	        then
+		  FILEHASHES=`cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:${file}:" | cut -d : -f 3`
+		  MYPACKAGES=`cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:${file}:" | cut -d : -f 6`
+		  #FILEHASHES=`echo ${i} | cut -d : -f 3`
+		  for J in ${FILEHASHES}; do
+		  if [ "$PRELINKING" -eq "1" -a "$PRELINKFOUND" -eq "1" ]
+		    then
+		      PRELINKVERIFY=`${PRELINKBINARY} --verify ${file} > ${TMPDIR}/prelink.tst`
+		      myhash=`${md5} ${TMPDIR}/prelink.tst | cut -d " " -f 1`
+		    else
+	              myhash=`${md5} ${file} | cut -d " " -f 1`
+		  fi
+		  # Fix for OpenBSD's version of MD5 (doesn't support -q option)
+		  if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${md5}" = "/bin/md5" ]; then
+		      myhash=`echo ${myhash} | cut -d ' ' -f4 | tr -d ' '`
+		  fi      
+
+	          hash="${J}"
+
+	    	  if [ "${hash}" = "${myhash}" ]
+		    then
+		        FOUND=1
+		        logtext "${file} hash valid, found in database"
+		       else
+		        logtext "${file} Hash NOT valid (My MD5: ${myhash}, expected: ${hash})"
+		  fi
+		  done
+		  		  
+		if [ ${FOUND} -eq 0 ]
+		  then
+		    # Compare against whitelist
+		    logtext "Using whitelists to compare MD5 hash (searching for ${myhash})"
+		    for WHITELISTSTRING in `cat ${CONFIGFILE} | grep '^MD5WHITELIST=' | sed 's/MD5WHITELIST=//g'`; do
+		      WHITELISTFILE=`echo ${WHITELISTSTRING} | cut -d ':' -f1`
+		      WHITELISTHASH=`echo ${WHITELISTSTRING} | cut -d ':' -f2`
+		      logtext "Checking ${WHITELISTHASH} (${WHITELISTFILE})"
+		      if [ "${WHITELISTFILE}" = "${file}" -a "${WHITELISTHASH}" = "${myhash}" ]; then
+		        FOUND=1
+		        logtext "Whitelisted hash found"
+		      fi
+		      
+		    done
+		    if [ ${FOUND} -eq 0 ]; then
+		      logtext "No whitelisted MD5 hash found for ${file}"
+		      logtext "MD5 hash for my file (${file}) is ${myhash}, but is not in database"
+		    fi
+		    
+		    logtext "End of whitelist compare"
+		fi
+		
+	        displaytext -n "   ${file}"
+	        if [ ${FOUND} -eq 1 ]
+	  	  then
+		    jump=`expr ${defaultcolumn} - ${SIZE}`
+		    insertlayout
+		    displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		  else
+		    MD5_DIFFERENT=`expr ${MD5_DIFFERENT} + 1`
+		    jump=`expr ${defaultcolumn} - ${SIZE}`
+		    insertlayout
+		    displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+		    logtext "Checking ${file} against hashes in database (${FILEHASHES}) failed" >> ${DEBUGFILE}
+		    if [ -f /bin/rpm ]
+		      then
+		        RPMPACKAGE=`rpm -qf ${file}`
+			logtext "RPM info: your package '${RPMPACKAGE}'"
+			logtext "RPM info: packages in database: ${MYPACKAGES}"
+		    fi
+		    WARNING=1
+
+		    logtext "---"
+		    logtext "${os_id}:${file}:${myhash}:-:-:${RPMPACKAGE}"
+		    logtext "---"
+
+	        fi
+		
+	      else
+	      
+	        jump=`expr ${defaultcolumn} - ${SIZE}`
+	        displaytext -n "   ${file}"
+		insertlayout
+	        displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
+	    fi
+	  fi
+	  lastfile="${file}"
+ 
+	done
+
+	# Cleanup temporary file
+	if [ -f ${TMPDIR}/prelink.tst ]; then rm -f ${TMPDIR}/prelink.tst; fi
+	
+	if [ $MD5_COUNT -eq 0 ]; then
+		displaytext "Info: Check skipped - no hashes available"
+		logtext "Info: Check skipped - no hashes available"
+	fi
+
+	if [ ${WARNING} -eq 1 ]; then
+	  displaytext "--------------------------------------------------------------------------------"
+	  displaytext "Rootkit Hunter has found some bad or unknown hashes. This can happen due to replaced"
+	  displaytext "binaries or updated packages (which give other hashes). Be sure your hashes are"
+	  displaytext "up-to-date (rkhunter --update). If you're in doubt about these hashes, contact"
+	  displaytext "us through the Rootkit Hunter mailinglist at rkhunter-users@lists.sourceforge.net."
+	  displaytext "--------------------------------------------------------------------------------"
+	fi
+
+        keypresspause
+
+      else
+        displaytext "     ${WHITE}Skipped!${NORMAL}"
+        logtext "MD5 test skipped!"
+
+    fi	
+
+
+
+
+#    displaytext "${test}* Searching for system files${NORMAL}"    
+    
+#    SCANFILELIST="${MYDIR}/lib/rkhunter/tmp/files.lst"
+#    if [ ${QUICKSCAN} -eq 0 ]
+#      then
+#	find / -name *.o -or -name *.ko > ${SCANFILELIST}
+#      else
+#        locate *.o *.ko | head > ${SCANFILELIST}
+#    fi
+#    FILESCOUNT=`cat ${SCANFILELIST} | wc -l | tr -s ' ' | tr -d ' '`
+#    displaytext "Datbase contains ${FILESCOUNT} files to investigate."
+    
+
+
+
+##################################################################################################
+#
+# Rootkits
+#
+##################################################################################################
+
+
+    displaytext ""; displaytext ""
+    displaytext "${YELLOW}Check rootkits${NORMAL}"
+    displaytext "${test}* Default files and directories${NORMAL}"
+
+    logtext "------------------------------ Rootkits ------------------------------"
+
+    # 55808 Trojan - Variant A
+
+	SCAN_ROOTKIT="55808 Trojan - Variant A"
+	SCAN_FILES=${W55808A_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # ADM worm
+
+	SIZE="13"
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+
+	displaytext -n "   ADM Worm... "
+	if [ -e /etc/passwd ]; then
+	  logtext "Checking /etc/passwd for presence of ADM worm"
+	  WORM=`cat /etc/passwd | grep 'w0rm'`
+	  if [ "${WORM}" = "" ]
+	    then
+	      insertlayout
+	      displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	      logtext --nodate "OK"
+	    else
+	      insertlayout
+	      displaytext $E "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+	      logtext --nodate "Warning! Possible ADM w0rm found"
+	      displaytext "${FOUNDTRACES}"
+	  fi
+	 else
+	  insertlayout
+          displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+	fi
+
+    # AjaKit
+
+	SCAN_ROOTKIT="AjaKit"
+	SCAN_FILES=${AJAKIT_FILES}
+	SCAN_DIRS=${AJAKIT_DIRS}
+	SCAN_KSYMS=${AJAKIT_KSYMS}
+	scanrootkit
+
+    # aPa Kit
+
+	SCAN_ROOTKIT="aPa Kit"
+	SCAN_FILES=${APAKIT_FILES}
+	SCAN_DIRS=${APAKIT_DIRS}
+	SCAN_KSYMS=${APAKIT_KSYMS}
+	scanrootkit
+
+    # Apache worm
+
+	SCAN_ROOTKIT="Apache Worm"
+	SCAN_FILES=${APACHEWORM_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Ambient (ark) Rootkit
+
+	SCAN_ROOTKIT="Ambient (ark) Rootkit"
+	SCAN_FILES=${ARK_FILES}
+	SCAN_DIRS=${ARK_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Balaur Rootkit
+
+	SCAN_ROOTKIT="Balaur Rootkit"
+	SCAN_FILES=${BALAUR_FILES}
+	SCAN_DIRS=${BALAUR_DIRS}
+	SCAN_KSYMS=${BALAUR_KSYMS}
+	scanrootkit
+
+    # BeastKit
+
+	SCAN_ROOTKIT="BeastKit"
+	SCAN_FILES=${BEASTKIT_FILES}
+	SCAN_DIRS=${BEASTKIT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # beX2
+	SCAN_ROOTKIT="beX2"
+	SCAN_FILES=${BEX_FILES}
+	SCAN_DIRS=${BEX_DIRS}
+	SCAN_KSYMS=${BEX_KSYMS}
+	scanrootkit
+
+    # BOBKit
+
+	SCAN_ROOTKIT="BOBKit"
+	SCAN_FILES=${BOBKIT_FILES}
+	SCAN_DIRS=${BOBKIT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # CiNIK Worm (Slapper.B variant)
+	SCAN_ROOTKIT="CiNIK Worm (Slapper.B variant)"
+	SCAN_FILES=${CINIK_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Danny-Boy's Abuse Kit
+
+	SCAN_ROOTKIT="Danny-Boy's Abuse Kit"
+	SCAN_FILES=${DANNYBOYS_FILES}
+	SCAN_DIRS=${DANNYBOYS_DIRS}
+	SCAN_KSYMS=${DANNYBOYS_KSYMS}
+	scanrootkit
+
+    # Devil RootKit
+
+	SCAN_ROOTKIT="Devil RootKit"
+	SCAN_FILES=${DEVIL_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Dica
+
+	SCAN_ROOTKIT="Dica"
+	SCAN_FILES=${DICA_FILES}
+	SCAN_DIRS=${DICA_DIRS}
+	SCAN_KSYMS=${DICA_KSYMS}
+	scanrootkit
+
+    # Dreams RootKit
+
+	SCAN_ROOTKIT="Dreams Rootkit"
+	SCAN_FILES=${DREAMS_FILES}
+	SCAN_DIRS=${DREAMS_DIRS}
+	SCAN_KSYMS=${DREAMS_KSYMS}
+	scanrootkit
+
+    # Duarawkz
+
+	SCAN_ROOTKIT="Duarawkz"
+	SCAN_FILES=${DUARAWKZ_FILES}
+	SCAN_DIRS=${DUARAWKZ_DIRS}
+	SCAN_KSYMS=${DUARAWKZ_KSYMS}
+	scanrootkit
+
+    # Flea Linux rootkit
+
+	SCAN_ROOTKIT="Flea Linux Rootkit"
+	SCAN_FILES=${FLEA_FILES}
+	SCAN_DIRS=${FLEA_DIRS}
+	SCAN_KSYMS=${FLEA_KSYMS}
+	scanrootkit
+
+    # FreeBSD Rootkit
+
+	SCAN_ROOTKIT="FreeBSD Rootkit"
+	SCAN_FILES=${FREEBSD_RK_FILES}
+	SCAN_DIRS=${FREEBSD_RK_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Fuck`it Rootkit
+
+	SCAN_ROOTKIT="Fuck\`it Rootkit"
+	SCAN_FILES=${FUCKIT_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # GasKit
+
+	SCAN_ROOTKIT="GasKit"
+	SCAN_FILES=${GASKIT_FILES}
+	SCAN_DIRS=${GASKIT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Heroin
+	SCAN_ROOTKIT="Heroin LKM"
+	SCAN_FILES=${HEROIN_FILES}
+	SCAN_DIRS=${HEROIN_DIRS}
+	SCAN_KSYMS=${HEROIN_KSYMS}
+	scanrootkit
+
+    # HjC Kit
+	SCAN_ROOTKIT="HjC Kit"
+	SCAN_FILES=${HJCKIT_FILES}
+	SCAN_DIRS=${HJCKIT_DIRS}
+	SCAN_KSYMS=${HJCKIT_KSYMS}
+	scanrootkit
+
+    # ignoKit
+
+	SCAN_ROOTKIT="ignoKit"
+	SCAN_FILES=${IGNOKIT_FILES}
+	SCAN_DIRS=${IGNOKIT_DIRS}
+	SCAN_KSYMS=${IGNOKIT_KSYMS}
+	scanrootkit
+
+    # ImperalsS-FBRK
+
+	SCAN_ROOTKIT="ImperalsS-FBRK"
+	SCAN_FILES=""
+	SCAN_DIRS=${IMPFRB_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Irix Rootkit
+    
+	SCAN_ROOTKIT="Irix Rootkit"
+	SCAN_FILES=${IRIXRK_FILES}
+	SCAN_DIRS=${IRIXRK_DIRS}
+	SCAN_KSYMS=${IRIXRK_KSYMS}
+	scanrootkit
+    
+    # Kitko
+
+	SCAN_ROOTKIT="Kitko"
+	SCAN_FILES=${KITKO_FILES}
+	SCAN_DIRS=${KITKO_DIRS}
+	SCAN_KSYMS=${KITKO_KSYMS}
+	scanrootkit
+
+    # Knark
+
+	SCAN_ROOTKIT="Knark"
+	SCAN_FILES=${KNARK_FILES}
+	SCAN_DIRS=${KNARK_DIRS}
+	SCAN_KSYMS=${KNARK_KSYMS}
+	scanrootkit
+
+    # Li0n Worm
+
+	SCAN_ROOTKIT="Li0n Worm"
+	SCAN_FILES=${LION_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Lockit / LJK2
+
+	SCAN_ROOTKIT="Lockit / LJK2"
+	SCAN_FILES=${LOCKIT_FILES}
+	SCAN_DIRS=${LOCKIT_DIRS}
+	SCAN_KSYMS=${LOCKIT_KSYMS}
+	scanrootkit
+    
+    # MRK (MiCrobul RootKit?)
+
+	SCAN_ROOTKIT="MRK"
+	SCAN_FILES=${MRK_FILES}
+	SCAN_DIRS=${MRK_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Ni0 Rootkit
+
+	SCAN_ROOTKIT="Ni0 Rootkit"
+	SCAN_FILES=${NIO_FILES}
+	SCAN_DIRS=${NIO_DIRS}
+	SCAN_KSYMS=${NIO_KSYMS}
+	scanrootkit
+
+    # RootKit for SunOS / NSDAP
+
+	SCAN_ROOTKIT="RootKit for SunOS / NSDAP"
+	SCAN_FILES=${NSDAP_FILES}
+	SCAN_DIRS=${NSDAP_DIRS}
+	SCAN_KSYMS=${NSDAP_KSYMS}
+	scanrootkit
+
+    # Optic Kit Worm
+
+	SCAN_ROOTKIT="Optic Kit (Tux)"
+	SCAN_FILES=""
+	SCAN_DIRS=${OPTICKIT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Oz Rootkit
+
+	SCAN_ROOTKIT="Oz Rootkit"
+	SCAN_FILES=${OZ_FILES}
+	SCAN_DIRS=${OZ_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Portacelo
+
+	SCAN_ROOTKIT="Portacelo"
+	SCAN_FILES=${PORTACELO_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # R3dstorm Toolkit
+
+	SCAN_ROOTKIT="R3dstorm Toolkit"
+	SCAN_FILES=${REDSTORM_FILES}
+	SCAN_DIRS=${REDSTORM_DIRS}
+	SCAN_KSYMS=${REDSTORM_KSYMS}
+	scanrootkit
+
+    # RH-Sharpe's rootkit
+
+	SCAN_ROOTKIT="RH-Sharpe's rootkit"
+	SCAN_FILES=${RHSHARPES_FILES}
+	SCAN_DIRS=${RHSHARPES_DIRS}
+	SCAN_KSYMS=${RHSHARPES_KSYMS}
+	scanrootkit
+
+    # RSHA's rootkit
+
+	SCAN_ROOTKIT="RSHA's rootkit"
+	SCAN_FILES=${RSHA_FILES}
+	SCAN_DIRS=${RSHA_DIRS}
+	SCAN_KSYMS=${RSHA_KSYMS}
+	scanrootkit
+
+    # Sebek LKM (Honeypot)
+
+	STATUS=0
+	SIZE=13
+
+	if [ ${DEBUG} -eq 1 ]; then
+	   logtext "Debug: Sebek LKM"
+	fi
+	displaytext -n "   Sebek LKM..."
+
+	# Search for signs of Sebek in ksyms file
+	if [ -f /proc/ksyms ]; then
+	  if `egrep -i 'adore|sebek' < /proc/ksyms >/dev/null 2>&1`; then
+	    STATUS=1
+	  fi
+        fi
+
+	if [ ${STATUS} -eq 0 ]
+	  then
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	  else
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	    displaytext "${FOUNDTRACES}"
+	fi
+
+    # Scalper Worm
+
+	SCAN_ROOTKIT="Scalper Worm"
+	SCAN_FILES=${SCALPER_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Shutdown
+
+	SCAN_ROOTKIT="Shutdown"
+	SCAN_FILES=${SHUTDOWN_FILES}
+	SCAN_DIRS=${SHUTDOWN_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # SHV4 Rootkit
+
+	SCAN_ROOTKIT="SHV4"
+	SCAN_FILES=${SHV4_FILES}
+	SCAN_DIRS=${SHV4_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # SHV5 Rootkit
+
+	SCAN_ROOTKIT="SHV5"
+	SCAN_FILES=${SHV5_FILES}
+	SCAN_DIRS=${SHV5_DIRS}
+	SCAN_KSYMS=${SHV5_KSYMS}
+	scanrootkit
+
+    # Sin Rootkit
+
+	SCAN_ROOTKIT="Sin Rootkit"
+	SCAN_FILES=${SINROOTKIT_FILES}
+	SCAN_DIRS=${SINROOTKIT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Slapper
+
+	SCAN_ROOTKIT="Slapper"
+	SCAN_FILES=${SLAPPER_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Sneakin Rootkit
+
+	SCAN_ROOTKIT="Sneakin Rootkit"
+	SCAN_FILES=""
+	SCAN_DIRS=${SNEAKIN_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Suckit Rootkit
+
+	SCAN_ROOTKIT="Suckit Rootkit"
+	SCAN_FILES=${SUCKIT_FILES}
+	SCAN_DIRS=${SUCKIT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+	scanrootkit_suckit_extra_checks
+
+    # SunOS Rootkit
+
+	SCAN_ROOTKIT="SunOS Rootkit"
+	SCAN_FILES=${SUNOSROOTKIT_FILES}
+	SCAN_DIRS=${SUNOSROOTKIT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Superkit
+
+	SCAN_ROOTKIT="Superkit"
+	SCAN_FILES=${SUPERKIT_FILES}
+	SCAN_DIRS=${SUPERKIT_DIRS}
+	SCAN_KSYMS=${SUPERKIT_KSYMS}
+	scanrootkit
+
+    # TBD (Telnet BackDoor)
+
+	SCAN_ROOTKIT="TBD (Telnet BackDoor)"
+	SCAN_FILES=${TBD_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # TeLeKiT
+
+	SCAN_ROOTKIT="TeLeKiT"
+	SCAN_FILES=${TELEKIT_FILES}
+	SCAN_DIRS=${TELEKIT_DIRS}
+	SCAN_KSYMS=${TELEKIT_KSYMS}
+	scanrootkit
+
+
+    # T0rn Rootkit
+
+	SCAN_ROOTKIT="T0rn Rootkit"
+	SCAN_FILES=${TORN_FILES}
+	SCAN_DIRS=${TORN_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Trojanit Kit
+
+	SCAN_ROOTKIT="Trojanit Kit"
+	SCAN_FILES=${TROJANIT_FILES}
+	SCAN_DIRS=""
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # Tuxtendo
+
+	SCAN_ROOTKIT="Tuxtendo"
+	SCAN_FILES=${TUXTENDO_FILES}
+	SCAN_DIRS=${TUXTENDO_DIRS}
+	SCAN_KSYMS=${TUXTENDO_KSYMS}
+	scanrootkit
+
+    # URK (Universal Root Kit)
+
+	SCAN_ROOTKIT="URK"
+	SCAN_FILES=${URK_FILES}
+	SCAN_DIRS=${URK_DIRS}
+	SCAN_KSYMS=${URK_KSYMS}
+	scanrootkit
+
+    # VcKit
+
+	SCAN_ROOTKIT="VcKit"
+	SCAN_FILES=${VCKIT_FILES}
+	SCAN_DIRS=${VCKIT_DIRS}
+	SCAN_KSYMS=${VCKIT_KSYMS}
+	scanrootkit
+
+    # Volc Rootkit
+    
+	SCAN_ROOTKIT="Volc Rootkit"
+	SCAN_FILES=${VOLC_FILES}
+	SCAN_DIRS=${VOLC_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # X-Org SunOS Rootkit
+
+	SCAN_ROOTKIT="X-Org SunOS Rootkit"
+	SCAN_FILES=${XORGSUNOS_FILES}
+	SCAN_DIRS=${XORGSUNOS_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+    # zaRwT.KiT
+    
+	SCAN_ROOTKIT="zaRwT.KiT Rootkit"
+	SCAN_FILES=${ZARWT_FILES}
+	SCAN_DIRS=${ZARWT_DIRS}
+	SCAN_KSYMS=""
+	scanrootkit
+
+
+
+##################################################################################################
+#
+# Malware
+#
+##################################################################################################
+
+    displaytext ""
+    displaytext "${test}* Suspicious files and malware${NORMAL}"
+
+    logtext "------------------------------ Malware ------------------------------"
+
+    logtext "Start scan for common used known (and unknown) rootkit files..."
+
+    SIZE=35
+    displaytext -n "   Scanning for known rootkit strings"
+    logtext "[Start string tests]"
+
+    if [ ${STRINGSFOUND} -eq 1 ]; then
+      FOUND=0    
+        FILEBINPATHS="/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin"
+	for I in ${STRINGSCAN}; do
+	  TYPE=`echo $I | cut -d ':' -f1`
+	  FILE=`echo $I | cut -d ':' -f2 | sed 's/%%/ /g'`
+	  FILESTRING=`echo $I | cut -d ':' -f3 | sed 's/%%/ /g'`
+	  INFO=`echo $I | cut -d ':' -f4 | sed 's/%%/ /g'`
+	  FOUNDFILE=0
+	  case ${TYPE} in
+	    bin)
+	      for I in ${FILEBINPATHS}; do 
+	        FILENAME="${I}/${FILE}"
+	        if [ -f $FILENAME ]; then
+		  FSTRING=`echo "${FILESTRING}" | sed 's/\./\\\./g'`
+		  FOUNDSTRING=`${STRINGSBINARY} $FILENAME | grep "${FSTRING}"`
+		  if [ "${FOUNDSTRING}" = "" ]; then
+		    logtext "${FILENAME} clean (string: $FILESTRING)"
+		    else
+		    logtext "Warning: ${FILENAME} NOT clean (string: $FILESTRING)"
+		    FOUND=1
+		  fi
+		fi  
+	      done
+	      ;;
+	  esac
+	done
+
+	if [ ${FOUND} -eq 1 ]; then
+	  jump=`expr ${defaultcolumn} - ${SIZE}`
+	  insertlayout
+	  displaytext $E "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"	  
+	  displaytext "Warning: Found unexpected strings in some files! See logfile for more details"
+	  logtext "Warning: Found unexpected strings in some files!"
+	  else
+	  jump=`expr ${defaultcolumn} - ${SIZE}`
+	  insertlayout
+	  displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	  
+	  logtext "All files are OK"
+	fi
+      else
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+        insertlayout
+        displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+	logtext "Skipped stringtest (rootkit strings), due to missing `strings`"
+    fi
+
+    logtext "[End string tests]"
+
+    SIZE=33
+    displaytext -n "   Scanning for known rootkit files"
+
+	for I in ${FILESCAN}; do
+	  TYPE=`echo $I | cut -d ':' -f1`
+	  FILE=`echo $I | cut -d ':' -f2`
+	  INFO=`echo $I | cut -d ':' -f3`
+	  FOUNDFILE=0
+	  FILE=`echo ${FILE} | sed 's/%%/ /g'`
+	  INFO=`echo ${INFO} | sed 's/%%/ /g'`
+	  
+	  logtext -n "Scanning for presence of ${FILE} (${TYPE})... "
+	  case ${TYPE} in
+	    dir)
+	      if [ -d "${FILE}" ]; then
+		  FOUNDFILE=1
+		  logtext --nodate "WARNING! Found possible bad directory"
+		else
+		  logtext --nodate "OK (not found)"
+	      fi
+	      ;;
+	    file)
+	      if [ -f "{$FILE}" ]; then
+		  FOUNDFILE=1
+		  logtext --nodate "WARNING! Found possible bad file"
+		else
+		  logtext --nodate "OK (not found)"
+	      fi
+	      ;;
+	  esac
+	    
+	done
+
+	if [ ${FOUNDFILE} -eq 0 ]
+	  then
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	  else
+	    INFECTED_COUNT=`expr ${INFECTED_COUNT} + 1`
+	    INFECTED_NAMES="${INFECTED_NAMES} / ${INFO} "
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+            displaytext "
+            -------------------------------------------------------------------------
+	    Warning found file '${FILE}'
+	    Information: ${INFO}
+	    -------------------------------------------------------------------------
+	    "
+
+	fi
+
+    logtext "-------------------------- Open files tests ---------------------------"
+
+SUSP_FILES_INFO="
+adore.so:Adore%%LKM%%rootkit
+mod_rootme.so:Apache%%mod_rootme%%backdoor
+phide_mod.o:PID%%hider%%LKM
+lbk.ko:LBK%%FreeBSD%%kernel%%module
+vlogger.o:THC-Vlogger%%kernel%%module
+cleaner.o:Cleaner%%kernel%%module
+mod_klgr.o:klgr,%%keyboard%%logger%%(kernel%%module)
+hydra:THC-Hydra%%(password%%capture)
+hydra.restore:THC-Hydra%%(password%%capture)
+"
+
+    displaytext -n "   Testing running processes... "
+    logtext -n "Scanning running processes... "
+    SIZE="30"
+    jump=`expr ${defaultcolumn} - ${SIZE}`
+    
+    if [ ${LSOFFOUND} -eq 1 ]
+      then
+	SUSP_FILES="backdoor"
+	# Add more suspicious files to the check
+	for I in ${SUSP_FILES_INFO}; do
+	  FILENAME=`echo ${I} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+	  SUSP_FILES="${SUSP_FILES}|${FILENAME}"
+	done
+	SEARCHFILES=`${LSOFBINARY} -F n -w | sort | uniq | grep '^n/' | sed 's/^n//' | egrep "/(${SUSP_FILES})$"`
+	if [ ! "${SEARCHFILES}" = "" ]; then
+	  insertlayout
+	  displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+	  logtext --nodate "Bad"
+          logtext "Warning! Found possible harmful files. Please inspect"
+          logtext "Warning! Output of test: ${SEARCHFILES}"
+         else
+	  insertlayout
+	  displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]" 
+	  logtext --nodate "OK"
+        fi
+	SUSP_FILES=`echo "${SUSP_FILES}" | sed -e 's/\\\././g'`
+	logtext "Scanned for '${SUSP_FILES}'"
+      else
+	insertlayout
+	displaytext -e "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+	logtext --nodate "Skipped"
+	
+    fi
+
+	displaytext -n "   Checking processes for deleted files... "
+	logtext -n "Scanning processes for deleted files... "
+	SIZE="41"
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+
+	if [ ${LSOFFOUND} -eq 1 ]; then
+		STATUS=0
+		WHITEPROC=""; BLACKPROC=""
+		SEARCHFILES=`${LSOFBINARY} -n -l -w | grep "(dele" | head -n 1`
+		if [ ! "${SEARCHFILES}" = "" ]; then
+			PMATCH=1; PIDLIST=""
+			OLDIFS=$IFS
+			IFS="
+"
+
+			for line in `${LSOFBINARY} -n -l -w | grep "(dele"`; do
+				lproc=`echo $line | awk '{ print $1 }'`
+				lpid=`echo $line | awk '{ print $2 }'`
+				l8=`echo $line | awk '{ print $8 }'`
+				lfile=`echo $line | awk '{ print $9 }'`
+
+				for i in $PIDLIST; do
+					i=`echo $i | cut -d' ' -f1`
+					if [ $lpid -eq $i ]; then
+						PMATCH=0
+					fi
+				done
+				if [ $PMATCH -eq 1 ]; then
+					if [ ${READLINKFOUND} -eq 1 ]; then
+						if [ "${OPERATING_SYSTEM}" != "SunOS" -o -L /proc/${lpid}/exe ]; then 
+							lproc=`readlink /proc/${lpid}/exe`
+						fi
+					fi
+					# If $lfile is not a pathname then look at $l8
+					if [ -z "`echo ${lfile} | grep '^/'`" ]; then
+						if [ -n "`echo ${l8} | grep '^/'`" ]; then
+							lfile=${l8}
+						fi
+					fi
+					# Remove anything after the pathname
+					if [ -n "`echo ${lfile} | grep '^/'`" ]; then
+						lfile=`echo ${lfile} | cut -f1 -d' '`
+					fi
+					ALLOWPROCDELFILES=`cat ${CONFIGFILE} | grep '^ALLOWPROCDELFILE=' | sed 's/ALLOWPROCDELFILE=//g'`
+					FMATCH=1
+					for i in $ALLOWPROCDELFILES; do
+						if [ "$lproc" = "$i" ]; then
+							FMATCH=0; break
+						fi
+					done
+					if [ ${READLINKFOUND} -eq 0 ]; then
+						lproc="\"$lproc\""
+					fi
+					if [ $FMATCH -eq 0 ]; then
+						if [ -z "`echo ${WHITEPROC} | egrep \"${lproc}( |$)\"`" ]; then
+							WHITEPROC="${WHITEPROC} ${lproc}"
+						fi
+					else
+						STATUS=1
+						BLACKPROC="${BLACKPROC}\\n${lproc} ${lpid} ${lfile}"
+					fi
+				fi
+				PIDLIST="$lpid $PIDLIST"
+			done
+			IFS=$OLDIFS
+		fi
+
+		insertlayout
+
+		if [ $STATUS -eq 0 ]; then
+			displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]" 
+			logtext --nodate "OK"
+		else
+			displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+			logtext --nodate "Bad"
+			logtext "Warning! Found deleted files in use. Please inspect:"
+
+			echo $E $BLACKPROC | while read lproc lpid lfile; do
+				if [ -n "$lproc" ]; then
+					logtext "Warning! Process ${lproc} (${lpid}) used deleted file ${lfile}"
+					displaytext "Warning! Process ${lproc} (${lpid}) used deleted file ${lfile}"
+				fi
+			done
+		fi
+
+		for lproc in $WHITEPROC; do
+			logtext "Found process ${lproc} on whitelist"
+		done
+
+		logtext "Scanned for deleted files"
+	else
+		insertlayout
+		displaytext -e "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+		logtext --nodate "Skipped"
+	fi
+
+
+    logtext "----------------------- Login backdoors check -------------------------"
+	  
+
+    # Miscellaneous Login backdoors
+
+	STATUS=0
+	SIZE=30
+	
+	displaytext -n "   Miscellaneous Login backdoors"
+
+	for I in ${LOGIN_BACKDOORS_FILES}
+	  do
+            if [ -d ${I} ]; then
+              STATUS=1
+	      if [ ${DEBUG} -eq 1 ]; then
+               logtext "${I} found! Possible part of a rootkit/trojan."
+	      fi
+            fi
+	    if [ ${DEBUG} -eq 1 ]; then
+              logtext "${I} clean"
+	    fi
+          done
+
+	if [ ${STATUS} -eq 0 ]
+	  then
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	  else
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	fi
+
+#	STATUS=0
+#	SIZE=17
+#	echo -n "   Suspicious files"	
+#
+#	for I in ${SUSPICIOUS1_FILES}
+#	  do
+#	    J=`echo ${I} | cut -d ':' -f1`
+#	    FINDFILE=`locate -i /${J}`
+#            if [ ! "${FINDFILE}" = "" ]; then
+#	        echo ${FINDFILE}
+#                STATUS=1
+#                logtext "${J} found! Possible part of a rootkit/trojan." >> ${DEBUGFILE}
+#		FOUNDFILES="${FOUNDFILES}, "
+#	      else
+#	        logtext "${J} clean"
+#            fi
+#          done
+#
+#	if [ ${STATUS} -eq 0 ]
+#	  then
+#	    jump=`expr ${defaultcolumn} - ${SIZE}`
+#	    insertlayout
+#	    echo $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+#	  else
+#	    jump=`expr ${defaultcolumn} - ${SIZE}`
+#	    insertlayout
+#	    echo $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+#	    echo "Found files:"
+#	    echo "${FOUNDFILES}"
+#	fi
+
+	STATUS=0
+	SIZE=26
+	
+	displaytext -n "   Miscellaneous directories"
+
+	for I in ${SUSPICIOUS1_DIRS}; do
+	    logtext -n "Checking ${I}... "
+            if [ -f ${I} ]; then
+              STATUS=1
+	      if [ ${DEBUG} -eq 1 ]; then
+              logtext --nodate "[ WARNING! ] Possible part of a rootkit/trojan." >> ${DEBUGFILE}
+	      fi
+	     else
+	      logtext --nodate "[ OK ] Not found" >> ${DEBUGFILE}
+            fi
+
+        done
+
+	if [ ${STATUS} -eq 0 ]
+	  then
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	  else
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	fi
+
+    # Software related files
+
+	STATUS=0
+	SIZE=23
+	FOUND=0
+
+	displaytext -n "   Software related files"
+	logtext "Scanning for software related files and intrusions..."
+
+	TRIPWIREFILE="${ROOTDIR}var/lib/tripwire/`uname`.twd"
+	
+	if [ -f "${TRIPWIREFILE}" ]
+	  then
+	    FOUND=1
+	    if [ "`cat ${TRIPWIREFILE} | grep \"Tripwire segment-faulted !\"`" = "" ]
+	      then
+		jump=`expr ${defaultcolumn} - ${SIZE}`
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	      else
+	        jump=`expr ${defaultcolumn} - ${SIZE}`
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+		logtext "The file ${TRIPWIREFILE} contains a very suspicious text string, which"
+		logtext "can indicate the presence of the SHV5 rootkit."
+	    fi
+	fi
+	
+	# No traces found
+	if [ ${FOUND} -eq 0 ]
+	  then
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	  
+	fi
+	
+	
+
+    # Sniffer logs
+
+	STATUS=0
+	SIZE=13
+
+	displaytext -n "   Sniffer logs"
+
+	for I in ${SNIFFER_FILES}; do
+	    logtext -n "Checking ${I}... "
+            if [ -f ${I} ]; then
+              STATUS=1
+	      if [ ${DEBUG} -eq 1 ]; then
+              logtext --nodate "[ WARNING! ] Possible sniffer log found." >> ${DEBUGFILE}
+	      fi
+	     else
+	      logtext --nodate "[ OK ] Not found" >> ${DEBUGFILE}
+            fi
+        done
+	
+	if [ ${STATUS} -eq 0 ]
+	  then
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	  else
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	fi
+
+keypresspause
+
+    displaytext ""
+    displaytext "${test}* Trojan specific characteristics${NORMAL}"
+
+    displaytext "   shv4"
+    
+    SIZE="32"
+    jump=`expr ${defaultcolumn} - ${SIZE}`
+    if [ "${OPERATING_SYSTEM}" = "AIX" ]
+     then
+     RCFILE="/etc/inittab"
+    else
+     RCFILE="/etc/rc.d/rc.sysinit"
+    fi
+    displaytext -n "     Checking ${RCFILE}"
+    if [ -f ${RCFILE} ]
+      then
+        # Insert end-of-line
+        displaytext ""
+        SIZE="11"
+        jump=`expr ${defaultcolumn} - ${SIZE}`
+
+        displaytext -n "       Test 1"
+        if [ -n "`grep 'in\.inetd' ${RCFILE}`" ]; then
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	  else
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+	fi
+
+        displaytext -n "       Test 2"
+        if [ "`grep 'bin/xchk' ${RCFILE}`" ]; then
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
+	  else
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+	fi
+
+        displaytext -n "       Test 3"
+        if [ "`grep 'bin/xsf' ${RCFILE}`" ]; then
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
+	  else
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+	fi
+
+       else
+        insertlayout
+	displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+    fi
+
+    SIZE="27"
+    jump=`expr ${defaultcolumn} - ${SIZE}`
+    displaytext -n "     Checking /etc/inetd.conf"
+
+    if [ -f /etc/inetd.conf ]
+      then
+
+        FOUND=0
+	if [ -e /etc/inetd.conf ]; then
+	   grep '/bin/csh' /etc/inetd.conf > /dev/null && FOUND=1
+           grep '/bin/bash' /etc/inetd.conf > /dev/null && FOUND=1
+	   grep '/bin/tcsh' /etc/inetd.conf > /dev/null && FOUND=1
+	   grep '/bin/ksh' /etc/inetd.conf > /dev/null && FOUND=1
+	   grep '/bin/bash' /etc/inetd.conf > /dev/null && FOUND=1
+	   grep '/bin/sh' /etc/inetd.conf > /dev/null && FOUND=1
+	   grep '/bin/ash' /etc/inetd.conf > /dev/null && FOUND=1
+	   grep '/bin/zsh' /etc/inetd.conf > /dev/null && FOUND=1
+	   grep 'in\.cfinger' /etc/inetd.conf > /dev/null && FOUND=1
+	fi
+
+        if [ ${FOUND} -eq 1 ]; then
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	   logtext "Possible bad string found in /etc/inetd.conf. Please check this file manually."
+	  else
+	   insertlayout
+	   displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+	fi
+       else
+        insertlayout
+	displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+    fi
+
+
+    SIZE="28"
+    jump=`expr ${defaultcolumn} - ${SIZE}`
+    displaytext -n "     Checking /etc/xinetd.conf"
+
+    # Only check when operating system is Linux and we have a xinetd configuration
+    if [ "${OPERATING_SYSTEM}" = "Linux" -a -f /etc/xinetd.conf ]
+      then
+        FOUND=0
+	logtext "Operating system is Linux and /etc/xinetd.conf found. Starting xinetd configuration scan..."
+	
+        incl=`grep 'includedir' /etc/xinetd.conf | cut -d" " -f2-`
+        if [ -n "$incl" ]
+        then
+          I=`find $incl/ -type f`
+          WARNINGMSG=""
+          for J in ${I}; do
+            svc=`grep ".*service." ${J} | grep -v "^#" | cut -d" " -f2-`
+            FOUNDSERVICES=`grep ".*disable.*=.*yes" ${J} | grep -v "#"`
+	    if [ "${FOUNDSERVICES}" = "" ]; then
+	      logtext "Info: Service ${J} enabled"	            
+	    fi
+          done
+        fi
+	if [ ${FOUND} -eq 0 ]
+	  then
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+	    logtext "xinetd.conf seems to be clean"
+	  else
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	    displaytext "${WARNINGMSG}"
+	    logtext "There were warnings found while testing xinetd.conf"
+	fi
+
+	logtext "End of xinetd configuration scan"
+
+      else
+        insertlayout
+	displaytext $E "${LAYOUT}[ ${OK}Skipped${NORMAL} ]"
+	logtext "Skipped xinetd tests (not Linux or file doesn't exists)"  
+    fi
+
+    displaytext ""
+    displaytext "${test}* Suspicious file properties${NORMAL}"
+
+    displaytext "   ${WHITE}chmod properties${NORMAL}"
+    
+    FILES="
+    ${ROOTDIR}bin/ps
+    ${ROOTDIR}bin/ls
+    ${ROOTDIR}usr/bin/w
+    ${ROOTDIR}usr/bin/who
+    ${ROOTDIR}bin/netstat
+    ${ROOTDIR}usr/bin/netstat
+    ${ROOTDIR}bin/login"
+    
+    for I in ${FILES}; do
+
+       # Calculate string length
+	SIZE=`echo "${I}" | wc -c | tr -d ' '`
+	SIZE=`expr ${SIZE} + 11`	  
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+	if [ -f ${I} ]; then
+	    displaytext -n "     Checking ${I}"
+
+    	    RIGHTS=`ls -l ${I} | cut -c 1-10`
+	    if [ "${RIGHTS}" = "-rwxrwxrwx" ]; then
+	        insertlayout
+		displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} (chmod 777 found, possible trojaned) ]"
+	      else
+	        insertlayout
+		displaytext -e "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+	    fi
+          else
+	    logtext "Checking ${I}... Not found"
+	fi
+
+    done
+
+    displaytext "   ${WHITE}Script replacements${NORMAL}"
+
+    for I in ${FILES}; do
+
+       # Calculate string length
+	SIZE=`echo "${I}" | wc -c | tr -d ' '`
+	SIZE=`expr ${SIZE} + 11`	  
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+	if [ -f ${I} ]
+          then
+
+	    displaytext -n "     Checking ${I}"
+
+            FILEOK=true
+            case "${OPERATING_SYSTEM}" in
+	     AIX)
+               file ${I} | grep -q "shell script" && FILEOK=false
+	       ;;
+	    SunOS)
+	       file ${I} | grep "shell script" >/dev/null 2>&1 && FILEOK=false
+	       ;;
+            *)
+               file -b ${I} | grep -q "shell script" && FILEOK=false 
+	       ;;
+            esac
+
+	    if ! $FILEOK
+	      then
+	        insertlayout
+		displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext "(script replacement found, possible trojaned)"
+		logtext "Checking ${I}... [ WARNING ]"
+		logtext "Possible script replacement found. Please inspect this file (check the file type, contents and size)"
+	      else
+	        insertlayout
+		displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+		logtext "Checking ${I}... [ OK ]"		
+	    fi
+          else
+	    logtext "Checking ${I}... Not found"
+	fi
+    done
+
+
+    displaytext ""
+    displaytext "${test}* OS dependant tests${NORMAL}"
+
+	if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]
+          then
+    	    displaytext "   ${WHITE}FreeBSD${NORMAL}"
+	    SIZE=38
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    displaytext -n "     Checking presence of KLD signatures"
+	    STATUS=0
+	
+	    for I in ${KLDSTATKEYWORDS}; do
+	      FNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
+	      PRESENCE=`kldstat -v | grep "${FNAME}"`
+	      if [ ! "${PRESENCE}" = "" ]; then
+		STATUS=1
+		FOUNDKEYS="${FOUNDKEYS}${I} "
+	      fi
+	    done
+
+	    if [ "${STATUS}" -eq 1 ]
+	      then
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found terms: ${FOUNDKEYS}) ]"
+	      else
+	        insertlayout
+		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	    fi
+
+    logtext "--------------------- Netstat / Sockstat checks -----------------------"
+
+	    SIZE=40
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    
+	    displaytext -n "     Comparing output sockstat and netstat"
+	    logtext -n "Comparing output of sockstat and netstat... "
+	    SOCKSTAT=`sockstat | grep '*:*' | cut -c 1-55 | grep '*:' | cut -c 39-47 | tr -d ' ' | sort| grep -v '*' | uniq`
+	    NETSTAT=`netstat -an | grep -v 'TIME_WAIT' | grep -v 'ESTABLISHED' | grep -v 'SYN_SENT' | grep -v 'CLOSE_WAIT' | grep -v 'LAST_ACK' | grep -v 'SYN_RECV' | grep -v 'CLOSING' | cut -c 1-44 | grep '*.' | cut -c 24-32 | tr -d ' ' | tr -d '\t' | grep -v '*' | sort | uniq`
+
+	    if [ "${SOCKSTAT}" = "${NETSTAT}" ]; then
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		logtext --nodate "OK"
+	      else
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		logtext --nodate "WARNING!"
+		logtext "Sockstat tested output: ${SOCKSTAT}"
+		logtext "Netstat tested output: ${NETSTAT}"
+	    fi
+
+    logtext "---------------------- Packages database check ------------------------"
+
+
+	    if [ -f /usr/local/sbin/pkgdb ]
+	      then
+	        SIZE=29
+	        jump=`expr ${defaultcolumn} - ${SIZE}`
+	        displaytext -n "     Checking packages database"
+
+	        RESULT=`/usr/local/sbin/pkgdb -Fa -v | grep "Skipped\."`
+
+    	        if [ "${RESULT}" = "" ]; then
+		  insertlayout
+	          displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		  logtext "OK"
+	         else
+		  insertlayout
+	          displaytext $E "${LAYOUT}[ ${YELLOW}Please check${NORMAL} ]"
+		  logtext "Your package databases seems to have inconsistenties. Please run pkgdb -F to"
+		  logtext "do manually checking. Although this isn't a security issue, you need to be sure"
+		  logtext "your applications are using the correct dependancies"
+	        fi
+	    fi
+	    
+
+#	    KLDLOADS=`grep -r 'kldload' /etc/*`
+#	    for I in "${KLDLOADS}"; do
+#	      echo "${I}"
+#	    done
+
+
+	fi
+
+	if [ ${OPERATING_SYSTEM} = "Linux" ]
+	  then
+	    temp1=""; temp2=""
+	    displaytext ""
+    	    displaytext "   ${WHITE}Linux${NORMAL}"
+
+	    SIZE=37
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+
+	    displaytext -n "     Checking loaded kernel modules... "
+
+	    # Is /proc/modules file available?
+	    if [ -f /proc/modules ]
+	      then
+    	        if [ "${KERNELVERSION}" = "2.2" -o "${KERNELVERSION}" = "2.4" ]
+	          then
+		    # show information found in /proc/modules (Linux-only) and get rid of the spaces
+			temp1=`cat /proc/modules | sort | tr -d ' '`
+	    
+	    	    # show output from lsmod. Throw away spaces, because they don't match the content
+		    # of /proc/modules
+		    temp2=`${LSMODBINARY} | grep -v "Size  Used by" | sort | tr -d ' '`
+	          else
+	    	    if [ "${KERNELVERSION}" = "2.6" ]
+		      then
+			temp1=`cat /proc/modules | sort | tr -s ' ' | cut -d " " -f1`
+			temp2=`${LSMODBINARY} | grep -v "Size  Used by" | sort | tr -s ' ' | cut -d " " -f1`
+		    fi
+		fi
+	    fi
+	    
+	    if [ ! "${temp1}" = "" ]
+	      then
+		if [ "${temp1}" = "${temp2}"  ]
+		  then
+		    insertlayout
+		    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	          else
+	            insertlayout
+	    	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found difference in output) ]"
+	        fi
+	      else
+	        displaytext "${WHITE}Skipped!${NORMAL}"
+		logtext "Info: no /proc/modules found. Lsmod test skipped"
+	    fi
+	    
+#	    displaytext -n "   Checking all kernelmodules..."
+	    
+#	    SCANFILES=`cat ${SCANFILELIST} | grep '.o'`
+#	    for J in ${SCANFILES}; do
+
+#	      FOUNDSIGN=0
+	      
+	      # Search strings in file
+	      # If we find something, we tell it after the last string
+	      # (multiple strings will overwrite each other)
+#	      for I in ${LKMSTRINGS}; do
+#	        SEARCHSTRING=`echo ${I} | cut -d ':' -f1`
+#	        TYPE=`echo ${I} | cut -d ':' -f2`
+#	        INFO=`echo ${I} | cut -d ':' -f3`
+#		if [ -f ${J} ]; then
+#	          FOUND=`strings ${J} | egrep '${SEARCHSTRING}'`
+#		 else
+#		  # File not found, no strings returned
+#		  FOUND=""
+#		fi 
+#	        if [ ! "${FOUND}" = "" ]; then
+#	          FOUNDSIGN=1
+#		  FOUNDSTRING=${FOUND}
+#		  FOUNDTYPE=${TYPE}
+#		  FOUNDINFO=${INFO}
+#		  echo "Found: ${FOUND}"
+#	        fi
+#	      done
+      
+#	      if [ ${FOUNDSIGN} -eq 1 ]
+#	        then
+#		  displaytext "     Scanning ${J}"
+#		  displaytext "Warning, found a possible ${FOUNDTYPE}"
+#		  displaytext "Searchstring '${FOUNDSTRING}' founded in '${SEARCHSTRING}'"
+#		  displaytext "Extra info: ${FOUNDINFO}"
+#		  waitkeypress
+#		else
+#		  logtext "Scanning ${J}... [ Clean ]"
+#	      fi
+	      
+#	    done
+
+	logtext "--------------------------- File attributes ---------------------------"
+
+	SIZE=27
+	displaytext -n "     Checking file attributes"
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+
+	FOUND=0
+
+        if [ ${LSATTRFOUND} -eq 1 ]
+          then
+            for I in ${BINPATHS}; do
+	      logtext "Checking $I file attributes"
+	      if [ -d ${I} ]
+	        then
+	          for J in `ls ${I}`; do
+	            LSAT=`${LSATTRBINARY} ${I}/${J} 2>/dev/null | cut -c 4`
+	            if [ "${LSAT}" = "i" ]; then
+	              FOUND=1
+	              logtext "Found 'immutable' binary (${I}/${J})"
+	            fi
+  	          done       
+	      fi
+	    done
+	    if [ ${FOUND} -eq 0 ]; then
+	      insertlayout
+	      displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	     else
+              insertlayout
+              displaytext $E "${LAYOUT}[ ${YELLOW}Special attributes found!${NORMAL} ]"
+	      logtext "Found special attributes on some binaries! This can be performed by security software OR"
+	      logtext "by a rootkit. Please inspect these files and try to find the reason of this immutable flag."
+	      logtext "See 'man chattr' for more information about this attributes."
+	    fi	 
+	  else
+	    insertlayout
+	    displaytext $E "   ${file}${LAYOUT}[ ${WHITE}Skipped!${NORMAL} ]"
+        fi
+
+
+	logtext "----------------------------- LKM modules -----------------------------"
+
+LKM_BADNAMES="
+adore.so
+cleaner.o
+flkm.o
+phide_mod.o
+vlogger.o
+"
+
+LKMPATH="/lib/modules/`uname -r`"
+FOUND=0
+
+
+	SIZE=27
+	displaytext -n "     Checking LKM module path"	
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+
+	if [ -d ${LKMPATH} ]
+	  then
+	    for J in `${FINDBINARY} ${LKMPATH} -name "*.o" -print`; do
+	    
+	      for I in ${LKM_BADNAMES}; do
+		FNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
+	        if [ ! "`echo ${J} | grep \"/${FNAME}\$\"`" = "" ]
+	          then
+	            logtext "Warning, possible unwanted LKM (filename: ${J} string: ${I}) installed!"
+	            FOUND=1
+	          # else
+                  #   logtext "Checking ${I} in ${J}... Not found"
+	        fi
+	      done
+	    done  
+	      
+	    if [ ${FOUND} -eq 0 ]
+	      then
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	      else
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	    fi	      
+	    
+	  else
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${WHITE}Skipped!${NORMAL} ]"
+	    logtext "LKM module filename check skipped, because path (${LKMPATH}) doesn't exist"
+	fi
+
+	# End Linux tests    
+	fi
+
+	logtext "------------------------------- Backdoors -----------------------------"
+
+
+
+	displaytext ""; displaytext ""
+	displaytext "${YELLOW}Networking${NORMAL}"
+
+	displaytext "${test}* Check: frequently used backdoors${NORMAL}"
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+	    donetstat="1"
+	fi
+	if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
+	    donetstat="1"
+	fi
+	if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
+	    donetstat="1"
+	fi
+	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	    donetstat="1"
+	fi
+
+	# Skip tests when GRSEC is available (because of the locking of /proc/*)
+	if [ ${GRSECINSTALLED} -eq 1 ]; then
+	    donetstat="0"
+	fi   
+
+	if [ "${donetstat}" = "1" ]
+	  then
+	    for i in `cat ${DB_PATH}/backdoorports.dat`
+	      do
+	        port=`echo ${i} | cut -d ':' -f 1`
+		DESCRIPTION=`echo ${i} | cut -d ':' -f 2`
+		DESCRIPTION=`echo ${DESCRIPTION} | sed 's/%%/ /g'`
+
+		if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+	    	    checkport=`netstat -an | grep "LISTEN" | grep ":${port} "`
+		fi
+
+	        if [ "${OPERATING_SYSTEM}" = "FreeBSD" -o "${OPERATING_SYSTEM}" = "AIX" -o "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	            checkport=`netstat -an | grep "LISTEN" | grep "\.${port} "`
+	        fi
+
+		SIZE=`echo "   ${port}: ${DESCRIPTION} " | wc -c | tr -d ' '`	  
+		jump=`expr ${defaultcolumn} - ${SIZE}`			
+		displaytext -n "  Port ${port}: ${DESCRIPTION}"
+		
+		if [ "${checkport}" = "" ]
+		  then
+		    insertlayout
+		    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		  else
+		    insertlayout
+		    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (possible trojan port) ]"
+		fi
+ 	      done
+	  else
+	    displaytext "${YELLOW}Not tested"
+	    if [ ${GRSECINSTALLED} -eq 1 ]; then
+    	      logtext "Backdoor ports test skipped, due to customized kernel (GRSEC)"
+    	    fi   
+
+	fi  
+
+	displaytext ""
+	displaytext "${test}* Interfaces${NORMAL}"
+
+	SIZE=41
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+
+	    displaytext -n "     Scanning for promiscuous interfaces..."
+	    LOGTEXT="Checking network interfaces (promiscuous mode)... "
+	    
+	    PROMISCSCAN1=""; PROMISCSCAN2=""
+	   
+	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
+		PROMISCSCAN1=`${IFCONFIGBINARY} -a | grep -v 'pflog' | grep 'PROMISC'`
+	elif [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+		PROMISCSCAN1=`${IFCONFIGBINARY} -a | grep 'PROMISC'`
+	else
+		PROMISCSCAN1=`${IFCONFIGBINARY} | grep 'PROMISC'`
+	fi
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" -a ${IPFOUND} -eq 1 ]; then
+		PROMISCSCAN2=`${IPBINARY} -s link | grep 'PROMISC'`
+	fi
+
+	if [ "${PROMISCSCAN1}" = "" -a "${PROMISCSCAN2}" = "" ]; then
+		insertlayout
+		displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		logtext "${LOGTEXT}[ OK ]"
+		if [ "${OPERATING_SYSTEM}" = "Linux" -a ${IPFOUND} -eq 1 ]; then
+			logtext "Performed successful test with \`ip\`"
+		fi
+	else
+		insertlayout
+		displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		if [ "${DEBUGLOG}" -eq 1 ]; then
+			displaytext "Warning! Found promiscuous interface. Please check the logfile."
+		else
+			displaytext "Warning! Found promiscuous interface. Please use option '--createlogfile' and check the logfile."
+		fi
+		logtext "${LOGTEXT}[ WARNING ]"
+		logtext "Possible promisc interfaces:"
+		logtext "Output test 1: ${PROMISCSCAN}"
+		if [ "${OPERATING_SYSTEM}" = "Linux" -a "${PROMISCSCAN2}" != "" ]; then
+			PROMISCSCAN2IFACES=`${IPBINARY} -s link | grep 'PROMISC' | cut -d ":" -f2`
+			for if in $PROMISCSCAN2IFACES ; do
+				logtext "Output test 2: $if in promiscuous mode"
+			done
+		fi
+	fi
+
+	SKIPNEXT=0
+	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
+		SKIPNEXT=1
+	fi
+	if [ "${LSOFFOUND}" -eq 0 ]; then
+		SKIPNEXT=1
+	fi
+	if [ ! -f "/proc/net/packet" ]; then
+		SKIPNEXT=1
+	fi
+
+	if [ "$SKIPNEXT" -eq 0 ]; then
+		STATUS=0
+		WHITEPROC=""; BLACKPROC=""
+		SIZE=48
+		jump=`expr ${defaultcolumn} - ${SIZE}`
+
+		displaytext -n "     Scanning for packet capturing applications..." # libpcap, raw
+		logtext -n "Checking for packet capturing applications... "
+		LIBPCAPRES=`egrep -v "^sk|888e" /proc/net/packet | cut -c 1`
+		if [ -n "${LIBPCAPRES}" ]; then
+			for inode in `egrep -v "^sk|888e" /proc/net/packet | awk '{print $9}'`; do
+				for pid in `${LSOFBINARY} -lMnP | grep "$inode" | awk '{print $2}'`; do
+					if [ "${READLINKFOUND}" -eq 1 ]; then
+						name=`readlink -f /proc/$pid/exe`
+					else
+						name=`grep "^Name:." /proc/$pid/status | sed 's/^Name:.//'`
+					fi
+					ALLOWPROCLISTENERS=`cat ${CONFIGFILE} | grep '^ALLOWPROCLISTEN=' | sed 's/ALLOWPROCLISTEN=//g'`
+					AMATCH=1
+					for i in $ALLOWPROCLISTENERS; do
+						if [ "$name" = "$i" ]; then
+							AMATCH=0; break
+						fi
+					done
+					if [ "$AMATCH" -eq "0" ]; then
+						FNAME=`echo "${name}" | sed -e 's/\./\\\./g'`
+						if [ -z "`echo ${WHITEPROC} | egrep \"${FNAME}( |$)\"`" ]; then
+							WHITEPROC="${WHITEPROC} ${name}"
+						fi
+					else
+						STATUS=1
+						BLACKPROC="${BLACKPROC}\\n${name} ${pid}"
+					fi
+				done
+			done
+		fi
+
+		insertlayout
+
+		if [ $STATUS -eq 0 ]; then
+			displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			logtext --nodate "OK"
+		else
+			displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+
+			if [ "${DEBUGLOG}" -eq 1 ]; then
+				displaytext "Warning! Found packet capturing application. Please check the logfile."
+			else
+				displaytext "Warning! Found packet capturing application. Please use option '--createlogfile' and check the logfile."
+			fi
+
+			logtext --nodate "Warning"
+			echo $E $BLACKPROC | while read name pid; do
+				if [ -n "$name" ]; then
+					logtext "Warning! Process ${name} (${pid}) listening"
+				fi
+			done
+		fi
+
+		for name in $WHITEPROC; do
+			logtext "Found process ${name} on whitelist"
+		done
+	fi
+
+
+keypresspause
+
+
+##################################################################################################
+#
+# System checks
+#
+##################################################################################################
+	    
+
+	logtext "---------------------------- System checks ----------------------------"
+
+	displaytext ""; displaytext ""
+	displaytext "${YELLOW}System checks${NORMAL}"
+
+	displaytext "${test}* Allround tests${NORMAL}"
+
+	displaytext -n "   Checking hostname... "
+	if [ "${hostname}" = "" ]
+	  then
+	    displaytext "${BAD}Warning. ${NORMAL}Found empty hostname. Some programs don't like this."
+	  else
+	    displaytext "${OK}Found. ${NORMAL}Hostname is ${hostname}"
+	fi
+
+	##################################################################################################
+
+	FOUND=0
+	SIZE=49
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+        displaytext -n "   Checking for passwordless user accounts... "
+	logtext "Checking for passwordless user accounts... "
+        if [ -e "/etc/shadow" ]
+	  then
+	    for I in `cat /etc/shadow`; do
+	      USER=`echo "${I}" | cut -d ':' -f1`
+	      PASSWORD=`echo "${I}" | cut -d ':' -f2`
+	      # Exclude NIS-user (+::::::)
+	      if [ ! "${USER}" = "+" -a "x${PASSWORD}x" = "xx" ]; then
+	        FOUND=1
+		logtext "Warning! Found passwordless account (${USER})"
+		logtext "Check this account and give it a password."
+	      fi
+	    done	  
+	    if [ ${FOUND} -eq 0 ]; then
+	       displaytext "${OK}OK${NORMAL}"
+	      else
+	       displaytext "${BAD}Warning!${NORMAL}"
+	       displaytext "Found passwordless user account. See logfile for more information"
+	       logtext --nodate "OK"
+	    fi
+	  else
+	    insertlayout
+	    displaytext "${WHITE}Skipped${NORMAL}"
+	    logtext --nodate "Skipped"
+	    logtext "Skipped test because /etc/shadow doesn't exist"
+	fi
+
+	##################################################################################################
+
+
+	if [ ${PASSWDCHECK_SKIP} -eq 0 ]
+	  then
+	    displaytext -n "   Checking for differences in user accounts... "
+	    if [ -e "/etc/passwd" ]
+	      then
+	        if [ -e "${TMPDIR}/passwd" ]
+		  then
+		    differences=`diff /etc/passwd ${TMPDIR}/passwd | grep ":"`
+		    if [ "${differences}" = "" ]
+		      then
+		        displaytext "${OK}OK. ${NORMAL}No changes."
+		      else
+			diffadded=`echo "${differences}" | grep "<"`
+			diffremoved=`echo "${differences}" | grep ">"`
+		        displaytext "${red}Found differences${NORMAL}"
+		        displaytext "   Info: "
+			displaytext "----------------------"
+			displaytext "${differences}"
+			displaytext "----------------------"
+			if [ ! "${diffadded}" = "" ]; then
+			  displaytext "   Info: Some items have been added (items marked with '<')"
+			fi
+			if [ ! "${diffremoved}" = "" ]; then
+			  displaytext "   Info: Some items have been removed (items marked with '>')"
+			fi
+		    fi  
+		    rm -f ${TMPDIR}/passwd
+		  else
+		    jump=44
+		    displaytext $E "${LAYOUT}[ ${warning}NA${NORMAL} ]"
+		fi
+		cp /etc/passwd ${TMPDIR}/passwd
+	      else
+	        displaytext "${BAD}Error. ${NORMAL}Cannot find /etc/passwd"
+		logtext "Can't find /etc/passwd file?!?"
+	    fi
+
+	    displaytext -n "   Checking for differences in user groups... "
+	    if [ -e "/etc/group" ]
+	      then
+	        if [ -e "${TMPDIR}/group" ]
+		  then
+		    differences=`diff /etc/group ${TMPDIR}/group | grep ":"`
+		    if [ "${differences}" = "" ]
+		      then
+		        displaytext "${OK}OK. ${NORMAL}No changes."
+		      else
+			diffadded=`echo "${differences}" | grep "<"`
+			diffremoved=`echo "${differences}" | grep ">"`
+		        displaytext "${red}Found differences${NORMAL}"
+		        displaytext "   Info: "
+			displaytext "----------------------"
+			displaytext "${differences}"
+			displaytext "----------------------"
+			if [ ! "${diffadded}" = "" ]; then
+			  displaytext "   Info: Some items have been added (items marked with '<')"
+			fi
+			if [ ! "${diffremoved}" = "" ]; then
+			  displaytext "   Info: Some items have been removed (items marked with '>')"
+			fi
+		    fi  
+		    rm -f ${TMPDIR}/group
+		  else
+		    displaytext "${warning}Creating file ${NORMAL}It seems this is your first time."
+		fi
+		cp /etc/group ${TMPDIR}/group
+	      else
+	        displaytext "${BAD}Error. ${NORMAL}Cannot find /etc/group"
+		logtext "Can't find /etc/group file?!?"
+	    fi
+        fi
+
+	SIZE=42
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+	displaytext "   Checking boot.local/rc.local file... "
+
+	# Gentoo: /etc/conf.d/local.start	
+	RCLOCATIONS="/etc/rc.local /etc/rc.d/rc.local /usr/local/etc/rc.local /usr/local/etc/rc.d/rc.local /etc/conf.d/local.start /etc/init.d/boot.local"
+	FOUNDRCSIGN=0
+
+	for FILE in ${RCLOCATIONS}; do
+	    FILELENGTH=`echo ${FILE} | wc -c | tr -d ' '`
+	    SIZE=4
+	    jump=`expr ${defaultcolumn} - ${SIZE} - ${FILELENGTH}`
+
+	    displaytext -n "     - ${FILE}"
+	    if [ -f "${FILE}" ]; then
+		for J in ${RCLOCAL_STRINGS}; do
+		  STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+		  FOUND=`cat ${FILE} | grep "${STRING}"`
+		  if [ ! "${FOUND}" = "" ]
+		    then
+		      FOUNDRCSIGN=1
+		      logtext "Warning! Found unusual string in ${FILE}"
+		  fi
+	        done
+		
+		if [ "${FOUNDRCSIGN}" -eq 1 ]; then
+		    insertlayout
+		    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found unusual signs) ]"
+		    logtext "Warning! Found unusual string in rc.local/boot.local file"
+		  else
+		    insertlayout
+	            displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		fi
+
+	      else
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+	   fi
+	done
+
+	FOUNDRCSIGN=0
+	COUNTER=0
+	
+	SIZE=24
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+	displaytext -n "   Checking rc.d files... "
+
+	if [ -d /etc/rc.d ]
+	  then
+	    # Insert end-of-line
+	    displaytext ""
+	    displaytext -n "     Processing"
+	    for I in `find /etc/rc.d/*`; do
+	    # Only check files, not directories
+	      if [ -f ${I} ]
+		then
+    	          COUNTER=`expr ${COUNTER} + 1`
+	          if [ ${COUNTER} -eq 40 ]; then
+	    	    displaytext "."
+	    	    displaytext -n "               "
+	    	    COUNTER=0
+	          else
+	    	    displaytext -n "."
+		fi
+		for J in ${RCLOCAL_STRINGS}; do
+	          STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+	          FOUND=`cat ${I} | grep "${STRING}"`
+	          if [ ! "${FOUND}" = "" ]
+	            then
+	              FOUNDRCSIGN=1
+	          fi
+		done
+	      fi	
+	    done
+	    # Insert end-of-line
+	    displaytext ""
+	    displaytext -n "   Result rc.d files check"
+	    if [ "${FOUNDRCSIGN}" -eq 1 ]; then
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found unusual things) ]"
+	    else
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	    fi
+
+	  else
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+
+	fi
+
+	if [ -f ${ROOTDIR}etc/conf.d/local.start ]
+	  then
+	    SIZE=37
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    displaytext -n "   Checking Gentoo local.start file... "
+	    logtext "Found ${ROOTDIR}etc/conf.d/local.start file (Gentoo)"
+
+	    INSPECTLINES=`cat ${ROOTDIR}etc//conf.d/local.start | grep -v '^#' | grep -v '^$'`
+	    
+		for J in ${RCLOCAL_STRINGS}; do
+	          STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+	          FOUND=`echo ${INSPECTLINES} | grep "${STRING}"`
+	          if [ ! "${FOUND}" = "" ]
+	            then
+	              FOUNDRCSIGN=1
+		      logtext "Found ${FOUND} while checking ${ROOTDIR}etc/conf.d/local.start"
+	          fi
+		done
+	    
+	    if [ "${FOUNDRCSIGN}" -eq 1 ]; then
+	        insertlayout
+	        displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+	    else
+	        insertlayout
+	        displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	    fi
+
+	fi
+
+#	logtext "---------------------------- Binary checks ----------------------------"
+
+#	SIZE=18
+#	displaytext -n "   Checking binaries..."
+#	jump=`expr ${defaultcolumn} - ${SIZE}`			
+
+#        if [ ${STRINGSFOUND} -eq 1 ]; then
+
+#	  FOUND=0
+#	  for I in ${BINPATHS}; do
+
+#            # Calculate string length
+#	    SIZE=`echo "${I}" | wc -c | tr -d ' '`
+# 	    SIZE=`expr ${SIZE} + 7`	  
+#	    jump=`expr ${defaultcolumn} - ${SIZE}`
+
+#	    for J in ${I}; do
+#	      for K in `ls ${J}/*`; do
+#	        UPXED=`${STRINGSBINARY} ${K} | grep " UPX "`
+#	        logtext -n "Checking ${K}... "
+#	        if [ ! "${UPXED}" = "" ]; then
+#	          FOUND=1
+#		  logtext "BAD"
+#		  logtext "Warning: ${J} seems to be a UPXed file. This is not usual for a binary file"
+#		 else
+#		  logtext "OK"
+#	        fi
+#	      done  	      
+#	    done
+#	  done
+#	  
+#	  # Check results
+#	  if [ ${FOUND} -eq 1 ]
+#	    then
+#	      insertlayout
+#	      displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+#	      displaytext "See logfile for more information"
+#	    else
+#	      insertlayout
+#	      displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"    
+#	  fi
+#
+#        else
+#	      insertlayout
+#	      displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+#	fi
+
+	logtext "---------------------------- History files ----------------------------"
+
+	SIZE=15
+	displaytext "   Checking history files"
+	jump=`expr ${defaultcolumn} - ${SIZE}`			
+
+	displaytext -n "     Bourne Shell"
+	
+	if [ -f /root/.bash_history ]
+	  then
+	    ATTRIBUTE=`ls -l /root/.bash_history | cut -c1`
+	    if [ "${ATTRIBUTE}" = "l" ]
+	      then
+	        insertlayout
+		displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (redirection found) ]"
+	      else
+	        insertlayout
+		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	    
+	    fi	      
+	  else
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}Not Found${NORMAL} ]"	    
+	fi    
+
+	displaytext ""
+	displaytext "${test}* Filesystem checks${NORMAL}"
+	displaytext -n "   Checking /dev for suspicious files... "
+	    
+	if [ -d ${ROOTDIR}dev ]; then
+	
+	  # FreeBSD (5): character special, symbolic link to,directory
+	  # Linux (Debian): block special, socket, fifo (named pipe)
+	  SPECIALFILES=`file "${ROOTDIR}dev/"* | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
+	  
+	  SIZE=39
+	  jump=`expr ${defaultcolumn} - ${SIZE}`			
+	  
+	  if [ "${SPECIALFILES}" = "" ]; then
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	   else
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (unusual files found) ]"
+	    displaytext "---------------------------------------------"
+	    displaytext "Unusual files:"
+	    displaytext "${SPECIALFILES}"
+	    displaytext "---------------------------------------------"
+	  fi
+         else
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"	  
+	fi   
+
+	SIZE=29
+	
+	displaytext -n "   Scanning for hidden files..."
+
+	SEARCHINDIRS="/dev /bin /usr /usr/man /usr/man/man1 /usr/man/man8 /usr/bin /usr/sbin /sbin /etc"
+	# Only reset status once
+	STATUS=0
+
+	for I in ${SEARCHINDIRS}; do
+	  # Initialize directory
+	  HIDDENDIRS=""
+	  
+	  logtext "Start scanning for hidden files in ${I}..."
+
+	  if [ -d "${I}" ]; then
+	    HIDDENDIRS=`${MYDIR}/lib/rkhunter/scripts/showfiles.pl ${I}`
+	    logtext "Value of hiddendirs: ${HIDDENDIRS}"
+	  fi
+	
+	  if [ ! "${HIDDENDIRS}" = "" ]; then
+	    ALLHIDDENDIRS="${HIDDENDIRS} ${ALLHIDDENDIRS}"
+            STATUS=1
+   	  fi
+
+	  logtext "End of scanning ${I}"
+  
+	done
+
+	if [ ${STATUS} -eq 0 ]
+	  then
+	    jump=`expr ${defaultcolumn} - ${SIZE}`
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	  else
+	    # Reset state
+	    STATUS=0
+	    for I in ${ALLHIDDENDIRS}; do
+              if [ ${OPERATING_SYSTEM} = "AIX" -o ${OPERATING_SYSTEM} = "SunOS" ] ; then
+	        FILETYPE=`file ${I}|awk '{print $2}'`
+              else
+	        FILETYPE=`file -b ${I}`
+              fi
+	      
+	      # Ignore some filetypes, because they are harmless
+	      case ${FILETYPE} in
+	        "character special (8/0)" | "character special (254/0)" | "empty")	      
+	          logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
+		  ;;
+		"TDB database"*)
+		  logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
+		  ;;  
+		*)
+		  # Ignore Gentoo's zero-sized files (extra check for future use)
+		  if [ ! ${GENTOO} -eq 1 -a ! "${I}" = ".keep" -a ! -z ${I} ]
+		    then
+	              SEARCHDIR=0		    
+		      if [ "${FILETYPE}" = "directory" ]
+		        then
+			  for ALLOWHIDDENDIRS in `cat ${CONFIGFILE} | grep '^ALLOWHIDDENDIR=' | sed 's/ALLOWHIDDENDIR=//g'`; do
+			    if [ "${ALLOWHIDDENDIRS}" = "${I}" ]; then
+			      SEARCHDIR=1
+			      logtext "Found hidden directory ${I} on whitelist"
+			    fi 
+			  done
+			else
+			  for ALLOWHIDDENFILES in `cat ${CONFIGFILE} | grep '^ALLOWHIDDENFILE=' | sed 's/ALLOWHIDDENFILE=//g'`; do
+			    if [ "${ALLOWHIDDENFILES}" = "${I}" ]; then
+			      SEARCHDIR=1
+			      logtext "Found hidden file ${I} on whitelist"
+			    fi 
+			  done
+		      fi
+		            
+		      # Is it a directory and is it on the whitelist?
+		      # searchdir: 0 = NOT on list, 1 = on list
+		      if [ ${SEARCHDIR} -eq 0 ]
+		        then
+		  	  STATUS=1
+		          HIDDENFILES="${HIDDENFILES} ${I} (${FILETYPE}) "
+		          logtext "Added ${I} (${FILETYPE}) to list of unknown hidden files/dirs"
+		      fi		 
+		  fi
+		  ;;
+	      esac
+	    done
+
+	    if [ ${STATUS} -eq 1 ]; then
+	      jump=`expr ${defaultcolumn} - ${SIZE}`
+	      insertlayout
+	      displaytext $E "${LAYOUT}[ ${YELLOW}Warning!${NORMAL} ]"
+	      logtext "WARNING, found: ${HIDDENFILES}"
+
+    	      displaytext "---------------"
+	      displaytext "${ALLHIDDENDIRS}"
+	      displaytext "---------------"
+
+	      displaytext "Please inspect: ${HIDDENFILES}"
+	      else
+	        jump=`expr ${defaultcolumn} - ${SIZE}`
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	    fi
+
+	fi
+
+keypresspause
+
+##################################################################################################
+#
+# Application advisories and warnings
+#
+##################################################################################################
+
+
+	logtext "------------------------ Application advisories -----------------------"
+
+	displaytext ""; displaytext ""
+	displaytext "${YELLOW}Application advisories${NORMAL}"
+	displaytext "* Application scan"
+
+	FOUNDSTRING=0
+	SIZE=33
+	displaytext -n "   Checking Apache2 modules ... "
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+
+	if [ -d /etc/apache2/mods-enabled ]
+	  then
+    	    for I in `ls /etc/apache2/mods-enabled/*`; do
+	      SEARCHSTRING=`cat ${I} | egrep 'mod_rootme\.so|mod_rootme2\.so'`
+	      logtext -n "Checking Apache2 modules in /etc/apache2/mods-enabled ${I}... "
+	      if [ ! "${SEARCHSTRING}" = "" ];
+	        then
+	          logtext --nodate "Warning! Possible bad module found."
+	          FOUNDSTRING=1
+	        else
+	          logtext --nodate "OK"
+	      fi
+	    done
+
+            if [ ${FOUNDSTRING} -eq 1 ]
+	      then	
+	        insertlayout
+	        displaytext $E "   ${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+	      else
+	        insertlayout
+	        displaytext $E "   ${LAYOUT}[ ${OK}OK${NORMAL} ]"
+	    fi
+
+	  else
+	    insertlayout
+	    displaytext $E "   ${LAYOUT}[ ${OK}Not found${NORMAL} ]"  
+	fi
+
+
+	FOUNDSTRING=0
+
+	SIZE=38
+	displaytext -n "   Checking Apache configuration ... "
+	jump=`expr ${defaultcolumn} - ${SIZE}`
+
+        for I in ${HTTPDCONFS}; do
+	      if [ -f ${I} ]	
+		then	
+	          SEARCHSTRING=`cat ${I} | egrep 'mod_rootme\.so|mod_rootme2\.so'`
+	          if [ ! "${SEARCHSTRING}" = "" ]; then
+	            # Found evil module
+	            FOUNDSTRING=1
+		  fi
+	      fi
+        done
+
+        if [ ${FOUNDSTRING} -eq 1 ]
+	  then	
+	    insertlayout
+	    displaytext $E "   ${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+          else
+	    insertlayout
+	    displaytext $E "   ${LAYOUT}[ ${OK}OK${NORMAL} ]"
+        fi
+
+
+
+	logtext "---------------------- Application version check ----------------------"
+
+
+	if [ ${APPLICATION_CHECK} -eq 1 ]
+	  then
+
+    	    displaytext ""
+	    displaytext "* Application version scan"
+
+
+#BINPATHS="/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/libexec"
+
+if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
+SCANFILES="
+exim:Exim%%MTA:
+httpd:Apache:
+openssl:OpenSSL:
+php:PHP:
+procmail:Procmail%%MTA:
+proftpd:ProFTPd:
+sshd:OpenSSH:
+"
+else
+SCANFILES="
+exim:Exim%%MTA:
+gpg:GnuPG:
+httpd:Apache:
+named:Bind%%DNS:
+openssl:OpenSSL:
+php:PHP:
+procmail:Procmail%%MTA:
+proftpd:ProFTPd:
+sshd:OpenSSH:
+"
+fi
+
+LINUX_KERNELS="
+vulnerable:%2.4.22%2.4.23%
+nonvulnerable:%2.4.24%
+"
+
+FOUND=0
+FOUNDUNKNOWN=0
+
+for J in ${SCANFILES}; do
+    APPLICATION=`echo ${J} | cut -d ':' -f1`
+    APPLICATIONNAME=`echo ${J} | cut -d ':' -f2`
+    VULNERABLE=`cat ${DB_PATH}/programs_bad.dat | cut -d ':' -f2`
+    NONVULNERABLE=`cat ${DB_PATH}/programs_good.dat | cut -d ':' -f2`
+    logtext "----------------------------------------------------------"
+    logtext "Scanning ${APPLICATIONNAME}..."
+
+  FILEFOUND=0
+  for I in ${BINPATHS}; do
+
+    if [ -f "${I}/${APPLICATION}" ]
+      then
+        FILEFOUND=1
+        VERSION=""
+        case ${APPLICATION} in
+          exim)
+                VERSION=`${I}/exim -bV | grep 'Exim version' | awk '{ print $3 }'`
+                ;;
+          gpg)
+                VERSION=`${I}/gpg --version | grep 'GnuPG' | awk '{ print $3 }'`
+                ;;
+          httpd)
+                VERSION=`${I}/httpd -v | grep 'Apache' | cut -d ' ' -f3 | cut -d '/' -f2`
+                ;;
+          named)
+                VERSION=`${I}/named -v | grep 'named' | grep -v '/' | awk '{ print $2 }'`
+                if [ ! "`echo ${VERSION} | grep "-"`" = "" ]; then
+                  VERSION=`echo ${VERSION} | cut -d '-' -f1`
+                fi
+		TEST=`${I}/named -v | grep 'named'`
+		logtext "Debug: ${TEST}"
+		if [ "${VERSION}" = "" ]; then
+		  VERSION=`${I}/named -v | awk '{ print $2 }'`
+		fi
+                ;;
+	  openssl)
+		VERSION=`${I}/openssl version | head -n 1 | cut -d' ' -f2`
+		;;
+          php)
+                # Strip off any additions (like Debian using version 4.3.10-8)
+		VERSION=`${I}/php -v | head -n 1 | awk '{ print $2 }' | cut -d'-' -f1`
+                ;;
+          procmail)
+                VERSION=`${I}/procmail -v 2>&1  | grep 'procmail v' | awk '{ print $2 }' | tr -d 'v'`
+                ;;
+          proftpd)
+                VERSION=`${I}/proftpd -v 2>&1 | awk '{ print $4 }'`
+                ;;
+          squid)
+                VERSION=`${I}/squid -v | grep 'Squid Cache' | awk '{ print $4 }'`
+                ;;
+          sshd)
+                VERSION=`${I}/sshd -t -d 2>&1 | head -n 1 | awk '{ print $4 }' | cut -d '_' -f2`
+		if [ ! "`echo "${VERSION}" | grep "+"`" = "" ]; then
+		  VERSION=`echo "${VERSION}" | cut -d'+' -f1`
+		fi
+                ;;
+          *)
+                displaytext "Unknown"
+                VERSION="NA"
+                ;;
+        esac
+
+        logtext "${I}/${APPLICATION} found"
+
+        VERSION=`echo ${VERSION} | tr -d '\r'`
+
+        if [ "${VERSION}" = "" ]
+          then
+            logtext "No version found of application ${APPLICATION}"
+            APPLICATIONNAME=`echo ${APPLICATIONNAME} | tr -s '%' ' '`
+                displaytext -n "   - ${APPLICATIONNAME} [unknown] "
+
+		JUMPCOL=`expr ${defaultcolumn} - 12`
+		SIZE=`echo \'${APPLICATIONNAME} [unknown]\' | wc -c | tr -s ' ' | tr -d ' '`
+		jump=`expr ${JUMPCOL} - ${SIZE} + 11`
+		insertlayout
+		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	    
+
+          else
+            APPLICATIONNAME=`echo ${APPLICATIONNAME} | tr -s '%' ' '`
+                displaytext -n "   - ${APPLICATIONNAME} ${VERSION} "
+
+		JUMPCOL=`expr ${defaultcolumn} - 12`
+		SIZE=`echo \'${APPLICATIONNAME} ${VERSION}\' | wc -c | tr -s ' ' | tr -d ' '`
+		jump=`expr ${JUMPCOL} - ${SIZE} + 11`
+		insertlayout
+
+		RE_VERSION=`echo "${VERSION}" | sed -e 's/\./\\\./g'`
+                ISVULNERABLE=`echo ${VULNERABLE} | grep "%${RE_VERSION}%"`
+                if [ "${ISVULNERABLE}" = "" ]
+                  then
+                    ISNONVULNERABLE=`echo ${NONVULNERABLE} | grep "%${RE_VERSION}%"`
+                    if [ "${ISNONVULNERABLE}" = "" ]
+                      then
+                        logtext "No information available. Unknown version number"
+			displaytext $E "${LAYOUT}[ ${YELLOW}Unknown${NORMAL} ]"	    			
+			FOUNDUNKNOWN=1
+                      else
+                        logtext "Version ${VERSION} is available in non-vulnerable group and seems to be OK!"
+			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	    
+                    fi
+                  else
+                    logtext "Version ${VERSION} seems to be vulnerable (if unpatched)!"
+		    if [ ${USE_PATCHED_SOFTWARE} -eq 1 ]
+		      then
+		       displaytext $E "${LAYOUT}[ ${YELLOW}Old or patched version${NORMAL} ]"
+		      else		      
+                       displaytext $E "${LAYOUT}[ ${BAD}Vulnerable${NORMAL} ]"	    
+		    fi
+		    FOUND=1
+		    VULNERABLE_ITEM_COUNT=`expr ${VULNERABLE_ITEM_COUNT} + 1`
+                fi
+        fi
+    fi
+  done
+
+if [ ${FILEFOUND} -eq 0 ]
+  then
+    logtext "Application not found"
+fi
+
+done
+
+#if [ `uname` = "Linux" ]
+#  then
+#    KERNELVERSION=`uname -r`
+#      # Strip hypens (-)
+#      if [ ! `echo ${KERNELVERSION} | grep '-'` = "" ]
+#        then
+#          KERNELVERSION=`echo ${KERNELVERSION} | cut -d '-' -f1`
+#      fi
+#
+#    displaytext -n "Search information for Linux kernel ${KERNELVERSION}..."
+#
+#    FOUND=0
+#    VULNERABLE=0
+#    for I in ${LINUX_KERNELS}; do
+#      TYPE=`echo ${I} | cut -d ':' -f1`
+#      INFO=`echo ${I} | cut -d ':' -f2`
+#
+#      if [ "${TYPE}" = "nonvulnerable" ]
+#        then
+#          GOODVERSIONS=`echo ${INFO} | sed -e "s/%/, /g" | sed -e "s/^, //"  | sed -e "s/, $//"`
+#      fi
+#
+#      KVERSION=`echo "${KERNELVERSION}" | sed -e 's/\./\\\./g'`
+#      if [ ! "`echo ${INFO} | grep "${KVERSION}"`" = "" -o ! "`echo ${INFO} | grep "${KVERSION}-"`" = "" ]
+#        then
+#          if [ "${TYPE}" = "vulnerable" ]
+#            then
+#              FOUND=1
+#              VULNERABLE=1
+#              displaytext "Possible vulnerable kernel version!"
+#          fi
+#
+#          if [ "${TYPE}" = "nonvulnerable" ]
+#            then
+#              FOUND=1
+#              displaytext "Found a non-vulnerable kernel version"
+#          fi
+#      fi
+#    done
+#    if [ "${FOUND}" -eq 0 ]
+#      then
+#        displaytext "Unknown version"
+#      else
+#        if [ "${VULNERABLE}" -eq 1 ]
+#          then
+#            displaytext "Please upgrade to a higher version like ${GOODVERSIONS}"
+#        fi
+#    fi
+#  else
+#    displaytext "Linux kernel check skipped"
+#fi
+
+displaytext ""
+if [ $FOUNDUNKNOWN -eq 1 ]; then
+  displaytext "Your system contains some unknown version numbers. Please run Rootkit Hunter"
+  displaytext "with the --update parameter or contact us through the Rootkit Hunter mailinglist"
+  displaytext "at rkhunter-users@lists.sourceforge.net."
+fi
+
+fi
+# end of application test CHECK (application_check=1)
+
+
+
+
+##################################################################################################
+#
+# Security advisories
+#
+##################################################################################################
+
+
+	displaytext ""; displaytext ""
+	displaytext "${YELLOW}Security advisories${NORMAL}"
+	logtext "------------------------- Security advisories -------------------------"
+
+	SIZE=30
+	jump=`expr ${defaultcolumn} - ${SIZE}`			
+
+
+	    displaytext "${test}* Check: Groups and Accounts${NORMAL}"
+	    displaytext -n "   Searching for /etc/passwd... "
+	    if [ -e "${ROOTDIR}etc/passwd" ]
+	      then
+	        insertlayout
+		displaytext $E "${LAYOUT}[ ${OK}Found${NORMAL} ]"	    
+    	        displaytext -n "   Checking users with UID '0' (root)... "
+
+		SIZE=39
+		jump=`expr ${defaultcolumn} - ${SIZE}`			
+
+		users_with_uid0=`grep -v '^:0:0:::' ${ROOTDIR}etc/passwd | grep ":0:" | cut -d ":" -f1,3 | grep '0' | grep -v 'root:0'` 
+		    if [ "${users_with_uid0}" = "" ] 
+		      then
+		        insertlayout
+			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	    
+		      else
+		        insertlayout
+			displaytext $E "${LAYOUT}[ ${YELLOW}Warning!${NORMAL} (some users in root group) ]"
+			displaytext "    info: ${users_with_uid0}"
+		    fi
+	    
+	      else
+	        insertlayout
+		displaytext $E "${LAYOUT}[ ${BAD}Not Found${NORMAL} ]"	    
+	    fi	
+
+
+
+	displaytext "";
+	displaytext "${test}* Check: SSH${NORMAL}"
+
+
+	SIZE=39
+	jump=`expr ${defaultcolumn} - ${SIZE}`			
+	
+	displaytext "   Searching for sshd_config... "
+	SSHDCONFIG_PLACES="${ROOTDIR}etc ${ROOTDIR}etc/ssh ${ROOTDIR}usr/local/etc ${ROOTDIR}usr/local/etc/ssh"
+	for I in ${SSHDCONFIG_PLACES}; do
+	    
+	  if [ -e "${I}/sshd_config" ]	
+	    then
+	        FOUND=0
+		displaytext "   Found ${I}/sshd_config"
+		displaytext -n "   Checking for allowed root login... "
+		permitrootlogin=`cat ${I}/sshd_config | grep "PermitRootLogin" | grep -v "#"`
+		
+		if [ "${permitrootlogin}" = "PermitRootLogin yes" ]
+	          then
+		    FOUND=1
+		    logtext "Info: Found 'PermitRootLogin yes'. Unsafe for production servers..."
+		    logtext "Tip: Change the option in your configuration file (${I}/sshd_config)."
+		    logtext "     Use normal user accounts and 'su' to obtain root permissions."
+	          else
+		    permitrootlogin2=`cat ${I}/sshd_config | egrep "PermitRootLogin (no|without-password)" | grep -v "#"`
+		    if [ "${permitrootlogin2}" = "PermitRootLogin no" -o "${permitrootlogin2}" = "PermitRootLogin without-password" ]
+		      then
+		        FOUND=0
+			logtext "Info: Found 'PermitRootLogin no' or 'PermitRootLogin without-password' in SSH configuration file ${I}/sshd_config"
+		      else
+			permitrootlogin2=`cat ${I}/sshd_config | grep "PermitRootLogin forced-commands-only" | grep -v "#"`
+			if [ "${permitrootlogin2}" = "PermitRootLogin forced-commands-only" ]
+			  then
+			    FOUND=1
+			    logtext "Info: Found 'PermitRootLogin forced-commands-only'"
+			  else
+			    permitrootlogin3=`cat ${I}/sshd_config | grep "#PermitRootLogin yes"`
+			    if [ ! "${permitrootlogin3}" = "" ]
+			      then
+				FOUND=1
+				logtext "Info: Found no PermitRootLogin value in file ${I}/sshd_config. Default value is 'yes'."
+			      else
+				FOUND=0
+				logtext "Unknown PermitRootLogin value found in file ${I}/sshd_config"
+			    fi
+			fi
+		    fi
+		fi
+
+		if [ ${FOUND} -eq 1 ]
+		  then
+		  
+		    if [ "${ALLOW_SSH_ROOT_USER}" = "0" ]
+		      then	      
+	    	        displaytext "${red}Watch out ${NORMAL}Root login possible. Possible risk!"
+			if [ -z "${permitrootlogin}" ]; then
+		    	        displaytext "    info: No 'PermitRootLogin' entry found in file ${I}/sshd_config"
+			else
+		    	        displaytext "    info: \"${permitrootlogin}\" found in file ${I}/sshd_config"
+			fi
+		        displaytext "    Hint: See logfile for more information about this issue"
+		        logtext "Warning: root login possible. Change for your safety the 'PermitRootLogin'"
+			logtext "entry in the SSH configuration file ${I}/sshd_config to 'no', and use 'su -' to become root. "
+		      else
+			logtext "Remote root login permitted, but allowed by using explicit option"	      
+			SIZE=36
+		        jump=`expr ${defaultcolumn} - ${SIZE}`			
+		        insertlayout
+		        displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} (Remote root login permitted by explicit option) ]"
+		    fi
+		  else
+		    SIZE=36
+		    jump=`expr ${defaultcolumn} - ${SIZE}`			
+		    insertlayout
+		    displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} (Remote root login disabled) ]"
+		fi
+
+		displaytext -n "   Checking for allowed protocols... "
+	    
+		protocols=`cat ${I}/sshd_config | grep 'Protocol 2' | grep -v '#'`
+		if [ "${protocols}" = "Protocol 2" ]
+		  then
+		    SIZE=35
+		    jump=`expr ${defaultcolumn} - ${SIZE}`			
+		    insertlayout
+		    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (Only SSH2 allowed) ]"	    
+		  else
+		    if [ "${protocols}" = "Protocol 2,1" -o "${protocols}" = "Protocol 1,2" -o "${protocols}" = "Protocol 1" ]
+		      then
+		        SIZE=35
+		        jump=`expr ${defaultcolumn} - ${SIZE}`			
+			insertlayout
+		        displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} ]"
+		        displaytext "    info: Users can use SSH1-protocol (see logfile for more information)."
+			logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
+		      else
+		        SIZE=35		      
+		        jump=`expr ${defaultcolumn} - ${SIZE}`			
+			insertlayout
+			protocols=`cat ${I}/sshd_config | grep "#Protocol"`
+			if [ "${protocols}" = "#Protocol 2,1" -o "${protocols}" = "#Protocol 1,2" ]
+			  then
+			    FOUND=1
+			    logtext "Found default option Protocol 2,1"
+			fi
+			if [ "${protocols}" = "#Protocol 1" ]
+			  then
+			    FOUND=1
+			    logtext "Found default option Protocol 1"
+			fi
+
+			if [ ${FOUND} -eq 0 ] 
+		          then			    
+			    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (Only SSH2 allowed) ]"	    
+			    displaytext "    info: found no option, most times default value is used."
+			  else
+			    displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} (SSH v1 allowed) ]"	    
+			    logtext "Warning: SSH version 1 possible allowed!"
+			    logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
+			fi
+		    fi
+		fi
+	  fi
+ 
+	done
+
+ 
+	displaytext "";
+	displaytext "${test}* Check: Events and Logging${NORMAL}"
+	displaytext -n "   Search for syslog configuration... "
+
+        SIZE=36
+        jump=`expr ${defaultcolumn} - ${SIZE}`			
+
+
+	if [ -e "/etc/syslog.conf" -o -e "/etc/syslog-ng/syslog-ng.conf" ]
+	  then
+	    insertlayout
+	    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	    		    
+	    SIZE=38
+	    jump=`expr ${defaultcolumn} - ${SIZE}`			
+
+	    displaytext -n "   Checking for running syslog slave... "
+	    
+		case "${OPERATING_SYSTEM}" in
+		  SunOS)
+		    syslogisrunning=`ps -ef | grep syslogd | grep -v "grep"`
+		    syslogngisrunning=`ps -ef | grep syslog-ng | grep -v "grep"`
+		    ;;		
+		  *)
+		    syslogisrunning=`ps ax | egrep "syslogd|syslog-ng|metalog" | grep -v "grep"`
+		    #syslogngisrunning=`ps ax | grep syslog-ng | grep -v "grep"`
+		    ;;
+		esac
+		
+		if [ ! "${syslogisrunning}" = "" -o ! "${syslogngisrunning}" = "" ]
+		  then
+		    insertlayout
+		    displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"	    		    
+		  else
+		    insertlayout
+		    displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		    displaytext "    Info: Cannot find syslog/syslog-ng daemon"
+	    	fi
+		    
+	    SIZE=42
+	    jump=`expr ${defaultcolumn} - ${SIZE}`			
+
+	    displaytext -n "   Checking for logging to remote system... "
+
+	    # First do syslog	    
+	    if [ -e /etc/syslog.conf ]
+	      then
+		logtoremote=`cat /etc/syslog.conf | grep "@" | grep -v "#"`
+	      else
+	        # Second try syslog-ng
+	        if [ -e /etc/syslog-ng/syslog-ng.conf ]
+		  then
+		    # Yes, we found the configuration file
+		    logtoremote=`cat /etc/syslog-ng/syslog-ng.conf | grep "@" | grep -v "#"`		  		    
+		  else
+		    displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
+		    displaytext "Warning: Cannot find syslog-ng configuration file"
+		    logtext "Info: Cannot find syslog-ng configuration file"
+		fi
+	    fi
+
+	    if [ "${logtoremote}" = "" ]
+	      then
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (no remote logging) ]"	    
+	      else
+	        insertlayout
+	        displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (remote logging) ]"
+	        displaytext "    info: ${logtoremote}"
+	        logtext "Info: line found with logging to remote host ($logtoremote)"
+	    fi
+
+	fi
+
+	
+keypresspause
+
+        #if [ ${OPERATING_SYSTEM} = "AIX" -o ${OPERATING_SYSTEM} = "SunOS" ] ; then
+        # ENDTIME=$SECONDS
+        #else
+         ENDTIME=`perl -e 'printf "%d\n", time;'`
+        #fi
+	TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
+	
+	displaytext ""; displaytext ""
+	displaytext "---------------------------- Scan results ----------------------------"
+
+	displaytext ""
+	displaytext "${YELLOW}MD5 scan${NORMAL}"
+	if [ ${MD5CHECK_SKIP} -eq 0 ]; then
+		displaytext "Scanned files: ${MD5_COUNT}"
+		displaytext -n "Incorrect MD5 checksums: "	
+		if [ "${MD5_DIFFERENT}" -eq 0 ]; then
+			displaytext -n "${OK}"
+		else
+			displaytext -n "${BAD}"
+		fi
+		displaytext "${MD5_DIFFERENT}${NORMAL}"
+	else
+		displaytext "Skipped"
+		logtext "MD5 scan skipped"
+	fi
+
+	displaytext ""
+	displaytext "${YELLOW}File scan${NORMAL}"
+	displaytext "Scanned files: ${SCANNED_COUNT}"
+	displaytext -n "Possible infected files: "
+	if [ "${INFECTED_COUNT}" -eq 0 ]; then
+	    displaytext -n "${OK}"
+	  else
+	    displaytext -n "${BAD}"
+	fi
+	displaytext "${INFECTED_COUNT}${NORMAL}"
+	logtext "Rootkits scanned for: ${ROOTKIT_TESTS}"
+	if [ ! "${INFECTED_NAMES}" = "" ]; then
+	  displaytext "Possible rootkits: ${INFECTED_NAMES}"
+	fi
+
+	displaytext ""
+	displaytext "${YELLOW}Application scan${NORMAL}"
+	if [ ${APPLICATION_CHECK} -eq 1 ]; then
+	  logtext "${VULNERABLE_ITEM_COUNT} vulnerable applications found"
+	  displaytext -n "Vulnerable applications: "
+  	  if [ "${VULNERABLE_ITEM_COUNT}" -eq 0 ]; then
+	    displaytext -n "${OK}"
+	    else
+	    displaytext -n "${BAD}"
+	  fi
+	  displaytext ${VULNERABLE_ITEM_COUNT}${NORMAL}
+	else
+	  displaytext "Skipped"
+	  logtext "Application scan skipped"
+	fi
+
+	displaytext ""
+	displaytext "Scanning took ${TOTALTIME} seconds"
+
+	if [ "${REPORTMODE}" -eq 0 ];
+	  then
+	    if [ "${DEBUGLOG}" -eq 1 ]; then
+	      displaytext ""
+	      displaytext "Scan results written to logfile (${DEBUGFILE})"
+	    fi
+	  
+	    displaytext ""
+	    displaytext "-----------------------------------------------------------------------"
+	    displaytext ""
+	    displaytext "Do you have some problems, undetected rootkits, false positives, ideas"
+	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailinglist"
+	    displaytext "at rkhunter-users@lists.sourceforge.net."
+	    displaytext ""
+	    displaytext "-----------------------------------------------------------------------"
+
+	  else
+
+	    # Force output (because we are in quiet mode)
+	    echo ""
+	    echo "* MD5 scan"
+	    if [ ${MD5CHECK_SKIP} -eq 0 ]; then
+		echo "MD5 compared            : ${MD5_COUNT}"
+		echo "Incorrect MD5 checksums : ${MD5_DIFFERENT}"
+	    else
+		echo "Skipped"
+	    fi
+	    echo ""
+	    echo "* File scan"
+	    echo "Scanned files: ${SCANNED_COUNT}"
+            echo "Possible infected files: ${INFECTED_COUNT}"
+	    echo ""
+	    echo "* Rootkits"
+	    echo "Possible rootkits: ${INFECTED_NAMES}"
+	    echo ""
+	    echo "* Application scan"
+	    if [ ${APPLICATION_CHECK} -eq 1 ]; then
+		echo "Vulnerable applications: ${VULNERABLE_ITEM_COUNT}"
+	    else
+		echo "Skipped"
+	    fi
+	    echo ""
+	    echo "Scanning took ${TOTALTIME} seconds"
+	    echo ""
+	    echo "*important*"
+	    echo "Scan your system manually sometimes with full output enabled!"
+
+	    displaytext ""
+	    displaytext "-----------------------------------------------------------------------"
+	    displaytext ""
+	    displaytext "Do you have some problems, undetected rootkits, false positives, ideas"
+	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailinglist"
+	    displaytext "at rkhunter-users@lists.sourceforge.net."
+	    displaytext ""
+	    displaytext "-----------------------------------------------------------------------"
+
+       fi
+       
+       if [ $CATLOGFILE -eq 1 ]; then
+         cat $DEBUGFILE
+       fi
+       
+       if [ ${WARNING} -eq 1 ]
+         then
+	 
+	   if [ ${SHOWWARNINGSONLY} -eq 1 ]; then
+	     echo "-----------------------------------------------------------------"
+	     echo ""
+	     echo "Found warnings:"
+	     cat $DEBUGFILE | egrep "Warning|WARNING|BAD|Bad|Vulnerable"
+	     echo ""
+	     echo "-----------------------------------------------------------------"
+	     echo ""
+	     echo "If you're unsure about the results above, please contact the"
+	     echo "Rootkit Hunter team through the Rootkit Hunter mailinglist"
+	     echo "at rkhunter-users@lists.sourceforge.net."
+	   fi
+	   if [ ! "${MAILONWARNING}" = "" ]; then
+	     echo "Please inspect this machine, because it can be infected" | mail -s [rkhunter]\ Warnings\ found\ for\ ${hostname} ${MAILONWARNING}
+	   fi
+	
+	   # If we use the --quiet option, tell the user he has to inspect the machine
+	   if [ ${QUIET} -eq 1 ]; then
+	     echo "Some errors has been found while checking. Please perform a manual check on this machine (${hostname})"
+	   fi
+
+	   # Something was wrong. So end with a nonzero exit state for scripters/coders ;-)
+           exit 1
+   
+	 else
+	   exit 0
+       fi
+       
+  else
+
+    if [ ! ${NOARGS} -eq 1 -a ${VERSIONCHECK} -eq 0 -a ${UPDATE} -eq 0 ]; then
+      displaytext "You don't want to check your system?"
+      displaytext "Please submit a parameter like --checkall or --cronjob"
+    fi
+fi
+
+if [ "${UPDATE}" -eq 1 ]
+  then
+    displaytext "Running updater..."
+    displaytext ""
+    ${MYDIR}/lib/rkhunter/scripts/check_update.sh ${CONFIGFILE} ${MIRRORFILE} ${DB_PATH} ${md5} ${DEBUGFILE}
+    displaytext ""
+    displaytext "Ready."
+fi
+
+if [ "${VERSIONCHECK}" -eq 1 ]
+  then
+    LATESTVERSION="unknown"
+
+    if [ -f ${TMPDIR}/rkhunter.upd ]; then
+      rm -f ${TMPDIR}/rkhunter.upd
+    fi
+
+    URLPREFIX=`cat ${DB_PATH}/mirrors.dat | grep -v 'version=' | head -n 1 | cut -d '=' -f2`
+
+    VERSIONUPDATEURL=`cat ${CONFIGFILE} | grep 'LATESTVERSION=' | sed 's/LATESTVERSION=//g'`
+  
+    if [ "${WGETFOUND}" -eq 1 ]
+      then
+	  ${WGETBINARY} -q -O ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL}
+	  displaytext "${URLPREFIX}${VERSIONUPDATEURL}"
+	  LATESTVERSION=`cat ${TMPDIR}/rkhunter.upd`
+    fi
+
+    if [ $QUIET -eq 0 ]
+      then
+        displaytext ""
+        displaytext "${PROGRAM_NAME} ${PROGRAM_version}, copyright ${PROGRAM_author}"
+        displaytext ""
+        displaytext "This version:   ${PROGRAM_version}"
+        displaytext "Latest version: ${LATESTVERSION}"
+    fi
+
+    
+    if [ "${LATESTVERSION}" = "" ]; then
+      LATESTVERSION="unknown"
+    fi
+    
+    if [ ! "${PROGRAM_version}" = "${LATESTVERSION}" ]
+      then
+        if [ "${LATESTVERSION}" = "unknown"  ]
+	  then
+	    echo "Can't fetch latest version number."
+	    echo "${WHITE}Please check manually for updates${NORMAL}"
+	  else
+            echo "${WHITE}Update available${NORMAL}"
+	fi	  
+    fi
+
+    if [ $QUIET -eq 0 ]; then
+      displaytext "" ; displaytext "" ; displaytext ""
+    fi
+fi   
+  
+
+if [ "${NOARGS}" -eq 1 ]
+  then
+    echo $ECHOOPT "${PROGRAM_license}"
+    echo $ECHOOPT ""
+    echo $ECHOOPT "Valid parameters:"
+    echo $ECHOOPT "--checkall (-c)           : Check system"
+    echo $ECHOOPT "--createlogfile <file>*   : Create logfile (file is optional, defaults to"
+    echo $ECHOOPT "                          : /var/log/rkhunter.log)"
+    echo $ECHOOPT "--cronjob                 : Run as cronjob (removes colored layout)"
+    echo $ECHOOPT "--display-logfile         : Show logfile at end of the output"    
+    echo $ECHOOPT "--help (-h)               : Show this help"
+    echo $ECHOOPT "--nocolors*               : Don't use colors for output"
+    echo $ECHOOPT "--report-mode*            : Don't show uninteresting information for reports"
+    echo $ECHOOPT "--report-warnings-only*   : Show only warnings (lesser output than --report-mode,"
+    echo $ECHOOPT "                          : more than --quiet)"
+    echo $ECHOOPT "--skip-application-check* : Don't run application version checks"
+    echo $ECHOOPT "--skip-keypress (-sk)*    : Don't wait after every test (non-interactive)"
+    echo $ECHOOPT "--quick*                  : Perform quick scan (instead of full scan)"
+    echo $ECHOOPT "--quiet*                  : Be quiet (only show warnings)"    
+    echo $ECHOOPT "--update                  : Run update tool and check for database updates"
+    echo $ECHOOPT "--version                 : Show version and quit"
+    echo $ECHOOPT "--versioncheck            : Check for latest version"    
+    echo $ECHOOPT ""
+    echo $ECHOOPT "--bindir <bindir>*        : Use <bindir> instead of using default binaries"
+    echo $ECHOOPT "--configfile <file>*      : Use different configuration file"    
+    echo $ECHOOPT "--dbdir <dir>*            : Use <dbdir> as database directory"        
+    echo $ECHOOPT "--rootdir <rootdir>*      : Use <rootdir> instead of / (slash at end)"
+    echo $ECHOOPT "--tmpdir <tempdir>*       : Use <tempdir> as temporary directory"    
+    echo $ECHOOPT ""
+    echo $ECHOOPT "Explicit scan options:"    
+    echo $ECHOOPT "--allow-ssh-root-user*    : Allow usage of SSH root user login"
+    echo $ECHOOPT "--disable-md5-check*      : Disable MD5 checks"
+    echo $ECHOOPT "--disable-passwd-check*   : Disable passwd/group checks"
+    echo $ECHOOPT "--scan-knownbad-files*    : Perform besides 'known good' check a 'known bad' check"    
+    echo $ECHOOPT ""
+    echo $ECHOOPT "Multiple parameters are allowed"
+    echo $ECHOOPT "*) Parameter can only be used with other parameters"
+    echo $ECHOOPT ""
+    echo $ECHOOPT "${PROGRAM_extrainfo}"
+    echo $ECHOOPT ""
+fi    
+
+# end of parameter check
+
+# 
+# To Do:
+#
+# - FreeBSD MD5 test:
+# ( md5 -x | grep -v 'verified correct' | grep -v 'MD5 test suite:' )
+# Portacelo:
+# String: 'big mess of a failure', 'Here today, gone tommorow' (sshd)
+# find `lsof -F n | sort | uniq | grep '^n/' | cut -b 2,256 | egrep 'ASCII|ELF'` | cut -d ':' -f1
+#
+#
+#################################################################################
+#
+# The Rootkit Hunter project owes gratitude to:
+# - Michael for providing and opening up the RKH project,
+# - John Horne for opening up a true cornucopia of enhancements,
+# - Gary Bak for testing and enhancing AIX support,
+# - Andrej Ricnik for patching and testing,
+# - Konsolebox for loads of suggestions,
+# - Sibtay Abbas for testing,
+# - Constantin Stefan for ideas,
+# - Iain Roberts: AIX and OpenBSD support,
+# - Doncho N. Gunchev,
+# - Steph: testing,
+# - unSpawn.
+#################################################################################
+
+
+# The End

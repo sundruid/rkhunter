@@ -1,0 +1,76 @@
+
+#################################################################################
+#
+# WISHLIST : Personal and public 'wishes' for Rootkit Hunter
+#
+# Notes:
+# - All things below CAN be integrated in future, but there are no planned
+#   dates available.
+#
+# - This file will be maintained as much as possible, but can be outdated.
+#   See changelog for latest additions.
+#
+# - I have also a book wishlist. Do you like rkhunter or want to have a nice
+#   banner on my website? Have a look at www.rootkit.nl and see how you
+#   can support development of rkhuner.
+#
+#
+#################################################################################
+#
+# Request:
+# - Do you have a copy of an undetected rootkit? Please send it to me, so
+#   it can be added and help others.
+#
+#################################################################################
+#
+
+ Important:
+ - Make a 'whereis' function for the installer
+ - Add MD5 check for unknown OSes
+ - Add/improve Tuxkit
+ - Hashes for FreeBSD 4.9, 4.10, 5.2, 5.2.1, Trustix, Slackware 9.1.0
+
+ Startup:
+ - Comparing LKM/KLD startups from rc-scripts (differences)
+ - Checking for kldload (*BSD) and loading of LKMs in rc-scripts
+ - Black/whitelisting of LKM/KLD
+ 
+ Processes:
+ - Black/whitelisting of processes
+ - Check for multiple instances of tools (like file, ls, ps, find)
+
+ Scanning:
+ - Check Perl (and configuration) when Perl tests are used
+ - Implement string scanner into main scanner
+
+ Support:
+ - Set lo interface into promisc mode to test ifconfig
+ - Improve support for Sebek LKM
+ - Option to use Perl modules on a different place than the usual
+   (requested by Henk Wevers)
+ - Debian package (.deb)
+ - Improve translation (and add it to main script)
+ 
+ Misc:
+ - Multi-language (checker and website)
+ - Make installation optional, so rkhunter can run without installing
+ - Create more documentation
+ - Scanning of multiple machines by using a central server
+ - Add debuglevels (also for use with logfile)
+ - Add checksums for all databases and scripts
+ - Add support for SSH version of SSH.com
+ 
+ Website:
+ - Reporting tool for trojaned binaries
+ - Create a static download URL for releases (rkhunter-latest.tar.gz), after setting up mirrors..
+ - Adding comparision between Rootkit Hunter and other projects (pros/cons).
+   *** Maybe someone likes to help me with this? I like an objective comparison, not
+       a commercial bullsh*t comparison which tells all other competitors are bad ;-)
+
+ NetBSD:
+ - Remove whereis parameter '-b' (doesn't exist)
+ - Use /usr/pkg/bin/perl instead of /usr/bin/perl
+
+#
+#################################################################################
+#
