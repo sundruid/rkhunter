@@ -230,6 +230,9 @@ while [ $# -ge 1 ]; do
       --versioncheck)
           VERSIONCHECK=1
 	  ;;
+      --check-deleted)
+          CHKDEL=1
+          ;;
       *)
           echo "Fatal: Invalid option $1"
 	  exit 1
@@ -3169,6 +3172,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	
     fi
 
+	if [ $CHKDEL -eq 1 ]; then
 	displaytext -n "   Checking processes for deleted files... "
 	logtext -n "Scanning processes for deleted files... "
 	SIZE="41"
@@ -3263,7 +3267,8 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		insertlayout
 		displaytext -e "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
 		logtext --nodate "Skipped"
-	fi
+        fi	
+      fi # end CHKDEL
 
 
     logtext "----------------------- Login backdoors check -------------------------"
@@ -5363,7 +5368,8 @@ if [ "${NOARGS}" -eq 1 ]
     echo $ECHOOPT "--allow-ssh-root-user*    : Allow usage of SSH root user login"
     echo $ECHOOPT "--disable-md5-check*      : Disable MD5 checks"
     echo $ECHOOPT "--disable-passwd-check*   : Disable passwd/group checks"
-    echo $ECHOOPT "--scan-knownbad-files*    : Perform besides 'known good' check a 'known bad' check"    
+    echo $ECHOOPT "--scan-knownbad-files*    : Perform besides 'known good' check a 'known bad' check"
+    echo $ECHOOPT "--check-deleted           : Perform 'deleted files' check"
     echo $ECHOOPT ""
     echo $ECHOOPT "Multiple parameters are allowed"
     echo $ECHOOPT "*) Parameter can only be used with other parameters"
