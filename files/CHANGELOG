@@ -23,48 +23,46 @@
 
  -- 
 
- * 1.2.9 (xx/09/2006)
+ * 1.2.9 (30/09/2006)
+
+ New:
+ - Rootkit Hunter is under new management so maintenance, development and support is assured
+ - Added support for RHEL WS/AS/ES 3, Taroon update 8
+ - Added support for Fedora Core 5
+ - Added support for SuSE 10
+ - Added check for packet capturing applications (see rkhunter.conf for whitelisting)
+ - Added check for processes using deleted files (see rkhunter.conf for whitelisting)
+ - Enabled netstat check for AIX
+ - Enabled backdoor check for SunOS
+ - Enabled logfile specification and checks
 
  Changes:
- - Check for packet capture applications (+whitelisting: see rkhunter.conf)
- - Check for processes using deleted files (+whitelisting: see rkhunter.conf)
- - Layout fixes
- - AIX rc.sysinit test
- - AIX uses netstat now
- - Add HIDDEN examples in conf
- - Add SuSE 10 detection
- - Add and expand CaOS detection
- - Error message correction "group" file
- - Added logfile specification and checks
- - Change time to perl epoch
- - Change contact information
- - Correct skdet args usage
- - use skdet FOUND check
- - Promiscuous mode check #2
- - Expanded prelinking test with binary FOUND
- - Expanded binaries FOUND check
- - Fix SF tracker issue 1449701
- - Typos, grammatical changes, and several formatting/display corrections
+ - Improved cAos support
+ - Improved AIX rc.sysinit test
+ - Improved second promiscuous mode check
+ - Improved prelinking test
+ - Improved binaries found check
  - Improved MD5 check and application scan
- - Ksh 'shift' fix
- - SunOS backdoor testing enabled
- - Better FreeBSD/AIX grepping (FP's)
- - Solaris grep/ifconfig fixes
- - Add Fedora Core 5 detection
- - Improved –reportmode –report-warnings-only
- - Enable the backdoor ports test for SunOS
- - Fix typo's and grammatical errors
- - permitrootlogin forced-commands-only
- - Improved logfile testing
- - Specific Solaris changes (grep, ifconfig)
+ - Improved FreeBSD/AIX grepping
+ - Improved Solaris grep/ifconfig (FP's)
+ - Improved reportmode report-warnings-only
+ - Improved permitrootlogin check with forced-commands-only
  - Improved passwordless user accounts test
- - Correct displaying and formatting
- - Improved file/module name checks (FP)
- - Improved check-update: DBDIR vs temp dir, preserve DAC rights
- - Improved script replacements (Solaris)
- - Improved SSH configuration check
+ - Improved file/module name checks (FP's)
+ - Improved check-update: DBDIR vs temp dir and preserve DAC rights
+ - Improved Solaris script replacements
+ - Fix typos, grammatical changes, formatting/displaying
+ - Added more examples to config
+ - Change contact information
+
+ Bugfixes:
  - Removed stale mirrors
- - Added support for RHEL WS/AS/ES 3, Taroon update 8
+ - Fix SF tracker issue 1449701
+ - Fix skdet test
+ - Time uses Perl epoch 
+ - Error message about "group" file
+ - Ksh 'shift' fix
+
  --
 
  * 1.2.8 (24/02/2006)

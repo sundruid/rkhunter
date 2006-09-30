@@ -5,13 +5,13 @@ AutoReqProv: no
 
 Summary:	Rootkit scans for rootkits, backdoors and local exploits.
 Name:		rkhunter
-Version:	1.2.8
+Version:	1.2.9
 Release:	1
 Epoch:		0
 License:	GPL
 Group:          Applications/System
-URL:		http://www.rootkit.nl/
-Source0:	http://downloads.rootkit.nl/%{name}-%{version}.tar.gz
+URL:		http://rkhunter.sourceforge.net/
+Source0:	%{name}-%{version}.tar.gz
 BuildArch:	noarch
 Requires:	/bin/sh, /bin/ps, /bin/ls, /bin/cat, /bin/egrep
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -121,6 +121,9 @@ EOF
 
 
 %changelog
+* Fri Sep 29 2006 unSpawn - 1.2.9
+- Updated for release 1.2.9
+
 * Tue Aug 10 2004 Michael Boelen - 1.1.5
 - Added update script
 - Extended description

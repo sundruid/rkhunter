@@ -5,30 +5,37 @@
 #
 # Notes:
 # - All things below CAN be integrated in future, but there are no planned
-#   dates available.
-#
-# - This file will be maintained as much as possible, but can be outdated.
-#   See changelog for latest additions.
-#
-# - I have also a book wishlist. Do you like rkhunter or want to have a nice
-#   banner on my website? Have a look at www.rootkit.nl and see how you
-#   can support development of rkhuner.
-#
+#   dates available. *Your* support can change help that!
 #
 #################################################################################
 #
 # Request:
-# - Do you have a copy of an undetected rootkit? Please send it to me, so
+# - Do you have a copy of an undetected rootkit? Please send it to us, so
 #   it can be added and help others.
+# - Are you a package maintainer? Please submit your changes through
+#   rkhunter.sourceforge.net so *everyone* can benefit from it.
+# - Are you an enduser? If you want to submit a patch or discuss enhancements,
+#   file a bug report, have comments, gripes or questions please
+#   visit rkhunter.sourceforge.net on how you can best reach the project team and
+#   fellow Rootkit Hunter users.
 #
 #################################################################################
 #
 
+Stale:
+ - the defaulthashes.dat file will be deprecated in the next release in
+   favour of locally generated hashes using the community-supplied hashupd
+ - the os.dat file will be deprecated in the next release, since it is only
+   used by defaulthashes.dat.
+
  Important:
  - Make a 'whereis' function for the installer
+ - Make the installer FSSTND or FHS or whatever-else-goes compliant.
  - Add MD5 check for unknown OSes
  - Add/improve Tuxkit
- - Hashes for FreeBSD 4.9, 4.10, 5.2, 5.2.1, Trustix, Slackware 9.1.0
+ - Missing hashes for any releases of supported O.S.es
+ - Promiscuous mode detection. In kernel-2.6 the ifconfig + ip (iproute2) 
+   method is no longer working.
 
  Startup:
  - Comparing LKM/KLD startups from rc-scripts (differences)
@@ -64,7 +71,7 @@
  - Reporting tool for trojaned binaries
  - Create a static download URL for releases (rkhunter-latest.tar.gz), after setting up mirrors..
  - Adding comparision between Rootkit Hunter and other projects (pros/cons).
-   *** Maybe someone likes to help me with this? I like an objective comparison, not
+   *** Maybe someone likes to help us with this? I like an objective comparison, not
        a commercial bullsh*t comparison which tells all other competitors are bad ;-)
 
  NetBSD:

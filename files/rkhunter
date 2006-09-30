@@ -18,10 +18,13 @@
 PROGRAM_NAME="Rootkit Hunter"
 PROGRAM_version="1.2.9"
 PROGRAM_releasedate="30 Sep 2006"
-PROGRAM_author="Michael Boelen"
-PROGRAM_copyright="Copyright 2003-2006, ${PROGRAM_author}"
+PROGRAM_copyright_owner="Michael Boelen"
+PROGRAM_copyright="Copyright 2003-2006, ${PROGRAM_copyright_owner}"
 PROGRAM_license="
 ${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
+
+Under active development by the ${PROGRAM_NAME} project team. For reporting
+bugs, updates, patches, comments and questions see: rkhunter.sourceforge.net
 
 ${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY. This is free software,
 and you are welcome to redistribute it under the terms of the GNU General
@@ -55,6 +58,9 @@ VULNERABLE_ITEM_COUNT=0
 
 # Patched software versions?
 USE_PATCHED_SOFTWARE=0
+
+CHKDEL=0
+CHKLISTEN=0
 
 PREVIOUSTEXT=""
 
@@ -233,6 +239,9 @@ while [ $# -ge 1 ]; do
       --check-deleted)
           CHKDEL=1
           ;;
+      --check-listen)
+	 CHKLISTEN=1
+	  ;;
       *)
           echo "Fatal: Invalid option $1"
 	  exit 1
@@ -4013,7 +4022,7 @@ FOUND=0
 		fi
 		logtext "${LOGTEXT}[ WARNING ]"
 		logtext "Possible promisc interfaces:"
-		logtext "Output test 1: ${PROMISCSCAN}"
+		logtext "Output test 1: ${PROMISCSCAN1}"
 		if [ "${OPERATING_SYSTEM}" = "Linux" -a "${PROMISCSCAN2}" != "" ]; then
 			PROMISCSCAN2IFACES=`${IPBINARY} -s link | grep 'PROMISC' | cut -d ":" -f2`
 			for if in $PROMISCSCAN2IFACES ; do
@@ -4033,7 +4042,7 @@ FOUND=0
 		SKIPNEXT=1
 	fi
 
-	if [ "$SKIPNEXT" -eq 0 ]; then
+	if [ "$SKIPNEXT" -eq 0 -a $CHKLISTEN -eq 1 ]; then
 		STATUS=0
 		WHITEPROC=""; BLACKPROC=""
 		SIZE=48
@@ -5307,7 +5316,7 @@ if [ "${VERSIONCHECK}" -eq 1 ]
     if [ $QUIET -eq 0 ]
       then
         displaytext ""
-        displaytext "${PROGRAM_NAME} ${PROGRAM_version}, copyright ${PROGRAM_author}"
+        displaytext "${PROGRAM_NAME} ${PROGRAM_version}, copyright ${PROGRAM_copyright_owner}"
         displaytext ""
         displaytext "This version:   ${PROGRAM_version}"
         displaytext "Latest version: ${LATESTVERSION}"
@@ -5370,6 +5379,7 @@ if [ "${NOARGS}" -eq 1 ]
     echo $ECHOOPT "--disable-passwd-check*   : Disable passwd/group checks"
     echo $ECHOOPT "--scan-knownbad-files*    : Perform besides 'known good' check a 'known bad' check"
     echo $ECHOOPT "--check-deleted           : Perform 'deleted files' check"
+    echo $ECHOOPT "--check-listen            : Perform 'listening applications' check"
     echo $ECHOOPT ""
     echo $ECHOOPT "Multiple parameters are allowed"
     echo $ECHOOPT "*) Parameter can only be used with other parameters"
@@ -5393,17 +5403,18 @@ fi
 #################################################################################
 #
 # The Rootkit Hunter project owes gratitude to:
-# - Michael for providing and opening up the RKH project,
+# - Michael Boelen for providing and opening up RKH for active development,
 # - John Horne for opening up a true cornucopia of enhancements,
-# - Gary Bak for testing and enhancing AIX support,
+# - Gary Bak for enhancing AIX support and testing,
 # - Andrej Ricnik for patching and testing,
-# - Konsolebox for loads of suggestions,
+# - Konsolebox for loads of suggestions nd testing,
 # - Sibtay Abbas for testing,
 # - Constantin Stefan for ideas,
 # - Iain Roberts: AIX and OpenBSD support,
 # - Doncho N. Gunchev,
 # - Steph: testing,
-# - unSpawn.
+# - unSpawn,
+# - and all the maintainers and endusers that volunteered to support RKH. (...)
 #################################################################################
 
 
