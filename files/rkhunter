@@ -1889,22 +1889,6 @@ if [ "${CHECK}" -eq 1 ]
 		fi
 	    fi
 
-	    # cAos?
-	    if [ -e "/etc/caos-release" ]
-	      then
-		full_osname=`cat /etc/caos-release | sed 's/^cAos: //'`
-		valid_os="1"
-		logtext "Info: Found /etc/caos-release"
-		uname_model=`uname -m`
-		case $uname_model in
-		 i[0-9]86) architecture=i386;;
-		 x86_64)   architecture=x86_64;;
-		esac
-	     logtext "Architecture ${uname_model} (->${architecture})"
-	     full_osname="${full_osname} (${architecture})"
-	     USE_PATCHED_SOFTWARE=1
-	    fi
-	    
 	    # Still found no valid OS
 	    if [ "${valid_os}" -eq 0 ]
 	      then
@@ -1918,6 +1902,22 @@ if [ "${CHECK}" -eq 1 ]
 	fi
 
 
+	# cAos?
+	if [ -e "/etc/caos-release" ]
+	  then
+	    full_osname=`cat /etc/caos-release | sed 's/^cAos: //'`
+	    valid_os="1"
+	    logtext "Info: Found /etc/caos-release"
+	    uname_model=`uname -m`
+	    case $uname_model in
+		i[0-9]86) architecture=i386;;
+		x86_64)   architecture=x86_64;;
+	    esac
+	    logtext "Architecture ${uname_model} (->${architecture})"
+	    full_osname="${full_osname} (${architecture})"
+	    USE_PATCHED_SOFTWARE=1
+	fi
+	    
 	# Debian?
 	if [ -e "/etc/debian_version" ]
 	  then
