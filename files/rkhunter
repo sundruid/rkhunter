@@ -5322,19 +5322,15 @@ if [ "${VERSIONCHECK}" -eq 1 ]
         displaytext "Latest version: ${LATESTVERSION}"
     fi
 
-    
+
     if [ "${LATESTVERSION}" = "" ]; then
-      LATESTVERSION="unknown"
-    fi
-    
-    if [ ! "${PROGRAM_version}" = "${LATESTVERSION}" ]
-      then
-        if [ "${LATESTVERSION}" = "unknown"  ]
-	  then
-	    echo "Can't fetch latest version number."
-	    echo "${WHITE}Please check manually for updates${NORMAL}"
-	  else
-            echo "${WHITE}Update available${NORMAL}"
+	echo "Unable to fetch latest rkhunter version number from mirror."
+	echo "${WHITE}Please check manually for updates${NORMAL}"
+    else
+	PROG_VERS=`echo "${PROGRAM_version}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
+	LATEST_VERS=`echo "${LATESTVERSION}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
+	if [ ${PROG_VERS} -lt ${LATEST_VERS} ]; then
+		echo "${WHITE}Update available${NORMAL}"
 	fi	  
     fi
 
