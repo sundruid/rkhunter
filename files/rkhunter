@@ -2026,7 +2026,6 @@ if [ "${CHECK}" -eq 1 ]
 	  then
 	    full_osname=`cat /etc/turbolinux-release`
 	    valid_os="1"
-
 	    logtext "Info: Found /etc/turbolinux-release"
 	fi
 
@@ -2035,7 +2034,6 @@ if [ "${CHECK}" -eq 1 ]
 	  then
 	    full_osname=`cat /etc/slackware-version`
 	    valid_os="1"
-
 	    logtext "Info: Found /etc/slackware-version"
 	fi
 
@@ -2044,7 +2042,6 @@ if [ "${CHECK}" -eq 1 ]
 	  then
 	    full_osname=`cat /etc/yellowdog-release`
 	    valid_os="1"
-
 	    logtext "Info: Found /etc/yellowdog-release"
 	fi
 
@@ -2065,9 +2062,16 @@ if [ "${CHECK}" -eq 1 ]
 
 	    full_osname="Gentoo Linux ${version} (${architecture})"
 	    valid_os="1"
-
 	    logtext "Info: Found /etc/gentoo-release"
 	fi
+
+	# Ipcop, finally. Note: only valid for versions 1.4 and up.
+	if [ -e /var/ipcop/general-functions.pl ]; then
+		full_osname=`cat /var/ipcop/general-functions.pl | grep version | grep -v Data | cut -d\' -f2`
+		fullname="Ipcop $full_osname"
+		valid_os="1"
+	fi
+
     fi
 
     
