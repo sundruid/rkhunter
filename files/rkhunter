@@ -99,7 +99,7 @@ QUIET=0
 SHOWWARNINGSONLY=0
 PERFORMKNOWNBAD=0
 
-# Almost every system has a root of '/', but just in case of..
+# Almost every system has a root of '/', but just in case...
 ROOTDIR="/"
 
 # One way to detect our active directory (autoconf based)
@@ -2460,8 +2460,8 @@ ${DB_PATH}/programs_good.dat
 	  displaytext "--------------------------------------------------------------------------------"
 	  displaytext "Rootkit Hunter has found some bad or unknown hashes. This can happen due to replaced"
 	  displaytext "binaries or updated packages (which give other hashes). Be sure your hashes are"
-	  displaytext "up-to-date (rkhunter --update). If you're in doubt about these hashes, contact"
-	  displaytext "us through the Rootkit Hunter mailinglist at rkhunter-users@lists.sourceforge.net."
+	  displaytext "up-to-date (rkhunter --update). If you are in doubt about these hashes, contact"
+	  displaytext "us through the Rootkit Hunter mailing list at rkhunter-users@lists.sourceforge.net"
 	  displaytext "--------------------------------------------------------------------------------"
 	fi
 
@@ -4866,8 +4866,8 @@ done
 displaytext ""
 if [ $FOUNDUNKNOWN -eq 1 ]; then
   displaytext "Your system contains some unknown version numbers. Please run Rootkit Hunter"
-  displaytext "with the --update parameter or contact us through the Rootkit Hunter mailinglist"
-  displaytext "at rkhunter-users@lists.sourceforge.net."
+  displaytext "with the --update parameter or contact us through the Rootkit Hunter mailing list"
+  displaytext "at rkhunter-users@lists.sourceforge.net"
 fi
 
 fi
@@ -5195,8 +5195,8 @@ keypresspause
 	    displaytext "-----------------------------------------------------------------------"
 	    displaytext ""
 	    displaytext "Do you have some problems, undetected rootkits, false positives, ideas"
-	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailinglist"
-	    displaytext "at rkhunter-users@lists.sourceforge.net."
+	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailing list"
+	    displaytext "at rkhunter-users@lists.sourceforge.net"
 	    displaytext ""
 	    displaytext "-----------------------------------------------------------------------"
 
@@ -5235,8 +5235,8 @@ keypresspause
 	    displaytext "-----------------------------------------------------------------------"
 	    displaytext ""
 	    displaytext "Do you have some problems, undetected rootkits, false positives, ideas"
-	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailinglist"
-	    displaytext "at rkhunter-users@lists.sourceforge.net."
+	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailing list"
+	    displaytext "at rkhunter-users@lists.sourceforge.net"
 	    displaytext ""
 	    displaytext "-----------------------------------------------------------------------"
 
@@ -5257,17 +5257,17 @@ keypresspause
 	     echo ""
 	     echo "-----------------------------------------------------------------"
 	     echo ""
-	     echo "If you're unsure about the results above, please contact the"
-	     echo "Rootkit Hunter team through the Rootkit Hunter mailinglist"
-	     echo "at rkhunter-users@lists.sourceforge.net."
+	     echo "If you are unsure about the results above, please contact the"
+	     echo "Rootkit Hunter team through the Rootkit Hunter mailing list"
+	     echo "at rkhunter-users@lists.sourceforge.net"
 	   fi
 	   if [ ! "${MAILONWARNING}" = "" ]; then
-	     echo "Please inspect this machine, because it can be infected" | mail -s [rkhunter]\ Warnings\ found\ for\ ${hostname} ${MAILONWARNING}
+	     echo "Please inspect this machine, because it may be infected" | mail -s [rkhunter]\ Warnings\ found\ for\ ${hostname} ${MAILONWARNING}
 	   fi
 	
 	   # If we use the --quiet option, tell the user he has to inspect the machine
 	   if [ ${QUIET} -eq 1 ]; then
-	     echo "Some errors has been found while checking. Please perform a manual check on this machine (${hostname})"
+	     echo "Some errors have been found while checking. Please perform a manual check on this machine (${hostname})"
 	   fi
 
 	   # Something was wrong. So end with a nonzero exit state for scripters/coders ;-)
@@ -5407,7 +5407,7 @@ fi
 # - John Horne for opening up a true cornucopia of enhancements,
 # - Gary Bak for enhancing AIX support and testing,
 # - Andrej Ricnik for patching and testing,
-# - Konsolebox for loads of suggestions nd testing,
+# - Konsolebox for loads of suggestions and testing,
 # - Sibtay Abbas for testing,
 # - Constantin Stefan for ideas,
 # - Iain Roberts: AIX and OpenBSD support,

@@ -71,7 +71,7 @@ Stale:
  - Reporting tool for trojaned binaries
  - Create a static download URL for releases (rkhunter-latest.tar.gz), after setting up mirrors..
  - Adding comparision between Rootkit Hunter and other projects (pros/cons).
-   *** Maybe someone likes to help us with this? I like an objective comparison, not
+   *** Maybe someone would like to help us with this? I would like an objective comparison, not
        a commercial bullsh*t comparison which tells all other competitors are bad ;-)
 
  NetBSD:
