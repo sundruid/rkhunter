@@ -11,9 +11,13 @@
 #################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.4"
+INSTALLER_VERSION="1.2.5"
 INSTALLER_COPYRIGHT="Copyright 2003-2005, Michael Boelen"
 INSTALLER_LICENSE="
+
+Under active development by the Rootkit Hunter project team. For reporting
+bugs, updates, patches, comments and questions see: rkhunter.sourceforge.net
+
 Rootkit Hunter comes with ABSOLUTELY NO WARRANTY. This is free
 software, and you are welcome to redistribute it under the terms
 of the GNU General Public License. See LICENSE for details.
@@ -402,6 +406,7 @@ language $lng
 clear
 
 echo "${INSTALLER_NAME} ${INSTALLER_VERSION} (${INSTALLER_COPYRIGHT})"
+echo "${INSTALLER_LICENSE}"
 echo $ECHOOPT "---------------"
 echo "Starting installation/update"
 echo ""
@@ -517,7 +522,19 @@ for I in ${INSTALLFILES2}; do
   # Does the file already exists and are we using the no-overwrite mode?
   if [ -f ${NEWFILE} -a ${INSTALLTYPE} = "nooverwrite" ]
     then
+      # We need people to make local changes themselves, so give opportunity and alert.
+      # Use Perl to get value, shell may not support "RANDOM".
+      RANDVAL=`perl -e 'printf "%d\n", time;'`
+      NEWFILE="${NEWFILE}.${RANDVAL}"
+      cp -f ${INSTALLPREFIX}${CURFILE} ${NEWFILE}
       echo "Skipped (no overwrite)"
+      if [ ${CURFILE} = rkhunter.conf ]
+        then
+         echo " >>> "
+         echo " >>> PLEASE NOTE: inspect for update changes in ${NEWFILE}"
+         echo " >>> and apply to ${CURFILE} before running Rootkit Hunter."
+         echo " >>> "
+      fi
     else
       #error redirection in .rkhunter it's just for a clear display if user run not as root
       cp -f ${INSTALLPREFIX}${CURFILE} ${NEWFILE}
