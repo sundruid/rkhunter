@@ -33,7 +33,7 @@ Rootkit Hunter is released as a GPL licensed project and free for everyone to us
 
 
 %prep
-%setup -q -n %name
+%setup
 
 %build
 #%%configure ...
