@@ -1,9 +1,7 @@
 #!/bin/sh
 
 # Temporary file for sorting the results
-if [ -f /tmp/createhashes.tmp ]; then
-	rm -f /tmp/createhashes.tmp
-fi
+TMPFILE="`mktemp /tmp/rkhunter.createhashes.XXXXXX`" || exit 1
 
 DIRS="/sbin /bin /usr/bin /usr/sbin"
 FILES="find
@@ -52,13 +50,13 @@ for I in ${FILES}; do
 	for J in ${DIRS}; do
 		FILE="${J}/${I}"
 		if [ -f ${FILE} ]; then
-			./createfilehashes.pl ${FILE} >> /tmp/createhashes.tmp
+			./createfilehashes.pl ${FILE} >> ${TMPFILE}
 		fi
 	done
 done
 
-cat /tmp/createhashes.tmp | sort
+sort ${TMPFILE}
 
-if [ -f /tmp/createhashes.tmp ]; then
-	rm -f /tmp/createhashes.tmp
-fi
+rm -f ${TMPFILE}
+
+exit 0

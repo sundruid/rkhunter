@@ -2,7 +2,7 @@
 
 #######################################################################
 #
-# Auto-updater server 1.0.0
+# Auto-updater server 1.0.1
 # Author: Michael Boelen (michael AT rootkit DOT nl)
 #
 #######################################################################
@@ -15,13 +15,6 @@
 # one), in the UPDATES directory, with 'latest.tar.gz' as filename.
 #
 #######################################################################
-#
-# Changelog
-#
-#######################################################################
-#
-# 1.00
-# - First release
 
 # Auto-update (0=no, 1=yes)
 AUTOUPDATE=0
@@ -34,30 +27,42 @@ UPDATESDIR="/usr/local/rkhunter/updates"
 # FreeBSD (md5 -q)
 MD5="md5 -q"
 
-if [ ${AUTOUPDATE} -eq 1 ]; then
-	wget http://www.rootkit.nl/rkhunter/rkhunter_latest.dat -O ${WORKDIR}/rk_latest.dat
-	if [ $? -eq 0 ]; then
-		if [ -f ${WORKDIR}/my_latest.dat ]; then
-			MYLATEST=`cat ${WORKDIR}/my_latest.dat`      
+if [ ! -w $WORKDIR ]; then
+	echo "Warning: $WORKDIR not writable, exiting."
+	exit 127
+elif [ ! -w $UPDATESDIR ]; then
+	echo "Warning: $UPDATESDIR not writable, exiting."
+	exit 127
+else
+	if [ ${AUTOUPDATE} -eq 1 ]; then
+		wget http://rkhunter.sourceforge.net/rkhunter_latest.dat -O ${WORKDIR}/rk_latest.dat
+		if [ $? -eq 0 ]; then
+			if [ -f ${WORKDIR}/my_latest.dat ]; then
+				MYLATEST=`cat ${WORKDIR}/my_latest.dat`      
+			else
+				MYLATEST="1111"
+			fi
+			if [ -f ${WORKDIR}/rk_latest.dat ]; then
+				RKLATEST=`cat ${WORKDIR}/rk_latest.dat`
+			else
+				RKLATEST="0000"
+			fi
+			if [ ! "${MYLATEST}" = "${RKLATEST}" ]; then
+				wget http://rkhunter.sourceforge.net/rkhunter_latest.dat -O ${UPDATESDIR}/latest.tar.gz
+			fi
 		else
-			MYLATEST="1111"
-		fi
-		if [ -f ${WORKDIR}/rk_latest.dat ]; then
-			RKLATEST=`cat ${WORKDIR}/rk_latest.dat`
-		else
-			RKLATEST="0000"
-		fi
-		if [ ! "${MYLATEST}" = "${RKLATEST}" ]; then
-			wget http://www.rootkit.nl/rkhunter/rkhunter_latest.dat -O ${UPDATESDIR}/latest.tar.gz
+			echo "Warning: Couldn't fetch latest information."
 		fi
 	else
-		echo "Warning: Couldn't fetch latest information."
+		echo "Warning: autoupdate is not enabled."
+	fi
+
+	LATESTFILE="${UPDATESDIR}/latest.tar.gz"
+	if [ -f ${LATESTFILE} ]; then
+		${MD5} ${LATESTFILE} > ${WORKDIR}/my_latest.dat
+	else
+		echo "Warning: ${LATESTFILE} doesn't exists yet. Please create it (copy) or use auto-update."
 	fi
 fi
 
-LATESTFILE="${UPDATESDIR}/latest.tar.gz"
-if [ -f ${LATESTFILE} ]; then
-	${MD5} ${LATESTFILE} > ${WORKDIR}/my_latest.dat
-else
-	echo "${LATESTFILE} doesn't exists yet. Please create it (copy) or use auto-update"
-fi
+exit 0
