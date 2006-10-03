@@ -4898,8 +4898,9 @@ nonvulnerable:%2.4.24%
 			# Second try syslog-ng
 			if [ -e /etc/syslog-ng/syslog-ng.conf ]; then
 				# Yes, we found the configuration file
-				# Better regex but may show incomplete lines due to allowed formatting (indentation)
-				logtoremote=`egrep "^[^#].*(udp|tcp)\(" /etc/syslog-ng/syslog-ng.conf`
+				# Gready regex necessary due to allowed formatting (indentation, destination names, destinations)
+				# As result logtxt below may contain partial lines.
+				logtoremote=`egrep -iA1 "^destination.*{" /etc/syslog-ng/syslog-ng.conf | egrep "(udp|tcp).*\(.*" | grep -v "/"`
 			else
 				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
 				displaytext "Warning: Cannot find syslog-ng configuration file"
