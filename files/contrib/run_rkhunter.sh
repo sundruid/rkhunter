@@ -45,14 +45,14 @@ RKHUNTER_OPTS="-c --cronjob --report-warnings-only --skip-application-check --cr
 
 # try to get a secure tempfile
 if [ -x /bin/tempfile ]; then
-  TMPLOGFILE1=`/bin/tempfile -p rkhu.`
-  TMPLOGFILE2=`/bin/tempfile -p rkhu.`
+	TMPLOGFILE1=`/bin/tempfile -p rkhu.`
+	TMPLOGFILE2=`/bin/tempfile -p rkhu.`
 else
-  TMPLOGFILE1=/var/tmp/rkhunter.tmp1.$$
-  TMPLOGFILE2=/var/tmp/rkhunter.tmp2.$$
-  # avoid symlink attacks
-  rm -fr $TMPLOGFILE1 $TMPLOGFILE2
-  touch $TMPLOGFILE1 $TMPLOGFILE2
+	TMPLOGFILE1=/var/tmp/rkhunter.tmp1.$$
+	TMPLOGFILE2=/var/tmp/rkhunter.tmp2.$$
+	# avoid symlink attacks
+	rm -fr $TMPLOGFILE1 $TMPLOGFILE2
+	touch $TMPLOGFILE1 $TMPLOGFILE2
 fi
 
 
@@ -61,9 +61,9 @@ echo "=======Updating=================================" >> $LOGFILE
 /bin/date >> $LOGFILE
 $RKHUNTER --update 2>&1 >> $TMPLOGFILE1
 if egrep -q "(Error|outdated)" $TMPLOGFILE1 ; then
-  echo . >> $TMPLOGFILE1
-  echo "WARNING: rkhunter couldn't update its hashes which will" >> $TMPLOGFILE1
-  echo "most likely lead to errors now." >> $TMPLOGFILE1
+	echo . >> $TMPLOGFILE1
+	echo "WARNING: rkhunter couldn't update its hashes which will" >> $TMPLOGFILE1
+	echo "most likely lead to errors now." >> $TMPLOGFILE1
 fi
 cat $TMPLOGFILE1 >> $LOGFILE
 
@@ -76,15 +76,15 @@ $RKHUNTER $RKHUNTER_OPTS >> $TMPLOGFILE2
 echo done. >> $LOGFILE
 
 if [ -s $TMPLOGFILE2 ]; then
-  (
-  echo __Start__: Output of rkhunter at `/bin/date`;
-  echo "=======Updating=================================";
-  /bin/cat $TMPLOGFILE1 ;
-  echo "=======Checking=================================";
-  /bin/cat $TMPLOGFILE2 ;
-  echo __End__ of rkhunter output
-  ) | mail -s "rkhunter output" $MAILADDRESSES
-#  ) | $AKTELOG $AKTELOG_LABEL
+	(
+		echo __Start__: Output of rkhunter at `/bin/date`;
+		echo "=======Updating=================================";
+		/bin/cat $TMPLOGFILE1 ;
+		echo "=======Checking=================================";
+		/bin/cat $TMPLOGFILE2 ;
+		echo __End__ of rkhunter output
+	) | mail -s "rkhunter output" $MAILADDRESSES
+	#  ) | $AKTELOG $AKTELOG_LABEL
 fi
 
 rm -f $TMPLOGFILE1 $TMPLOGFILE2

@@ -1,9 +1,8 @@
 #!/bin/sh
 
 # Temporary file for sorting the results
-if [ -f /tmp/createhashes.tmp ]
-  then
-    rm -f /tmp/createhashes.tmp
+if [ -f /tmp/createhashes.tmp ]; then
+	rm -f /tmp/createhashes.tmp
 fi
 
 DIRS="/sbin /bin /usr/bin /usr/sbin"
@@ -49,21 +48,17 @@ runlevel
 groups
 ip"
 
-
 for I in ${FILES}; do
-  for J in ${DIRS}; do
-    FILE="${J}/${I}"
-    if [ -f ${FILE} ]
-      then
-        ./createfilehashes.pl ${FILE} >> /tmp/createhashes.tmp
-    fi
-  done
+	for J in ${DIRS}; do
+		FILE="${J}/${I}"
+		if [ -f ${FILE} ]; then
+			./createfilehashes.pl ${FILE} >> /tmp/createhashes.tmp
+		fi
+	done
 done
 
 cat /tmp/createhashes.tmp | sort
 
-if [ -f /tmp/createhashes.tmp ]
-  then
-    rm -f /tmp/createhashes.tmp
+if [ -f /tmp/createhashes.tmp ]; then
+	rm -f /tmp/createhashes.tmp
 fi
-

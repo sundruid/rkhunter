@@ -35,36 +35,32 @@ URLPREFIX="http://www.mydomain.com/rkhunter"
 MD5="md5 -q"
 
 if [ ${AUTOUPDATE} -eq 1 ]; then
-  wget ${URLPREFIX}/rk_latest.dat -O ${WORKDIR}/rk_latest.dat
-  if [ $? -eq 0 ]
-    then
-      MYLATEST=`cat ${WORKDIR}/my_latest.dat`      
-     
-      if [ -f ${WORKDIR}/rk_latest.dat ]; then
-        RKLATEST=`cat ${WORKDIR}/rk_latest.dat`
+	wget ${URLPREFIX}/rk_latest.dat -O ${WORKDIR}/rk_latest.dat
+	if [ $? -eq 0 ]; then
+		MYLATEST=`cat ${WORKDIR}/my_latest.dat`      
+
+		if [ -f ${WORKDIR}/rk_latest.dat ]; then
+			RKLATEST=`cat ${WORKDIR}/rk_latest.dat`
+		else
+			RKLATEST="0000"
+		fi
+
+		# If there is a new version, do some actions.
+		# CHANGE THE FILES BELOW 
+		if [ ! "${MYLATEST}" = "${RKLATEST}" ]; then
+			# - Insert get option here
+			# wget ${URLPREFIX}/latest.tar.gz
+			# - Insert here install option
+			# cp latest.tar.gz /usr/local/install/latest.tar.gz
+			# cd /usr/local/install
+			# tar xfvz latest.tar.gz
+			# cd rkhunter
+			# ./installer.sh
+			# - Add some cleanup options here
+			echo "Action here"
+		fi
+		cp ${WORKDIR}/rk_latest.dat ${WORKDIR}/my_latest.dat
 	else
-	RKLATEST="0000"
-      fi
-
-      # If there is a new version, do some actions.
-      # CHANGE THE FILES BELOW 
-      if [ ! "${MYLATEST}" = "${RKLATEST}" ]
-        then
-	  # - Insert get option here
-	  # wget ${URLPREFIX}/latest.tar.gz
-          # - Insert here install option
-	  # cp latest.tar.gz /usr/local/install/latest.tar.gz
-	  # cd /usr/local/install
-	  # tar xfvz latest.tar.gz
-	  # cd rkhunter
-	  # ./installer.sh
-	  # - Add some cleanup options here
-	  echo "Action here"
-      fi
-      cp ${WORKDIR}/rk_latest.dat ${WORKDIR}/my_latest.dat
-
-    else
-      echo "Warning: Couldn't fetch latest information."
-  fi
+		echo "Warning: Couldn't fetch latest information."
+	fi
 fi
-

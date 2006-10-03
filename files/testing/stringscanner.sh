@@ -1,15 +1,15 @@
 #!/bin/sh
 
-  NORMAL="[0;39m" 
-  WARNING="[33;55;1m" # yellow WARNING
-  YELLOW="[1;33m" # yellow
-  WHITE="[1;37m"
-  OK="[1;32m" # green OK
-  DARKGRAY="[1;30m" # green OK
-  test="[1;36m" # green OK
-  green="[1;32m" # green
-  red="[1;31m" # red
-  BAD="[1;31m" # red BAD
+NORMAL="[0;39m" 
+WARNING="[33;55;1m" # yellow WARNING
+YELLOW="[1;33m" # yellow
+WHITE="[1;37m"
+OK="[1;32m" # green OK
+DARKGRAY="[1;30m" # green OK
+test="[1;36m" # green OK
+green="[1;32m" # green
+red="[1;31m" # red
+BAD="[1;31m" # red BAD
 
 SHOWHELP=0
 SCANNED=0
@@ -17,11 +17,10 @@ INFECTED=0
 DEBUG=1
 SHOWWARNINGSONLY=1
 
-if [ "$2" = "verbose" ]
-  then
-    VERBOSE=1
-  else
-    VERBOSE=0
+if [ "$2" = "verbose" ]; then
+	VERBOSE=1
+else
+	VERBOSE=0
 fi
 
 
@@ -151,74 +150,66 @@ BEGINTIME=`date +%s`
 
 
 if [ $# -lt 1 ]; then
-  echo "Fatal error: Not enough parameters"
-  exit 1
+	echo "Fatal error: Not enough parameters"
+	exit 1
 fi
 
 SCANDIRS=$1
 
-waitonkeypress()
-  {
-    read a
-  }
+waitonkeypress() {
+	read a
+}
 
 for I in ${SCANDIRS}; do
-  if [ $VERBOSE -eq 1 ]; then
-    echo -n "Checking directory '${I}'... "
-  fi
-  if [ -d $I ]
-    then
-      if [ $VERBOSE -eq 1 ]; then
-        echo "Exists"
-      fi
-      for J in `ls -A ${I}/*`; do
+	if [ $VERBOSE -eq 1 ]; then
+		echo -n "Checking directory '${I}'... "
+	fi
+	if [ -d $I ]; then
+		if [ $VERBOSE -eq 1 ]; then
+			echo "Exists"
+		fi
+		for J in `ls -A ${I}/*`; do
+			ALLSTRINGS=`strings ${J}`
+			SCANNED=`expr ${SCANNED} + 1`
+			FOUNDSTRING=""
+			EREG=`strings $J | egrep $EVILSTRINGS | egrep -v $GOODSTRINGS`
+			SIZE=`echo \'${J}\' | wc -c | tr -s ' ' | tr -d ' '`
+			FILETYPE=`file -b ${J}`
+			JUMP=`expr 60 - ${SIZE}`
+			if [ ! "${EREG}" = "" ]; then
+				FOUNDSTRING="${FOUNDSTRING} ${EREG} "
+			fi
 
-        ALLSTRINGS=`strings ${J}`
-        SCANNED=`expr ${SCANNED} + 1`
-        FOUNDSTRING=""
-        EREG=`strings $J | egrep $EVILSTRINGS | egrep -v $GOODSTRINGS`
-        SIZE=`echo \'${J}\' | wc -c | tr -s ' ' | tr -d ' '`
-	FILETYPE=`file -b ${J}`
-        JUMP=`expr 60 - ${SIZE}`
-        if [ ! "${EREG}" = "" ]; then
-          FOUNDSTRING="${FOUNDSTRING} ${EREG} "
-        fi
-
-        if [ ! "${FOUNDSTRING}" = "" ]
-          then
-
-
-	    if [ ${VERBOSE} -eq 1 ]; then	  
-	      echo -n "  - Checking $J... "
-  	      echo -e "\033[${jump}C[ ${BAD}Found strings${NORMAL} ]"
-echo "
+			if [ ! "${FOUNDSTRING}" = "" ]; then
+				if [ ${VERBOSE} -eq 1 ]; then	  
+					echo -n "  - Checking $J... "
+					echo -e "\033[${jump}C[ ${BAD}Found strings${NORMAL} ]"
+					echo "
 --------------------------------------------------------------------------
-  ${WARNING}String(s):${NORMAL}"
-  for K in "${FOUNDSTRING}"; do
-  echo "${K}"
-  done 
-echo "
+${WARNING}String(s):${NORMAL}"
+					for K in "${FOUNDSTRING}"; do
+						echo "${K}"
+					done 	
+					echo "
 Filetype: ${FILETYPE}
 --------------------------------------------------------------------------
 "
-              echo "(press [ENTER])"
-  	      waitonkeypress
-	    fi
-            INFECTED=`expr ${INFECTED} + 1`
-          else
-	    if [ ${SHOWWARNINGSONLY} -eq 0 ]; then
-    	      echo -n "  - Checking $J... "  
-	      echo -e "\033[${JUMP}C[ ${OK}OK${NORMAL} ]"
-	    fi
-        fi
-      done
-      
-    else
-      if [ $VERBOSE -eq 1 ]; then
-        echo "${J} Skipped. Doesn't exists"
-      fi
-    fi
-
+					echo "(press [ENTER])"
+					waitonkeypress
+				fi
+				INFECTED=`expr ${INFECTED} + 1`
+			else
+				if [ ${SHOWWARNINGSONLY} -eq 0 ]; then
+					echo -n "  - Checking $J... "  
+					echo -e "\033[${JUMP}C[ ${OK}OK${NORMAL} ]"
+				fi
+			fi
+		done
+	else
+		if [ $VERBOSE -eq 1 ]; then
+			echo "${J} Skipped. Doesn't exists"
+		fi
+	fi
 done
 
 
@@ -226,7 +217,7 @@ ENDTIME=`date +%s`
 TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
 
 if [ ! ${INFECTED} -eq 0 ]; then
-  echo "Warning! Found some suspicious strings in one or more files"
+	echo "Warning! Found some suspicious strings in one or more files"
 fi
 
 
