@@ -745,7 +745,7 @@ for I in ${BINPATHS}; do
 	J=${I}"/nmap";    	if [ -x ${J} ]; then logtext "Found ${J}"; NMAPFOUND=1;    	 NMAPBINARY=${J};       fi
 	J=${I}"/prelink";   	if [ -x ${J} ]; then logtext "Found ${J}"; PRELINKFOUND=1; 	 PRELINKBINARY=${J};    fi
 	J=${I}"/ps";      	if [ -x ${J} ]; then logtext "Found ${J}"; PSFOUND=1;      	 PSBINARY=${J};         fi
-	J=${I}"/stat"; 	if [ -x ${J} ]; then logtext "Found ${J}"; STATFOUND=1;	   	 STATBINARY=${J};       fi
+	J=${I}"/stat";		if [ -x ${J} ]; then logtext "Found ${J}"; STATFOUND=1;	   	 STATBINARY=${J};       fi
 	J=${I}"/strings"; 	if [ -x ${J} ]; then logtext "Found ${J}"; STRINGSFOUND=1; 	 STRINGSBINARY=${J};    fi
 	J=${I}"/wget";    	if [ -x ${J} ]; then logtext "Found ${J}"; WGETFOUND=1;    	 WGETBINARY=${J};       fi
 	J=${I}"/skdet";    	if [ -x ${J} ]; then logtext "Found ${J}"; SKDETFOUND=1;    	 SKDETBINARY=${J};      fi
@@ -4898,7 +4898,7 @@ nonvulnerable:%2.4.24%
 			# Second try syslog-ng
 			if [ -e /etc/syslog-ng/syslog-ng.conf ]; then
 				# Yes, we found the configuration file
-				logtoremote=`cat /etc/syslog-ng/syslog-ng.conf | grep "@" | grep -v "#"`
+				logtoremote=`grep "^destination.*{.[ut].*(" /etc/syslog-ng/syslog-ng.conf`
 			else
 				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
 				displaytext "Warning: Cannot find syslog-ng configuration file"
