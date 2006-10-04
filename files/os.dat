@@ -1,5 +1,5 @@
 OS id:OS Description:Location of md5:Local binary dir:
-000:version:2006100101:
+000:version:2006100400:
 100:Red Hat Linux release 7.2 (Enigma):/usr/bin/md5sum:/bin:
 101:Red Hat Linux release 7.1 (Seawolf):/usr/bin/md5sum:/bin:
 102:Debian testing/unstable (i386):/usr/bin/md5sum:/bin:
