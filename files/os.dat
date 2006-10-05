@@ -1,5 +1,5 @@
 OS id:OS Description:Location of md5:Local binary dir:
-000:version:2006100400:
+000:version:2006100500:
 100:Red Hat Linux release 7.2 (Enigma):/usr/bin/md5sum:/bin:
 101:Red Hat Linux release 7.1 (Seawolf):/usr/bin/md5sum:/bin:
 102:Debian testing/unstable (i386):/usr/bin/md5sum:/bin:
@@ -158,6 +158,7 @@ OS id:OS Description:Location of md5:Local binary dir:
 601:Community Linux release 2.0 (Lorien) 2005.07.17 (i386):/usr/bin/md5sum:/bin:
 602:Community Linux release 2.0 (Lorien) 2006.09.09 (i386):/usr/bin/md5sum:/bin:
 603:Community Linux release 3.0 (lobo) 2006.07.10 (i386):/usr/bin/md5sum:/bin:
+604:Community Linux release 2.0 (Lorien) 2005.10.13 (i386):/usr/bin/md5sum:/bin:
 700:ALT Linux Master 2.2 (Orange):/usr/bin/md5sum:/bin:
 701:ALT Linux Master 2.4 (Citron):/usr/bin/md5sum:/bin:
 702:Gentoo Linux 1.6 (sparc):/usr/bin/md5sum:/bin:
@@ -187,3 +188,4 @@ OS id:OS Description:Location of md5:Local binary dir:
 724:CentOS release 4.4 (Final):/usr/bin/md5sum:/bin:
 725:Fedora Core release 5 (Bordeaux) (x86_64):/usr/bin/md5sum:/bin:
 800:Ipcop 1.4.11:/usr/bin/md5sum:/bin:
+801:CentOS release 3.8 (Final):/usr/bin/md5sum:/bin:
