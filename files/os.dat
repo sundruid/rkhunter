@@ -154,10 +154,10 @@ OS id:OS Description:Location of md5:Local binary dir:
 404:IBM AIX 4.3.3:/bin/ls:/bin:
 405:IBM AIX 4.3.2:/bin/ls:/bin:
 500:Mac OS X:/sbin/md5:/bin:
-600:Community Linux release 2.0 (Lorien) 2004.08.19:/usr/bin/md5sum:/bin:
+600:Community Linux release 2.0 (Lorien) 2004.08.19 (i386):/usr/bin/md5sum:/bin:
 601:Community Linux release 2.0 (Lorien) 2005.07.17 (i386):/usr/bin/md5sum:/bin:
-602:Community Linux release 2.0 (Lorien) 2006.09.09:/usr/bin/md5sum:/bin:
-603:Community Linux release 3.0 (lobo) 2006.07.10:/usr/bin/md5sum:/bin:
+602:Community Linux release 2.0 (Lorien) 2006.09.09 (i386):/usr/bin/md5sum:/bin:
+603:Community Linux release 3.0 (lobo) 2006.07.10 (i386):/usr/bin/md5sum:/bin:
 700:ALT Linux Master 2.2 (Orange):/usr/bin/md5sum:/bin:
 701:ALT Linux Master 2.4 (Citron):/usr/bin/md5sum:/bin:
 702:Gentoo Linux 1.6 (sparc):/usr/bin/md5sum:/bin:
