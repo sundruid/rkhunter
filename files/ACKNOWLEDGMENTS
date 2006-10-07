@@ -1,0 +1,18 @@
+
+Rootkit Hunter acknowledgments
+==============================
+
+Michael Boelen      For providing and opening up RKH for active development
+John Horne          For opening up a true cornucopia of enhancements
+Gary Bak            For enhancing AIX support and testing
+Andrej Ricnik       For patching and testing
+konsolebox          For loads of suggestions and testing
+Sibtay Abbas        For testing
+Constantin Stefan   For ideas
+Iain Roberts        AIX and OpenBSD support
+Doncho N. Gunchev
+Steph               For testing
+unSpawn
+
+and all the maintainers and end-users that volunteered to support RKH.
+
