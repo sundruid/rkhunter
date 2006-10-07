@@ -1,407 +1,37 @@
 #!/bin/sh
 
-#################################################################################
 #
-#  Rootkit Hunter
-# ----------------
+# rkhunter -- Scan the system for rootkits and other known security issues.
 #
-# Copyright Michael Boelen ( michael AT rootkit DOT nl )
+# Copyright (c) 2003-2006, Michael Boelen ( michael AT rootkit DOT nl )
 #
-# This software is GPL and free to use. See LICENSE file for
-# use of this software.
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or
+#     (at your option) any later version.
 #
-#################################################################################
-# [More info at the end of this file]
-#################################################################################
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
 #
-# Program information
-PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="1.2.9"
-PROGRAM_releasedate="30 Sep 2006"
-PROGRAM_copyright_owner="Michael Boelen"
-PROGRAM_copyright="Copyright 2003-2006, ${PROGRAM_copyright_owner}"
-PROGRAM_license="
-${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
-
-Under active development by the ${PROGRAM_NAME} project team. For reporting
-bugs, updates, patches, comments and questions see: rkhunter.sourceforge.net
-
-${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY. This is free software,
-and you are welcome to redistribute it under the terms of the GNU General
-Public License. See LICENSE for details.
-"
-
-PROGRAM_extrainfo=""
-
-# Run as cronjob?
-CRONJOB=0
-CHECK=0
-
-# Debugging
-DEBUG=1
-DEBUGLOG=0
-CATLOGFILE=0
-
-VERSIONCHECK=0
-UPDATE=0
-NOARGS=1
-NOCOLORS=0
-
-# Skip MD5 check
-MD5OPT=0
-MD5CHECK_SKIP=0
-# Skip passwd/group check
-PASSWDCHECK_SKIP=0
-# Application check
-APPLICATION_CHECK=1
-VULNERABLE_ITEM_COUNT=0
-
-# Patched software versions?
-USE_PATCHED_SOFTWARE=0
-
-CHKDEL=0
-CHKLISTEN=0
-
-PREVIOUSTEXT=""
-
-# SunOS improvement
-if [ "`uname`" = "SunOS" ]; then
-	if [ "$RANDOM" = "$RANDOM" ]; then
-		echo "WARN: Found Bourne-Shell -> Switching now to /b"
-		exec /bin/ksh $0 $*
-		exit 0
-	fi
-fi
-
-# echo alias for AIX/OpenBSD/SunOS
-case `uname` in
-AIX|OpenBSD|SunOS)
-	# What is the default shell
-	if print >/dev/null 2>&1; then
-		alias echo='print'
-		E=""
-		ECHOOPT="--"
-		MYSHELL=ksh
-	else
-		E="-e"
-		ECHOOPT=""
-		MYSHELL=bash
-	fi
-	;;
-*)
-	E="-e"
-	ECHOOPT=""
-	MYSHELL=bash
-	;;
-esac
-
-# Be quiet (only show warnings)
-QUIET=0
-
-# Show only warnings
-SHOWWARNINGSONLY=0
-PERFORMKNOWNBAD=0
-
-# Almost every system has a root of '/', but just in case...
-ROOTDIR="/"
-
-# One way to detect our active directory (autoconf based)
-#MYDIR=`dirname "$0" 2>/dev/null` ||
-#echo X$0 | sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{ s//\1/; q; }
-#          /^X\(\/\/\)[^/].*/{ s//\1/; q; }
-#          /^X\(\/\/\)$/{ s//\1/; q; }
-#          /^X\(\/\).*/{ s//\1/; q; }
-#          s/.*/./; q'
-
-# Quick scanning (instead of full scan)
-QUICKSCAN=0
-
-# Report mode (do not show footer and make a 'professional' report)
-REPORTMODE=0
-
-# Set prefix for binaries (useful when using chrooted enviroments)
-BINPREFIX=""
-
-# Wait after every test
-PAUSEAFTERTESTS=1
-
-# Wait after warning (--skip-keypress will deactive this)
-WAITONWARNING=1
-
-# Operating system is Gentoo? (check will be performed later)
-GENTOO=0
-
-# Allow SSH root login (default: NOT allowed)
-ALLOW_SSH_ROOT_USER="0"
-
-# Check parameters
-PARAMCOUNT=$#
-if [ $# -ge 1 ]; then
-NOARGS=0
-else
-NOARGS=1
-fi
-
-while [ $# -ge 1 ]; do
-	case $1 in
-	--allow-ssh-root-user)
-		ALLOW_SSH_ROOT_USER="1"
-		;;
-	-c | --checkall)
-		CHECK=1
-		;;
-	--bindir)
-		shift
-		BINPATHS=$1
-		;;
-	--configfile)
-		shift
-		CONFIGFILE=$1
-		;;
-	--cronjob)
-		CHECK=1
-		CRONJOB=1
-		PAUSEAFTERTESTS=0
-		WAITONWARNING=0
-		;;
-	--createlogfile | --createlog | --create-log | --create-logfile)
-		DEBUG=1
-		DEBUGLOG=1
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			LOGFILE="$1"
-			;;
-		esac
-		;;
-	--dbdir)
-		shift
-		DB_PATH=$1
-		;;
-	--disable-md5-check | --disable-md5check | --dmc)
-		MD5OPT=1
-		MD5CHECK_SKIP=1
-		;;
-	--disable-passwd-check | --dpc)
-		PASSWDCHECK_SKIP=1
-		;;
-	--display-logfile|displaylogfile|display-log|displaylog)
-		CATLOGFILE=1
-		;;
-	-h | --help | -?)
-		NOARGS=1
-		;;
-	--nocolors)
-		NOCOLORS=1
-		;;
-	-q | --quiet)
-		QUIET=1
-		;;
-	--quick)
-		QUICKSCAN=1
-		;;
-	--report-mode | --reportmode)
-		QUIET=1
-		REPORTMODE=1
-		;;
-	--report-warnings-only)
-		SHOWWARNINGSONLY=1
-		QUIET=1
-		DEBUG=1
-		DEBUGLOG=1
-		;;
-	-r | --rootdir)
-		shift
-		ROOTDIR=$1
-	;;
-	--scan-knownbad-files)
-		PERFORMKNOWNBAD=1
-		;;
-	--skip-application-check | --skipapplicationcheck | --skip-applicationcheck)
-		APPLICATION_CHECK=0
-		;;
-	--skip-keypress | --skipkeypress | -sk)
-		# Don't wait after every test
-		PAUSEAFTERTESTS=0
-		# Don't wait after warnings
-		WAITONWARNING=0
-		;;
-	--tmpdir)
-		shift
-		TMPDIR=$1
-		;;
-	--version)
-		echo $ECHOOPT "${PROGRAM_NAME} ${PROGRAM_version}"
-		exit 0
-		;;
-	--update)
-		UPDATE=1
-		;;
-	--versioncheck)
-		VERSIONCHECK=1
-		;;
-	--check-deleted)
-		CHKDEL=1
-		;;
-	--check-listen)
-		CHKLISTEN=1
-		;;
-	*)
-		echo "Fatal: Invalid option $1"
-		exit 1
-		;;
-	esac
-	shift
-done
-
-if [ "${DEBUGLOG}" -eq 0 ]; then
-	# Through the drain...
-	DEBUGFILE="/dev/null"
-else
-	if [ -n "${LOGFILE}" ]; then
-		LOGDIR=`echo "X${LOGFILE}" | sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{ s//\1/; q; }'`
-		if [ "${LOGDIR}" = "X" ]; then
-			echo "No logfile given: using default."
-			DEBUGFILE=/var/log/rkhunter.log
-		elif [ "${LOGDIR}" = "X${LOGFILE}" ]; then
-			DEBUGFILE="${LOGFILE}"
-		elif [ -d "${LOGDIR}" ]; then
-			if [ -w "${LOGDIR}" ]; then
-				DEBUGFILE="${LOGFILE}"
-			else
-				echo "Unwritable logdir: using default."
-				DEBUGFILE=/var/log/rkhunter.log
-			fi
-		elif [ ! -d "${LOGDIR}" ]; then
-			echo "Nonexistent logdir: using default."
-			DEBUGFILE=/var/log/rkhunter.log
-		else
-			echo "No logfile given: using default."
-			DEBUGFILE=/var/log/rkhunter.log
-		fi
-	else
-		echo "No logfile given: using default."
-		DEBUGFILE=/var/log/rkhunter.log
-	fi
-
-	if [ "${DEBUGFILE}" = "/var/log/rkhunter.log" ]; then
-		if [ ! -d "/var/log" ]; then
-			echo "Nonexistent /var/log: no log file created"
-			DEBUGFILE="/dev/null"
-		elif [ ! -w "/var/log" ]; then
-			echo "Nonwritable /var/log: no log file created"
-			DEBUGFILE="/dev/null"
-		fi
-	fi
-
-	# Clear debug file
-	if [ -f ${DEBUGFILE} ]; then
-		rm -f ${DEBUGFILE}
-	fi
-fi
-
-if [ "${DEBUGFILE}" = "" ]; then
-	DEBUGFILE="/dev/null"
-fi
-
-INFECTED_COUNT=0
-INFECTED_NAMES=""
-SCANNED_COUNT=0
-MD5_COUNT=0
-MD5_DIFFERENT=0
-
-FOUNDFILE=0
-FOUNDRCSIGNS=0
-
-# Initialize grsec (grsec check)
-GRSECINSTALLED=0
-
-# Warnings
-WARNING=0
-
-if [ "${CRONJOB}" -eq 1 ]; then
-	COLORS=0
-	# Do not wait in cronjob mode
-	PAUSEAFTERTESTS=0
-	WAITONWARNING=0
-else
-	if [ "${NOCOLORS}" -eq 1 ]; then
-		COLORS=0
-	else
-		COLORS=1
-	fi
-fi
-
-if [ ${QUICKSCAN} -eq 1 -a "${CHECK}" -eq 0 ]; then
-	echo "Wrong parameter use: Quickscan option active, but scan option (-c) is missing..."
-fi
-
-# Integrity tests
-STRINGSFAILED=0
-
-if [ "${COLORS}" -eq 1 ]; then
-	# Colors
-	NORMAL="[0;39m"
-	warning="[33;55;1m"		# warning (red)
-	YELLOW="[1;33m"		# yellow
-	WHITE="[1;37m"		# white
-	OK="[1;32m"			# green (OK)
-	BAD="[1;31m"		# red (BAD)
-	DARKGRAY="[1;30m"
-	green="[1;32m"		# green
-	red="[1;31m"		# red
-fi
-
-# Checking hostname
-hostname=`hostname`
-
-# Check timestamp (start)
-#case `uname` in
-#  AIX|SunOS)
-#      BEGINTIME=$SECONDS
-#      ;;
-#  *)
-BEGINTIME=`perl -e 'printf "%d\n", time;'`
-#      ;;
-#esac
-
-filelist="/bin/ps /bin/ls"
-
-# Messages
-FOUNDTRACES="
---------------------------------------------------------------------------------
-Found parts of this rootkit/trojan by checking the default files and directories
-Please inspect the available files, by running this check with the parameter
---createlogfile and check the log file (current file: $DEBUGFILE).
---------------------------------------------------------------------------------
-"
-
-# Default column width
-defaultcolumn="60"
-
-# Use parameters
-arg1="$1"
-arg2="$2"
-arg3="$3"
-
-# Initialise default status
-STATUS="0"
-
-
-##################################################################################################
+#     You should have received a copy of the GNU General Public License
+#     along with this program; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111, USA.
 #
-# Global functions
+
+
+######################################################################
 #
-##################################################################################################
+# Global function definitions
+#
+######################################################################
 
 # Jump: set position
 jump() {
 	counter=${SIZE}
 }
+
 
 # Waitkeypress: wait for a keypress after some events
 waitkeypress() {
@@ -414,11 +44,6 @@ waitkeypress() {
 	fi
 }
 
-# Debugdate: insert date/time
-debugdate() {
-	sdate=`date "+[%H:%M:%S] "`
-	echo -n "${sdate}"
-}
 
 # Keypresspause: wait for a keypress, only if option is set
 keypresspause() {
@@ -429,11 +54,12 @@ keypresspause() {
 	fi
 }
 
+
 # Logtext: add text to logfile
 logtext() {
 	# Add date/time to logfile
 	if [ ! "$1" = "--nodate" ]; then
-		debugdate >> ${DEBUGFILE}
+		echo -n "`date '+[%H:%M:%S] '`" >>${LOGFILE}
 	fi
 
 	NE1="n"
@@ -442,18 +68,19 @@ logtext() {
 
 	if [ "$NE1" = "y" ]; then
 		if [ "$MYSHELL" = "ksh" ]; then
-			[ "$1" = "-n" ] &&  echo -n "$2" >> $DEBUGFILE || echo $ECHOOPT $2 >> $DEBUGFILE
+			[ "$1" = "-n" ] &&  echo -n "$2" >>$LOGFILE || echo $ECHOOPT $2 >>$LOGFILE
 		else
-			echo $1 "$2" >> $DEBUGFILE
+			echo $1 "$2" >>$LOGFILE
 		fi
 	else
 		if [ "$1" = "--nodate" ]; then
-			echo $ECHOOPT "$2" >> ${DEBUGFILE}
+			echo $ECHOOPT "$2" >>$LOGFILE
 		else
-			echo $ECHOOPT "$1" >> ${DEBUGFILE}
+			echo $ECHOOPT "$1" >>$LOGFILE
 		fi
 	fi
 }
+
 
 # Displaytext: display text to STDOUT
 displaytext() {
@@ -496,13 +123,15 @@ displaytext() {
 	fi
 }
 
+
 insertlayout() {
-	if [ "${CRONJOB}" -eq 0 ]; then
+	if [ ${CRONJOB} -eq 0 ]; then
 		LAYOUT="\033[${jump}C"
 	else
 		LAYOUT="  "
 	fi
 }
+
 
 scanrootkit() {
 	if [ "${ROOTKIT_TESTS}" = "" ]; then
@@ -520,14 +149,14 @@ scanrootkit() {
 	for I in $SCAN_FILES; do
 		SCANNED_COUNT=`expr ${SCANNED_COUNT} + 1`
 		I=`echo ${I} | tr -s '%' ' '`
-		logtext -n "  - File ${I}... " >> ${DEBUGFILE}
+		logtext -n "  - File ${I}... "
 		if [ -f "${I}" ]; then
-			logtext --nodate "WARNING! Exists." >> ${DEBUGFILE}
+			logtext --nodate "WARNING! Exists."
 			SCAN_STATUS=1
-			# Set warning value, to exit the with a nonzero state
+			# Set warning value, to exit with a non-zero value
 			WARNING=1
 		else
-			logtext --nodate "OK. Not found." >> ${DEBUGFILE}
+			logtext --nodate "OK. Not found."
 		fi
 	done
 
@@ -567,6 +196,7 @@ scanrootkit() {
 	fi
 }
 
+
 scanrootkit_suckit_extra_checks() {
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 		if [ ${STATFOUND} -eq 1 ]; then
@@ -604,20 +234,627 @@ scanrootkit_suckit_extra_checks() {
 }
 
 
-logtext "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${hostname}"
-logtext "${PROGRAM_license}"
+get_logfile_option() {
+
+# set default to create log file - add --nolog option.
+	if [ -z "${LOGFILE}" ]; then
+		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | sed -e 's/LOGFILE=//'`
+
+		if [ -z "${LOGFILE}" ]; then
+			echo "Default logfile will be used."
+			LOGFILE="/var/log/rkhunter.log"
+		fi
+	fi
+
+	#
+	# Now check that the given option is useable.
+	#
+
+	if [ "${LOGFILE}" != "/dev/null" ]; then
+		LOGOK=1
+		LOGDIR=`echo "${LOGFILE}" | sed -e 's/\/[^/]\+$//' | grep '/'`
+
+		if [ -z "${LOGDIR}" ]; then
+			LOGOK=0
+			echo "No logfile directory given: ${LOGFILE}"
+		elif [ "${LOGDIR}" = "${LOGFILE}" ]; then
+			LOGOK=0
+			echo "No log filename given: ${LOGFILE}"
+		elif [ ! -d "${LOGDIR}" ]; then
+			LOGOK=0
+			echo "Logfile directory does not exist: ${LOGFILE}"
+		elif [ ! -w "${LOGDIR}" ]; then
+			LOGOK=0
+			echo "Logfile directory is unwritable: ${LOGFILE}"
+		fi
+
+		if [ $LOGOK -eq 0 ]; then
+			echo "Default logfile will be used."
+			LOGFILE="/var/log/rkhunter.log"
+		fi
+
+		if [ "${LOGFILE}" = "/var/log/rkhunter.log" ]; then
+			if [ ! -d "/var/log" ]; then
+				echo "Directory /var/log does not exist - logfile will not be created."
+				LOGFILE="/dev/null"
+			elif [ ! -w "/var/log" ]; then
+				echo "Directory /var/log is unwritable - logfile will not be created."
+				LOGFILE="/dev/null"
+			fi
+		fi
 
 
-##################################################################################################
+		#
+		# Now check whether we should append to the logfile
+		# or overwrite it.
+		#
+
+		if [ $APPEND_OPT -eq 0 ]; then
+			APPEND_LOG=`cat ${CONFIGFILE} | grep '^APPEND_LOG=' | sed -e 's/APPEND_LOG=//'`
+
+			if [ -z "${APPEND_LOG}" ]; then
+				APPEND_LOG=0
+			fi
+		fi
+
+
+		if [ -f ${LOGFILE} ]; then
+			if [ $APPEND_LOG -eq 0 ]; then
+				rm -f ${LOGFILE} >/dev/null 2>&1
+			else
+				logtext --nodate ""
+				logtext --nodate ""
+			fi
+		fi
+	fi
+
+	return
+}
+
+
+get_tmpdir_option() {
+
+	if [ -z "${TMPDIR}" ]; then
+		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | sed -e 's/TMPDIR=//'`
+
+		if [ -z "${TMPDIR}" ]; then
+			TMPDIR="${INSTALLDIR}/lib/rkhunter/tmp"
+		fi
+	fi
+
+	#
+	# Now check that the given option is useable.
+	#
+
+	if [ ! -d "${TMPDIR}" ]; then
+		echo "Temporary directory does not exist: ${TMPDIR}"
+		exit 1
+	elif [ ! -w "${TMPDIR}" ]; then
+		echo "Temporary directory is unwritable: ${TMPDIR}"
+		exit 1
+	fi
+
+	return
+}
+
+
+get_dbdir_option() {
+
+	if [ -z "${DB_PATH}" ]; then
+		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | sed -e 's/DBDIR=//'`
+
+		if [ -z "${DB_PATH}" ]; then
+			DB_PATH="${INSTALLDIR}/lib/rkhunter/db"
+		fi
+	fi
+
+	#
+	# Now check that the given option is useable.
+	#
+
+	if [ ! -d "${DB_PATH}" ]; then
+		echo "Database directory does not exist: ${DB_PATH}"
+		exit 1
+	elif [ ! -w "${DB_PATH}" ]; then
+		echo "Database directory is unwritable: ${DB_PATH}"
+		exit 1
+	fi
+
+	return
+}
+
+
+get_bindir_option() {
+
+	#
+	# In this instance we need to check that the user has not specified on
+	# the command-line, or configured in the configuration file, an invalid
+	# option. Basically we strip out any double-quotes, and compress spaces.
+	# The resulting option will either be a list of valid directory names,
+	# nothing, or a single space (if they incorrectly configured the option).
+	#
+
+	if [ -n "${BINPATHS}" ]; then
+		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -s ' '`
+
+		if [ "${BINPATHS}" = " " ]; then
+			echo "Invalid --bindir option specified - using default value."
+			BINPATHS=""
+		fi
+	fi
+
+	if [ -z "${BINPATHS}" ]; then
+		BINPATHS=`cat ${CONFIGFILE} | grep '^BINDIR=' | sed -e 's/BINDIR=//' | tr -d '"' | tr -s ' '`
+
+		if [ "${BINPATHS}" = " " ]; then
+			echo "Invalid BINDIR configuration option - using default value."
+			BINPATHS=""
+		fi
+
+		if [ -z "${BINPATHS}" ]; then
+			BINPATHS="/usr/sbin /usr/bin /usr/local/bin /usr/local/sbin /bin /sbin /sw/bin /usr/local/libexec /usr/libexec"
+		fi
+	fi
+
+	#
+	# This is a simple check that each directory begins with the '/' character.
+	#
+
+	for dir in ${BINPATHS}; do
+		if [ -z "`echo $dir | grep '^/'`" ]; then
+			echo "Invalid BINDIR directory: $dir"
+			exit 1
+		fi
+	done
+
+	return
+}
+
+
+get_rootdir_option() {
+
+	if [ -z "${ROOTDIR}" ]; then
+		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | sed -e 's/ROOTDIR=//'`
+
+		if [ -z "${ROOTDIR}" ]; then
+			ROOTDIR="/"
+		fi
+	fi
+
+	#
+	# Now check that the given option is useable.
+	#
+
+	if [ ! -d "${ROOTDIR}" ]; then
+		echo "The root directory does not exist: ${ROOTDIR}"
+		exit 1
+	fi
+
+	return
+}
+
+
+get_configfile_options() {
+
+	#
+	# We call separate functions to process those options which involve
+	# path names.
+	#
+
+	get_logfile_option
+
+	get_tmpdir_option
+
+	get_dbdir_option
+
+	get_bindir_option
+
+	get_rootdir_option
+
+
+	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | sed -e 's/MAIL-ON-WARNING=//'`
+
+
+	if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
+		ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | sed -e 's/ALLOW_SSH_ROOT_USER=//'`
+
+		if [ -z "${ALLOW_SSH_ROOT_USER}" ]; then
+			ALLOW_SSH_ROOT_USER=0
+		fi
+	fi
+
+
+	#
+	# For the second colour set we first see if the auto X detect option
+	# has been set. If it is set, and X is in use, then the second colour
+	# set is used. If X is not in use, or the auto detect option is not
+	# set, then we only use the second colour set if the option (--cs2)
+	# is used or it is configured in the configuration file.
+	#
+
+	if [ $AUTO_X_OPT -eq 0 ]; then
+		AUTO_X_DTCT=`cat ${CONFIGFILE} | grep '^AUTO_X_DETECT=' | sed -e 's/AUTO_X_DETECT=//'`
+
+		if [ -z "${AUTO_X_DTCT}" ]; then
+			AUTO_X_DTCT=0
+		fi
+	fi
+
+	if [ $AUTO_X_DTCT -eq 1 -a -n "$DISPLAY" ]; then
+		CLRSET2=1
+	fi
+
+	if [ $CLRSET2 -eq 0 ]; then
+		CLRSET2=`cat ${CONFIGFILE} | grep '^COLOR_SET2=' | sed -e 's/COLOR_SET2=//'`
+
+		if [ -z "${CLRSET2}" ]; then
+			CLRSET2=0
+		fi
+	fi
+
+	return
+}
+
+
+help() {
+
+	echo ""
+	echo "Usage: rkhunter (--checkall | --cronjob | --update | --versioncheck |"
+	echo "                 --version | --help) [option]..."
+	echo ""
+
+	echo "Current options are:"
+	echo "       --append-log                    Append to the logfile, do not overwrite"
+	echo "       --bindir '<bindir>...'          Use <bindir> instead of default"
+	echo "                                       command directories"
+	echo "   -c, --checkall                      Check the local system"
+	echo "       --color-set2                    Use second color set for output"
+	echo "       --configfile <file>             Use specified configuration file"
+	echo "   -l, --logfile [logfile]             Write to a logfile"
+	echo "                                       (default is /var/log/rkhunter.log)"
+	echo "       --cronjob                       Run as a cronjob"
+	echo "                                       (implies -c, -sk and --nocolors options)"
+	echo "       --dbdir <dir>                   Use specified database directory"
+	echo "       --display-logfile               Display the logfile at end of the output"
+	echo "   -h, --help                          Display this help menu and exit"
+	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
+	echo "       --nocolors                      Use black and white output"
+	echo "       --nolog                         Do not write to a logfile."
+	echo "   -q, --quiet                         Quiet mode (only show warnings)"
+	echo "       --report-mode                   Only show interesting information"
+	echo "       --report-warnings-only          Show only warnings (less output than"
+	echo "                                       --report-mode more than --quiet)"
+	echo "   -r, --rootdir <rootdir>             Use <rootdir> instead of '/'"
+	echo "  -sk, --skip-keypress                 Don't wait for a keypress after each test"
+	echo "       --tmpdir <tempdir>              Use specified temporary directory"
+	echo "       --update                        Check for updates to database files"
+	echo "   -V, --version                       Display version and exit"
+	echo "       --versioncheck                  Check for latest version of program"
+	echo "   -x                                  Do not automatically detect if X is in use"
+	echo "   -X                                  Automatically detect if X is in use"
+	echo ""
+
+	echo "Specific scan options:"
+	echo "       --allow-ssh-root-user           Allow the 'root can login via SSH' check"
+	echo "       --check-deleted                 Perform a 'deleted files' check"
+	echo "       --check-listen                  Perform a 'listening applications' check"
+	echo "       --dac, --disable-application-check"
+	echo "                                       Disable application version checks"
+	echo "       --dmc, --disable-md5-check      Disable all MD5 hash checks"
+	echo "       --dpc, --disable-passwd-check   Disable passwd/group file checks"
+	echo "       --scan-knownbad-files           Perform a 'known bad' MD5 hash check"
+	echo ""
+
+	return
+}
+
+######################################################################
 #
-# Configuration file
+# End of global function definitions
 #
-##################################################################################################
+######################################################################
 
 
+#
+# First we initialise variables used throughout the program.
+#
 
-# Check configuration file
-if [ "${CONFIGFILE}" = "" ]; then
+PROGRAM_NAME="Rootkit Hunter"
+PROGRAM_version="1.2.9"
+PROGRAM_copyright_owner="Michael Boelen"
+PROGRAM_copyright="Copyright (c) 2003-2006, ${PROGRAM_copyright_owner}"
+PROGRAM_license="
+${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
+
+Under active development by the ${PROGRAM_NAME} project team. For reporting
+bugs, updates, patches, comments and questions please go to: http://rkhunter.sourceforge.net
+
+${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under the terms of the GNU General
+Public License. See LICENSE for details.
+"
+
+# Set to run as a cronjob
+CRONJOB=0
+CHECK=0
+
+# Set to display the logfile at the end
+CATLOGFILE=0
+
+LOGFILE=""
+
+# Set to have the logfile appended to rather than overwritten.
+APPEND_LOG=0
+APPEND_OPT=0
+
+VERSIONCHECK=0
+UPDATE=0
+
+# By default use coloured output.
+COLORS=1
+CLRSET2=0
+
+# Set to automatically detect if X is in use, and hence use the second colour set.
+AUTO_X_DTCT=0
+AUTO_X_OPT=0
+
+# Set to skip the MD5 check
+MD5OPT=0
+MD5CHECK_SKIP=0
+
+# Set to skip the passwd/group check
+PASSWDCHECK_SKIP=0
+
+# Perform the application check
+APPLICATION_CHECK=1
+VULNERABLE_ITEM_COUNT=0
+
+# Patched software versions?
+USE_PATCHED_SOFTWARE=0
+
+CHKDEL=0
+CHKLISTEN=0
+
+PREVIOUSTEXT=""
+
+# Set to be quiet (only show warnings)
+QUIET=0
+
+# Set to only show warnings
+SHOWWARNINGSONLY=0
+
+# Set to perform check of known bad checksums
+PERFORMKNOWNBAD=0
+
+ROOTDIR=""
+
+# Set to use report mode (do not show footer and make a 'professional' report)
+REPORTMODE=0
+
+# Set prefix for binaries (useful when using chrooted environments)
+BINPREFIX=""
+
+# Wait for a keypress after each test
+PAUSEAFTERTESTS=1
+
+# Wait for a keypress after a warning
+WAITONWARNING=1
+
+# Is the operating system Gentoo?
+GENTOO=0
+
+# Set to allow SSH root login
+ALLOW_SSH_ROOT_USER=0
+
+INFECTED_COUNT=0
+INFECTED_NAMES=""
+SCANNED_COUNT=0
+MD5_COUNT=0
+MD5_DIFFERENT=0
+
+FOUNDFILE=0
+FOUNDRCSIGNS=0
+
+# Initialize grsec (grsec check)
+GRSECINSTALLED=0
+
+# This is set if a problem is found
+WARNING=0
+
+# Default display column width
+defaultcolumn=60
+
+# Initialise default status
+STATUS=0
+
+
+#
+# Display the help menu if no options were given.
+#
+
+if [ $# -eq 0 ]; then
+	help
+	exit 0
+fi
+
+OPERATING_SYSTEM=`uname`
+
+# SunOS improvement
+if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	if [ "$RANDOM" = "$RANDOM" ]; then
+		echo "WARN: Found Bourne-Shell -> Switching now to /b"
+		exec /bin/ksh $0 $*
+		exit 0
+	fi
+fi
+
+# echo alias for AIX/OpenBSD/SunOS
+case `uname` in
+AIX|OpenBSD|SunOS)
+	# What is the default shell
+	if print >/dev/null 2>&1; then
+		alias echo='print'
+		E=""
+		ECHOOPT="--"
+		MYSHELL=ksh
+	else
+		E="-e"
+		ECHOOPT=""
+		MYSHELL=bash
+	fi
+	;;
+*)
+	E="-e"
+	ECHOOPT=""
+	MYSHELL=bash
+	;;
+esac
+
+
+#
+# Check the command-line options. If set, these will override the
+# configuration file options.
+#
+
+while [ $# -ge 1 ]; do
+	case $1 in
+	--allow-ssh-root-user)
+		ALLOW_SSH_ROOT_USER=1
+		;;
+	--append-log)
+		APPEND_LOG=1
+		APPEND_OPT=1
+		;;
+	-c | --check | --checkall)
+		CHECK=1
+		;;
+	--check-deleted)
+		CHKDEL=1
+		;;
+	--check-listen)
+		CHKLISTEN=1
+		;;
+	--cs2 | --colorset2 | --color-set2)
+		CLRSET2=1
+		;;
+	--bindir)
+		shift
+		BINPATHS=$1
+		;;
+	--configfile)
+		shift
+		CONFIGFILE=$1
+		;;
+	--cronjob)
+		CHECK=1
+		CRONJOB=1
+		COLORS=0
+		PAUSEAFTERTESTS=0
+		WAITONWARNING=0
+		;;
+	-l | --log | --logfile | --createlogfile | --createlog | --create-log | --create-logfile)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			LOGFILE="$1"
+			;;
+		esac
+		;;
+	--dbdir)
+		shift
+		DB_PATH=$1
+		;;
+	--disable-application-check | --disable-applicationcheck | --dac | --skip-application-check | --skipapplicationcheck | --skip-applicationcheck)
+		APPLICATION_CHECK=0
+		;;
+	--disable-md5-check | --disable-md5check | --dmc)
+		MD5OPT=1
+		MD5CHECK_SKIP=1
+		;;
+	--disable-passwd-check | --dpc)
+		PASSWDCHECK_SKIP=1
+		;;
+	--display-logfile | --displaylogfile | --display-log | --displaylog)
+		CATLOGFILE=1
+		;;
+	-h | --help)
+		help
+		exit 0
+		;;
+	--noappend-log | --no-append-log)
+		APPEND_LOG=0
+		APPEND_OPT=1
+		;;
+	--nocolors | --no-colors | --nocolor | --no-color)
+		COLORS=0
+		;;
+	--nolog | --no-log)
+		LOGFILE="/dev/null"
+		;;
+	-q | --quiet)
+		QUIET=1
+		;;
+	--report-mode | --reportmode)
+		QUIET=1
+		REPORTMODE=1
+		;;
+	--report-warnings-only)
+		QUIET=1
+		SHOWWARNINGSONLY=1
+		;;
+	-r | --rootdir)
+		shift
+		ROOTDIR=$1
+		;;
+	--scan-knownbad-files)
+		PERFORMKNOWNBAD=1
+		;;
+	--skip-keypress | --skipkeypress | -sk)
+		PAUSEAFTERTESTS=0
+		WAITONWARNING=0
+		;;
+	--tmpdir)
+		shift
+		TMPDIR=$1
+		;;
+	--update)
+		UPDATE=1
+		;;
+	-V | --version)
+		echo $ECHOOPT "${PROGRAM_NAME} ${PROGRAM_version}"
+		exit 0
+		;;
+	--versioncheck)
+		VERSIONCHECK=1
+		;;
+	-x)
+		AUTO_X_OPT=1
+		AUTO_X_DTCT=0
+		;;
+	-X)
+		AUTO_X_OPT=1
+		AUTO_X_DTCT=1
+		;;
+	*)
+		echo "Invalid option specified: $1"
+		exit 1
+		;;
+	esac
+
+	shift
+done
+
+
+#
+# Now we check for the configuration file, and then check the various
+# variables within it.
+#
+
+if [ -z "${CONFIGFILE}" ]; then
 	if [ -f /etc/rkhunter.conf ]; then
 		CONFIGFILE="/etc/rkhunter.conf"
 	else
@@ -625,43 +862,25 @@ if [ "${CONFIGFILE}" = "" ]; then
 	fi
 fi
 
-# Can we found the configuration file?
 if [ ! -f ${CONFIGFILE} ]; then
-	echo "Fatal error: can't find configuration file (${CONFIGFILE})"
+	echo "Unable to find configuration file: ${CONFIGFILE}"
 	exit 1
 fi
 
-# Is the installation directory available in the configuration file?
-MYDIR=`cat ${CONFIGFILE} | grep '^INSTALLDIR=' | sed s/INSTALLDIR=//`
-if [ "${MYDIR}" = "" ]; then
-	echo "Fatal error: can't find INSTALLDIR option in configuration file (${CONFIGFILE})"
+
+INSTALLDIR=`cat ${CONFIGFILE} | grep '^INSTALLDIR=' | sed -e 's/INSTALLDIR=//'`
+
+if [ -z "${INSTALLDIR}" ]; then
+	echo "Unable to find INSTALLDIR option in configuration file: ${CONFIGFILE}"
+	exit 1
+elif [ ! -d "${INSTALLDIR}" ]; then
+	echo "Installation directory does not exist: ${CONFIGFILE}"
 	exit 1
 fi
 
-logtext "Info: Shell ${SHELL}"
 
-logtext "------------------------ Configuration check --------------------------"
-logtext "Parsing configuration file (${CONFIGFILE})"
+get_configfile_options
 
-MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | sed s/MAIL-ON-WARNING=//`
-
-if [ "${MAILONWARNING}" = "" ]; then
-	logtext "Info: No mail-on-warning address configured"
-else
-	logtext "Info: Sending warnings to ${MAILONWARNING}"
-fi
-
-if [ "${TMPDIR}" = "" ]; then
-	# Search in configuration file
-	TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | sed s/TMPDIR=//`
-
-	# If not available in configuration file, make it static
-	if [ "${TMPDIR}" = "" ]; then
-		TMPDIR="${MYDIR}/lib/rkhunter/tmp"
-	fi
-fi
-
-logtext "Info: Using ${TMPDIR} as temporary directory"
 
 if [ "${TMPDIR}" = "/tmp" ]; then
 	logtext "Warning: using /tmp as your temporary directory is a very bad idea, because"
@@ -671,49 +890,85 @@ if [ "${TMPDIR}" = "/tmp" ]; then
 	displaytext "See logfile for more information about this issue."
 fi
 
-
-##################################################################################################
-
-
-# Place where database files can be found
-if [ "${DB_PATH}" = "" ]; then
-	# Search in configuration file
-	DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | sed s/DBDIR=//`
-
-	# If not available in configuration file, make it static
-	if [ "${DB_PATH}" = "" ]; then
-		DB_PATH="${MYDIR}/lib/rkhunter/db"
-	fi
-fi
-
-logtext "Info: Using ${DB_PATH} as database directory"
-
-
-##################################################################################################
-
-# Don't read configuration file if parameter has been used
-if [ ! "${ALLOW_SSH_ROOT_USER}" = "1" ]; then
-	ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | sed s/ALLOW_SSH_ROOT_USER=//`
-	if [ "${ALLOW_SSH_ROOT_USER}" = "" ]; then
-		ALLOW_SSH_ROOT_USER="0"
-	fi
-fi
-
-if [ "${ALLOW_SSH_ROOT_USER}" = "1" ]; then
+if [ ${ALLOW_SSH_ROOT_USER} -eq 1 ]; then
 	logtext "Info: Explicit option set to allow root logins within SSH (don't mark test BAD when"
 	logtext "rkhunter finds it in the SSH configuration file)"
 fi
 
-# Places where all binaries are stored
-# If binary path is empty (no --bindir parameter used), fill in a static value
-if [ "${BINPATHS}" = "" ]; then
-	BINPATHS="/usr/sbin /usr/bin /usr/local/bin /usr/local/sbin /bin /sbin /sw/bin /usr/local/libexec /usr/libexec"
+
+#
+# Now set up some final variables based on the combination
+# of options we have been given.
+#
+
+if [ $COLORS -eq 1 ]; then
+	if [ $CLRSET2 -eq 0 ]; then
+		RED="[1;31m"		# Bright red
+		GREEN="[1;32m"	# Bright green
+		YELLOW="[1;33m"	# Bright yellow
+		WHITE="[1;37m"	# White
+	else
+		RED="[1;31m"		# Bright red
+		GREEN="[0;32m"	# Green
+		YELLOW="[0;35m"	# Purple
+		WHITE="[0;30m"	# Black
+	fi
+
+	OK=$GREEN
+	BAD=$RED
+	NORMAL="[0;39m"		# Foreground colour to default
 fi
-logtext "Info: Using '${BINPATHS}' as binary directory"
 
 
-# File with mirrors
-MIRRORFILE="${DB_PATH}/mirrors.dat"
+hostname=`hostname`
+
+BEGINTIME=`perl -e 'printf "%d\n", time;'`
+
+FOUNDTRACES="
+---------------------------------------------------------------------------------
+Found parts of this rootkit/trojan by checking the default files and directories.
+Please inspect the available files, by checking the logfile ($LOGFILE).
+---------------------------------------------------------------------------------
+"
+
+
+#
+# Write out various information messages to the logfile.
+#
+
+logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${hostname}"
+logtext --nodate "${PROGRAM_license}"
+
+logtext "Info: Start date is `date`"
+
+logtext "Info: Shell ${SHELL}"
+
+logtext "Parsing configuration file ${CONFIGFILE}"
+
+if [ -z "${MAILONWARNING}" ]; then
+	logtext "Info: No mail-on-warning address configured"
+else
+	logtext "Info: Emailing warnings to ${MAILONWARNING}"
+fi
+
+logtext "Info: Using ${TMPDIR} as temporary directory"
+
+if [ "${TMPDIR}" = "/tmp" ]; then
+	logtext "Warning: Do not use /tmp as your temporary directory. It will contain"
+	logtext "some important system files! Please choose another directory in"
+	logtext "your configuration file, or use the --tmpdir command-line option."
+	displaytext "Warning! Using /tmp as your temporary directory can be a security risk!"
+	displaytext "See logfile for more information about this issue."
+fi
+
+logtext "Info: Using ${DB_PATH} as database directory"
+
+if [ $ALLOW_SSH_ROOT_USER -eq 1 ]; then
+	logtext "Info: Explicit option set to allow root logins via SSH (don't mark test BAD when"
+	logtext "rkhunter finds it in the SSH configuration file)"
+fi
+
+logtext "Info: Using '${BINPATHS}' as command directories"
 
 
 ##################################################################################################
@@ -763,27 +1018,27 @@ for I in ${BINPATHS}; do
 done
 
 if [ "${WGETFOUND}" -eq 1 ]; then
-	logtext "Info: WGET found" >> ${DEBUGFILE}
+	logtext "Info: WGET found"
 else
-	logtext "Info: WGET not found" >> ${DEBUGFILE}
+	logtext "Info: WGET not found"
 fi
 
 if [ "${NMAPFOUND}" -eq 1 ]; then
-	logtext "Info: NMAP found" >> ${DEBUGFILE}
+	logtext "Info: NMAP found"
 else
-	logtext "Info: NMAP not found" >> ${DEBUGFILE}
+	logtext "Info: NMAP not found"
 fi
 
 if [ "${LSOFFOUND}" -eq 1 ]; then
-	logtext "Info: LSOF found" >> ${DEBUGFILE}
+	logtext "Info: LSOF found"
 else
-	logtext "Info: LSOF not found" >> ${DEBUGFILE}
+	logtext "Info: LSOF not found"
 fi
 
 if [ "${IPFOUND}" -eq 1 ]; then
-	logtext "Info: ip found" >> ${DEBUGFILE}
+	logtext "Info: ip found"
 else
-	logtext "Info: ip not found" >> ${DEBUGFILE}
+	logtext "Info: ip not found"
 fi
 
 
@@ -1670,14 +1925,8 @@ BAD_PROCESSES="
 #
 ##################################################################################################
 
-# Detect OS
-OPERATING_SYSTEM=`uname`
-
 # We don't know OS yet
 valid_os="0"
-
-# Clear screen for a clean start
-#clear
 
 
 # Begin parameters
@@ -2057,9 +2306,9 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		# Check FreeBSD version (release, stable, current)
 		if [ "${SUBVERSION}" = "RELEASE" -a ! "${SUBVERSION2}" = "" ]; then
-			logtext "Debug: You have a 'RELEASE' version of FreeBSD" >> ${DEBUGFILE}
+			logtext "Debug: You have a 'RELEASE' version of FreeBSD"
 		else
-			logtext "Debug: You do not have a 'RELEASE' version of FreeBSD: MD5 scan will be skipped" >> ${DEBUGFILE}
+			logtext "Debug: You do not have a 'RELEASE' version of FreeBSD: MD5 scan will be skipped"
 			MD5CHECK_SKIP=1
 		fi
 	fi
@@ -2123,17 +2372,17 @@ if [ "${CHECK}" -eq 1 ]; then
 		if [ $MD5CHECK_SKIP -eq 0 ]; then
 			# Only use Perl MD5 module if we have it installed
 			# If we can find it then skip the md5(sum) utility
-			perlmd5installed=`${MYDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
-			perlsha1installed=`${MYDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::SHA1 installed'`
+			perlmd5installed=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
+			perlsha1installed=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::SHA1 installed'`
 
 			if [ ! "${perlmd5installed}" = "" ]; then
 				logtext "Info: Perl module ${perlmd5installed}"
-				md5="${MYDIR}/lib/rkhunter/scripts/filehashmd5.pl"
+				md5="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
 			fi
 
 			if [ ! "${perlsha1installed}" = "" ]; then
 				logtext "Info: Perl module ${perlsha1installed}"
-				sha1="${MYDIR}/lib/rkhunter/scripts/filehashsha1.pl"
+				sha1="${INSTALLDIR}/lib/rkhunter/scripts/filehashsha1.pl"
 			fi
 		fi
 	else
@@ -2142,7 +2391,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 	if [ $MD5CHECK_SKIP -eq 0 ]; then
 		if [ -n "${md5}" ]; then
-			if [ "${md5}" = "${MYDIR}/lib/rkhunter/scripts/filehashmd5.pl" ]; then
+			if [ "${md5}" = "${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl" ]; then
 				logtext "Info: Using perl module Digest::MD5 to verify MD5 hashes"
 			else
 				logtext "Info: Using command ${md5} to verify MD5 hashes"
@@ -2157,12 +2406,12 @@ if [ "${CHECK}" -eq 1 ]; then
 	if [ -d ${TMPDIR} ]; then
 		logtext "Info: using ${TMPDIR} as temporary directory"
 	else
-		logtext "Fatal: temporary directory ${TMPDIR} doesn't exist." >> ${DEBUGFILE}
+		logtext "Fatal: temporary directory ${TMPDIR} doesn't exist."
 		exit 1
 	fi
 
 	if [ `${BINPREFIX}id -u` = "0" ]; then
-		logtext "Info: UID is zero (root)" >> ${DEBUGFILE}
+		logtext "Info: UID is zero (root)"
 	else
 		displaytext "Fatal error: root rights needed to perform a full scan"
 		exit 1
@@ -2295,7 +2544,7 @@ if [ "${CHECK}" -eq 1 ]; then
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
 						displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
-						logtext "Possible backdoored or harmful file found ${I}" >> ${DEBUGFILE}
+						logtext "Possible backdoored or harmful file found ${I}"
 						WARNING=1
 					fi
 				fi
@@ -2367,7 +2616,7 @@ if [ "${CHECK}" -eq 1 ]; then
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
 						displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
-						logtext "Checking ${file} against hashes in database (${FILEHASHES}) failed" >> ${DEBUGFILE}
+						logtext "Checking ${file} against hashes in database (${FILEHASHES}) failed"
 						if [ -f /bin/rpm ]; then
 							RPMPACKAGE=`rpm -qf ${file}`
 							logtext "RPM info: your package '${RPMPACKAGE}'"
@@ -2421,7 +2670,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 	#    displaytext "${test}* Searching for system files${NORMAL}"
 
-	#	SCANFILELIST="${MYDIR}/lib/rkhunter/tmp/files.lst"
+	#	SCANFILELIST="${INSTALLDIR}/lib/rkhunter/tmp/files.lst"
 	#	if [ ${QUICKSCAN} -eq 0 ]; then
 	#		find / -name *.o -or -name *.ko > ${SCANFILELIST}
 	#	else
@@ -2765,9 +3014,7 @@ if [ "${CHECK}" -eq 1 ]; then
 	STATUS=0
 	SIZE=13
 
-	if [ ${DEBUG} -eq 1 ]; then
-		logtext "Debug: Sebek LKM"
-	fi
+	logtext "Debug: Sebek LKM"
 	displaytext -n "   Sebek LKM..."
 
 	# Search for signs of Sebek in ksyms file
@@ -3225,11 +3472,8 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	for I in ${LOGIN_BACKDOORS_FILES}; do
 		if [ -d ${I} ]; then
 			STATUS=1
-			if [ ${DEBUG} -eq 1 ]; then
-				logtext "${I} found! Possible part of a rootkit/trojan."
-			fi
-		fi
-		if [ ${DEBUG} -eq 1 ]; then
+			logtext "${I} found! Possible part of a rootkit/trojan."
+		else
 			logtext "${I} clean"
 		fi
 	done
@@ -3254,7 +3498,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 #		if [ ! "${FINDFILE}" = "" ]; then
 #			echo ${FINDFILE}
 #			STATUS=1
-#			logtext "${J} found! Possible part of a rootkit/trojan." >> ${DEBUGFILE}
+#			logtext "${J} found! Possible part of a rootkit/trojan."
 #			FOUNDFILES="${FOUNDFILES}, "
 #		else
 #			logtext "${J} clean"
@@ -3282,11 +3526,9 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		logtext -n "Checking ${I}... "
 		if [ -f ${I} ]; then
 			STATUS=1
-			if [ ${DEBUG} -eq 1 ]; then
-				logtext --nodate "[ WARNING! ] Possible part of a rootkit/trojan." >> ${DEBUGFILE}
-			fi
+			logtext --nodate "[ WARNING! ] Possible part of a rootkit/trojan."
 		else
-			logtext --nodate "[ OK ] Not found" >> ${DEBUGFILE}
+			logtext --nodate "[ OK ] Not found"
 		fi
 	done
 
@@ -3346,11 +3588,9 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		logtext -n "Checking ${I}... "
 		if [ -f ${I} ]; then
 			STATUS=1
-			if [ ${DEBUG} -eq 1 ]; then
-				logtext --nodate "[ WARNING! ] Possible sniffer log found." >> ${DEBUGFILE}
-			fi
+			logtext --nodate "[ WARNING! ] Possible sniffer log found."
 		else
-			logtext --nodate "[ OK ] Not found" >> ${DEBUGFILE}
+			logtext --nodate "[ OK ] Not found"
 		fi
 	done
 
@@ -3562,7 +3802,7 @@ ${ROOTDIR}bin/login
 
 
 	displaytext ""
-	displaytext "${test}* OS dependant tests${NORMAL}"
+	displaytext "${test}* OS dependent tests${NORMAL}"
 
 	if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
 		displaytext "   ${WHITE}FreeBSD${NORMAL}"
@@ -3629,7 +3869,7 @@ ${ROOTDIR}bin/login
 				displaytext $E "${LAYOUT}[ ${YELLOW}Please check${NORMAL} ]"
 				logtext "Your package databases seems to have inconsistenties. Please run pkgdb -F to"
 				logtext "do manually checking. Although this isn't a security issue, you need to be sure"
-				logtext "your applications are using the correct dependancies"
+				logtext "your applications are using the correct dependencies"
 			fi
 		fi
 
@@ -3896,11 +4136,7 @@ vlogger.o
 	else
 		insertlayout
 		displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
-		if [ "${DEBUGLOG}" -eq 1 ]; then
-			displaytext "Warning! Found promiscuous interface. Please check the logfile."
-		else
-			displaytext "Warning! Found promiscuous interface. Please use option '--createlogfile' and check the logfile."
-		fi
+		displaytext "Warning! Found promiscuous interface. Please check the logfile."
 		logtext "${LOGTEXT}[ WARNING ]"
 		logtext "Possible promisc interfaces:"
 		logtext "Output test 1: ${PROMISCSCAN1}"
@@ -3967,11 +4203,7 @@ vlogger.o
 			logtext --nodate "OK"
 		else
 			displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
-			if [ "${DEBUGLOG}" -eq 1 ]; then
-				displaytext "Warning! Found packet capturing application. Please check the logfile."
-			else
-				displaytext "Warning! Found packet capturing application. Please use option '--createlogfile' and check the logfile."
-			fi
+			displaytext "Warning! Found packet capturing application. Please check the logfile."
 
 			logtext --nodate "Warning"
 			echo $E $BLACKPROC | \
@@ -4057,7 +4289,7 @@ vlogger.o
 				else
 					diffadded=`echo "${differences}" | grep "<"`
 					diffremoved=`echo "${differences}" | grep ">"`
-					displaytext "${red}Found differences${NORMAL}"
+					displaytext "${RED}Found differences${NORMAL}"
 					displaytext "   Info: "
 					displaytext "----------------------"
 					displaytext "${differences}"
@@ -4072,7 +4304,7 @@ vlogger.o
 				rm -f ${TMPDIR}/passwd
 			else
 				jump=44
-				displaytext $E "${LAYOUT}[ ${warning}NA${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
 			fi
 			cp /etc/passwd ${TMPDIR}/passwd
 		else
@@ -4089,7 +4321,7 @@ vlogger.o
 				else
 					diffadded=`echo "${differences}" | grep "<"`
 					diffremoved=`echo "${differences}" | grep ">"`
-					displaytext "${red}Found differences${NORMAL}"
+					displaytext "${RED}Found differences${NORMAL}"
 					displaytext "   Info: "
 					displaytext "----------------------"
 					displaytext "${differences}"
@@ -4103,7 +4335,7 @@ vlogger.o
 				fi
 				rm -f ${TMPDIR}/group
 			else
-				displaytext "${warning}Creating file ${NORMAL}It seems this is your first time."
+				displaytext "${YELLOW}Creating file ${NORMAL}It seems this is your first time."
 			fi
 			cp /etc/group ${TMPDIR}/group
 		else
@@ -4333,7 +4565,7 @@ vlogger.o
 		logtext "Start scanning for hidden files in ${I}..."
 
 		if [ -d "${I}" ]; then
-			HIDDENDIRS=`${MYDIR}/lib/rkhunter/scripts/showfiles.pl ${I}`
+			HIDDENDIRS=`${INSTALLDIR}/lib/rkhunter/scripts/showfiles.pl ${I}`
 			logtext "Value of hiddendirs: ${HIDDENDIRS}"
 		fi
 
@@ -4782,8 +5014,8 @@ nonvulnerable:%2.4.24%
 			fi
 
 			if [ ${FOUND} -eq 1 ]; then
-				if [ "${ALLOW_SSH_ROOT_USER}" = "0" ]; then
-					displaytext "${red}Watch out ${NORMAL}Root login possible. Possible risk!"
+				if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
+					displaytext "${RED}Watch out ${NORMAL}Root login possible. Possible risk!"
 					if [ -z "${permitrootlogin}" ]; then
 						displaytext "    info: No 'PermitRootLogin' entry found in file ${I}/sshd_config"
 					else
@@ -4922,11 +5154,8 @@ nonvulnerable:%2.4.24%
 
 	keypresspause
 
-	#if [ ${OPERATING_SYSTEM} = "AIX" -o ${OPERATING_SYSTEM} = "SunOS" ] ; then
-	#	ENDTIME=$SECONDS
-	#else
 	ENDTIME=`perl -e 'printf "%d\n", time;'`
-	#fi
+
 	TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
 
 	displaytext ""; displaytext ""
@@ -4983,9 +5212,9 @@ nonvulnerable:%2.4.24%
 	displaytext "Scanning took ${TOTALTIME} seconds"
 
 	if [ "${REPORTMODE}" -eq 0 ]; then
-		if [ "${DEBUGLOG}" -eq 1 ]; then
+		if [ "${LOGFILE}" != "/dev/null" ]; then
 			displaytext ""
-			displaytext "Scan results written to logfile (${DEBUGFILE})"
+			displaytext "Scan results written to logfile ($LOGFILE)"
 		fi
 
 		displaytext ""
@@ -5039,8 +5268,10 @@ nonvulnerable:%2.4.24%
 
 	fi
 
+	logtext "Info: End date is `date`"
+
 	if [ $CATLOGFILE -eq 1 ]; then
-		cat $DEBUGFILE
+		cat $LOGFILE
 	fi
 
 	if [ ${WARNING} -eq 1 ]; then
@@ -5048,7 +5279,7 @@ nonvulnerable:%2.4.24%
 			echo "-----------------------------------------------------------------"
 			echo ""
 			echo "Found warnings:"
-			cat $DEBUGFILE | egrep "Warning|WARNING|BAD|Bad|Vulnerable"
+			cat $LOGFILE | egrep "Warning|WARNING|BAD|Bad|Vulnerable"
 			echo ""
 			echo "-----------------------------------------------------------------"
 			echo ""
@@ -5070,7 +5301,6 @@ nonvulnerable:%2.4.24%
 	else
 		exit 0
 	fi
-
 else
 	if [ ! ${NOARGS} -eq 1 -a ${VERSIONCHECK} -eq 0 -a ${UPDATE} -eq 0 ]; then
 		displaytext "You don't want to check your system?"
@@ -5081,7 +5311,7 @@ fi
 if [ "${UPDATE}" -eq 1 ]; then
 	displaytext "Running updater..."
 	displaytext ""
-	${MYDIR}/lib/rkhunter/scripts/check_update.sh ${CONFIGFILE} ${MIRRORFILE} ${DB_PATH} ${md5} ${DEBUGFILE}
+	${INSTALLDIR}/lib/rkhunter/scripts/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${md5} ${LOGFILE}
 	displaytext ""
 	displaytext "Ready."
 fi
@@ -5127,49 +5357,6 @@ if [ "${VERSIONCHECK}" -eq 1 ]; then
 fi
 
 
-if [ "${NOARGS}" -eq 1 ]; then
-	echo $ECHOOPT "${PROGRAM_license}"
-	echo $ECHOOPT ""
-	echo $ECHOOPT "Valid parameters:"
-	echo $ECHOOPT "--checkall (-c)           : Check system"
-	echo $ECHOOPT "--createlogfile <file>*   : Create logfile (file is optional, defaults to"
-	echo $ECHOOPT "                          : /var/log/rkhunter.log)"
-	echo $ECHOOPT "--cronjob                 : Run as cronjob (removes colored layout)"
-	echo $ECHOOPT "--display-logfile         : Show logfile at end of the output"
-	echo $ECHOOPT "--help (-h)               : Show this help"
-	echo $ECHOOPT "--nocolors*               : Don't use colors for output"
-	echo $ECHOOPT "--report-mode*            : Don't show uninteresting information for reports"
-	echo $ECHOOPT "--report-warnings-only*   : Show only warnings (lesser output than --report-mode,"
-	echo $ECHOOPT "                          : more than --quiet)"
-	echo $ECHOOPT "--skip-application-check* : Don't run application version checks"
-	echo $ECHOOPT "--skip-keypress (-sk)*    : Don't wait after every test (non-interactive)"
-	echo $ECHOOPT "--quick*                  : Perform quick scan (instead of full scan)"
-	echo $ECHOOPT "--quiet*                  : Be quiet (only show warnings)"
-	echo $ECHOOPT "--update                  : Run update tool and check for database updates"
-	echo $ECHOOPT "--version                 : Show version and quit"
-	echo $ECHOOPT "--versioncheck            : Check for latest version"
-	echo $ECHOOPT ""
-	echo $ECHOOPT "--bindir <bindir>*        : Use <bindir> instead of using default binaries"
-	echo $ECHOOPT "--configfile <file>*      : Use different configuration file"
-	echo $ECHOOPT "--dbdir <dir>*            : Use <dbdir> as database directory"
-	echo $ECHOOPT "--rootdir <rootdir>*      : Use <rootdir> instead of / (slash at end)"
-	echo $ECHOOPT "--tmpdir <tempdir>*       : Use <tempdir> as temporary directory"
-	echo $ECHOOPT ""
-	echo $ECHOOPT "Explicit scan options:"
-	echo $ECHOOPT "--allow-ssh-root-user*    : Allow usage of SSH root user login"
-	echo $ECHOOPT "--disable-md5-check*      : Disable MD5 checks"
-	echo $ECHOOPT "--disable-passwd-check*   : Disable passwd/group checks"
-	echo $ECHOOPT "--scan-knownbad-files*    : Perform besides 'known good' check a 'known bad' check"
-	echo $ECHOOPT "--check-deleted           : Perform 'deleted files' check"
-	echo $ECHOOPT "--check-listen            : Perform 'listening applications' check"
-	echo $ECHOOPT ""
-	echo $ECHOOPT "Multiple parameters are allowed"
-	echo $ECHOOPT "*) Parameter can only be used with other parameters"
-	echo $ECHOOPT ""
-	echo $ECHOOPT "${PROGRAM_extrainfo}"
-	echo $ECHOOPT ""
-fi
-
 # end of parameter check
 
 #
@@ -5182,22 +5369,5 @@ fi
 # find `lsof -F n | sort | uniq | grep '^n/' | cut -b 2,256 | egrep 'ASCII|ELF'` | cut -d ':' -f1
 #
 #
-#################################################################################
-#
-# The Rootkit Hunter project owes gratitude to:
-# - Michael Boelen for providing and opening up RKH for active development,
-# - John Horne for opening up a true cornucopia of enhancements,
-# - Gary Bak for enhancing AIX support and testing,
-# - Andrej Ricnik for patching and testing,
-# - konsolebox for loads of suggestions and testing,
-# - Sibtay Abbas for testing,
-# - Constantin Stefan for ideas,
-# - Iain Roberts: AIX and OpenBSD support,
-# - Doncho N. Gunchev,
-# - Steph: testing,
-# - unSpawn,
-# - and all the maintainers and endusers that volunteered to support RKH. (...)
-#################################################################################
 
-
-# The End
+exit 0
