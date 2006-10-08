@@ -882,20 +882,6 @@ fi
 get_configfile_options
 
 
-if [ "${TMPDIR}" = "/tmp" ]; then
-	logtext "Warning: using /tmp as your temporary directory is a very bad idea, because"
-	logtext "it will contain some important system files! Please choose another directory in"
-	logtext "your configuration file, or as TMPDIR parameter!"
-	displaytext "Warning! Using /tmp as your temporary directory can be a security risk!"
-	displaytext "See logfile for more information about this issue."
-fi
-
-if [ ${ALLOW_SSH_ROOT_USER} -eq 1 ]; then
-	logtext "Info: Explicit option set to allow root logins within SSH (don't mark test BAD when"
-	logtext "rkhunter finds it in the SSH configuration file)"
-fi
-
-
 #
 # Now set up some final variables based on the combination
 # of options we have been given.
