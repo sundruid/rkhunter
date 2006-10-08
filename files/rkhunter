@@ -5302,7 +5302,7 @@ nonvulnerable:%2.4.24%
 		exit 0
 	fi
 else
-	if [ ! ${NOARGS} -eq 1 -a ${VERSIONCHECK} -eq 0 -a ${UPDATE} -eq 0 ]; then
+	if [ ${VERSIONCHECK} -eq 0 -a ${UPDATE} -eq 0 ]; then
 		displaytext "You don't want to check your system?"
 		displaytext "Please submit a parameter like --checkall or --cronjob"
 	fi
