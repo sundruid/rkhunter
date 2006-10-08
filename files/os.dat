@@ -187,5 +187,8 @@ OS id:OS Description:Location of md5:Local binary dir:
 723:Scientific Linux SL release 4.3 (Beryllium):/usr/bin/md5sum:/bin:
 724:CentOS release 4.4 (Final):/usr/bin/md5sum:/bin:
 725:Fedora Core release 5 (Bordeaux) (x86_64):/usr/bin/md5sum:/bin:
+726:Red Hat Enterprise Linux ES release 4 (Nahant Update 4):/usr/bin/md5sum:/bin:
+726:Red Hat Enterprise Linux AS release 4 (Nahant Update 4):/usr/bin/md5sum:/bin:
+726:Red Hat Enterprise Linux WS release 4 (Nahant Update 4):/usr/bin/md5sum:/bin:
 800:Ipcop 1.4.11:/usr/bin/md5sum:/bin:
 801:CentOS release 3.8 (Final):/usr/bin/md5sum:/bin:
