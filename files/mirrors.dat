@@ -1,7 +1,6 @@
-version=2006092302
+version=2006100900
 mirror=http://rkhunter.sourceforge.net
 mirror=http://mirror07.mirror.rkhunter.org
-mirror=http://mirror11.mirror.rkhunter.org
 mirror=http://mirror14.mirror.rkhunter.org
 mirror=http://www.rkhunter.com.ar
 mirror=http://www.rootkit.nl/rkhunter
