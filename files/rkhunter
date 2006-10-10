@@ -236,9 +236,8 @@ scanrootkit_suckit_extra_checks() {
 
 get_logfile_option() {
 
-# set default to create log file - add --nolog option.
 	if [ -z "${LOGFILE}" ]; then
-		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | sed -e 's/LOGFILE=//'`
+		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | sed -e 's/LOGFILE=//' | tr -d '"'`
 
 		if [ -z "${LOGFILE}" ]; then
 			echo "Default logfile will be used."
@@ -302,8 +301,14 @@ get_logfile_option() {
 			if [ $APPEND_LOG -eq 0 ]; then
 				rm -f ${LOGFILE} >/dev/null 2>&1
 			else
-				logtext --nodate ""
-				logtext --nodate ""
+				if [ -L "${LOGFILE}" ]; then
+					echo "Logfile is a symbolic (soft) link: ${LOGFILE}"
+					echo "This is a security problem. The link points to another file, and that file is about to be appended to."
+					exit 1
+				else
+					logtext --nodate ""
+					logtext --nodate ""
+				fi
 			fi
 		fi
 	fi
@@ -315,7 +320,7 @@ get_logfile_option() {
 get_tmpdir_option() {
 
 	if [ -z "${TMPDIR}" ]; then
-		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | sed -e 's/TMPDIR=//'`
+		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | sed -e 's/TMPDIR=//' | tr -d '"'`
 
 		if [ -z "${TMPDIR}" ]; then
 			TMPDIR="${INSTALLDIR}/lib/rkhunter/tmp"
@@ -341,7 +346,7 @@ get_tmpdir_option() {
 get_dbdir_option() {
 
 	if [ -z "${DB_PATH}" ]; then
-		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | sed -e 's/DBDIR=//'`
+		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | sed -e 's/DBDIR=//' | tr -d '"'`
 
 		if [ -z "${DB_PATH}" ]; then
 			DB_PATH="${INSTALLDIR}/lib/rkhunter/db"
@@ -414,7 +419,7 @@ get_bindir_option() {
 get_rootdir_option() {
 
 	if [ -z "${ROOTDIR}" ]; then
-		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | sed -e 's/ROOTDIR=//'`
+		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | sed -e 's/ROOTDIR=//' | tr -d '"'`
 
 		if [ -z "${ROOTDIR}" ]; then
 			ROOTDIR="/"
@@ -452,7 +457,15 @@ get_configfile_options() {
 	get_rootdir_option
 
 
-	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | sed -e 's/MAIL-ON-WARNING=//'`
+	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | sed -e 's/MAIL-ON-WARNING=//' | tr -d '"'`
+
+	if [ -n "${MAILONWARNING}" ]; then
+		MAIL_CMD=`cat ${CONFIGFILE} | grep '^MAIL_CMD=' | sed -e 's/MAIL_CMD=//' | sed -e 's/^"\(.*\)"$/\1/'`
+
+		if [ -z "${MAIL_CMD}" ]; then
+			MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${hostname}\""
+		fi
+	fi
 
 
 	if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
@@ -934,7 +947,7 @@ logtext "Parsing configuration file ${CONFIGFILE}"
 if [ -z "${MAILONWARNING}" ]; then
 	logtext "Info: No mail-on-warning address configured"
 else
-	logtext "Info: Emailing warnings to ${MAILONWARNING}"
+	logtext "Info: Emailing warnings to \"${MAILONWARNING}\" using command \"${MAIL_CMD}\""
 fi
 
 logtext "Info: Using ${TMPDIR} as temporary directory"
@@ -5273,8 +5286,8 @@ nonvulnerable:%2.4.24%
 			echo "Rootkit Hunter team through the Rootkit Hunter mailing list"
 			echo "at rkhunter-users@lists.sourceforge.net"
 		fi
-		if [ ! "${MAILONWARNING}" = "" ]; then
-			echo "Please inspect this machine, because it may be infected" | mail -s [rkhunter]\ Warnings\ found\ for\ ${hostname} ${MAILONWARNING}
+		if [ -n "${MAILONWARNING}" ]; then
+			eval "echo 'Please inspect this machine, because it may be infected' | ${MAIL_CMD} ${MAILONWARNING}"
 		fi
 
 		# If we use the --quiet option, tell the user he has to inspect the machine
