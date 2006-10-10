@@ -183,7 +183,7 @@ scanrootkit() {
 
 	if [ "${SCAN_STATUS}" -eq 1 ]; then
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		INFECTED_COUNT=`expr ${INFECTED_COUNT} + 1`
 		INFECTED_NAMES="${INFECTED_NAMES}${SCAN_ROOTKIT} "
 		displaytext "${FOUNDTRACES}"
@@ -192,7 +192,7 @@ scanrootkit() {
 		waitkeypress
 	else
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	fi
 }
 
@@ -236,12 +236,32 @@ scanrootkit_suckit_extra_checks() {
 
 get_logfile_option() {
 
-	if [ -z "${LOGFILE}" ]; then
-		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | sed -e 's/LOGFILE=//' | tr -d '"'`
+	#
+	# First get the option from the command-line or the
+	# configuration file, and do a simple check on whether
+	# it is empty or a space.
+	#
 
-		if [ -z "${LOGFILE}" ]; then
-			echo "Default logfile will be used."
-			LOGFILE="/var/log/rkhunter.log"
+	if [ -n "${LOGFILE}" ]; then
+		LOGFILE=`echo "${LOGFILE}" | tr -s ' '`
+
+		if [ "${LOGFILE}" = " " ]; then
+			echo "Invalid --logfile option - no logfile name given."
+			exit 1
+		fi
+	else
+		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | tail -n 1`
+
+		if [ -n "${LOGFILE}" ]; then
+			LOGFILE=`echo "${LOGFILE}" | sed -e 's/LOGFILE=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${LOGFILE}" -o "${LOGFILE}" = " " ]; then
+				echo "Invalid LOGFILE configuration option - no logfile name specified."
+				exit 1
+			fi
+		else
+			echo "Default logfile will be used ($DFLT_LOGFILE)."
+			LOGFILE=$DFLT_LOGFILE
 		fi
 	fi
 
@@ -250,52 +270,46 @@ get_logfile_option() {
 	#
 
 	if [ "${LOGFILE}" != "/dev/null" ]; then
-		LOGOK=1
-		LOGDIR=`echo "${LOGFILE}" | sed -e 's/\/[^/]\+$//' | grep '/'`
+		LOGDIR=`echo "${LOGFILE}" | sed -e 's/\/[^/]\+$//'`
 
-		if [ -z "${LOGDIR}" ]; then
-			LOGOK=0
-			echo "No logfile directory given: ${LOGFILE}"
-		elif [ "${LOGDIR}" = "${LOGFILE}" ]; then
-			LOGOK=0
+		if [ -z "`echo ${LOGDIR} | grep '/'`" ]; then
+			LOGDIR="."
+		fi
+
+		if [ "${LOGDIR}" = "${LOGFILE}" ]; then
 			echo "No log filename given: ${LOGFILE}"
+			exit 1
 		elif [ ! -d "${LOGDIR}" ]; then
-			LOGOK=0
 			echo "Logfile directory does not exist: ${LOGFILE}"
+			exit 1
 		elif [ ! -w "${LOGDIR}" ]; then
-			LOGOK=0
 			echo "Logfile directory is unwritable: ${LOGFILE}"
+			exit 1
 		fi
-
-		if [ $LOGOK -eq 0 ]; then
-			echo "Default logfile will be used."
-			LOGFILE="/var/log/rkhunter.log"
-		fi
-
-		if [ "${LOGFILE}" = "/var/log/rkhunter.log" ]; then
-			if [ ! -d "/var/log" ]; then
-				echo "Directory /var/log does not exist - logfile will not be created."
-				LOGFILE="/dev/null"
-			elif [ ! -w "/var/log" ]; then
-				echo "Directory /var/log is unwritable - logfile will not be created."
-				LOGFILE="/dev/null"
-			fi
-		fi
-
 
 		#
 		# Now check whether we should append to the logfile
-		# or overwrite it.
+		# or overwrite it. We check the configuration file
+		# option, if it is given, and ensure that it is valid.
 		#
 
 		if [ $APPEND_OPT -eq 0 ]; then
-			APPEND_LOG=`cat ${CONFIGFILE} | grep '^APPEND_LOG=' | sed -e 's/APPEND_LOG=//'`
+			APPEND_LOG=`cat ${CONFIGFILE} | grep '^APPEND_LOG=' | tail -n 1`
 
-			if [ -z "${APPEND_LOG}" ]; then
+			if [ -n "${APPEND_LOG}" ]; then
+				APPEND_LOG=`echo "${APPEND_LOG}" | sed -e 's/APPEND_LOG=//' | tr -d '"' | tr -s ' '`
+
+				if [ -z "${APPEND_LOG}" -o "${APPEND_LOG}" = " " ]; then
+					echo "Invalid APPEND_LOG configuration option - no value specified."
+					exit 1
+				elif [ "${APPEND_LOG}" != "0" -a "${APPEND_LOG}" != "1" ]; then
+					echo "Invalid APPEND_LOG configuration option: ${APPEND_LOG}"
+					exit 1
+				fi
+			else
 				APPEND_LOG=0
 			fi
 		fi
-
 
 		if [ -f ${LOGFILE} ]; then
 			if [ $APPEND_LOG -eq 0 ]; then
@@ -303,13 +317,16 @@ get_logfile_option() {
 			else
 				if [ -L "${LOGFILE}" ]; then
 					echo "Logfile is a symbolic (soft) link: ${LOGFILE}"
-					echo "This is a security problem. The link points to another file, and that file is about to be appended to."
+					echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
 					exit 1
 				else
 					logtext --nodate ""
 					logtext --nodate ""
 				fi
 			fi
+		elif [ -e ${LOGFILE} ]; then
+			echo "Logfile already exists but it is not a file: ${LOGFILE}"
+			exit 1
 		fi
 	fi
 
@@ -319,10 +336,30 @@ get_logfile_option() {
 
 get_tmpdir_option() {
 
-	if [ -z "${TMPDIR}" ]; then
-		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | sed -e 's/TMPDIR=//' | tr -d '"'`
+	#
+	# First get the option from the command-line or the
+	# configuration file, and do a simple check on whether
+	# it is empty or a space.
+	#
 
-		if [ -z "${TMPDIR}" ]; then
+	if [ -n "${TMPDIR}" ]; then
+		TMPDIR=`echo "${TMPDIR}" | tr -s ' '`
+
+		if [ "${TMPDIR}" = " " ]; then
+			echo "Invalid --tmpdir option - no directory name given."
+			exit 1
+		fi
+	else
+		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | tail -n 1`
+
+		if [ -n "${TMPDIR}" ]; then
+			TMPDIR=`echo "${TMPDIR}" | sed -e 's/TMPDIR=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${TMPDIR}" -o "${TMPDIR}" = " " ]; then
+				echo "Invalid TMPDIR configuration option - no directory name specified."
+				exit 1
+			fi
+		else
 			TMPDIR="${INSTALLDIR}/lib/rkhunter/tmp"
 		fi
 	fi
@@ -345,10 +382,30 @@ get_tmpdir_option() {
 
 get_dbdir_option() {
 
-	if [ -z "${DB_PATH}" ]; then
-		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | sed -e 's/DBDIR=//' | tr -d '"'`
+	#
+	# First get the option from the command-line or the
+	# configuration file, and do a simple check on whether
+	# it is empty or a space.
+	#
 
-		if [ -z "${DB_PATH}" ]; then
+	if [ -n "${DB_PATH}" ]; then
+		DB_PATH=`echo "${DB_PATH}" | tr -s ' '`
+
+		if [ "${DB_PATH}" = " " ]; then
+			echo "Invalid --dbdir option - no directory name given."
+			exit 1
+		fi
+	else
+		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | tail -n 1`
+
+		if [ -n "${DB_PATH}" ]; then
+			DB_PATH=`echo "${DB_PATH}" | sed -e 's/DBDIR=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${DB_PATH}" -o "${DB_PATH}" = " " ]; then
+				echo "Invalid DBDIR configuration option - no directory name specified."
+				exit 1
+			fi
+		else
 			DB_PATH="${INSTALLDIR}/lib/rkhunter/db"
 		fi
 	fi
@@ -372,41 +429,42 @@ get_dbdir_option() {
 get_bindir_option() {
 
 	#
-	# In this instance we need to check that the user has not specified on
-	# the command-line, or configured in the configuration file, an invalid
-	# option. Basically we strip out any double-quotes, and compress spaces.
-	# The resulting option will either be a list of valid directory names,
-	# nothing, or a single space (if they incorrectly configured the option).
+	# First get the option from the command-line or the
+	# configuration file, and do a simple check on whether
+	# it is empty or a space.
 	#
 
 	if [ -n "${BINPATHS}" ]; then
-		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -s ' '`
+		BINPATHS=`echo "${BINPATHS}" | tr -s ' '`
 
 		if [ "${BINPATHS}" = " " ]; then
-			echo "Invalid --bindir option specified - using default value."
-			BINPATHS=""
+			echo "Invalid --bindir option - no directory names given."
+			exit 1
 		fi
-	fi
+	else
+		BINPATHS=`cat ${CONFIGFILE} | grep '^BINDIR=' | tail -n 1`
 
-	if [ -z "${BINPATHS}" ]; then
-		BINPATHS=`cat ${CONFIGFILE} | grep '^BINDIR=' | sed -e 's/BINDIR=//' | tr -d '"' | tr -s ' '`
+		if [ -n "${BINPATHS}" ]; then
+			BINPATHS=`echo "${BINPATHS}" | sed -e 's/BINDIR=//' | tr -d '"' | tr -s ' '`
 
-		if [ "${BINPATHS}" = " " ]; then
-			echo "Invalid BINDIR configuration option - using default value."
-			BINPATHS=""
-		fi
-
-		if [ -z "${BINPATHS}" ]; then
+			if [ -z "${BINPATHS}" -o "${BINPATHS}" = " " ]; then
+				echo "Invalid BINDIR configuration option - no directory names specified."
+				exit 1
+			fi
+		else
 			BINPATHS="/usr/sbin /usr/bin /usr/local/bin /usr/local/sbin /bin /sbin /sw/bin /usr/local/libexec /usr/libexec"
 		fi
 	fi
 
 	#
-	# This is a simple check that each directory begins with the '/' character.
+	# This is a simple check that each directory begins with
+	# a '.' or '/'. No check is made on whether the directory
+	# actually exists or not since nonexistent directories
+	# are ignored.
 	#
 
 	for dir in ${BINPATHS}; do
-		if [ -z "`echo $dir | grep '^/'`" ]; then
+		if [ -z "`echo $dir | grep '^[./]'`" ]; then
 			echo "Invalid BINDIR directory: $dir"
 			exit 1
 		fi
@@ -418,10 +476,30 @@ get_bindir_option() {
 
 get_rootdir_option() {
 
-	if [ -z "${ROOTDIR}" ]; then
-		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | sed -e 's/ROOTDIR=//' | tr -d '"'`
+	#
+	# First get the option from the command-line or the
+	# configuration file, and do a simple check on whether
+	# it is empty or a space.
+	#
 
-		if [ -z "${ROOTDIR}" ]; then
+	if [ -n "${ROOTDIR}" ]; then
+		ROOTDIR=`echo "${ROOTDIR}" | tr -s ' '`
+
+		if [ "${ROOTDIR}" = " " ]; then
+			echo "Invalid --rootdir option - no directory name given."
+			exit 1
+		fi
+	else
+		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | tail -n 1`
+
+		if [ -n "${ROOTDIR}" ]; then
+			ROOTDIR=`echo "${ROOTDIR}" | sed -e 's/ROOTDIR=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${ROOTDIR}" -o "${ROOTDIR}" = " " ]; then
+				echo "Invalid ROOTDIR configuration option - no directory name specified."
+				exit 1
+			fi
+		else
 			ROOTDIR="/"
 		fi
 	fi
@@ -439,11 +517,136 @@ get_rootdir_option() {
 }
 
 
+get_mailonwarn_option() {
+
+	#
+	# Get the option from the configuration file, and do a simple
+	# check on whether it is empty or a space.
+	#
+
+	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | tail -n 1`
+
+	if [ -n "${MAILONWARNING}" ]; then
+		MAILONWARNING=`echo "${MAILONWARNING}" | sed -e 's/MAIL-ON-WARNING=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${MAILONWARNING}" -o "${MAILONWARNING}" = " " ]; then
+			echo "Invalid MAIL-ON-WARNING configuration option - no email address specified."
+			exit 1
+		fi
+	fi
+
+
+	if [ -n "${MAILONWARNING}" ]; then
+		MAIL_CMD=`cat ${CONFIGFILE} | grep '^MAIL_CMD=' | tail -n 1`
+
+		if [ -n "${MAIL_CMD}" ]; then
+			MAIL_CMD=`echo "${MAIL_CMD}" | sed -e 's/MAIL_CMD=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
+
+			if [ -z "${MAIL_CMD}" -o "${MAIL_CMD}" = " " ]; then
+				echo "Invalid MAIL_CMD configuration option - no command specified."
+				exit 1
+			fi
+		else
+			MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${hostname}\""
+		fi
+	fi
+
+	return
+}
+
+
+get_allow_rootssh_option() {
+
+	#
+	# If the option is not specified on the command-line, then
+	# get it from the configuration file. Next do a simple check
+	# on whether it is empty, a space, or not 0 or 1.
+	#
+
+	if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
+		ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | tail -n 1`
+
+		if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
+			ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | sed -e 's/ALLOW_SSH_ROOT_USER=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${ALLOW_SSH_ROOT_USER}" -o "${ALLOW_SSH_ROOT_USER}" = " " ]; then
+				echo "Invalid ALLOW_SSH_ROOT_USER configuration option - no value specified."
+				exit 1
+			elif [ "${ALLOW_SSH_ROOT_USER}" != "0" -a "${ALLOW_SSH_ROOT_USER}" != "1" ]; then
+				echo "Invalid ALLOW_SSH_ROOT_USER configuration option: ${ALLOW_SSH_ROOT_USER}"
+				exit 1
+			fi
+		else
+			ALLOW_SSH_ROOT_USER=0
+		fi
+	fi
+
+	return
+}
+
+
+get_auto_x_option() {
+
+	#
+	# For the second colour set we first see if the auto X detect option
+	# has been set. If it is set, and X is in use, then the second colour
+	# set is used. If X is not in use, or the auto detect option is not
+	# set, then we only use the second colour set if the command-line
+	# option is used or it is configured in the configuration file.
+	#
+
+	if [ $AUTO_X_OPT -eq 0 ]; then
+		AUTO_X_DTCT=`cat ${CONFIGFILE} | grep '^AUTO_X_DETECT=' | tail -n 1`
+
+		if [ -n "${AUTO_X_DTCT}" ]; then
+			AUTO_X_DTCT=`echo "${AUTO_X_DTCT}" | sed -e 's/AUTO_X_DETECT=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${AUTO_X_DTCT}" -o "${AUTO_X_DTCT}" = " " ]; then
+				echo "Invalid AUTO_X_DETECT configuration option - no value specified."
+				exit 1
+			elif [ "${AUTO_X_DTCT}" != "0" -a "${AUTO_X_DTCT}" != "1" ]; then
+				echo "Invalid AUTO_X_DETECT configuration option: ${AUTO_X_DTCT}"
+				exit 1
+			fi
+		else
+			AUTO_X_DTCT=0
+		fi
+	fi
+
+
+	if [ $AUTO_X_DTCT -eq 1 -a -n "$DISPLAY" ]; then
+		CLRSET2=1
+	fi
+
+
+	if [ $CLRSET2 -eq 0 ]; then
+		CLRSET2=`cat ${CONFIGFILE} | grep '^COLOR_SET2=' | tail -n 1`
+
+		if [ -n "${CLRSET2}" ]; then
+			CLRSET2=`echo "${CLRSET2}" | sed -e 's/COLOR_SET2=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${CLRSET2}" -o "${CLRSET2}" = " " ]; then
+				echo "Invalid COLOR_SET2 configuration option - no value specified."
+				exit 1
+			elif [ "${CLRSET2}" != "0" -a "${CLRSET2}" != "1" ]; then
+				echo "Invalid COLOR_SET2 configuration option: ${CLRSET2}"
+				exit 1
+			fi
+		else
+			CLRSET2=0
+		fi
+	fi
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
-	# We call separate functions to process those options which involve
-	# path names.
+	# We call separate functions to process each option. The option
+	# is checked first to see if it has been given on the command-line,
+	# and, if not, then if it is specified in the configuration file.
 	#
 
 	get_logfile_option
@@ -456,54 +659,11 @@ get_configfile_options() {
 
 	get_rootdir_option
 
+	get_mailonwarn_option
 
-	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | sed -e 's/MAIL-ON-WARNING=//' | tr -d '"'`
+	get_allow_rootssh_option
 
-	if [ -n "${MAILONWARNING}" ]; then
-		MAIL_CMD=`cat ${CONFIGFILE} | grep '^MAIL_CMD=' | sed -e 's/MAIL_CMD=//' | sed -e 's/^"\(.*\)"$/\1/'`
-
-		if [ -z "${MAIL_CMD}" ]; then
-			MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${hostname}\""
-		fi
-	fi
-
-
-	if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
-		ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | sed -e 's/ALLOW_SSH_ROOT_USER=//'`
-
-		if [ -z "${ALLOW_SSH_ROOT_USER}" ]; then
-			ALLOW_SSH_ROOT_USER=0
-		fi
-	fi
-
-
-	#
-	# For the second colour set we first see if the auto X detect option
-	# has been set. If it is set, and X is in use, then the second colour
-	# set is used. If X is not in use, or the auto detect option is not
-	# set, then we only use the second colour set if the option (--cs2)
-	# is used or it is configured in the configuration file.
-	#
-
-	if [ $AUTO_X_OPT -eq 0 ]; then
-		AUTO_X_DTCT=`cat ${CONFIGFILE} | grep '^AUTO_X_DETECT=' | sed -e 's/AUTO_X_DETECT=//'`
-
-		if [ -z "${AUTO_X_DTCT}" ]; then
-			AUTO_X_DTCT=0
-		fi
-	fi
-
-	if [ $AUTO_X_DTCT -eq 1 -a -n "$DISPLAY" ]; then
-		CLRSET2=1
-	fi
-
-	if [ $CLRSET2 -eq 0 ]; then
-		CLRSET2=`cat ${CONFIGFILE} | grep '^COLOR_SET2=' | sed -e 's/COLOR_SET2=//'`
-
-		if [ -z "${CLRSET2}" ]; then
-			CLRSET2=0
-		fi
-	fi
+	get_auto_x_option
 
 	return
 }
@@ -524,11 +684,11 @@ help() {
 	echo "       --color-set2                    Use second color set for output"
 	echo "       --configfile <file>             Use specified configuration file"
 	echo "   -l, --logfile [logfile]             Write to a logfile"
-	echo "                                       (default is /var/log/rkhunter.log)"
+	echo "                                       (default is $DFLT_LOGFILE)"
 	echo "       --cronjob                       Run as a cronjob"
 	echo "                                       (implies -c, -sk and --nocolors options)"
 	echo "       --dbdir <dir>                   Use specified database directory"
-	echo "       --display-logfile               Display the logfile at end of the output"
+	echo "       --display-logfile               Display the logfile at the end"
 	echo "   -h, --help                          Display this help menu and exit"
 	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
 	echo "       --nocolors                      Use black and white output"
@@ -595,6 +755,7 @@ CHECK=0
 CATLOGFILE=0
 
 LOGFILE=""
+DFLT_LOGFILE="/var/log/rkhunter.log"
 
 # Set to have the logfile appended to rather than overwritten.
 APPEND_LOG=0
@@ -680,6 +841,9 @@ defaultcolumn=60
 # Initialise default status
 STATUS=0
 
+# Record for logging the command-line being used
+CMD_LINE="$0 $*"
+
 
 #
 # Display the help menu if no options were given.
@@ -734,7 +898,7 @@ while [ $# -ge 1 ]; do
 	--allow-ssh-root-user)
 		ALLOW_SSH_ROOT_USER=1
 		;;
-	--append-log)
+	--append-log | --appendlog)
 		APPEND_LOG=1
 		APPEND_OPT=1
 		;;
@@ -751,12 +915,28 @@ while [ $# -ge 1 ]; do
 		CLRSET2=1
 		;;
 	--bindir)
-		shift
-		BINPATHS=$1
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			BINPATHS="$1"
+			;;
+		esac
 		;;
 	--configfile)
-		shift
-		CONFIGFILE=$1
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			CONFIGFILE="$1"
+			;;
+		esac
 		;;
 	--cronjob)
 		CHECK=1
@@ -778,8 +958,16 @@ while [ $# -ge 1 ]; do
 		esac
 		;;
 	--dbdir)
-		shift
-		DB_PATH=$1
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			DB_PATH="$1"
+			;;
+		esac
 		;;
 	--disable-application-check | --disable-applicationcheck | --dac | --skip-application-check | --skipapplicationcheck | --skip-applicationcheck)
 		APPLICATION_CHECK=0
@@ -798,7 +986,7 @@ while [ $# -ge 1 ]; do
 		help
 		exit 0
 		;;
-	--noappend-log | --no-append-log)
+	--noappend-log | --no-append-log | --noappendlog)
 		APPEND_LOG=0
 		APPEND_OPT=1
 		;;
@@ -820,8 +1008,16 @@ while [ $# -ge 1 ]; do
 		SHOWWARNINGSONLY=1
 		;;
 	-r | --rootdir)
-		shift
-		ROOTDIR=$1
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			ROOTDIR="$1"
+			;;
+		esac
 		;;
 	--scan-knownbad-files)
 		PERFORMKNOWNBAD=1
@@ -831,8 +1027,16 @@ while [ $# -ge 1 ]; do
 		WAITONWARNING=0
 		;;
 	--tmpdir)
-		shift
-		TMPDIR=$1
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			TMPDIR="$1"
+			;;
+		esac
 		;;
 	--update)
 		UPDATE=1
@@ -901,6 +1105,8 @@ get_configfile_options
 #
 
 if [ $COLORS -eq 1 ]; then
+	NORMAL="[0;39m"		# Foreground colour to default
+
 	if [ $CLRSET2 -eq 0 ]; then
 		RED="[1;31m"		# Bright red
 		GREEN="[1;32m"	# Bright green
@@ -912,10 +1118,25 @@ if [ $COLORS -eq 1 ]; then
 		YELLOW="[0;35m"	# Purple
 		WHITE="[0;30m"	# Black
 	fi
+fi
 
-	OK=$GREEN
-	BAD=$RED
-	NORMAL="[0;39m"		# Foreground colour to default
+
+#
+# If the logfile has been disabled, then we cannot let the program run
+# when certain options are used. If we did, the user would see no output
+# and might assume that all was well.
+#
+
+if [ "${LOGFILE}" = "/dev/null" ]; then
+	if [ $SHOWWARNINGSONLY -eq 1 ]; then
+		echo "The logfile has been disabled - unable to report warnings."
+		exit 1
+	fi
+
+	if [ $CATLOGFILE -eq 1 ]; then
+		echo "The logfile has been disabled - unable to display the log file."
+		exit 1
+	fi
 fi
 
 
@@ -942,6 +1163,8 @@ logtext "Info: Start date is `date`"
 
 logtext "Info: Shell ${SHELL}"
 
+logtext "Info: Command line is ${CMD_LINE}"
+
 logtext "Parsing configuration file ${CONFIGFILE}"
 
 if [ -z "${MAILONWARNING}" ]; then
@@ -957,7 +1180,7 @@ if [ "${TMPDIR}" = "/tmp" ]; then
 	logtext "some important system files! Please choose another directory in"
 	logtext "your configuration file, or use the --tmpdir command-line option."
 	displaytext "Warning! Using /tmp as your temporary directory can be a security risk!"
-	displaytext "See logfile for more information about this issue."
+	displaytext "Check the logfile for more information about this issue."
 fi
 
 logtext "Info: Using ${DB_PATH} as database directory"
@@ -2474,7 +2697,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		if [ "${STRINGSFAILED}" -eq 1 ]; then
 			insertlayout
-			displaytext $E "   ${file}${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+			displaytext $E "   ${file}${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 			displaytext ""
 			displaytext "-----------------------------------------------------------------------------------"
 			displaytext "Expected (but not found) strings:"
@@ -2483,7 +2706,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		else
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
-			displaytext $E "   ${file}${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "   ${file}${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 		displaytext "${NORMAL}"
 	else
@@ -2538,11 +2761,11 @@ if [ "${CHECK}" -eq 1 ]; then
 					if [ "${ISBAD}" = "" ]; then
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
-						displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+						displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 					else
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
-						displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+						displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 						logtext "Possible backdoored or harmful file found ${I}"
 						WARNING=1
 					fi
@@ -2609,12 +2832,12 @@ if [ "${CHECK}" -eq 1 ]; then
 					if [ ${FOUND} -eq 1 ]; then
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
-						displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+						displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 					else
 						MD5_DIFFERENT=`expr ${MD5_DIFFERENT} + 1`
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
-						displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+						displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 						logtext "Checking ${file} against hashes in database (${FILEHASHES}) failed"
 						if [ -f /bin/rpm ]; then
 							RPMPACKAGE=`rpm -qf ${file}`
@@ -2711,17 +2934,17 @@ if [ "${CHECK}" -eq 1 ]; then
 		WORM=`cat /etc/passwd | grep 'w0rm'`
 		if [ "${WORM}" = "" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext --nodate "OK"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 			logtext --nodate "Warning! Possible ADM w0rm found"
 			displaytext "${FOUNDTRACES}"
 		fi
 	else
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 	fi
 
 	# AjaKit
@@ -3026,11 +3249,11 @@ if [ "${CHECK}" -eq 1 ]; then
 	if [ ${STATUS} -eq 0 ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	else
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		displaytext "${FOUNDTRACES}"
 	fi
 
@@ -3246,13 +3469,13 @@ if [ "${CHECK}" -eq 1 ]; then
 		if [ ${FOUND} -eq 1 ]; then
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
-			displaytext "Warning: Found unexpected strings in some files! See logfile for more details"
+			displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+			displaytext "Warning: Found unexpected strings in some files! Check the logfile for more details"
 			logtext "Warning: Found unexpected strings in some files!"
 		else
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext "All files are OK"
 		fi
 	else
@@ -3299,13 +3522,13 @@ if [ "${CHECK}" -eq 1 ]; then
 	if [ ${FOUNDFILE} -eq 0 ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	else
 		INFECTED_COUNT=`expr ${INFECTED_COUNT} + 1`
 		INFECTED_NAMES="${INFECTED_NAMES} / ${INFO} "
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		displaytext "
 		-------------------------------------------------------------------------
 		Warning found file '${FILE}'
@@ -3343,13 +3566,13 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		SEARCHFILES=`${LSOFBINARY} -F n -w | sort | uniq | grep '^n/' | sed 's/^n//' | egrep "/(${SUSP_FILES})$"`
 		if [ ! "${SEARCHFILES}" = "" ]; then
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+			displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 			logtext --nodate "Bad"
 			logtext "Warning! Found possible harmful files. Please inspect"
 			logtext "Warning! Output of test: ${SEARCHFILES}"
 		else
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext --nodate "OK"
 		fi
 		SUSP_FILES=`echo "${SUSP_FILES}" | sed -e 's/\\\././g'`
@@ -3429,10 +3652,10 @@ hydra.restore:THC-Hydra%%(password%%capture)
 			insertlayout
 
 			if [ $STATUS -eq 0 ]; then
-				displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+				displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 				logtext --nodate "OK"
 			else
-				displaytext -e "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+				displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 				logtext --nodate "Bad"
 				logtext "Warning! Found deleted files in use. Please inspect:"
 
@@ -3480,11 +3703,11 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	if [ ${STATUS} -eq 0 ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	else
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 	fi
 
 #	STATUS=0
@@ -3507,11 +3730,11 @@ hydra.restore:THC-Hydra%%(password%%capture)
 #	if [ ${STATUS} -eq 0 ]; then
 #		jump=`expr ${defaultcolumn} - ${SIZE}`
 #		insertlayout
-#		echo $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+#		echo $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 #	else
 #		jump=`expr ${defaultcolumn} - ${SIZE}`
 #		insertlayout
-#		echo $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+#		echo $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 #		echo "Found files:"
 #		echo "${FOUNDFILES}"
 #	fi
@@ -3534,11 +3757,11 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	if [ ${STATUS} -eq 0 ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	else
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 	fi
 
 	# Software related files
@@ -3557,11 +3780,11 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		if [ "`cat ${TRIPWIREFILE} | grep \"Tripwire segment-faulted !\"`" = "" ]; then
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		else
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 			logtext "The file ${TRIPWIREFILE} contains a very suspicious text string, which"
 			logtext "can indicate the presence of the SHV5 rootkit."
 		fi
@@ -3571,7 +3794,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	if [ ${FOUND} -eq 0 ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	fi
 
 
@@ -3596,11 +3819,11 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	if [ ${STATUS} -eq 0 ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	else
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 	fi
 
 	keypresspause
@@ -3627,32 +3850,32 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		displaytext -n "       Test 1"
 		if [ -n "`grep 'in\.inetd' ${RCFILE}`" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 		fi
 
 		displaytext -n "       Test 2"
 		if [ "`grep 'bin/xchk' ${RCFILE}`" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 		fi
 
 		displaytext -n "       Test 3"
 		if [ "`grep 'bin/xsf' ${RCFILE}`" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 		fi
 	else
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 	fi
 
 	SIZE="27"
@@ -3675,15 +3898,15 @@ hydra.restore:THC-Hydra%%(password%%capture)
 
 		if [ ${FOUND} -eq 1 ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 			logtext "Possible bad string found in /etc/inetd.conf. Please check this file manually."
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 		fi
 	else
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 	fi
 
 
@@ -3710,11 +3933,11 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		fi
 		if [ ${FOUND} -eq 0 ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 			logtext "xinetd.conf seems to be clean"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 			displaytext "${WARNINGMSG}"
 			logtext "There were warnings found while testing xinetd.conf"
 		fi
@@ -3722,7 +3945,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		logtext "End of xinetd configuration scan"
 	else
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}Skipped${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}Skipped${NORMAL} ]"
 		logtext "Skipped xinetd tests (not Linux or file doesn't exists)"
 	fi
 
@@ -3751,10 +3974,10 @@ ${ROOTDIR}bin/login
 			RIGHTS=`ls -l ${I} | cut -c 1-10`
 			if [ "${RIGHTS}" = "-rwxrwxrwx" ]; then
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} (chmod 777 found, possible trojaned) ]"
+				displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} (chmod 777 found, possible trojaned) ]"
 			else
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+				displaytext -e "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 			fi
 		else
 			logtext "Checking ${I}... Not found"
@@ -3785,13 +4008,13 @@ ${ROOTDIR}bin/login
 
 			if ! $FILEOK; then
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+				displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 				displaytext "(script replacement found, possible trojaned)"
 				logtext "Checking ${I}... [ WARNING ]"
 				logtext "Possible script replacement found. Please inspect this file (check the file type, contents and size)"
 			else
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}Clean${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 				logtext "Checking ${I}... [ OK ]"
 			fi
 		else
@@ -3821,10 +4044,10 @@ ${ROOTDIR}bin/login
 
 		if [ "${STATUS}" -eq 1 ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found terms: ${FOUNDKEYS}) ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found terms: ${FOUNDKEYS}) ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 
 		logtext "--------------------- Netstat / Sockstat checks -----------------------"
@@ -3839,11 +4062,11 @@ ${ROOTDIR}bin/login
 
 		if [ "${SOCKSTAT}" = "${NETSTAT}" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext --nodate "OK"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 			logtext --nodate "WARNING!"
 			logtext "Sockstat tested output: ${SOCKSTAT}"
 			logtext "Netstat tested output: ${NETSTAT}"
@@ -3861,7 +4084,7 @@ ${ROOTDIR}bin/login
 
 			if [ "${RESULT}" = "" ]; then
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 				logtext "OK"
 			else
 				insertlayout
@@ -3908,10 +4131,10 @@ ${ROOTDIR}bin/login
 		if [ ! "${temp1}" = "" ]; then
 			if [ "${temp1}" = "${temp2}"  ]; then
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			else
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found difference in output) ]"
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found difference in output) ]"
 			fi
 		else
 			displaytext "${WHITE}Skipped!${NORMAL}"
@@ -3982,7 +4205,7 @@ ${ROOTDIR}bin/login
 			done
 			if [ ${FOUND} -eq 0 ]; then
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			else
 				insertlayout
 				displaytext $E "${LAYOUT}[ ${YELLOW}Special attributes found!${NORMAL} ]"
@@ -4029,10 +4252,10 @@ vlogger.o
 
 			if [ ${FOUND} -eq 0 ]; then
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			else
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 			fi
 		else
 			insertlayout
@@ -4089,10 +4312,10 @@ vlogger.o
 
 			if [ "${checkport}" = "" ]; then
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			else
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (possible trojan port) ]"
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (possible trojan port) ]"
 			fi
 		done
 	else
@@ -4127,14 +4350,14 @@ vlogger.o
 
 	if [ "${PROMISCSCAN1}" = "" -a "${PROMISCSCAN2}" = "" ]; then
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		logtext "${LOGTEXT}[ OK ]"
 		if [ "${OPERATING_SYSTEM}" = "Linux" -a ${IPFOUND} -eq 1 ]; then
 			logtext "Performed successful test with \`ip\`"
 		fi
 	else
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+		displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		displaytext "Warning! Found promiscuous interface. Please check the logfile."
 		logtext "${LOGTEXT}[ WARNING ]"
 		logtext "Possible promisc interfaces:"
@@ -4198,10 +4421,10 @@ vlogger.o
 		insertlayout
 
 		if [ $STATUS -eq 0 ]; then
-			displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext --nodate "OK"
 		else
-			displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+			displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 			displaytext "Warning! Found packet capturing application. Please check the logfile."
 
 			logtext --nodate "Warning"
@@ -4238,9 +4461,9 @@ vlogger.o
 
 	displaytext -n "   Checking hostname... "
 	if [ "${hostname}" = "" ]; then
-		displaytext "${BAD}Warning. ${NORMAL}Found empty hostname. Some programs don't like this."
+		displaytext "${RED}Warning. ${NORMAL}Found empty hostname. Some programs don't like this."
 	else
-		displaytext "${OK}Found. ${NORMAL}Hostname is ${hostname}"
+		displaytext "${GREEN}Found. ${NORMAL}Hostname is ${hostname}"
 	fi
 
 	##################################################################################################
@@ -4262,10 +4485,10 @@ vlogger.o
 			fi
 		done
 		if [ ${FOUND} -eq 0 ]; then
-			displaytext "${OK}OK${NORMAL}"
+			displaytext "${GREEN}OK${NORMAL}"
 		else
-			displaytext "${BAD}Warning!${NORMAL}"
-			displaytext "Found passwordless user account. See logfile for more information"
+			displaytext "${RED}Warning!${NORMAL}"
+			displaytext "Found passwordless user account. Check the logfile for more information"
 			logtext --nodate "OK"
 		fi
 	else
@@ -4284,7 +4507,7 @@ vlogger.o
 			if [ -e "${TMPDIR}/passwd" ]; then
 				differences=`diff /etc/passwd ${TMPDIR}/passwd | grep ":"`
 				if [ "${differences}" = "" ]; then
-					displaytext "${OK}OK. ${NORMAL}No changes."
+					displaytext "${GREEN}OK. ${NORMAL}No differences."
 				else
 					diffadded=`echo "${differences}" | grep "<"`
 					diffremoved=`echo "${differences}" | grep ">"`
@@ -4307,7 +4530,7 @@ vlogger.o
 			fi
 			cp /etc/passwd ${TMPDIR}/passwd
 		else
-			displaytext "${BAD}Error. ${NORMAL}Cannot find /etc/passwd"
+			displaytext "${RED}Error. ${NORMAL}Cannot find /etc/passwd"
 			logtext "Can't find /etc/passwd file?!?"
 		fi
 
@@ -4316,7 +4539,7 @@ vlogger.o
 			if [ -e "${TMPDIR}/group" ]; then
 				differences=`diff /etc/group ${TMPDIR}/group | grep ":"`
 				if [ "${differences}" = "" ]; then
-					displaytext "${OK}OK. ${NORMAL}No changes."
+					displaytext "${GREEN}OK. ${NORMAL}No differences."
 				else
 					diffadded=`echo "${differences}" | grep "<"`
 					diffremoved=`echo "${differences}" | grep ">"`
@@ -4338,7 +4561,7 @@ vlogger.o
 			fi
 			cp /etc/group ${TMPDIR}/group
 		else
-			displaytext "${BAD}Error. ${NORMAL}Cannot find /etc/group"
+			displaytext "${RED}Error. ${NORMAL}Cannot find /etc/group"
 			logtext "Can't find /etc/group file?!?"
 		fi
 	fi
@@ -4369,15 +4592,15 @@ vlogger.o
 
 			if [ "${FOUNDRCSIGN}" -eq 1 ]; then
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found unusual signs) ]"
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found unusual signs) ]"
 				logtext "Warning! Found unusual string in rc.local/boot.local file"
 			else
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			fi
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 		fi
 	done
 
@@ -4418,14 +4641,14 @@ vlogger.o
 		displaytext -n "   Result rc.d files check"
 		if [ "${FOUNDRCSIGN}" -eq 1 ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (found unusual things) ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found unusual things) ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 	else
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 	fi
 
 	if [ -f ${ROOTDIR}etc/conf.d/local.start ]; then
@@ -4447,10 +4670,10 @@ vlogger.o
 
 		if [ "${FOUNDRCSIGN}" -eq 1 ]; then
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+			displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		else
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 	fi
 
@@ -4487,11 +4710,11 @@ vlogger.o
 #		# Check results
 #		if [ ${FOUND} -eq 1 ]; then
 #			insertlayout
-#			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
-#			displaytext "See logfile for more information"
+#			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+#			displaytext "Check the logfile for more information"
 #		else
 #			insertlayout
-#			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+#			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 #		fi
 
 #	else
@@ -4511,14 +4734,14 @@ vlogger.o
 		ATTRIBUTE=`ls -l /root/.bash_history | cut -c1`
 		if [ "${ATTRIBUTE}" = "l" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (redirection found) ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (redirection found) ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 	else
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}Not Found${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}Not Found${NORMAL} ]"
 	fi
 
 	displaytext ""
@@ -4535,10 +4758,10 @@ vlogger.o
 
 		if [ "${SPECIALFILES}" = "" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} (unusual files found) ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (unusual files found) ]"
 			displaytext "---------------------------------------------"
 			displaytext "Unusual files:"
 			displaytext "${SPECIALFILES}"
@@ -4579,7 +4802,7 @@ vlogger.o
 	if [ ${STATUS} -eq 0 ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	else
 		# Reset state
 		STATUS=0
@@ -4644,7 +4867,7 @@ vlogger.o
 		else
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 	fi
 
@@ -4682,14 +4905,14 @@ vlogger.o
 
 		if [ ${FOUNDSTRING} -eq 1 ]; then
 			insertlayout
-			displaytext $E "   ${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+			displaytext $E "   ${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 		else
 			insertlayout
-			displaytext $E "   ${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "   ${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 	else
 		insertlayout
-		displaytext $E "   ${LAYOUT}[ ${OK}Not found${NORMAL} ]"
+		displaytext $E "   ${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 	fi
 
 	FOUNDSTRING=0
@@ -4710,10 +4933,10 @@ vlogger.o
 
 	if [ ${FOUNDSTRING} -eq 1 ]; then
 		insertlayout
-		displaytext $E "   ${LAYOUT}[ ${BAD}BAD${NORMAL} ]"
+		displaytext $E "   ${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 	else
 		insertlayout
-		displaytext $E "   ${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "   ${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	fi
 
 
@@ -4832,7 +5055,7 @@ nonvulnerable:%2.4.24%
 						SIZE=`echo \'${APPLICATIONNAME} [unknown]\' | wc -c | tr -s ' ' | tr -d ' '`
 						jump=`expr ${JUMPCOL} - ${SIZE} + 11`
 						insertlayout
-						displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 					else
 						APPLICATIONNAME=`echo ${APPLICATIONNAME} | tr -s '%' ' '`
 						displaytext -n "   - ${APPLICATIONNAME} ${VERSION} "
@@ -4852,14 +5075,14 @@ nonvulnerable:%2.4.24%
 								FOUNDUNKNOWN=1
 							else
 								logtext "Version ${VERSION} is available in non-vulnerable group and seems to be OK!"
-								displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+								displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 							fi
 						else
 							logtext "Version ${VERSION} seems to be vulnerable (if unpatched)!"
 							if [ ${USE_PATCHED_SOFTWARE} -eq 1 ]; then
 								displaytext $E "${LAYOUT}[ ${YELLOW}Old or patched version${NORMAL} ]"
 							else
-								displaytext $E "${LAYOUT}[ ${BAD}Vulnerable${NORMAL} ]"
+								displaytext $E "${LAYOUT}[ ${RED}Vulnerable${NORMAL} ]"
 							fi
 							FOUND=1
 							VULNERABLE_ITEM_COUNT=`expr ${VULNERABLE_ITEM_COUNT} + 1`
@@ -4949,7 +5172,7 @@ nonvulnerable:%2.4.24%
 	displaytext -n "   Searching for /etc/passwd... "
 	if [ -e "${ROOTDIR}etc/passwd" ]; then
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}Found${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}Found${NORMAL} ]"
 		displaytext -n "   Checking users with UID '0' (root)... "
 
 		SIZE=39
@@ -4958,7 +5181,7 @@ nonvulnerable:%2.4.24%
 		users_with_uid0=`grep -v '^:0:0:::' ${ROOTDIR}etc/passwd | grep ":0:" | cut -d ":" -f1,3 | grep '0' | grep -v 'root:0'`
 		if [ "${users_with_uid0}" = "" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		else
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${YELLOW}Warning!${NORMAL} (some users in root group) ]"
@@ -4967,7 +5190,7 @@ nonvulnerable:%2.4.24%
 
 	else
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${BAD}Not Found${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Not Found${NORMAL} ]"
 	fi
 
 	displaytext "";
@@ -5020,7 +5243,7 @@ nonvulnerable:%2.4.24%
 					else
 						displaytext "    info: \"${permitrootlogin}\" found in file ${I}/sshd_config"
 					fi
-					displaytext "    Hint: See logfile for more information about this issue"
+					displaytext "    Hint: Check the logfile for more information about this issue"
 					logtext "Warning: root login possible. Change for your safety the 'PermitRootLogin'"
 					logtext "entry in the SSH configuration file ${I}/sshd_config to 'no', and use 'su -' to become root. "
 				else
@@ -5028,13 +5251,13 @@ nonvulnerable:%2.4.24%
 					SIZE=36
 					jump=`expr ${defaultcolumn} - ${SIZE}`
 					insertlayout
-					displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} (Remote root login permitted by explicit option) ]"
+					displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login permitted by explicit option) ]"
 				fi
 			else
 				SIZE=36
 				jump=`expr ${defaultcolumn} - ${SIZE}`
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${OK}OK${NORMAL} (Remote root login disabled) ]"
+				displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login disabled) ]"
 			fi
 
 			displaytext -n "   Checking for allowed protocols... "
@@ -5044,14 +5267,14 @@ nonvulnerable:%2.4.24%
 				SIZE=35
 				jump=`expr ${defaultcolumn} - ${SIZE}`
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (Only SSH2 allowed) ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Only SSH2 allowed) ]"
 			else
 				if [ "${protocols}" = "Protocol 2,1" -o "${protocols}" = "Protocol 1,2" -o "${protocols}" = "Protocol 1" ]; then
 					SIZE=35
 					jump=`expr ${defaultcolumn} - ${SIZE}`
 					insertlayout
 					displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} ]"
-					displaytext "    info: Users can use SSH1-protocol (see logfile for more information)."
+					displaytext "    info: Users can use SSH1-protocol (Check the logfile for more information)."
 					logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
 				else
 					SIZE=35
@@ -5068,7 +5291,7 @@ nonvulnerable:%2.4.24%
 					fi
 
 					if [ ${FOUND} -eq 0 ];then
-						displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (Only SSH2 allowed) ]"
+						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Only SSH2 allowed) ]"
 						displaytext "    info: found no option, most times default value is used."
 					else
 						displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} (SSH v1 allowed) ]"
@@ -5091,7 +5314,7 @@ nonvulnerable:%2.4.24%
 
 	if [ -e "/etc/syslog.conf" -o -e "/etc/syslog-ng/syslog-ng.conf" ]; then
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		SIZE=38
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 
@@ -5110,10 +5333,10 @@ nonvulnerable:%2.4.24%
 
 		if [ ! "${syslogisrunning}" = "" -o ! "${syslogngisrunning}" = "" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${BAD}Warning!${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 			displaytext "    Info: Cannot find syslog/syslog-ng daemon"
 		fi
 
@@ -5141,10 +5364,10 @@ nonvulnerable:%2.4.24%
 
 		if [ "${logtoremote}" = "" ]; then
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (no remote logging) ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (no remote logging) ]"
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (remote logging) ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (remote logging) ]"
 			displaytext "    info: ${logtoremote}"
 			logtext "Info: line found with logging to remote host ($logtoremote)"
 		fi
@@ -5156,6 +5379,20 @@ nonvulnerable:%2.4.24%
 	ENDTIME=`perl -e 'printf "%d\n", time;'`
 
 	TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
+	TOTALMINS=`expr ${TOTALTIME} / 60`
+	TOTALSECS=`expr ${TOTALTIME} % 60`
+
+	if [ $TOTALMINS -eq 1 ]; then
+		TOTALTIME="${TOTALMINS} minute, "
+	else
+		TOTALTIME="${TOTALMINS} minutes, "
+	fi
+
+	if [ $TOTALSECS -eq 1 ]; then
+		TOTALTIME="${TOTALTIME}${TOTALSECS} second"
+	else
+		TOTALTIME="${TOTALTIME}${TOTALSECS} seconds"
+	fi
 
 	displaytext ""; displaytext ""
 	displaytext "---------------------------- Scan results ----------------------------"
@@ -5166,9 +5403,9 @@ nonvulnerable:%2.4.24%
 		displaytext "Scanned files: ${MD5_COUNT}"
 		displaytext -n "Incorrect MD5 checksums: "
 		if [ "${MD5_DIFFERENT}" -eq 0 ]; then
-			displaytext -n "${OK}"
+			displaytext -n "${GREEN}"
 		else
-			displaytext -n "${BAD}"
+			displaytext -n "${RED}"
 		fi
 		displaytext "${MD5_DIFFERENT}${NORMAL}"
 	else
@@ -5181,9 +5418,9 @@ nonvulnerable:%2.4.24%
 	displaytext "Scanned files: ${SCANNED_COUNT}"
 	displaytext -n "Possible infected files: "
 	if [ "${INFECTED_COUNT}" -eq 0 ]; then
-		displaytext -n "${OK}"
+		displaytext -n "${GREEN}"
 	else
-		displaytext -n "${BAD}"
+		displaytext -n "${RED}"
 	fi
 	displaytext "${INFECTED_COUNT}${NORMAL}"
 	logtext "Rootkits scanned for: ${ROOTKIT_TESTS}"
@@ -5197,9 +5434,9 @@ nonvulnerable:%2.4.24%
 		logtext "${VULNERABLE_ITEM_COUNT} vulnerable applications found"
 		displaytext -n "Vulnerable applications: "
 		if [ "${VULNERABLE_ITEM_COUNT}" -eq 0 ]; then
-			displaytext -n "${OK}"
+			displaytext -n "${GREEN}"
 		else
-			displaytext -n "${BAD}"
+			displaytext -n "${RED}"
 		fi
 		displaytext ${VULNERABLE_ITEM_COUNT}${NORMAL}
 	else
@@ -5208,7 +5445,7 @@ nonvulnerable:%2.4.24%
 	fi
 
 	displaytext ""
-	displaytext "Scanning took ${TOTALTIME} seconds"
+	displaytext "Scanning took ${TOTALTIME}."
 
 	if [ "${REPORTMODE}" -eq 0 ]; then
 		if [ "${LOGFILE}" != "/dev/null" ]; then
@@ -5251,7 +5488,7 @@ nonvulnerable:%2.4.24%
 			echo "Skipped"
 		fi
 		echo ""
-		echo "Scanning took ${TOTALTIME} seconds"
+		echo "Scanning took ${TOTALTIME}."
 		echo ""
 		echo "*important*"
 		echo "Scan your system manually sometimes with full output enabled!"
