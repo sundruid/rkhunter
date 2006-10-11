@@ -5554,7 +5554,7 @@ fi
 if [ "${UPDATE}" -eq 1 ]; then
 	displaytext "Running updater..."
 	displaytext ""
-	${INSTALLDIR}/lib/rkhunter/scripts/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${md5} ${LOGFILE}
+	${INSTALLDIR}/lib/rkhunter/scripts/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
 	displaytext ""
 	displaytext "Ready."
 fi

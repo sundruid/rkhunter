@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" -o "$5" = "" ]; then
-	echo "Usage $0 <path/to/rkhunter.conf> <path/to/mirrors.dat> </path/to/dbdir> </path/to/md5>" 
+if [ "$1" = "" -o "$2" = "" -o "$3" = "" -o "$4" = "" ]; then
+	echo "Usage $0 <path/to/rkhunter.conf> <path/to/mirrors.dat> </path/to/dbdir> </path/to/logfile>" 
 	exit 1
 fi 
 
@@ -10,8 +10,7 @@ CONFFILE=$1
 # Mirrors
 MIRRORFILE=$2
 DBDIR=$3
-MD5=$4
-LOGFILE=$5
+LOGFILE=$4
 
 debug() {
 	echo $1 >> ${LOGFILE}
