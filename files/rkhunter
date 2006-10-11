@@ -21,6 +21,42 @@
 #
 
 
+#
+# Unfortunately we must do some O/S checks at the very beginning.
+# Otherwise SunOS will complain about some of the ksh/bash syntax.
+#
+
+OPERATING_SYSTEM=`uname`
+
+if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	if [ "$RANDOM" = "$RANDOM" ]; then
+		exec /bin/ksh $0 $*
+		exit 0
+	fi
+fi
+
+case "${OPERATING_SYSTEM}" in
+AIX|OpenBSD|SunOS)
+	# What is the default shell
+	if print >/dev/null 2>&1; then
+		alias echo='print'
+		E=""
+		ECHOOPT="--"
+		MYSHELL=ksh
+	else
+		E="-e"
+		ECHOOPT=""
+		MYSHELL=bash
+	fi
+	;;
+*)
+	E="-e"
+	ECHOOPT=""
+	MYSHELL=bash
+	;;
+esac
+
+
 ######################################################################
 #
 # Global function definitions
@@ -110,7 +146,7 @@ displaytext() {
 				echo $ECHOOPT $1 "$2"
 			fi
 		else
-			[ "$1" = "-n" ] && PREVIOUSTEXT=`echo "$2" | sed 's/^ \+//'`
+			[ "$1" = "-n" ] && PREVIOUSTEXT=`echo "$2" | sed -e 's/^ *//'`
 		fi
 	else
 		if [ $DODISPLAY -eq 1 ]; then
@@ -250,7 +286,7 @@ get_logfile_option() {
 			exit 1
 		fi
 	else
-		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | tail -n 1`
+		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | tail -1`
 
 		if [ -n "${LOGFILE}" ]; then
 			LOGFILE=`echo "${LOGFILE}" | sed -e 's/LOGFILE=//' | tr -d '"' | tr -s ' '`
@@ -270,7 +306,7 @@ get_logfile_option() {
 	#
 
 	if [ "${LOGFILE}" != "/dev/null" ]; then
-		LOGDIR=`echo "${LOGFILE}" | sed -e 's/\/[^/]\+$//'`
+		LOGDIR=`echo "${LOGFILE}" | sed -e 's/\/[^/][^/]*$//'`
 
 		if [ -z "`echo ${LOGDIR} | grep '/'`" ]; then
 			LOGDIR="."
@@ -294,7 +330,7 @@ get_logfile_option() {
 		#
 
 		if [ $APPEND_OPT -eq 0 ]; then
-			APPEND_LOG=`cat ${CONFIGFILE} | grep '^APPEND_LOG=' | tail -n 1`
+			APPEND_LOG=`cat ${CONFIGFILE} | grep '^APPEND_LOG=' | tail -1`
 
 			if [ -n "${APPEND_LOG}" ]; then
 				APPEND_LOG=`echo "${APPEND_LOG}" | sed -e 's/APPEND_LOG=//' | tr -d '"' | tr -s ' '`
@@ -350,7 +386,7 @@ get_tmpdir_option() {
 			exit 1
 		fi
 	else
-		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | tail -n 1`
+		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | tail -1`
 
 		if [ -n "${TMPDIR}" ]; then
 			TMPDIR=`echo "${TMPDIR}" | sed -e 's/TMPDIR=//' | tr -d '"' | tr -s ' '`
@@ -396,7 +432,7 @@ get_dbdir_option() {
 			exit 1
 		fi
 	else
-		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | tail -n 1`
+		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | tail -1`
 
 		if [ -n "${DB_PATH}" ]; then
 			DB_PATH=`echo "${DB_PATH}" | sed -e 's/DBDIR=//' | tr -d '"' | tr -s ' '`
@@ -442,7 +478,7 @@ get_bindir_option() {
 			exit 1
 		fi
 	else
-		BINPATHS=`cat ${CONFIGFILE} | grep '^BINDIR=' | tail -n 1`
+		BINPATHS=`cat ${CONFIGFILE} | grep '^BINDIR=' | tail -1`
 
 		if [ -n "${BINPATHS}" ]; then
 			BINPATHS=`echo "${BINPATHS}" | sed -e 's/BINDIR=//' | tr -d '"' | tr -s ' '`
@@ -490,7 +526,7 @@ get_rootdir_option() {
 			exit 1
 		fi
 	else
-		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | tail -n 1`
+		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | tail -1`
 
 		if [ -n "${ROOTDIR}" ]; then
 			ROOTDIR=`echo "${ROOTDIR}" | sed -e 's/ROOTDIR=//' | tr -d '"' | tr -s ' '`
@@ -524,7 +560,7 @@ get_mailonwarn_option() {
 	# check on whether it is empty or a space.
 	#
 
-	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | tail -n 1`
+	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | tail -1`
 
 	if [ -n "${MAILONWARNING}" ]; then
 		MAILONWARNING=`echo "${MAILONWARNING}" | sed -e 's/MAIL-ON-WARNING=//' | tr -d '"' | tr -s ' '`
@@ -537,7 +573,7 @@ get_mailonwarn_option() {
 
 
 	if [ -n "${MAILONWARNING}" ]; then
-		MAIL_CMD=`cat ${CONFIGFILE} | grep '^MAIL_CMD=' | tail -n 1`
+		MAIL_CMD=`cat ${CONFIGFILE} | grep '^MAIL_CMD=' | tail -1`
 
 		if [ -n "${MAIL_CMD}" ]; then
 			MAIL_CMD=`echo "${MAIL_CMD}" | sed -e 's/MAIL_CMD=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
@@ -564,7 +600,7 @@ get_allow_rootssh_option() {
 	#
 
 	if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
-		ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | tail -n 1`
+		ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | tail -1`
 
 		if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
 			ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | sed -e 's/ALLOW_SSH_ROOT_USER=//' | tr -d '"' | tr -s ' '`
@@ -596,7 +632,7 @@ get_auto_x_option() {
 	#
 
 	if [ $AUTO_X_OPT -eq 0 ]; then
-		AUTO_X_DTCT=`cat ${CONFIGFILE} | grep '^AUTO_X_DETECT=' | tail -n 1`
+		AUTO_X_DTCT=`cat ${CONFIGFILE} | grep '^AUTO_X_DETECT=' | tail -1`
 
 		if [ -n "${AUTO_X_DTCT}" ]; then
 			AUTO_X_DTCT=`echo "${AUTO_X_DTCT}" | sed -e 's/AUTO_X_DETECT=//' | tr -d '"' | tr -s ' '`
@@ -620,7 +656,7 @@ get_auto_x_option() {
 
 
 	if [ $CLRSET2 -eq 0 ]; then
-		CLRSET2=`cat ${CONFIGFILE} | grep '^COLOR_SET2=' | tail -n 1`
+		CLRSET2=`cat ${CONFIGFILE} | grep '^COLOR_SET2=' | tail -1`
 
 		if [ -n "${CLRSET2}" ]; then
 			CLRSET2=`echo "${CLRSET2}" | sed -e 's/COLOR_SET2=//' | tr -d '"' | tr -s ' '`
@@ -806,7 +842,7 @@ ROOTDIR=""
 REPORTMODE=0
 
 # Set prefix for binaries (useful when using chrooted environments)
-BINPREFIX=""
+ID_CMD="id"
 
 # Wait for a keypress after each test
 PAUSEAFTERTESTS=1
@@ -853,39 +889,6 @@ if [ $# -eq 0 ]; then
 	help
 	exit 0
 fi
-
-OPERATING_SYSTEM=`uname`
-
-# SunOS improvement
-if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-	if [ "$RANDOM" = "$RANDOM" ]; then
-		echo "WARN: Found Bourne-Shell -> Switching now to /b"
-		exec /bin/ksh $0 $*
-		exit 0
-	fi
-fi
-
-# echo alias for AIX/OpenBSD/SunOS
-case `uname` in
-AIX|OpenBSD|SunOS)
-	# What is the default shell
-	if print >/dev/null 2>&1; then
-		alias echo='print'
-		E=""
-		ECHOOPT="--"
-		MYSHELL=ksh
-	else
-		E="-e"
-		ECHOOPT=""
-		MYSHELL=bash
-	fi
-	;;
-*)
-	E="-e"
-	ECHOOPT=""
-	MYSHELL=bash
-	;;
-esac
 
 
 #
@@ -2234,8 +2237,8 @@ if [ "${CHECK}" -eq 1 ]; then
 		full_osname="Sun Solaris ${OPERATING_VERSION} (${OPERATING_ARCH})"
 
 		# Solaris has POSIX compatible binaries in /usr/xpg4/bin, but doesn't
-		# use them by default..
-		BINPREFIX="${ROOTDIR}usr/xpg4/bin/"
+		# use them by default.
+		ID_CMD="${ROOTDIR}usr/xpg4/bin/id"
 	fi
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
@@ -2632,7 +2635,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		exit 1
 	fi
 
-	if [ `${BINPREFIX}id -u` = "0" ]; then
+	if [ `${ID_CMD} -u` = "0" ]; then
 		logtext "Info: UID is zero (root)"
 	else
 		displaytext "Fatal error: root rights needed to perform a full scan"
@@ -2788,7 +2791,11 @@ if [ "${CHECK}" -eq 1 ]; then
 					#FILEHASHES=`echo ${i} | cut -d : -f 3`
 					for J in ${FILEHASHES}; do
 						if [ "$PRELINKING" -eq "1" -a "$PRELINKFOUND" -eq "1" ]; then
-							PRELINKVERIFY=`${PRELINKBINARY} --verify ${file} > ${TMPDIR}/prelink.tst`
+							${PRELINKBINARY} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
+# JH - prelink/SELinux workaround (11-10-06)
+							if [ ! -s "${TMPDIR}/prelink.tst" ]; then
+								runcon -t unconfined_t -- ${PRELINKBINARY} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
+							fi
 							myhash=`${md5} ${TMPDIR}/prelink.tst | cut -d " " -f 1`
 						else
 							myhash=`${md5} ${file} | cut -d " " -f 1`
