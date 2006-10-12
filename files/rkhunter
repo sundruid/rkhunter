@@ -841,7 +841,7 @@ ROOTDIR=""
 # Set to use report mode (do not show footer and make a 'professional' report)
 REPORTMODE=0
 
-# Set prefix for binaries (useful when using chrooted environments)
+# Default 'id' command - Solaris will reset this.
 ID_CMD="id"
 
 # Wait for a keypress after each test
@@ -3780,7 +3780,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	displaytext -n "   Software related files"
 	logtext "Scanning for software related files and intrusions..."
 
-	TRIPWIREFILE="${ROOTDIR}var/lib/tripwire/`uname`.twd"
+	TRIPWIREFILE="${ROOTDIR}var/lib/tripwire/`uname -n`.twd"
 
 	if [ -f "${TRIPWIREFILE}" ]; then
 		FOUND=1
