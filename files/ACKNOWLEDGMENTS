@@ -1,8 +1,9 @@
 
-Rootkit Hunter acknowledgments
+ROOTKIT HUNTER ACKNOWLEDGMENTS
 ==============================
 
-Michael Boelen      For providing and opening up RKH for active development
+Michael Boelen      For providing and opening up RKH for
+                    active development
 John Horne          For opening up a true cornucopia of enhancements
 Gary Bak            For enhancing AIX support and testing
 Andrej Ricnik       For patching and testing
@@ -14,5 +15,17 @@ Doncho N. Gunchev
 Steph               For testing
 unSpawn
 
-and all the maintainers and end-users that volunteered to support RKH.
+
+KNOWN CONTRIBUTORS
+==================
+
+Macemoneta          FUSE support
+B. Donnachie        cAos support
+intrigeri           Parallel run support
+jabel               FreeBSD 6.1 cli vs cron
+baddcarma           ProFTPd 1.3.0 on SuSE 10.0
+
+
+Finally, thanks go to all the maintainers and end-users that have
+volunteered to support RKH.
 

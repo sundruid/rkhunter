@@ -1,0 +1,307 @@
+
+#################################################################################
+#
+# FAQ
+#
+#################################################################################
+#
+# Note: Please check the website for the
+#       most recent version of this document.
+#
+#################################################################################
+#
+
+Basic questions
+
+
+B0
+What's up with Rootkit Hunter? I haven't seen any updates in *ages*!
+In the second quarter (IIRC) of 2006 the founder of Rootkit Hunter (abbrev.: RKH) 
+found out the hard way maintaining FOSS can be difficult when RL commitments overrule. 
+Management of the project (read: responsibility ;-p) was taken over by unSpawn and 
+a project group comprising of developers and testers was formed. The Rootkit Hunter 
+project team is committed to making sure development continues. If you're interested 
+in joining the development team send an email to unspawn at users dot sourceforge dot 
+net (--verbosity appreciated).
+
+
+B1
+What is Rootkit Hunter?
+It is an easy-to-use tool which checks machines running UNIX (clones) for the 
+presence of rootkits and other unwanted tools.
+
+
+B2
+What are rootkits?
+Most times it are selfhiding toolkits used by blackhats/crackers/scriptkiddies to 
+avoid the eye of the sysadmin.
+
+
+B3
+How do I install Rootkit Hunter?
+Download the gzipped tarball, extract it and run the installation script.
+
+download Rootkit Hunter from http://rkhunter.sourceforge.net
+Note: It doesn't matter where you save the archive
+
+extract:
+# tar zxf rkhunter-<version>.tar.gz
+
+installation:
+# cd rkhunter
+# ./installer.sh
+
+Or you can create a RPM file with the integrated rkhunter.spec file and install 
+your own package
+# rpmbuild -ta rkhunter-<version>.tar.gz
+Note: I don't support any 3rd party RPM file, but I will maintain the spec file. 
+If you have questions/suggestions about the spec file, please let us know.
+
+
+B4
+Rootkit Hunter tells me there is something wrong with my system, what to do?
+* Read "Intruder Detection Checklist" first: 
+  http://www.cert.org/tech_tips/intruder_detection_checklist.html
+  it tells you what to check. This makes it easier for you to find out and 
+  answer questions.
+* Remember that if you are unsure you can get a second opinion about everywhere
+  from the rkhunter-users mailing list to Linux-oriented fora like LinuxQuestions.org 
+  to IRC.
+
+(1) If just one check fails, it is possible you have a so called false positive. 
+Sometimes this will happen due to package updates, custom configurations or 
+changed binaries. If so, please validate:
+
+Files:
+- If you run a file integrity checker like Aide, Samhain or even tripwire consult
+  the result from running those tools. Note they must be installed directly after 
+  the O.S. installation to be useful and you must keep a copy of the binary, config 
+  and databases off-site. Also note running those and Rootkit Hunter is no substitute 
+  for updating software when updates are released and proper host and network hardening.
+- If you don't run a file integrity checker you can possibly use your distributions
+  package management system if it (is configured to) deal with verification.
+- "strings <file>" and check for untrusted file paths (things like /dev/.hiddendir)
+- recently updated binaries and their original source. If it is due an update, please sent 
+  us an URI to the changed file (like a RPM), so I can add new hashes to the databases.
+- "file <file>" and compare them with others (especially trusted binaries). If some binaries 
+   are linked static and others are all dynamic, than they could have been trojaned..
+
+Other warnings:
+If you have a warning about another part of the checks, please join the rkhunter-users 
+mailing list and tell us about your system configuration:
+- purpose of the server (for example: webserver, intranet fileserver, shell server),
+- the (aproximate) date of the incident and when you found out,
+- the running distribution name, release and kernel version,
+- if any passwd/shadow data has changed,
+- any anomalies you find from reading system, daemon, IDS and firewall logs,
+- if all installed software was recently updated,
+- what services are or where running at the time,
+- if you found setuid root files in directories for temporary files,
+- any anomalies you find from reading user shell histories.
+
+
+(2) If your system is infected with a rootkit, cleaning up is not an option. Restoring
+is also not an option unless you are skilled and have autonomous and independant means of
+verifying the backup is a) clean and b) does not contain misconfigured or stale software.
+Never trust a compromised machine. Period.
+
+* Read "Steps for Recovering from a UNIX or NT System Compromise":
+  http://www.cert.org/tech_tips/root_compromise.html
+
+A clean install of the system is recommended after backing up the full system. So follow
+the next steps:
+1. Stay calm. Be methodical.
+2. From another machine inform users (and the network, facility or host  owner) the machine
+   is compromised.
+3. Get the host offline or make sure the firewall is raised to only allow traffic to and from
+   your management IP or range.
+4. Backup your data. If you do not intend to investigate: do not backup binaries or binary data
+   you have not the means for to verify their integrity.
+5. Verify the integrity of your backup by visual inspection (auth data, configs, logs) or using
+   a file integrity checker or your distributions package management tools.
+6. Install your host with a fresh install and restrict network access to it using the systems 
+   authentication features like accounts, PAM, firewall, tcp wrappers, daemon configs, while 
+   you update and configure software and services. Please make sure you properly harden the machine.
+7. Investigate the old log files and the possible used tools. Also investigate the services which 
+   were vulnerable at the time of hack.
+
+
+B5
+What does the warning "Determining OS... Warning: this operating system is not fully 
+supported!" mean?
+It simply means: not all functions and checks can be performed, because the system is 
+'unknown' to  the script (things like which md5 utility is available, md5 hashes for 
+this system etc.). If you want support for a newly distro, please join the 
+rkhunter-users mailing list and tell us which distro you are using.
+
+
+B6
+Rootkit Hunter gives me an error some binary couldn't be found, what do do?
+Sometimes a binary can't be found in the PATH variable. Because Rootkit Hunter just tries 
+to run the binary by executing it without a path, the systems will searches it path. If 
+the binary couldn't be found, an error will occur.
+
+For example:
+    Checking loaded kernel modules... /usr/local/bin/rkhunter: lsmod: command not found
+    [ Warning! (found difference in output) ]
+Please enter `echo $PATH` and check your path settings.
+
+
+B7
+Rootkit Hunter tells me a lot of installed software is 'vulnerable', what does it mean?
+It means this software possibly contains software bugs which make external (or local) 
+attacks possible. In worst case, a person with malicious intentions can get full access 
+to your server.
+
+
+B8
+Rootkit Hunter tells me I have vulnerable applications installed, but I have fully patched 
+my server! How is this possible?
+Some distributions like Red Hat and OpenBSD do patch old versions. So Rootkit Hunter thinks 
+it's a old version, but instead it's a safe patched version. If you have the same situation, 
+don't use the program version checker (--skip-application-check), to suppress the false positives.
+
+
+B9
+Rootkit Hunter installation fails with Solaris, why?
+You have to use the bash shell to install Rootkit Hunter.
+
+# (/path/to)bash installer.sh
+
+
+B10
+How can I run Rootkit Hunter every day?
+
+You can create a cronjob script like this:
+=========== /etc/cron.daily/rkhunter ====================
+#!/bin/sh
+( /usr/local/bin/rkhunter --versioncheck
+/usr/local/bin/rkhunter --update
+/usr/local/bin/rkhunter --cronjob --report-warnings-only
+) | /bin/mail -s 'rkhunter Daily Run' root
+=========================================================
+Or add a line in your /etc/crontab file directly.
+
+
+Errors from external software
+
+E1 - I use prelinking, but after performing some updates all, or some, binaries are 'BAD' when running 
+the Rootkit Hunter MD5 hash check. What can I do?
+
+The first thing would be to verify that the update is the cause of the reported
+'BAD' files. Checking the system log files should indicate what has been
+updated.
+
+If the update is the cause, then it is most likely that the prelinking database
+has become out of step with the rkhunter local MD5 hash values. To correct this
+will require rebuilding the prelinking database and the rkhunter local hash
+values. Prelinking is used by the system to optimize the use of binary files
+and libraries.
+
+To correct this problem you will need to use a small utility, called
+'hashupd.sh', which is downloadable from the sourceforge web site as part of
+rkhunter (see http://sourceforge.net/project/showfiles.php?group_id=155034).
+Download the utility, and make it executable.
+
+On RedHat/Fedora, it is necessary to carry out the following procedure:
+1) If you are running SELinux then temporarily disable it by typing in 'setenforce 0';
+Note: If you are unsure whther you are running SELinux or not, then type in 'sestatus'.
+A line containing 'Current mode: enforcing' indicates that you are running SELinux.
+If it says 'permissive', then you are not currently running SELinux, and can
+ignore the steps about SELinux.
+2) Run the daily prelink update script - to do this type in '/etc/cron.daily/prelink';
+3) Run the hashupd.sh script to update your local hash values;
+4) Run rkhunter;
+5) If rkhunter still shows 'BAD' hash entries, then type in 'rm /etc/prelink.cache'
+and repeat the procedure from step 2.
+Note: Step 2 may now take some time to complete.
+6) Re-enable SELinux, if you disabled it, by typing in 'setenforce 1'.
+Hopefully rkhunter will now work without any problems with hash values.
+
+For other Linux distributions you will need to determine if and how prelinking
+takes place, and whether SELinux is present or not. It is possible that the
+above sequence will work for other distributions, but it is for the user to
+check this.
+
+
+E2
+I get warnings from PHP, like:
+PHP Warning: Function registration failed - duplicate name - pg_update in Unknown on line 0
+
+Most times this is because you have updated the Apache version of PHP, but forgot to update/recompile 
+the CLI (console version) of PHP. So recompile/update it and retry.
+
+
+Update problems/questions
+
+U1
+Rootkit Hunter tells me I have multiple versions installed, how it this possible?
+
+Most times you install a tool and upgrade it later. Sometimes if you use a 'non-official' updater
+ (let's say from an external party, build from source/using a installer like RPM/DEB/TGZ), the 
+binaries will be installed in another place than the original. So there are two binaries with the 
+same name, but on another place (/usr/bin and /usr/local/bin for example). You have to check which 
+binaries are old and can be safely removed/replaced (tip: make a copy / use replace, instead of 
+removing).
+
+
+U2
+Although Rootkit Hunter tells me my binaries do have the correct hashes (=OK), the logfile 
+shows a lot of incorrect items. How is that possible?
+Because the main program is a shell script, a lot of small utilities are used to read the database 
+(in fact a CSV-alike file). The output you see in the logfile is debug information and contains 
+a lot of extra information. Because every line of the hash database will be read and compared with 
+the real hash of the binary, it will have some good and bad hashes for one single binary (because of
+the multiple versions of a single binary). Every line will be available in the logfile too, so if 
+a hash DOESN'T match with the binary, it will log this too. If ONE of the multiple hashes match, 
+you don't have to worry about the 'failed' lines.
+
+
+Q1
+How can I run Rootkit Hunter on a daily basis?
+Add it as a cronjob to /etc/crontab. Example:
+30 5 * * * root </path>/rkhunter -c --cronjob <more options>
+Rootkit Hunter will now run at 5:30 (AM)
+
+
+Q2
+My operating system isn't supported! Can you add support for it?
+A: Yes and no. Please join the rkhunter-users mailing list and tell us which operating system you're using
+include system architecture.
+
+
+Q3
+Can I be notified when a new release will be available?
+A: Yes you can, please join the rkhunter-announce mailing list (low volume) or subscribe to the Freshmeat 
+project page: http://freshmeat.net/projects/rkhunter/. If you're a Sourceforge user like us you can also 
+monitor the project for changes. Luckily the Sourceforge is *that* easy to use I don't need to give you
+instructions ;-p
+
+
+Q3
+What is the best way to run Rootkit Hunter from the crontab?
+A: Add a cronjob with the parameters '-c --quiet --cronjob'. It will run Rootkit Hunter without colors and 
+without layout characterics (--cronjob). Rootkit Hunter will only show text when it founds some warnings 
+or errors. Very nice when you own a lot of machines and don't want to have a huge amount of mail ;-)
+
+
+Q4
+Can I help with the development of this project?
+Everyone can help, period.
+- Help your fellow Rootkit Hunter users on the rkhunter-users mailing list, 
+- Send a copy of an undetected rootkit so it can be added and help others,
+- Are you a package maintainer? Please submit your changes so *everyone* can benefit from it,
+- Are you an enduser? Ultimately FOSS, and so RKH, depends on *you*. Contributing is *your*
+  responsibility, not someone elses. Whatever you contribute constructively is very much welcome:
+  contribute or discuss enhancing Rootkit Hunter with us, submit a patch or discuss enhancements, 
+  file a bug report, test the application by using it on your servers.
+
+
+Q5 
+I like your software! How can I thank you?
+Simple. By contributing.
+  
+
+See http://rkhunter.sourceforge.net for the latest and complete FAQ.
+(when the site is updated, OK)
+
