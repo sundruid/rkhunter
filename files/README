@@ -40,7 +40,7 @@ directory. Man pages will be installed into 'user/local/share/man',
 and other documentation will be installed into the
 '/usr/local/share/doc/rkhunter' directory. RKH data files, and a
 directory for temporary files, will be installed into
-'/var/lib/rkhunter'. All directories will be created where
+'/usr/local/var/lib/rkhunter'. All directories will be created where
 necessary.
 
 If it is wished to install RKH into a different directory, then
@@ -91,40 +91,40 @@ ROOTKIT HUNTER SUPPORT
 ======================
 
 When a problem is found with RKH it is recommended that users
-initially try and resolve the problem themselves. This can be done
-by first checking the FAQ file. The FAQ will contain answers to many
+initially try and resolve the problem themselves. This can be done by
+first checking the FAQ file. The FAQ will contain answers to many
 common problems.
 
-If your problem has occurred directly after upgrading RKH, then
-please check the CHANGELOG file. It will contain information about
-changes made since the previous version of RKH, and may indicate why
-you are now experiencing a problem.
+If the problem has occurred directly after upgrading RKH, then please
+check the CHANGELOG file. It will contain information about changes
+made since the previous version of RKH, and may indicate why you are
+now experiencing a problem.
 
 Users should also check the rkhunter-users mailing list archives
-(available on the web site). It is very common for a problem to be
-reported by more than one user. The problem will be looked at by a
-member of the RKH development team, and, where appropriate, a
-solution posted on the mailing list. Hence the mailing list archives
-may well contain a solution to your problem.
+(available on the web site). The problem will be looked at by the RKH
+development team, and, where appropriate, a solution posted on the
+mailing list. Hence the mailing list archives may well contain a
+solution to the problem.
 
-Additionally, users should also check the RKH tracker system
-(available at http://sourceforge.net/tracker/?group_id=155034). It
-is quite possible that your problem has already been reported to us
-as a bug or support request. It is also possible that a fix for the
-problem has been provided in the tracker log.
+Additionally, users should check the RKH tracker system (available at
+http://sourceforge.net/tracker/?group_id=155034). It is quite
+possible that the problem has already been reported to us as a bug or
+support request. It is also possible that a fix for the problem has
+been provided in the tracker log.
 
-Depending upon the nature of your problem it may be worthwhile
-trying an Internet search (for example using google), to see if
-anyone else has experienced a similar problem.
+Depending upon the nature of the problem it may be worthwhile trying
+an Internet search (for example using google), to see if anyone else
+has experienced a similar problem.
 
-Finally, if you have still not found an answer to your problem, then
+Finally, if you have still not found an answer to the problem, then
 mail it to the rkhunter-users mailing list. Please provide as much
 information as possible about the problem, but do not make the
 message excessively long! Information such as your operating system
 and version of RKH should always be included.
 
-If you are sure the problem is a bug, or want a feature request,
-then please submit this directly into the tracker system.
+If you are sure the problem is a bug, or want it considered as a
+support request, then please submit it directly into the tracker
+system.
 
 
 THE ROOTKIT HUNTER PROJECT TEAM
