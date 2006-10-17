@@ -29,15 +29,20 @@
 OPERATING_SYSTEM=`uname`
 
 if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-	if [ "$RANDOM" = "$RANDOM" ]; then
-		exec /bin/ksh $0 $*
+	if [ -z "$RANDOM" ]; then
+		if [ -z "`which bash 2>&1 | grep '^no '`" ]; then
+			exec bash $0 $*
+		else
+			exec /bin/ksh $0 $*
+		fi
+
 		exit 0
 	fi
 fi
 
 case "${OPERATING_SYSTEM}" in
 AIX|OpenBSD|SunOS)
-	# What is the default shell
+	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'
 		E=""
@@ -209,7 +214,7 @@ scanrootkit() {
 
 	# Scan ksyms file
 	if [ ! "${SCAN_KSYMS}" = "" -a -f ${ROOTDIR}proc/ksyms ]; then
-		SEARCHTEXT=`cat ${ROOTDIR}proc/ksyms | grep ${SCAN_KSYMS}`
+		SEARCHTEXT=`grep ${SCAN_KSYMS} ${ROOTDIR}proc/ksyms`
 		if [ ! "${SEARCHTEXT}" = "" ]; then
 			logtext "WARNING! Found ${SCAN_KSYMS}"
 		else
@@ -286,7 +291,7 @@ get_logfile_option() {
 			exit 1
 		fi
 	else
-		LOGFILE=`cat ${CONFIGFILE} | grep '^LOGFILE=' | tail -1`
+		LOGFILE=`grep '^LOGFILE=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${LOGFILE}" ]; then
 			LOGFILE=`echo "${LOGFILE}" | sed -e 's/LOGFILE=//' | tr -d '"' | tr -s ' '`
@@ -330,7 +335,7 @@ get_logfile_option() {
 		#
 
 		if [ $APPEND_OPT -eq 0 ]; then
-			APPEND_LOG=`cat ${CONFIGFILE} | grep '^APPEND_LOG=' | tail -1`
+			APPEND_LOG=`grep '^APPEND_LOG=' ${CONFIGFILE} | tail -1`
 
 			if [ -n "${APPEND_LOG}" ]; then
 				APPEND_LOG=`echo "${APPEND_LOG}" | sed -e 's/APPEND_LOG=//' | tr -d '"' | tr -s ' '`
@@ -386,7 +391,7 @@ get_tmpdir_option() {
 			exit 1
 		fi
 	else
-		TMPDIR=`cat ${CONFIGFILE} | grep '^TMPDIR=' | tail -1`
+		TMPDIR=`grep '^TMPDIR=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${TMPDIR}" ]; then
 			TMPDIR=`echo "${TMPDIR}" | sed -e 's/TMPDIR=//' | tr -d '"' | tr -s ' '`
@@ -432,7 +437,7 @@ get_dbdir_option() {
 			exit 1
 		fi
 	else
-		DB_PATH=`cat ${CONFIGFILE} | grep '^DBDIR=' | tail -1`
+		DB_PATH=`grep '^DBDIR=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${DB_PATH}" ]; then
 			DB_PATH=`echo "${DB_PATH}" | sed -e 's/DBDIR=//' | tr -d '"' | tr -s ' '`
@@ -478,7 +483,7 @@ get_bindir_option() {
 			exit 1
 		fi
 	else
-		BINPATHS=`cat ${CONFIGFILE} | grep '^BINDIR=' | tail -1`
+		BINPATHS=`grep '^BINDIR=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${BINPATHS}" ]; then
 			BINPATHS=`echo "${BINPATHS}" | sed -e 's/BINDIR=//' | tr -d '"' | tr -s ' '`
@@ -488,7 +493,45 @@ get_bindir_option() {
 				exit 1
 			fi
 		else
-			BINPATHS="/usr/sbin /usr/bin /usr/local/bin /usr/local/sbin /bin /sbin /sw/bin /usr/local/libexec /usr/libexec"
+			BINPATHS=${DFLT_BINPATHS}
+
+			if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+				#
+				# Under SunOS /bin is a link to /usr/bin, so
+				# there is no need to look in it.
+				#
+
+				if [ -L /bin ]; then
+					B=""
+
+					for dir in ${BINPATHS}; do
+						test "$dir" != "/bin" && B="${B} $dir"
+					done
+
+					BINPATHS=`echo ${B} | sed -e 's/^ *//'`
+				fi
+
+
+				#
+				# Add in directories which contain the Sun
+				# 'companion' software.
+				#
+
+				if [ -d /usr/sfw ]; then
+					BINPATHS="${BINPATHS} /usr/sfw/bin /usr/sfw/sbin /usr/sfw/libexec"
+				fi
+
+				if [ -d /opt/sfw ]; then
+					BINPATHS="${BINPATHS} /opt/sfw/bin /opt/sfw/sbin /opt/sfw/libexec"
+				fi
+			fi
+
+
+			#
+			# Cater for Fink (Mac OSX) additional software.
+			#
+
+			test -d /sw/bin && BINPATHS="${BINPATHS} /sw/bin"
 		fi
 	fi
 
@@ -526,7 +569,7 @@ get_rootdir_option() {
 			exit 1
 		fi
 	else
-		ROOTDIR=`cat ${CONFIGFILE} | grep '^ROOTDIR=' | tail -1`
+		ROOTDIR=`grep '^ROOTDIR=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${ROOTDIR}" ]; then
 			ROOTDIR=`echo "${ROOTDIR}" | sed -e 's/ROOTDIR=//' | tr -d '"' | tr -s ' '`
@@ -560,7 +603,7 @@ get_mailonwarn_option() {
 	# check on whether it is empty or a space.
 	#
 
-	MAILONWARNING=`cat ${CONFIGFILE} | grep '^MAIL-ON-WARNING=' | tail -1`
+	MAILONWARNING=`grep '^MAIL-ON-WARNING=' ${CONFIGFILE} | tail -1`
 
 	if [ -n "${MAILONWARNING}" ]; then
 		MAILONWARNING=`echo "${MAILONWARNING}" | sed -e 's/MAIL-ON-WARNING=//' | tr -d '"' | tr -s ' '`
@@ -573,7 +616,7 @@ get_mailonwarn_option() {
 
 
 	if [ -n "${MAILONWARNING}" ]; then
-		MAIL_CMD=`cat ${CONFIGFILE} | grep '^MAIL_CMD=' | tail -1`
+		MAIL_CMD=`grep '^MAIL_CMD=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${MAIL_CMD}" ]; then
 			MAIL_CMD=`echo "${MAIL_CMD}" | sed -e 's/MAIL_CMD=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
@@ -600,7 +643,7 @@ get_allow_rootssh_option() {
 	#
 
 	if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
-		ALLOW_SSH_ROOT_USER=`cat ${CONFIGFILE} | grep '^ALLOW_SSH_ROOT_USER=' | tail -1`
+		ALLOW_SSH_ROOT_USER=`grep '^ALLOW_SSH_ROOT_USER=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
 			ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | sed -e 's/ALLOW_SSH_ROOT_USER=//' | tr -d '"' | tr -s ' '`
@@ -632,7 +675,7 @@ get_auto_x_option() {
 	#
 
 	if [ $AUTO_X_OPT -eq 0 ]; then
-		AUTO_X_DTCT=`cat ${CONFIGFILE} | grep '^AUTO_X_DETECT=' | tail -1`
+		AUTO_X_DTCT=`grep '^AUTO_X_DETECT=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${AUTO_X_DTCT}" ]; then
 			AUTO_X_DTCT=`echo "${AUTO_X_DTCT}" | sed -e 's/AUTO_X_DETECT=//' | tr -d '"' | tr -s ' '`
@@ -656,7 +699,7 @@ get_auto_x_option() {
 
 
 	if [ $CLRSET2 -eq 0 ]; then
-		CLRSET2=`cat ${CONFIGFILE} | grep '^COLOR_SET2=' | tail -1`
+		CLRSET2=`grep '^COLOR_SET2=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${CLRSET2}" ]; then
 			CLRSET2=`echo "${CLRSET2}" | sed -e 's/COLOR_SET2=//' | tr -d '"' | tr -s ' '`
@@ -796,6 +839,8 @@ DFLT_LOGFILE="/var/log/rkhunter.log"
 # Set to have the logfile appended to rather than overwritten.
 APPEND_LOG=0
 APPEND_OPT=0
+
+DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
 
 VERSIONCHECK=0
 UPDATE=0
@@ -1088,7 +1133,7 @@ if [ ! -f ${CONFIGFILE} ]; then
 fi
 
 
-INSTALLDIR=`cat ${CONFIGFILE} | grep '^INSTALLDIR=' | sed -e 's/INSTALLDIR=//'`
+INSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | sed -e 's/INSTALLDIR=//'`
 
 if [ -z "${INSTALLDIR}" ]; then
 	echo "Unable to find INSTALLDIR option in configuration file: ${CONFIGFILE}"
@@ -1164,7 +1209,7 @@ logtext --nodate "${PROGRAM_license}"
 
 logtext "Info: Start date is `date`"
 
-logtext "Info: Shell ${SHELL}"
+logtext "Info: Shell ${SHELL} (${MYSHELL})"
 
 logtext "Info: Command line is ${CMD_LINE}"
 
@@ -2236,8 +2281,9 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		full_osname="Sun Solaris ${OPERATING_VERSION} (${OPERATING_ARCH})"
 
-		# Solaris has POSIX compatible binaries in /usr/xpg4/bin, but doesn't
-		# use them by default.
+		#
+		# The XPG4 id command is POSIX-compatible, so we use that.
+		#
 		ID_CMD="${ROOTDIR}usr/xpg4/bin/id"
 	fi
 
@@ -2301,7 +2347,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 			# And Trustix too...
 			if [ -e "/etc/release" ]; then
-				TRUSTIX=`cat /etc/release | grep 'Trustix'`
+				TRUSTIX=`grep 'Trustix' /etc/release`
 				if [ ! "${TRUSTIX}" = "" ]; then
 					full_osname=`cat /etc/release`
 					valid_os="1"
@@ -2311,7 +2357,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 			# And Tao Linux too...
 			if [ -e "/etc/tao-release" ]; then
-				TAOREL=`cat /etc/tao-release | grep 'Tao Linux'`
+				TAOREL=`grep 'Tao Linux' /etc/tao-release`
 				if [ ! "${TAOREL}" = "" ]; then
 					full_osname=`cat /etc/tao-release`
 					valid_os="1"
@@ -2333,7 +2379,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		# cAos?
 		if [ -e "/etc/caos-release" ]; then
-			full_osname=`cat /etc/caos-release | sed 's/^cAos: //'`
+			full_osname=`sed -e 's/^cAos: //' /etc/caos-release`
 			valid_os="1"
 			logtext "Info: Found /etc/caos-release"
 			uname_model=`uname -m`
@@ -2448,7 +2494,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		if [ -e "/etc/SuSE-release" ]; then
 			# Grep for 'SuSE Linux' because this file contains multiple lines
 			# NOT case sensitive, because of Suse Linux enterprise server
-			version=`cat /etc/SuSE-release | grep -i "SuSE Linux"`
+			version=`grep -i "SuSE Linux" /etc/SuSE-release`
 			full_osname="${version}"
 			valid_os="1"
 			logtext "Info: Found /etc/SuSE-release"
@@ -2457,7 +2503,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		# SuSE (Linux Openexchange Server)
 		if [ -e "/etc/SLOX-release" ]; then
 			# Grep for 'SuSE Linux' because this file contains multiple lines
-			version=`cat /etc/SLOX-release | grep "SuSE Linux"`
+			version=`grep "SuSE Linux" /etc/SLOX-release`
 			full_osname="${version}"
 			valid_os="1"
 			logtext "Info: Found /etc/SLOX-release"
@@ -2487,7 +2533,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		# Gentoo?
 		if [ -e "/etc/gentoo-release" ]; then
 			GENTOO=1
-			version=`cat /etc/gentoo-release | awk '{ print $5 }' | cut -d '.' -f1,2`
+			version=`awk '{ print $5 }' /etc/gentoo-release | cut -d '.' -f1,2`
 			uname_model=`uname -m`
 			case $uname_model in
 			i[0-9]86) architecture=i386
@@ -2512,7 +2558,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		# Ipcop, finally. Note: only valid for versions 1.4 and up.
 		if [ -e /var/ipcop/general-functions.pl ]; then
-			full_osname=`cat /var/ipcop/general-functions.pl | grep version | grep -v Data | cut -d\' -f2`
+			full_osname=`grep version /var/ipcop/general-functions.pl | grep -v Data | cut -d\' -f2`
 			fullname="Ipcop $full_osname"
 			valid_os="1"
 		fi
@@ -2550,8 +2596,8 @@ if [ "${CHECK}" -eq 1 ]; then
 		valid_os="1"
 	fi
 	# Extract information from Operating System database
-	fos_name=`echo "${full_osname}" | sed 's/\./\\\./g'`
-	os_string=`cat ${DB_PATH}/os.dat | grep "${fos_name}:"`
+	fos_name=`echo "${full_osname}" | sed -e 's/\./\\\./g'`
+	os_string=`grep "${fos_name}:" ${DB_PATH}/os.dat`
 	os_id=`echo ${os_string} | cut -d ":" -f1`
 	md5=`echo ${os_string} | cut -d ":" -f3`
 	if [ -z "${md5}" ]; then
@@ -2687,7 +2733,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		for I in ${STRINGS_INTEGRITY}; do
 			echo "${I}" > ${TMPDIR}/stringstest.dat
 			logtext -n "Strings selftest: scanning for string ${I}... "
-			STRINGNAME=`echo "${I}" | sed 's/\./\\\./g'`
+			STRINGNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
 			STRINGFOUND=`strings ${TMPDIR}/stringstest.dat | grep "${STRINGNAME}" | tr -d ' '`
 			if [ "${STRINGFOUND}" = "" ]; then
 				STRINGSFAILED=1
@@ -2745,7 +2791,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		# Check if we have any 'known good' checksums for this operating system
 		# If not, we perform a 'known bad' check.
-		DBMD5COUNT=`cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:/"`
+		DBMD5COUNT=`grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`
 		if [ "${DBMD5COUNT}" = "" -o ${PERFORMKNOWNBAD} -eq 1 ]; then
 
 			displaytext "  ${WHITE}Performing 'known bad' check...${NORMAL}"
@@ -2759,7 +2805,7 @@ if [ "${CHECK}" -eq 1 ]; then
 					ISBAD=""
 					MD5SUM=`${md5} ${I}`
 
-					ISBAD=`cat ${DB_PATH}/md5blacklist.dat | grep ${MD5SUM}`
+					ISBAD=`grep ${MD5SUM} ${DB_PATH}/md5blacklist.dat`
 
 					if [ "${ISBAD}" = "" ]; then
 						jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -2779,15 +2825,15 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		displaytext "  ${WHITE}Performing 'known good' check...${NORMAL}"
 
-		for i in `cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:/"`; do
+		for i in `grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`; do
 			file=`echo ${i} | cut -d : -f 2`
 			SIZE=`echo "${file}" | wc -c | tr -d ' '`
 			MD5_COUNT=`expr ${MD5_COUNT} + 1`
 			FOUND=0
 			if [ ! "${file}" = "${lastfile}" ]; then
 				if [ -e "${file}"  ]; then
-					FILEHASHES=`cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:${file}:" | cut -d : -f 3`
-					MYPACKAGES=`cat ${DB_PATH}/defaulthashes.dat | grep "^${os_id}:${file}:" | cut -d : -f 6`
+					FILEHASHES=`grep "^${os_id}:${file}:" ${DB_PATH}/defaulthashes.dat | cut -d : -f 3`
+					MYPACKAGES=`grep "^${os_id}:${file}:" ${DB_PATH}/defaulthashes.dat | cut -d : -f 6`
 					#FILEHASHES=`echo ${i} | cut -d : -f 3`
 					for J in ${FILEHASHES}; do
 						if [ "$PRELINKING" -eq "1" -a "$PRELINKFOUND" -eq "1" ]; then
@@ -2818,7 +2864,7 @@ if [ "${CHECK}" -eq 1 ]; then
 					if [ ${FOUND} -eq 0 ]; then
 						# Compare against whitelist
 						logtext "Using whitelists to compare MD5 hash (searching for ${myhash})"
-						for WHITELISTSTRING in `cat ${CONFIGFILE} | grep '^MD5WHITELIST=' | sed 's/MD5WHITELIST=//g'`; do
+						for WHITELISTSTRING in `grep '^MD5WHITELIST=' ${CONFIGFILE} | sed -e 's/MD5WHITELIST=//g'`; do
 							WHITELISTFILE=`echo ${WHITELISTSTRING} | cut -d ':' -f1`
 							WHITELISTHASH=`echo ${WHITELISTSTRING} | cut -d ':' -f2`
 							logtext "Checking ${WHITELISTHASH} (${WHITELISTFILE})"
@@ -2938,7 +2984,7 @@ if [ "${CHECK}" -eq 1 ]; then
 	displaytext -n "   ADM Worm... "
 	if [ -e /etc/passwd ]; then
 		logtext "Checking /etc/passwd for presence of ADM worm"
-		WORM=`cat /etc/passwd | grep 'w0rm'`
+		WORM=`grep 'w0rm' /etc/passwd`
 		if [ "${WORM}" = "" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
@@ -3447,19 +3493,18 @@ if [ "${CHECK}" -eq 1 ]; then
 
 	if [ ${STRINGSFOUND} -eq 1 ]; then
 		FOUND=0
-		FILEBINPATHS="/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin"
 		for I in ${STRINGSCAN}; do
 			TYPE=`echo $I | cut -d ':' -f1`
-			FILE=`echo $I | cut -d ':' -f2 | sed 's/%%/ /g'`
-			FILESTRING=`echo $I | cut -d ':' -f3 | sed 's/%%/ /g'`
-			INFO=`echo $I | cut -d ':' -f4 | sed 's/%%/ /g'`
+			FILE=`echo $I | cut -d ':' -f2 | sed -e 's/%%/ /g'`
+			FILESTRING=`echo $I | cut -d ':' -f3 | sed -e 's/%%/ /g'`
+			INFO=`echo $I | cut -d ':' -f4 | sed -e 's/%%/ /g'`
 			FOUNDFILE=0
 			case ${TYPE} in
 			bin)
-				for I in ${FILEBINPATHS}; do
+				for I in ${BINPATHS}; do
 					FILENAME="${I}/${FILE}"
 					if [ -f $FILENAME ]; then
-						FSTRING=`echo "${FILESTRING}" | sed 's/\./\\\./g'`
+						FSTRING=`echo "${FILESTRING}" | sed -e 's/\./\\\./g'`
 						FOUNDSTRING=`${STRINGSBINARY} $FILENAME | grep "${FSTRING}"`
 						if [ "${FOUNDSTRING}" = "" ]; then
 							logtext "${FILENAME} clean (string: $FILESTRING)"
@@ -3502,8 +3547,8 @@ if [ "${CHECK}" -eq 1 ]; then
 		FILE=`echo $I | cut -d ':' -f2`
 		INFO=`echo $I | cut -d ':' -f3`
 		FOUNDFILE=0
-		FILE=`echo ${FILE} | sed 's/%%/ /g'`
-		INFO=`echo ${INFO} | sed 's/%%/ /g'`
+		FILE=`echo ${FILE} | sed -e 's/%%/ /g'`
+		INFO=`echo ${INFO} | sed -e 's/%%/ /g'`
 
 		logtext -n "Scanning for presence of ${FILE} (${TYPE})... "
 		case ${TYPE} in
@@ -3570,7 +3615,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 			FILENAME=`echo ${I} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
 			SUSP_FILES="${SUSP_FILES}|${FILENAME}"
 		done
-		SEARCHFILES=`${LSOFBINARY} -F n -w | sort | uniq | grep '^n/' | sed 's/^n//' | egrep "/(${SUSP_FILES})$"`
+		SEARCHFILES=`${LSOFBINARY} -F n -w | sort | uniq | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})$"`
 		if [ ! "${SEARCHFILES}" = "" ]; then
 			insertlayout
 			displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
@@ -3632,7 +3677,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 						if [ -n "`echo ${lfile} | grep '^/'`" ]; then
 							lfile=`echo ${lfile} | cut -f1 -d' '`
 						fi
-						ALLOWPROCDELFILES=`cat ${CONFIGFILE} | grep '^ALLOWPROCDELFILE=' | sed 's/ALLOWPROCDELFILE=//g'`
+						ALLOWPROCDELFILES=`grep '^ALLOWPROCDELFILE=' ${CONFIGFILE} | sed -e 's/ALLOWPROCDELFILE=//g'`
 						FMATCH=1
 						for i in $ALLOWPROCDELFILES; do
 							if [ "$lproc" = "$i" ]; then
@@ -3784,7 +3829,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 
 	if [ -f "${TRIPWIREFILE}" ]; then
 		FOUND=1
-		if [ "`cat ${TRIPWIREFILE} | grep \"Tripwire segment-faulted !\"`" = "" ]; then
+		if [ -z "`grep 'Tripwire segment-faulted !' ${TRIPWIREFILE}`" ]; then
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
@@ -4150,7 +4195,7 @@ ${ROOTDIR}bin/login
 
 #		displaytext -n "   Checking all kernelmodules..."
 
-#		SCANFILES=`cat ${SCANFILELIST} | grep '.o'`
+#		SCANFILES=`grep '.o' ${SCANFILELIST}`
 #		for J in ${SCANFILES}; do
 
 #		FOUNDSIGN=0
@@ -4303,7 +4348,7 @@ vlogger.o
 		for i in `cat ${DB_PATH}/backdoorports.dat`; do
 			port=`echo ${i} | cut -d ':' -f 1`
 			DESCRIPTION=`echo ${i} | cut -d ':' -f 2`
-			DESCRIPTION=`echo ${DESCRIPTION} | sed 's/%%/ /g'`
+			DESCRIPTION=`echo ${DESCRIPTION} | sed -e 's/%%/ /g'`
 
 			if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 				checkport=`netstat -an | grep "LISTEN" | grep ":${port} "`
@@ -4403,9 +4448,9 @@ vlogger.o
 					if [ "${READLINKFOUND}" -eq 1 ]; then
 						name=`readlink -f /proc/$pid/exe`
 					else
-						name=`grep "^Name:." /proc/$pid/status | sed 's/^Name:.//'`
+						name=`grep "^Name:." /proc/$pid/status | sed -e 's/^Name:.//'`
 					fi
-					ALLOWPROCLISTENERS=`cat ${CONFIGFILE} | grep '^ALLOWPROCLISTEN=' | sed 's/ALLOWPROCLISTEN=//g'`
+					ALLOWPROCLISTENERS=`grep '^ALLOWPROCLISTEN=' ${CONFIGFILE} | sed -e 's/ALLOWPROCLISTEN=//g'`
 					AMATCH=1
 					for i in $ALLOWPROCLISTENERS; do
 						if [ "$name" = "$i" ]; then
@@ -4590,7 +4635,7 @@ vlogger.o
 		if [ -f "${FILE}" ]; then
 			for J in ${RCLOCAL_STRINGS}; do
 				STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
-				FOUND=`cat ${FILE} | grep "${STRING}"`
+				FOUND=`grep "${STRING}" ${FILE}`
 				if [ ! "${FOUND}" = "" ]; then
 					FOUNDRCSIGN=1
 					logtext "Warning! Found unusual string in ${FILE}"
@@ -4635,7 +4680,7 @@ vlogger.o
 				fi
 				for J in ${RCLOCAL_STRINGS}; do
 					STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
-					FOUND=`cat ${I} | grep "${STRING}"`
+					FOUND=`grep "${STRING}" ${I}`
 					if [ ! "${FOUND}" = "" ]; then
 						FOUNDRCSIGN=1
 					fi
@@ -4664,7 +4709,7 @@ vlogger.o
 		displaytext -n "   Checking Gentoo local.start file... "
 		logtext "Found ${ROOTDIR}etc/conf.d/local.start file (Gentoo)"
 
-		INSPECTLINES=`cat ${ROOTDIR}etc//conf.d/local.start | grep -v '^#' | grep -v '^$'`
+		INSPECTLINES=`grep -v '^#' ${ROOTDIR}etc/conf.d/local.start | grep -v '^$'`
 
 		for J in ${RCLOCAL_STRINGS}; do
 			STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
@@ -4833,14 +4878,14 @@ vlogger.o
 				if [ ! ${GENTOO} -eq 1 -a ! "${I}" = ".keep" -a ! -z ${I} ]; then
 					SEARCHDIR=0
 					if [ "${FILETYPE}" = "directory" ]; then
-						for ALLOWHIDDENDIRS in `cat ${CONFIGFILE} | grep '^ALLOWHIDDENDIR=' | sed 's/ALLOWHIDDENDIR=//g'`; do
+						for ALLOWHIDDENDIRS in `grep '^ALLOWHIDDENDIR=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENDIR=//g'`; do
 							if [ "${ALLOWHIDDENDIRS}" = "${I}" ]; then
 								SEARCHDIR=1
 								logtext "Found hidden directory ${I} on whitelist"
 							fi
 						done
 					else
-						for ALLOWHIDDENFILES in `cat ${CONFIGFILE} | grep '^ALLOWHIDDENFILE=' | sed 's/ALLOWHIDDENFILE=//g'`; do
+						for ALLOWHIDDENFILES in `grep '^ALLOWHIDDENFILE=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENFILE=//g'`; do
 							if [ "${ALLOWHIDDENFILES}" = "${I}" ]; then
 								SEARCHDIR=1
 								logtext "Found hidden file ${I} on whitelist"
@@ -4900,7 +4945,7 @@ vlogger.o
 
 	if [ -d /etc/apache2/mods-enabled ]; then
 		for I in `ls /etc/apache2/mods-enabled/*`; do
-			SEARCHSTRING=`cat ${I} | egrep 'mod_rootme\.so|mod_rootme2\.so'`
+			SEARCHSTRING=`egrep 'mod_rootme\.so|mod_rootme2\.so' ${I}`
 			logtext -n "Checking Apache2 modules in /etc/apache2/mods-enabled ${I}... "
 			if [ ! "${SEARCHSTRING}" = "" ]; then
 				logtext --nodate "Warning! Possible bad module found."
@@ -4930,7 +4975,7 @@ vlogger.o
 
 	for I in ${HTTPDCONFS}; do
 		if [ -f ${I} ]; then
-			SEARCHSTRING=`cat ${I} | egrep 'mod_rootme\.so|mod_rootme2\.so'`
+			SEARCHSTRING=`egrep 'mod_rootme\.so|mod_rootme2\.so' ${I}`
 			if [ ! "${SEARCHSTRING}" = "" ]; then
 				# Found evil module
 				FOUNDSTRING=1
@@ -5213,25 +5258,25 @@ nonvulnerable:%2.4.24%
 			FOUND=0
 			displaytext "   Found ${I}/sshd_config"
 			displaytext -n "   Checking for allowed root login... "
-			permitrootlogin=`cat ${I}/sshd_config | grep "PermitRootLogin" | grep -v "#"`
+			permitrootlogin=`grep "PermitRootLogin" ${I}/sshd_config | grep -v "#"`
 			if [ "${permitrootlogin}" = "PermitRootLogin yes" ]; then
 				FOUND=1
 				logtext "Info: Found 'PermitRootLogin yes'. Unsafe for production servers..."
 				logtext "Tip: Change the option in your configuration file (${I}/sshd_config)."
 				logtext "     Use normal user accounts and 'su' to obtain root permissions."
 			else
-				permitrootlogin2=`cat ${I}/sshd_config | egrep "PermitRootLogin (no|without-password)" | grep -v "#"`
+				permitrootlogin2=`egrep "PermitRootLogin (no|without-password)" ${I}/sshd_config | grep -v "#"`
 				if [ "${permitrootlogin2}" = "PermitRootLogin no" -o "${permitrootlogin2}" = "PermitRootLogin without-password" ]; then
 					FOUND=0
 					logtext "Info: Found 'PermitRootLogin no' or 'PermitRootLogin without-password' in SSH configuration file ${I}/sshd_config"
 				else
-					permitrootlogin2=`cat ${I}/sshd_config | grep "PermitRootLogin forced-commands-only" | grep -v "#"`
+					permitrootlogin2=`grep "PermitRootLogin forced-commands-only" ${I}/sshd_config | grep -v "#"`
 					if [ "${permitrootlogin2}" = "PermitRootLogin forced-commands-only" ]; then
 						FOUND=1
 						logtext "Info: Found 'PermitRootLogin forced-commands-only'"
 					else
-						permitrootlogin3=`cat ${I}/sshd_config | grep "#PermitRootLogin yes"`
-						if [ ! "${permitrootlogin3}" = "" ]; then
+						permitrootlogin3=`grep "#PermitRootLogin yes" ${I}/sshd_config`
+						if [ -n "${permitrootlogin3}" ]; then
 							FOUND=1
 							logtext "Info: Found no PermitRootLogin value in file ${I}/sshd_config. Default value is 'yes'."
 						else
@@ -5269,7 +5314,7 @@ nonvulnerable:%2.4.24%
 
 			displaytext -n "   Checking for allowed protocols... "
 
-			protocols=`cat ${I}/sshd_config | grep 'Protocol 2' | grep -v '#'`
+			protocols=`grep 'Protocol 2' ${I}/sshd_config | grep -v '#'`
 			if [ "${protocols}" = "Protocol 2" ]; then
 				SIZE=35
 				jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -5287,7 +5332,7 @@ nonvulnerable:%2.4.24%
 					SIZE=35
 					jump=`expr ${defaultcolumn} - ${SIZE}`
 					insertlayout
-					protocols=`cat ${I}/sshd_config | grep "#Protocol"`
+					protocols=`grep "#Protocol" ${I}/sshd_config`
 					if [ "${protocols}" = "#Protocol 2,1" -o "${protocols}" = "#Protocol 1,2" ]; then
 						FOUND=1
 						logtext "Found default option Protocol 2,1"
@@ -5354,7 +5399,7 @@ nonvulnerable:%2.4.24%
 
 		# First do syslog
 		if [ -e /etc/syslog.conf ]; then
-			logtoremote=`cat /etc/syslog.conf | grep "@" | grep -v "#"`
+			logtoremote=`grep "@" /etc/syslog.conf | grep -v "#"`
 		else
 			# Second try syslog-ng
 			if [ -e /etc/syslog-ng/syslog-ng.conf ]; then
@@ -5522,7 +5567,7 @@ nonvulnerable:%2.4.24%
 			echo "-----------------------------------------------------------------"
 			echo ""
 			echo "Found warnings:"
-			cat $LOGFILE | egrep "Warning|WARNING|BAD|Bad|Vulnerable"
+			egrep "Warning|WARNING|BAD|Bad|Vulnerable" $LOGFILE
 			echo ""
 			echo "-----------------------------------------------------------------"
 			echo ""
@@ -5565,9 +5610,9 @@ if [ "${VERSIONCHECK}" -eq 1 ]; then
 		rm -f ${TMPDIR}/rkhunter.upd
 	fi
 
-	URLPREFIX=`cat ${DB_PATH}/mirrors.dat | grep -v 'version=' | head -n 1 | cut -d '=' -f2`
+	URLPREFIX=`grep -v 'version=' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d '=' -f2`
 
-	VERSIONUPDATEURL=`cat ${CONFIGFILE} | grep 'LATESTVERSION=' | sed 's/LATESTVERSION=//g'`
+	VERSIONUPDATEURL=`grep 'LATESTVERSION=' ${CONFIGFILE} | sed -e 's/LATESTVERSION=//g'`
 
 	if [ "${WGETFOUND}" -eq 1 ]; then
 		${WGETBINARY} -q -O ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL}

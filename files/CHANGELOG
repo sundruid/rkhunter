@@ -1,15 +1,15 @@
 
-#################################################################################
+####################################################################
 #
 # CHANGELOG
 #
-#################################################################################
+####################################################################
 
  !! Important notices !!:
 
  - Dates in this file are formatted as DD/MM/YYYY (European format)
  - With the release of version 1.0.9, the installer has been changed
-   to make Rootkit Hunter less static. It now CAN use some different
+   to make Rootkit Hunter less static. It CAN now use some different
    paths than before (although it will install to the default location
    when no additional options are given). To be sure you have a clean
    install, delete the directory /usr/local/rkhunter, delete the file
@@ -18,10 +18,44 @@
  - The rkhunter configuration file (default /usr/local/etc/rkhunter.conf)
    will not be overwritten by default (when using the rkhunter installer).
    Be sure you compare your configuration file against the one delivered
-   in this package, to optimize this file for your machine
+   in this package, to optimize this file for your machine.
 
 
  -- 
+
+ * 1.3.0 (xx/xx/2006)
+
+ New:
+ - Created an ACKNOWLEDGMENTS file.
+ - Added configuration file option MAIL_CMD when report-on-warning used.
+   This can specify the 'mail' command to use and the subject line.
+ - The log file can be appended to. This can be set in the config file or
+   by using the --append-log command line option.
+ - A second colour set has been added for users using RKH with black
+   characters on a white screen. The command-line option --cs2 will enable it.
+ - Added special config file and command-line option, -x/-X, to detect if X
+   is in use. If detected then second colour set will be used.
+
+ Changes:
+ - Improved command-line and config file option checking.
+ - The log file is now created by default, it can be disabled in the config
+   file or by using the --nolog command line option.
+ - The log file cannot be a symlink.
+ - Multiple recipients may be specified with the MAIL-ON-WARNING config option.
+ - Added BINDIR and ROOTDIR options to the config file.
+ - Split out the README file in to README and FAQ files.
+ - Solaris will now use the bash shell if available.
+ - Expanded the command PATH used to include the /opt/sfw/ and usr/sfw
+   directories for Solaris users.
+ - Added command-line option --dac as alias for --disable-application-check.
+ - Versioncheck now checks the versions numerically.
+
+ Bugfixes:
+ - Corrected SHV4/Tripwire check
+ - Command-line options requiring an argument now work correctly under Solaris
+ - The -h/--help option now works as expected.
+
+ --
 
  * 1.2.9 (30/09/2006)
 
