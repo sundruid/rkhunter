@@ -475,6 +475,8 @@ get_bindir_option() {
 	# it is empty or a space.
 	#
 
+	USE_DFLT=0
+
 	if [ -n "${BINPATHS}" ]; then
 		BINPATHS=`echo "${BINPATHS}" | tr -s ' '`
 
@@ -493,6 +495,8 @@ get_bindir_option() {
 				exit 1
 			fi
 		else
+			USE_DFLT=1
+
 			BINPATHS=${DFLT_BINPATHS}
 
 			if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
@@ -532,22 +536,69 @@ get_bindir_option() {
 			#
 
 			test -d /sw/bin && BINPATHS="${BINPATHS} /sw/bin"
+
+
+			#
+			# Finally check if there are any optional
+			# bin directories present.
+			#
+
+			test -d /usr/opt/bin && BINPATHS="${BINPATHS} /usr/opt/bin"
+			test -d /opt/bin && BINPATHS="${BINPATHS} /opt/bin"
 		fi
 	fi
 
+
 	#
 	# This is a simple check that each directory begins with
-	# a '.' or '/'. No check is made on whether the directory
-	# actually exists or not since nonexistent directories
-	# are ignored.
+	# a '.' or '/', and that the directory exists.
 	#
+
+	LEAVE=0
 
 	for dir in ${BINPATHS}; do
 		if [ -z "`echo $dir | grep '^[./]'`" ]; then
+			LEAVE=1
 			echo "Invalid BINDIR directory: $dir"
-			exit 1
+		elif [ ! -d $dir -a $USE_DFLT -eq 0 ]; then
+			LEAVE=1
+			echo "Non-existent BINDIR directory: $dir"
 		fi
 	done
+
+	if [ $LEAVE -eq 1 ]; then
+		exit 1
+	fi
+
+	return
+}
+
+
+find_cmd() {
+
+	#
+	# This function performs a search of the PATH and BINPATHS
+	# directories looking for the requested command. The full
+	# pathname is returned if the command is found.
+	#
+	# If a full pathname is provided then we simply check that
+	# it is executable.
+	#
+
+	CMD=$1
+
+	test -z "${CMD}" && return
+
+	if [ -n "`echo ${CMD} | grep '/'`" ]; then
+		test -f "${CMD}" -a -x "${CMD}" && echo "${CMD}"
+	else
+		for CMDDIR in ${SPACEDPATH} ${BINPATHS}; do
+			if [ -f "${CMDDIR}/${CMD}" -a -x "${CMDDIR}/${CMD}" ]; then
+				echo "${CMDDIR}/${CMD}"
+				return
+			fi
+		done
+	fi
 
 	return
 }
@@ -628,6 +679,19 @@ get_mailonwarn_option() {
 		else
 			MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${hostname}\""
 		fi
+
+
+		#
+		# Check that the mail command is executable.
+		#
+
+		MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f1`
+		MC=`find_cmd ${MCMD}`
+
+		if [ -z "${MC}" ]; then
+			echo "Invalid MAIL_CMD configuration option - command '${MCMD}' is non-existent or not executable."
+			exit 1
+		fi
 	fi
 
 	return
@@ -642,7 +706,7 @@ get_allow_rootssh_option() {
 	# on whether it is empty, a space, or not 0 or 1.
 	#
 
-	if [ ${ALLOW_SSH_ROOT_USER} -eq 0 ]; then
+	if [ $ALLOW_SSH_ROOT_USER -eq 0 ]; then
 		ALLOW_SSH_ROOT_USER=`grep '^ALLOW_SSH_ROOT_USER=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
@@ -720,6 +784,107 @@ get_auto_x_option() {
 }
 
 
+get_hash_function() {
+
+	#
+	# First get the option from the command-line or the
+	# configuration file, and do a simple check on whether
+	# it is empty or a space.
+	#
+
+	if [ -n "${HASH_FUNC}" ]; then
+		HASH_FUNC=`echo "${HASH_FUNC}" | tr -s ' '`
+
+		if [ "${HASH_FUNC}" = " " ]; then
+			echo "Invalid --hash option - no command given."
+			exit 1
+		fi
+	else
+		HASH_FUNC=`grep '^HASH_FUNC=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${HASH_FUNC}" ]; then
+			HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/HASH_FUNC=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
+
+			if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = " " ]; then
+				echo "Invalid HASH_FUNC configuration option - no command specified."
+				exit 1
+			fi
+		fi
+	fi
+
+
+	#
+	# At this point we have either been given a hash function
+	# command, one of the reserved words 'SHA1' or 'MD5', or
+	# nothing. For the reserved words we must find the SHA1 or
+	# MD5 command or use the supplied perl scripts.
+	#
+
+	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "SHA1" ]; then
+		HF=`find_cmd sha1sum`
+
+		if [ -z "${HF}" ]; then
+			HF=`find_cmd sha1`
+		fi
+
+		if [ -z "${HF}" ]; then
+			MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::SHA1 installed'`
+
+			if [ -n "${MOD_INSTALLED}" ]; then
+				HASH_FUNC="${INSTALLDIR}/lib/rkhunter/scripts/filehashsha1.pl"
+			else
+				HASH_FUNC=""
+			fi
+		else
+			HASH_FUNC=${HF}
+		fi
+	elif [ "${HASH_FUNC}" = "MD5" ]; then
+		HF=`find_cmd md5sum`
+
+		if [ -z "${HF}" ]; then
+			HF=`find_cmd md5`
+		fi
+
+		if [ -z "${HF}" ]; then
+			MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
+
+			if [ -n "${MOD_INSTALLED}" ]; then
+				HASH_FUNC="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
+			else
+				HASH_FUNC=""
+			fi
+		else
+			HASH_FUNC=${HF}
+		fi
+
+		test -n "${HASH_FUNC}" && MD5_CMD=${HASH_FUNC}
+	fi
+
+
+	#
+	# A final check that the command is actually executable.
+	# This will ensure that the sha1/md5 perl scripts have been
+	# installed correctly, should they be needed.
+	#
+
+	if [ -n "${HASH_FUNC}" ]; then
+		HF=`find_cmd ${HASH_FUNC}`
+
+		if [ -z "${HF}" ]; then
+			echo "Invalid hash option - command '${HASH_FUNC}' is non-existent or not executable."
+			exit 1
+		else
+			HASH_FUNC=${HF}
+		fi
+	else
+		echo "Unable to find any hash function command to perform file checks."
+		exit 1
+	fi
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
@@ -744,6 +909,8 @@ get_configfile_options() {
 
 	get_auto_x_option
 
+	test $HASHCHECK_SKIP -eq 0 && get_hash_function
+
 	return
 }
 
@@ -762,16 +929,17 @@ help() {
 	echo "   -c, --checkall                      Check the local system"
 	echo "       --color-set2                    Use second color set for output"
 	echo "       --configfile <file>             Use specified configuration file"
-	echo "   -l, --logfile [logfile]             Write to a logfile"
-	echo "                                       (default is $DFLT_LOGFILE)"
 	echo "       --cronjob                       Run as a cronjob"
 	echo "                                       (implies -c, -sk and --nocolors options)"
 	echo "       --dbdir <dir>                   Use specified database directory"
 	echo "       --display-logfile               Display the logfile at the end"
+	echo "       --hash                          Specify the hash function to use"
 	echo "   -h, --help                          Display this help menu and exit"
+	echo "   -l, --logfile [logfile]             Write to a logfile"
+	echo "                                       (default is $DFLT_LOGFILE)"
 	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
 	echo "       --nocolors                      Use black and white output"
-	echo "       --nolog                         Do not write to a logfile."
+	echo "       --nolog                         Do not write to a logfile"
 	echo "   -q, --quiet                         Quiet mode (only show warnings)"
 	echo "       --report-mode                   Only show interesting information"
 	echo "       --report-warnings-only          Show only warnings (less output than"
@@ -792,7 +960,7 @@ help() {
 	echo "       --check-listen                  Perform a 'listening applications' check"
 	echo "       --dac, --disable-application-check"
 	echo "                                       Disable application version checks"
-	echo "       --dmc, --disable-md5-check      Disable all MD5 hash checks"
+	echo "       --dhc, --disable-hash-check     Disable the hash checks"
 	echo "       --dpc, --disable-passwd-check   Disable passwd/group file checks"
 	echo "       --scan-knownbad-files           Perform a 'known bad' MD5 hash check"
 	echo ""
@@ -842,6 +1010,9 @@ APPEND_OPT=0
 
 DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
 
+MD5_CMD=""
+HASH_FUNC=""
+
 VERSIONCHECK=0
 UPDATE=0
 
@@ -853,9 +1024,9 @@ CLRSET2=0
 AUTO_X_DTCT=0
 AUTO_X_OPT=0
 
-# Set to skip the MD5 check
-MD5OPT=0
-MD5CHECK_SKIP=0
+# Set to skip the hash checks
+HASHOPT=0
+HASHCHECK_SKIP=0
 
 # Set to skip the passwd/group check
 PASSWDCHECK_SKIP=0
@@ -904,8 +1075,8 @@ ALLOW_SSH_ROOT_USER=0
 INFECTED_COUNT=0
 INFECTED_NAMES=""
 SCANNED_COUNT=0
-MD5_COUNT=0
-MD5_DIFFERENT=0
+HASH_COUNT=0
+HASH_DIFFERENT=0
 
 FOUNDFILE=0
 FOUNDRCSIGNS=0
@@ -924,6 +1095,9 @@ STATUS=0
 
 # Record for logging the command-line being used
 CMD_LINE="$0 $*"
+
+# Create a spaced-separated PATH variable
+SPACEDPATH=`echo ${PATH} | tr : ' '`
 
 
 #
@@ -1020,15 +1194,27 @@ while [ $# -ge 1 ]; do
 	--disable-application-check | --disable-applicationcheck | --dac | --skip-application-check | --skipapplicationcheck | --skip-applicationcheck)
 		APPLICATION_CHECK=0
 		;;
-	--disable-md5-check | --disable-md5check | --dmc)
-		MD5OPT=1
-		MD5CHECK_SKIP=1
+	--disable-hash-check | --disable-hashcheck | --dhc | --disable-md5-check | --disable-md5check | --dmc)
+		HASHOPT=1
+		HASHCHECK_SKIP=1
 		;;
 	--disable-passwd-check | --dpc)
 		PASSWDCHECK_SKIP=1
 		;;
 	--display-logfile | --displaylogfile | --display-log | --displaylog)
 		CATLOGFILE=1
+		;;
+	--hash)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			HASH_FUNC="$1"
+			;;
+		esac
 		;;
 	-h | --help)
 		help
@@ -1188,6 +1374,32 @@ if [ "${LOGFILE}" = "/dev/null" ]; then
 fi
 
 
+#
+# To perfrom the 'known bad' check requires an MD5 command.
+# Here we look for the command or use the supplied perl script
+# if possible.
+#
+
+if [ $PERFORMKNOWNBAD -eq 1 -a -z "${MD5_CMD}" ]; then
+	MD5_CMD=`find_cmd md5sum`
+
+	if [ -z "${MD5_CMD}" ]; then
+		MD5_CMD=`find_cmd md5`
+	fi
+
+	if [ -z "${MD5_CMD}" ]; then
+		MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
+
+		if [ -n "${MOD_INSTALLED}" ]; then
+			MD5_CMD="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
+		else
+			echo "Unable to find any MD5 command to perform 'known bad' hash file checks."
+			exit 1
+		fi
+	fi
+fi
+
+
 hostname=`hostname`
 
 BEGINTIME=`perl -e 'printf "%d\n", time;'`
@@ -1209,7 +1421,7 @@ logtext --nodate "${PROGRAM_license}"
 
 logtext "Info: Start date is `date`"
 
-logtext "Info: Shell ${SHELL} (${MYSHELL})"
+logtext "Info: Environment shell is ${SHELL}; rkhunter is using ${MYSHELL}"
 
 logtext "Info: Command line is ${CMD_LINE}"
 
@@ -1239,6 +1451,24 @@ if [ $ALLOW_SSH_ROOT_USER -eq 1 ]; then
 fi
 
 logtext "Info: Using '${BINPATHS}' as command directories"
+
+if [ $HASHCHECK_SKIP -eq 0 ]; then
+	if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
+		logtext "Info: Using the perl script for SHA1 hash checks"
+	elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
+		logtext "Info: Using the perl script for MD5 hash checks"
+	else
+		logtext "Info: Using ${HASH_FUNC} for the hash checks"
+	fi
+fi
+
+if [ $PERFORMKNOWNBAD -eq 1 ]; then
+	if [ -n "`echo "${MD5_CMD}" | grep '/filehashmd5\.pl$'`" ]; then
+		logtext "Info: Using the perl script for 'known bad' MD5 hash checks"
+	else
+		logtext "Info: Using ${MD5_CMD} for the 'known bad' MD5 hash checks"
+	fi
+fi
 
 
 ##################################################################################################
@@ -2579,8 +2809,8 @@ if [ "${CHECK}" -eq 1 ]; then
 		if [ "${SUBVERSION}" = "RELEASE" -a ! "${SUBVERSION2}" = "" ]; then
 			logtext "Debug: You have a 'RELEASE' version of FreeBSD"
 		else
-			logtext "Debug: You do not have a 'RELEASE' version of FreeBSD: MD5 scan will be skipped"
-			MD5CHECK_SKIP=1
+			logtext "Debug: You do not have a 'RELEASE' version of FreeBSD: hash scan will be skipped"
+			HASHCHECK_SKIP=1
 		fi
 	fi
 
@@ -2614,10 +2844,10 @@ if [ "${CHECK}" -eq 1 ]; then
 		displaytext "Warning: This operating system is not fully supported!"
 		logtext "Warning: This operating system is not fully supported!"
 		os_id="NA"
-		MD5CHECK_SKIP=1
-		if [ ${MD5OPT} -eq 0 ]; then
-			displaytext "All MD5 checks will be skipped!"
-			logtext "All MD5 checks will be skipped!"
+		HASHCHECK_SKIP=1
+		if [ ${HASHOPT} -eq 0 ]; then
+			displaytext "All hash checks will be skipped!"
+			logtext "All hash checks will be skipped!"
 		fi
 	else
 		displaytext "Ready"
@@ -2626,7 +2856,7 @@ if [ "${CHECK}" -eq 1 ]; then
 	logtext "Info: Full OS name = ${full_osname}"
 	logtext "Info: OS ID = ${os_id}"
 
-	if [ $MD5CHECK_SKIP -eq 0 ]; then
+	if [ $HASHCHECK_SKIP -eq 0 ]; then
 		if [ -n "${md5}" ]; then
 			if [ -e `echo ${md5} | cut -d " " -f1` ]; then
 				logtext "Info: Found MD5 command ${md5}"
@@ -2640,7 +2870,7 @@ if [ "${CHECK}" -eq 1 ]; then
 	if [ "${PERLFOUND}" -eq 1 ]; then
 		logtext "Info: Perl version ${PERLVERSION} found"
 
-		if [ $MD5CHECK_SKIP -eq 0 ]; then
+		if [ $HASHCHECK_SKIP -eq 0 ]; then
 			# Only use Perl MD5 module if we have it installed
 			# If we can find it then skip the md5(sum) utility
 			perlmd5installed=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
@@ -2660,7 +2890,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		logtext "Info: Perl not found"
 	fi
 
-	if [ $MD5CHECK_SKIP -eq 0 ]; then
+	if [ $HASHCHECK_SKIP -eq 0 ]; then
 		if [ -n "${md5}" ]; then
 			if [ "${md5}" = "${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl" ]; then
 				logtext "Info: Using perl module Digest::MD5 to verify MD5 hashes"
@@ -2668,7 +2898,7 @@ if [ "${CHECK}" -eq 1 ]; then
 				logtext "Info: Using command ${md5} to verify MD5 hashes"
 			fi
 		else
-			MD5CHECK_SKIP=1
+			HASHCHECK_SKIP=1
 			logtext "Warning: Cannot find any MD5 command: All MD5 checks will be skipped"
 			displaytext "Warning: Cannot find any MD5 command: All MD5 checks will be skipped"
 		fi
@@ -2772,14 +3002,14 @@ if [ "${CHECK}" -eq 1 ]; then
 
 
 
-	logtext "---------------------------- MD5 hash tests ---------------------------"
+	logtext "---------------------------- Hash tests ---------------------------"
 
 	# Binary check
 
 	displaytext "${test}* System tools${NORMAL}"
 
-	if [ $MD5CHECK_SKIP -eq 0 ]; then
-		logtext "Starting MD5 checksum test (${md5})"
+	if [ $HASHCHECK_SKIP -eq 0 ]; then
+		logtext "Starting hash checksum test (${md5})"
 
 		PRELINKING=0
 		if [ -e ${ROOTDIR}etc/prelink.cache ]; then
@@ -2791,8 +3021,8 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		# Check if we have any 'known good' checksums for this operating system
 		# If not, we perform a 'known bad' check.
-		DBMD5COUNT=`grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`
-		if [ "${DBMD5COUNT}" = "" -o ${PERFORMKNOWNBAD} -eq 1 ]; then
+		DBHASHCOUNT=`grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`
+		if [ "${DBHASHCOUNT}" = "" -o ${PERFORMKNOWNBAD} -eq 1 ]; then
 
 			displaytext "  ${WHITE}Performing 'known bad' check...${NORMAL}"
 
@@ -2820,6 +3050,8 @@ if [ "${CHECK}" -eq 1 ]; then
 					fi
 				fi
 			done
+
+			displaytext ""
 		fi
 
 
@@ -2828,7 +3060,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		for i in `grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`; do
 			file=`echo ${i} | cut -d : -f 2`
 			SIZE=`echo "${file}" | wc -c | tr -d ' '`
-			MD5_COUNT=`expr ${MD5_COUNT} + 1`
+			HASH_COUNT=`expr ${HASH_COUNT} + 1`
 			FOUND=0
 			if [ ! "${file}" = "${lastfile}" ]; then
 				if [ -e "${file}"  ]; then
@@ -2887,7 +3119,7 @@ if [ "${CHECK}" -eq 1 ]; then
 						insertlayout
 						displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 					else
-						MD5_DIFFERENT=`expr ${MD5_DIFFERENT} + 1`
+						HASH_DIFFERENT=`expr ${HASH_DIFFERENT} + 1`
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
 						displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
@@ -2920,7 +3152,7 @@ if [ "${CHECK}" -eq 1 ]; then
 			rm -f ${TMPDIR}/prelink.tst
 		fi
 
-		if [ $MD5_COUNT -eq 0 ]; then
+		if [ $HASH_COUNT -eq 0 ]; then
 			displaytext "Info: Check skipped - no hashes available"
 			logtext "Info: Check skipped - no hashes available"
 		fi
@@ -2938,7 +3170,7 @@ if [ "${CHECK}" -eq 1 ]; then
 
 	else
 		displaytext "     ${WHITE}Skipped!${NORMAL}"
-		logtext "MD5 test skipped!"
+		logtext "Hash test skipped!"
 
 	fi
 
@@ -5450,19 +5682,19 @@ nonvulnerable:%2.4.24%
 	displaytext "---------------------------- Scan results ----------------------------"
 
 	displaytext ""
-	displaytext "${YELLOW}MD5 scan${NORMAL}"
-	if [ ${MD5CHECK_SKIP} -eq 0 ]; then
-		displaytext "Scanned files: ${MD5_COUNT}"
-		displaytext -n "Incorrect MD5 checksums: "
-		if [ "${MD5_DIFFERENT}" -eq 0 ]; then
+	displaytext "${YELLOW}Hash scan${NORMAL}"
+	if [ ${HASHCHECK_SKIP} -eq 0 ]; then
+		displaytext "Scanned files: ${HASH_COUNT}"
+		displaytext -n "Incorrect hash checksums: "
+		if [ "${HASH_DIFFERENT}" -eq 0 ]; then
 			displaytext -n "${GREEN}"
 		else
 			displaytext -n "${RED}"
 		fi
-		displaytext "${MD5_DIFFERENT}${NORMAL}"
+		displaytext "${HASH_DIFFERENT}${NORMAL}"
 	else
 		displaytext "Skipped"
-		logtext "MD5 scan skipped"
+		logtext "Hash scan skipped"
 	fi
 
 	displaytext ""
@@ -5518,10 +5750,10 @@ nonvulnerable:%2.4.24%
 
 		# Force output (because we are in quiet mode)
 		echo ""
-		echo "* MD5 scan"
-		if [ ${MD5CHECK_SKIP} -eq 0 ]; then
-			echo "MD5 compared            : ${MD5_COUNT}"
-			echo "Incorrect MD5 checksums : ${MD5_DIFFERENT}"
+		echo "* Hash scan"
+		if [ ${HASHCHECK_SKIP} -eq 0 ]; then
+			echo "Hash compared            : ${HASH_COUNT}"
+			echo "Incorrect hash checksums : ${HASH_DIFFERENT}"
 		else
 			echo "Skipped"
 		fi
