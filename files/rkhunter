@@ -584,7 +584,7 @@ get_scriptdir_option() {
 	SCRIPT_PATH=`grep '^SCRIPTDIR=' ${CONFIGFILE} | tail -1`
 
 	if [ -n "${SCRIPT_PATH}" ]; then
-		SCRIPT_PATH=`echo "${SCRIPTDIR}" | sed -e 's/SCRIPTDIR=//' | tr -d '"' | tr -s ' '`
+		SCRIPT_PATH=`echo "${SCRIPT_PATH}" | sed -e 's/SCRIPTDIR=//' | tr -d '"' | tr -s ' '`
 
 		if [ -z "${SCRIPT_PATH}" -o "${SCRIPT_PATH}" = " " ]; then
 			echo "Invalid SCRIPTDIR configuration option - no directory name specified."
@@ -592,7 +592,8 @@ get_scriptdir_option() {
 		fi
 	# The installer sets this, there is no "default" path solution.
 	else
-		SCRIPT_PATH="${INSTALLDIR}/lib/rkhunter/scripts"
+		echo "Invalid SCRIPTDIR configuration option - no directory name specified."
+		exit 1
 	fi
 
 	#
