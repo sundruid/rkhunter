@@ -574,6 +574,43 @@ get_bindir_option() {
 }
 
 
+get_scriptdir_option() {
+
+	#
+	# Get the value from the configuration file, and do a simple check on whether
+	# it is empty or a space.
+	#
+
+	SCRIPT_PATH=`grep '^SCRIPTDIR=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${SCRIPT_PATH}" ]; then
+		SCRIPT_PATH=`echo "${SCRIPTDIR}" | sed -e 's/SCRIPTDIR=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${SCRIPT_PATH}" -o "${SCRIPT_PATH}" = " " ]; then
+			echo "Invalid SCRIPTDIR configuration option - no directory name specified."
+			exit 1
+		fi
+	# The installer sets this, there is no "default" path solution.
+	else
+		SCRIPT_PATH="${INSTALLDIR}/lib/rkhunter/scripts"
+	fi
+
+	#
+	# Now check that the given option is useable.
+	#
+
+	if [ ! -d "${SCRIPT_PATH}" ]; then
+		echo "Script directory does not exist: ${SCRIPT_PATH}"
+		exit 1
+	elif [ ! -r "${SCRIPT_PATH}" ]; then
+		echo "Script directory is unreadable: ${SCRIPT_PATH}"
+		exit 1
+	fi
+
+	return
+}
+
+
 find_cmd() {
 
 	#
@@ -859,10 +896,10 @@ get_md5_cmd() {
 			fi
 
 			if [ -z "${MD5_CMD}" ]; then
-				MOD_INSTALLED=`${SCRIPTDIR}/check_modules.pl | grep 'Digest::MD5 installed'`
+				MOD_INSTALLED=`${SCRIPT_PATH}/check_modules.pl | grep 'Digest::MD5 installed'`
 
 				if [ -n "${MOD_INSTALLED}" ]; then
-					MD5_CMD="${SCRIPTDIR}/filehashmd5.pl"
+					MD5_CMD="${SCRIPT_PATH}/filehashmd5.pl"
 				fi
 			fi
 		fi
@@ -943,10 +980,10 @@ get_hash_function() {
 		fi
 
 		if [ -z "${HF}" ]; then
-			MOD_INSTALLED=`${SCRIPTDIR}/check_modules.pl | grep 'Digest::SHA1 installed'`
+			MOD_INSTALLED=`${SCRIPT_PATH}/check_modules.pl | grep 'Digest::SHA1 installed'`
 
 			if [ -n "${MOD_INSTALLED}" ]; then
-				HASH_FUNC="${SCRIPTDIR}/filehashsha1.pl"
+				HASH_FUNC="${SCRIPT_PATH}/filehashsha1.pl"
 			else
 				HASH_FUNC=""
 			fi
@@ -1007,6 +1044,8 @@ get_configfile_options() {
 	get_tmpdir_option
 
 	get_dbdir_option
+
+	get_scriptdir_option
 
 	get_bindir_option
 
@@ -5161,7 +5200,7 @@ vlogger.o
 		logtext "Start scanning for hidden files in ${I}..."
 
 		if [ -d "${I}" ]; then
-			HIDDENDIRS=`${SCRIPTDIR}/showfiles.pl ${I}`
+			HIDDENDIRS=`${SCRIPT_PATH}/showfiles.pl ${I}`
 			logtext "Value of hiddendirs: ${HIDDENDIRS}"
 		fi
 
@@ -5921,7 +5960,7 @@ fi
 if [ "${UPDATE}" -eq 1 ]; then
 	displaytext "Running updater..."
 	displaytext ""
-	${SCRIPTDIR}/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
+	${SCRIPT_PATH}/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
 	displaytext ""
 	displaytext "Ready."
 fi
