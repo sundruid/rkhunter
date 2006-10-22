@@ -859,10 +859,10 @@ get_md5_cmd() {
 			fi
 
 			if [ -z "${MD5_CMD}" ]; then
-				MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
+				MOD_INSTALLED=`${SCRIPTDIR}/check_modules.pl | grep 'Digest::MD5 installed'`
 
 				if [ -n "${MOD_INSTALLED}" ]; then
-					MD5_CMD="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
+					MD5_CMD="${SCRIPTDIR}/filehashmd5.pl"
 				fi
 			fi
 		fi
@@ -943,10 +943,10 @@ get_hash_function() {
 		fi
 
 		if [ -z "${HF}" ]; then
-			MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::SHA1 installed'`
+			MOD_INSTALLED=`${SCRIPTDIR}/check_modules.pl | grep 'Digest::SHA1 installed'`
 
 			if [ -n "${MOD_INSTALLED}" ]; then
-				HASH_FUNC="${INSTALLDIR}/lib/rkhunter/scripts/filehashsha1.pl"
+				HASH_FUNC="${SCRIPTDIR}/filehashsha1.pl"
 			else
 				HASH_FUNC=""
 			fi
@@ -5161,7 +5161,7 @@ vlogger.o
 		logtext "Start scanning for hidden files in ${I}..."
 
 		if [ -d "${I}" ]; then
-			HIDDENDIRS=`${INSTALLDIR}/lib/rkhunter/scripts/showfiles.pl ${I}`
+			HIDDENDIRS=`${SCRIPTDIR}/showfiles.pl ${I}`
 			logtext "Value of hiddendirs: ${HIDDENDIRS}"
 		fi
 
@@ -5921,7 +5921,7 @@ fi
 if [ "${UPDATE}" -eq 1 ]; then
 	displaytext "Running updater..."
 	displaytext ""
-	${INSTALLDIR}/lib/rkhunter/scripts/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
+	${SCRIPTDIR}/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
 	displaytext ""
 	displaytext "Ready."
 fi
