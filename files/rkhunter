@@ -33,7 +33,7 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 		if [ -z "`which bash 2>&1 | grep '^no '`" ]; then
 			exec bash $0 $*
 		else
-			exec /bin/ksh $0 $*
+			exec ksh $0 $*
 		fi
 
 		exit 0
@@ -326,6 +326,10 @@ get_logfile_option() {
 		elif [ ! -w "${LOGDIR}" ]; then
 			echo "Logfile directory is unwritable: ${LOGFILE}"
 			exit 1
+		elif [ -L "${LOGFILE}" ]; then
+			echo "Logfile is a symbolic (soft) link: ${LOGFILE}"
+			echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
+			exit 1
 		fi
 
 		#
@@ -356,14 +360,8 @@ get_logfile_option() {
 			if [ $APPEND_LOG -eq 0 ]; then
 				rm -f ${LOGFILE} >/dev/null 2>&1
 			else
-				if [ -L "${LOGFILE}" ]; then
-					echo "Logfile is a symbolic (soft) link: ${LOGFILE}"
-					echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
-					exit 1
-				else
-					logtext --nodate ""
-					logtext --nodate ""
-				fi
+				logtext --nodate ""
+				logtext --nodate ""
 			fi
 		elif [ -e ${LOGFILE} ]; then
 			echo "Logfile already exists but it is not a file: ${LOGFILE}"
@@ -577,8 +575,11 @@ get_bindir_option() {
 get_scriptdir_option() {
 
 	#
-	# Get the value from the configuration file, and do a simple check on whether
-	# it is empty or a space.
+	# Get the value from the configuration file, and do a simple
+	# check on whether it is empty or a space.
+	#
+	# Note: The installer will set this option. As such there
+	# is no default.
 	#
 
 	SCRIPT_PATH=`grep '^SCRIPTDIR=' ${CONFIGFILE} | tail -1`
@@ -590,7 +591,6 @@ get_scriptdir_option() {
 			echo "Invalid SCRIPTDIR configuration option - no directory name specified."
 			exit 1
 		fi
-	# The installer sets this, there is no "default" path solution.
 	else
 		echo "Invalid SCRIPTDIR configuration option - no directory name specified."
 		exit 1
@@ -667,8 +667,6 @@ get_rootdir_option() {
 				echo "Invalid ROOTDIR configuration option - no directory name specified."
 				exit 1
 			fi
-		else
-			ROOTDIR="/"
 		fi
 	fi
 
@@ -844,14 +842,14 @@ get_if_prelinked() {
 	# regardless of the hash checks.
 	#
 
-	if [ -e ${ROOTDIR}etc/prelink.cache ]; then
+	if [ -f ${ROOTDIR}etc/prelink.cache ]; then
 		PRELINK_CMD=`find_cmd prelink`
 
 		if [ -n "${PRELINK_CMD}" ]; then
 			PRELINKED=1
 		else
 			SKIP_HASHCHECK=1
-			logtext "Warning: This system uses prelinking, but no prelink command can be found."
+			PRELINK_WARN="Warning: This system uses prelinking, but no prelink command can be found."
 		fi
 	fi
 
@@ -992,11 +990,9 @@ get_hash_function() {
 			HASH_FUNC=${HF}
 		fi
 	elif [ "${HASH_FUNC}" = "MD5" ]; then
-		if [ -z "${MD5_CMD}" ]; then
-			HASH_FUNC=`get_md5_cmd`
-		else
-			HASH_FUNC=${MD5_CMD}
-		fi
+		test -z "${MD5_CMD}" && get_md5_cmd
+
+		HASH_FUNC=${MD5_CMD}
 	fi
 
 
@@ -1054,30 +1050,44 @@ get_configfile_options() {
 
 	get_mailonwarn_option
 
-	get_allow_rootssh_option
-
-	get_auto_x_option
-
 
 	#
-	# For the 'known bad' MD5 hash file check we must have
-	# an MD5 command available for use.
+	# We only need the hash function options if we are going to
+	# be checking the system or updating the hash database.
 	#
 
-	test $PERFORMKNOWNBAD -eq 1 && get_md5_cmd
+	if [ $CHECK -eq 1 -o $HASH_UPDATE -eq 1 ]; then
+		get_allow_rootssh_option
+
+		get_auto_x_option
 
 
-	#
-	# For the file hash check we need to find out if we are
-	# a prelinked system, and if so, then find out which
-	# hash function to use.
-	#
+		#
+		# For the 'known bad' MD5 hash file check we must have
+		# an MD5 command available for use.
+		#
 
-	if [ $SKIP_HASHCHECK -eq 0 ]; then
-		get_if_prelinked
+		test $PERFORMKNOWNBAD -eq 1 && get_md5_cmd
 
-		test $SKIP_HASHCHECK -eq 0 && get_hash_function
+
+		#
+		# For the file hash check we need to find out if we are
+		# a prelinked system, and if so, then find out which
+		# hash function to use.
+		#
+
+		if [ $SKIP_HASHCHECK -eq 0 ]; then
+			get_if_prelinked
+
+			test $SKIP_HASHCHECK -eq 0 && get_hash_function
+		fi
 	fi
+
+	return
+}
+
+
+do_hash_update() {
 
 	return
 }
@@ -1086,8 +1096,8 @@ get_configfile_options() {
 help() {
 
 	echo ""
-	echo "Usage: rkhunter (--checkall | --cronjob | --update | --versioncheck |"
-	echo "                 --version | --help) [option]..."
+	echo "Usage: rkhunter (--checkall | --cronjob | --update | --hashupd |"
+	echo "                 --versioncheck | --version | --help) [option]..."
 	echo ""
 
 	echo "Current options are:"
@@ -1102,6 +1112,7 @@ help() {
 	echo "       --dbdir <dir>                   Use specified database directory"
 	echo "       --display-logfile               Display the logfile at the end"
 	echo "       --hash                          Specify the hash function to use"
+	echo "       --hashupd                       Update the local file hash database"
 	echo "   -h, --help                          Display this help menu and exit"
 	echo "   -l, --logfile [logfile]             Write to a logfile"
 	echo "                                       (default is $DFLT_LOGFILE)"
@@ -1185,9 +1196,11 @@ HASH_FUNC=""
 
 PRELINKED=0
 PRELINK_CMD=""
+PRELINK_WARN=""
 
-VERSIONCHECK=0
 UPDATE=0
+HASH_UPDATE=0
+VERSIONCHECK=0
 
 # By default use coloured output.
 COLORS=1
@@ -1200,6 +1213,7 @@ AUTO_X_OPT=0
 # Set to skip the hash checks
 HASHOPT=0
 SKIP_HASHCHECK=0
+HASHCHECK_WARN=""
 
 # Set to skip the passwd/group check
 SKIP_PASSWDCHECK=0
@@ -1225,12 +1239,12 @@ SHOWWARNINGSONLY=0
 # Set to perform check of known bad checksums
 PERFORMKNOWNBAD=0
 
-ROOTDIR=""
+ROOTDIR="/"
 
 # Set to use report mode (do not show footer and make a 'professional' report)
 REPORTMODE=0
 
-# Default 'id' command - Solaris will reset this.
+# Default 'id' command. Solaris will reset this.
 ID_CMD="id"
 
 # Wait for a keypress after each test
@@ -1389,6 +1403,9 @@ while [ $# -ge 1 ]; do
 			;;
 		esac
 		;;
+	--hashupd | --hash-update | --hashupdate)
+		HASH_UPDATE=1
+		;;
 	-h | --help)
 		help
 		exit 0
@@ -1486,6 +1503,19 @@ done
 
 
 #
+# We first check that we are root. If we are not, then only the
+# help and version options are valid.
+#
+
+test "${OPERATING_SYSTEM}" = "SunOS" && ID_CMD="/usr/xpg4/bin/id"
+
+if [ "`${ID_CMD} -u`" != "0" ]; then
+	echo "You must be the root user to run this program."
+	exit 1
+fi
+
+
+#
 # Now we check for the configuration file, and then check the various
 # variables within it.
 #
@@ -1504,7 +1534,7 @@ if [ ! -f ${CONFIGFILE} ]; then
 fi
 
 
-INSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | sed -e 's/INSTALLDIR=//'`
+INSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | tail -1 | sed -e 's/INSTALLDIR=//'`
 
 if [ -z "${INSTALLDIR}" ]; then
 	echo "Unable to find INSTALLDIR option in configuration file: ${CONFIGFILE}"
@@ -1519,63 +1549,72 @@ get_configfile_options
 
 
 #
-# Now set up some final variables based on the combination
+# Next set up some final variables based on the combination
 # of options we have been given.
 #
 
-if [ $COLORS -eq 1 ]; then
-	NORMAL="[0;39m"		# Foreground colour to default
+if [ $CHECK -eq 1 ]; then
+	#
+	# If the logfile has been disabled, then we cannot let the program
+	# run when certain options are used. If we did, the user would see
+	# no output and might assume that all was well.
+	#
 
-	if [ $CLRSET2 -eq 0 ]; then
-		RED="[1;31m"		# Bright red
-		GREEN="[1;32m"	# Bright green
-		YELLOW="[1;33m"	# Bright yellow
-		WHITE="[1;37m"	# White
-	else
-		RED="[1;31m"		# Bright red
-		GREEN="[0;32m"	# Green
-		YELLOW="[0;35m"	# Purple
-		WHITE="[0;30m"	# Black
+	if [ "${LOGFILE}" = "/dev/null" ]; then
+		if [ $SHOWWARNINGSONLY -eq 1 ]; then
+			echo "The logfile has been disabled - unable to report warnings."
+			exit 1
+		fi
+
+		if [ $CATLOGFILE -eq 1 ]; then
+			echo "The logfile has been disabled - unable to display the log file."
+			exit 1
+		fi
 	fi
-fi
 
 
-#
-# If the logfile has been disabled, then we cannot let the program run
-# when certain options are used. If we did, the user would see no output
-# and might assume that all was well.
-#
+	#
+	# To perform the 'known bad' check requires an MD5 command.
+	#
 
-if [ "${LOGFILE}" = "/dev/null" ]; then
-	if [ $SHOWWARNINGSONLY -eq 1 ]; then
-		echo "The logfile has been disabled - unable to report warnings."
+	if [ $PERFORMKNOWNBAD -eq 1 -a -z "${MD5_CMD}" ]; then
+		echo "Unable to perform 'known bad' check - no MD5 command can be found."
 		exit 1
 	fi
 
-	if [ $CATLOGFILE -eq 1 ]; then
-		echo "The logfile has been disabled - unable to display the log file."
-		exit 1
+
+	#
+	# Set up the colors to be used.
+	#
+
+	if [ $COLORS -eq 1 ]; then
+		NORMAL="[0;39m"		# Foreground colour to default
+
+		if [ $CLRSET2 -eq 0 ]; then
+			RED="[1;31m"		# Bright red
+			GREEN="[1;32m"	# Bright green
+			YELLOW="[1;33m"	# Bright yellow
+			WHITE="[1;37m"	# White
+		else
+			RED="[1;31m"		# Bright red
+			GREEN="[0;32m"	# Green
+			YELLOW="[0;35m"	# Purple
+			WHITE="[0;30m"	# Black
+		fi
 	fi
 fi
 
 
 #
-# If we can find no hash function to use, then skip the checks.
+# If we can find no hash function to use, then skip the
+# check or update.
 #
 
-if [ -z "${HASH_FUNC}" ]; then
-	SKIP_HASHCHECK=1
-	logtext "Warning: Unable to find any hash function command to perform hash checks."
-fi
-
-
-#
-# To perform the 'known bad' check requires an MD5 command.
-#
-
-if [ $PERFORMKNOWNBAD -eq 1 -a -z "${MD5_CMD}" ]; then
-	echo "Unable to perform 'known bad' check - no MD5 command can be found."
-	exit 1
+if [ $CHECK -eq 1 -o $HASH_UPDATE -eq 1 ]; then
+	if [ -z "${HASH_FUNC}" ]; then
+		SKIP_HASHCHECK=1
+		HASHCHECK_WARN="Warning: Unable to find any hash function command to perform hash checks."
+	fi
 fi
 
 
@@ -1595,7 +1634,12 @@ Please inspect the available files, by checking the logfile ($LOGFILE).
 # Write out various information messages to the logfile.
 #
 
-logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${hostname}"
+if [ -n "${hostname}" ]; then
+	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${hostname}"
+else
+	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version}"
+fi
+
 logtext --nodate "${PROGRAM_license}"
 
 logtext "Info: Start date is `date`"
@@ -1624,6 +1668,8 @@ fi
 
 logtext "Info: Using ${DB_PATH} as database directory"
 
+logtext "Info: Using ${SCRIPT_PATH} as script directory"
+
 if [ $ALLOW_SSH_ROOT_USER -eq 1 ]; then
 	logtext "Info: Explicit option set to allow root logins via SSH (don't mark test BAD when"
 	logtext "rkhunter finds it in the SSH configuration file)"
@@ -1631,15 +1677,20 @@ fi
 
 logtext "Info: Using '${BINPATHS}' as command directories"
 
+test -n "${PRELINK_WARN}" && logtext "${PRELINK_WARN}"
+
+test -n "${HASHCHECK_WARN}" && logtext "${HASHCHECK_WARN}"
+
+
 if [ $SKIP_HASHCHECK -eq 0 ]; then
 	if [ $PRELINKED -eq 1 ]; then
 		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 		if [ -z "`echo ${HCMD} | egrep -i 'sha1|md5'`" ]; then
-			logtext "Warning: This system uses prelinking, but the hash function (${HCMD}) does not look like SHA1 or MD5."
+			logtext "Warning: This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
 		elif [ -n "`echo ${HCMD} | egrep -i 'sha1'`" ]; then
-			logtext "Info: System is using prelinking - using SHA1 (${HCMD}) for hash checks"
+			logtext "Info: System is using prelinking - using SHA1 (${HASH_FUNC}) for hash checks"
 		else
-			logtext "Info: System is using prelinking - using MD5 (${HCMD}) for hash checks"
+			logtext "Info: System is using prelinking - using MD5 (${HASH_FUNC}) for hash checks"
 		fi
 	else
 		logtext "Info: System is not using prelinking"
@@ -1660,6 +1711,15 @@ if [ $PERFORMKNOWNBAD -eq 1 ]; then
 	else
 		logtext "Info: Using ${MD5_CMD} for the 'known bad' MD5 hash checks"
 	fi
+fi
+
+
+#
+# Carry out the local file hash database update if requested.
+#
+
+if [ $HASH_UPDATE -eq 1 ]; then
+	do_hash_update
 fi
 
 
@@ -2695,11 +2755,6 @@ if [ "${CHECK}" -eq 1 ]; then
 		esac
 
 		full_osname="Sun Solaris ${OPERATING_VERSION} (${OPERATING_ARCH})"
-
-		#
-		# The XPG4 id command is POSIX-compatible, so we use that.
-		#
-		ID_CMD="${ROOTDIR}usr/xpg4/bin/id"
 	fi
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
@@ -3043,20 +3098,6 @@ if [ "${CHECK}" -eq 1 ]; then
 		logtext "Info: Perl not found"
 	fi
 
-	if [ -d ${TMPDIR} ]; then
-		logtext "Info: using ${TMPDIR} as temporary directory"
-	else
-		logtext "Fatal: temporary directory ${TMPDIR} doesn't exist."
-		exit 1
-	fi
-
-	if [ `${ID_CMD} -u` = "0" ]; then
-		logtext "Info: UID is zero (root)"
-	else
-		displaytext "Fatal error: root rights needed to perform a full scan"
-		exit 1
-	fi
-
 	if [ ! -f "${ROOTDIR}proc/ksyms" ]; then
 		logtext "Info: ksyms file check will be skipped (${ROOTDIR}proc/ksyms not available on this system)"
 	fi
@@ -3192,6 +3233,8 @@ if [ "${CHECK}" -eq 1 ]; then
 
 		displaytext "  ${WHITE}Performing 'known good' check...${NORMAL}"
 
+		RUNCON_CMD=`find_cmd runcon`
+
 		for i in `grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`; do
 			file=`echo ${i} | cut -d : -f 2`
 			SIZE=`echo "${file}" | wc -c | tr -d ' '`
@@ -3204,9 +3247,8 @@ if [ "${CHECK}" -eq 1 ]; then
 					for J in ${FILEHASHES}; do
 						if [ $PRELINKED -eq 1 ]; then
 							${PRELINK_CMD} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
-# JH - prelink/SELinux workaround (11-10-06)
-							if [ ! -s "${TMPDIR}/prelink.tst" ]; then
-								runcon -t unconfined_t -- ${PRELINK_CMD} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
+							if [ ! -s "${TMPDIR}/prelink.tst" -a -n "${RUNCON_CMD}" ]; then
+								${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
 							fi
 							myhash=`${HASH_FUNC} ${TMPDIR}/prelink.tst | cut -d " " -f 1`
 						else
@@ -5952,7 +5994,7 @@ nonvulnerable:%2.4.24%
 		exit 0
 	fi
 else
-	if [ ${VERSIONCHECK} -eq 0 -a ${UPDATE} -eq 0 ]; then
+	if [ ${VERSIONCHECK} -eq 0 -a ${UPDATE} -eq 0 -a $HASH_UPDATE -eq 0 ]; then
 		displaytext "You don't want to check your system?"
 		displaytext "Please submit a parameter like --checkall or --cronjob"
 	fi
