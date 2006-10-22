@@ -688,7 +688,19 @@ get_mailonwarn_option() {
 		MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f1`
 		MC=`find_cmd ${MCMD}`
 
-		if [ -z "${MC}" ]; then
+		if [ -n "${MC}" ]; then
+			#
+			# We rebuild the command to use the full pathname.
+			#
+
+			MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f2-`
+
+			if [ -z "${MCMD}" -o "${MCMD}" = "${MAIL_CMD}" ]; then
+				MAIL_CMD=${MC}
+			else
+				MAIL_CMD="${MC} ${MCMD}"
+			fi
+		else
 			echo "Invalid MAIL_CMD configuration option - command '${MCMD}' is non-existent or not executable."
 			exit 1
 		fi
@@ -784,6 +796,109 @@ get_auto_x_option() {
 }
 
 
+get_if_prelinked() {
+
+	#
+	# If the system appears to be using prelinking, but no
+	# prelink command can be found, then we simply skip the
+	# hash checks. We do not exit because this is a suspicious
+	# circumstance, and it may be better to check the system
+	# regardless of the hash checks.
+	#
+
+	if [ -e ${ROOTDIR}etc/prelink.cache ]; then
+		PRELINK_CMD=`find_cmd prelink`
+
+		if [ -n "${PRELINK_CMD}" ]; then
+			PRELINKED=1
+		else
+			SKIP_HASHCHECK=1
+			logtext "Warning: This system uses prelinking, but no prelink command can be found."
+		fi
+	fi
+
+	return
+}
+
+
+get_md5_cmd() {
+
+	#
+	# This function is different from the others in that it is
+	# called in more than one place. As such we do not generate
+	# an error message if no MD5 command can be found - we leave
+	# that to the calling code.
+	#
+	# As usual we first test any given command-line option, and
+	# then check the configuration file. We do generate an error
+	# message if either of these is invalid.
+	#
+
+	if [ -n "${MD5_CMD}" ]; then
+		MD5_CMD=`echo "${MD5_CMD}" | tr -s ' '`
+
+		if [ "${MD5_CMD}" = " " ]; then
+			echo "Invalid --md5 option - no command given."
+			exit 1
+		fi
+	else
+		MD5_CMD=`grep '^MD5_CMD=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${MD5_CMD}" ]; then
+			MD5_CMD=`echo "${MD5_CMD}" | sed -e 's/MD5_CMD=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
+
+			if [ -z "${MD5_CMD}" -o "${MD5_CMD}" = " " ]; then
+				echo "Invalid MD5_CMD configuration option - no command specified."
+				exit 1
+			fi
+		else
+			MD5_CMD=`find_cmd md5sum`
+
+			if [ -z "${MD5_CMD}" ]; then
+				MD5_CMD=`find_cmd md5`
+			fi
+
+			if [ -z "${MD5_CMD}" ]; then
+				MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
+
+				if [ -n "${MOD_INSTALLED}" ]; then
+					MD5_CMD="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
+				fi
+			fi
+		fi
+	fi
+
+
+	#
+	# We now do a final check that the command is executable.
+	#
+
+	if [ -n "${MD5_CMD}" ]; then
+		MCMD=`echo "${MD5_CMD}" | cut -d' ' -f1`
+		MC=`find_cmd ${MCMD}`
+
+		if [ -n "${MC}" ]; then
+			#
+			# We rebuild the command to use the full pathname.
+			#
+
+			MCMD=`echo "${MD5_CMD}" | cut -d' ' -f2-`
+
+			if [ -z "${MCMD}" -o "${MCMD}" = "${MD5_CMD}" ]; then
+				MD5_CMD=${MC}
+			else
+				MD5_CMD="${MC} ${MCMD}"
+			fi
+		else
+			echo "Invalid MD5 hash option - command '${MCMD}' is non-existent or not executable."
+			exit 1
+		fi
+	fi
+
+	return
+}
+
+
 get_hash_function() {
 
 	#
@@ -839,25 +954,11 @@ get_hash_function() {
 			HASH_FUNC=${HF}
 		fi
 	elif [ "${HASH_FUNC}" = "MD5" ]; then
-		HF=`find_cmd md5sum`
-
-		if [ -z "${HF}" ]; then
-			HF=`find_cmd md5`
-		fi
-
-		if [ -z "${HF}" ]; then
-			MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
-
-			if [ -n "${MOD_INSTALLED}" ]; then
-				HASH_FUNC="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
-			else
-				HASH_FUNC=""
-			fi
+		if [ -z "${MD5_CMD}" ]; then
+			HASH_FUNC=`get_md5_cmd`
 		else
-			HASH_FUNC=${HF}
+			HASH_FUNC=${MD5_CMD}
 		fi
-
-		test -n "${HASH_FUNC}" && MD5_CMD=${HASH_FUNC}
 	fi
 
 
@@ -868,17 +969,25 @@ get_hash_function() {
 	#
 
 	if [ -n "${HASH_FUNC}" ]; then
-		HF=`find_cmd ${HASH_FUNC}`
+		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+		HF=`find_cmd ${HCMD}`
 
-		if [ -z "${HF}" ]; then
-			echo "Invalid hash option - command '${HASH_FUNC}' is non-existent or not executable."
-			exit 1
+		if [ -n "${HF}" ]; then
+			#
+			# We rebuild the command to use the full pathname.
+			#
+
+			HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f2-`
+
+			if [ -z "${HCMD}" -o "${HCMD}" = "${HASH_FUNC}" ]; then
+				HASH_FUNC=${HF}
+			else
+				HASH_FUNC="${HF} ${HCMD}"
+			fi
 		else
-			HASH_FUNC=${HF}
+			echo "Invalid hash option - command '${HCMD}' is non-existent or not executable."
+			exit 1
 		fi
-	else
-		echo "Unable to find any hash function command to perform file checks."
-		exit 1
 	fi
 
 	return
@@ -909,7 +1018,26 @@ get_configfile_options() {
 
 	get_auto_x_option
 
-	test $HASHCHECK_SKIP -eq 0 && get_hash_function
+
+	#
+	# For the 'known bad' MD5 hash file check we must have
+	# an MD5 command available for use.
+	#
+
+	test $PERFORMKNOWNBAD -eq 1 && get_md5_cmd
+
+
+	#
+	# For the file hash check we need to find out if we are
+	# a prelinked system, and if so, then find out which
+	# hash function to use.
+	#
+
+	if [ $SKIP_HASHCHECK -eq 0 ]; then
+		get_if_prelinked
+
+		test $SKIP_HASHCHECK -eq 0 && get_hash_function
+	fi
 
 	return
 }
@@ -937,6 +1065,8 @@ help() {
 	echo "   -h, --help                          Display this help menu and exit"
 	echo "   -l, --logfile [logfile]             Write to a logfile"
 	echo "                                       (default is $DFLT_LOGFILE)"
+	echo "       --md5                           Specify the MD5 command to use for the"
+	echo "                                       'known bad' hash check"
 	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
 	echo "       --nocolors                      Use black and white output"
 	echo "       --nolog                         Do not write to a logfile"
@@ -1013,6 +1143,9 @@ DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr
 MD5_CMD=""
 HASH_FUNC=""
 
+PRELINKED=0
+PRELINK_CMD=""
+
 VERSIONCHECK=0
 UPDATE=0
 
@@ -1026,10 +1159,10 @@ AUTO_X_OPT=0
 
 # Set to skip the hash checks
 HASHOPT=0
-HASHCHECK_SKIP=0
+SKIP_HASHCHECK=0
 
 # Set to skip the passwd/group check
-PASSWDCHECK_SKIP=0
+SKIP_PASSWDCHECK=0
 
 # Perform the application check
 APPLICATION_CHECK=1
@@ -1196,10 +1329,10 @@ while [ $# -ge 1 ]; do
 		;;
 	--disable-hash-check | --disable-hashcheck | --dhc | --disable-md5-check | --disable-md5check | --dmc)
 		HASHOPT=1
-		HASHCHECK_SKIP=1
+		SKIP_HASHCHECK=1
 		;;
 	--disable-passwd-check | --dpc)
-		PASSWDCHECK_SKIP=1
+		SKIP_PASSWDCHECK=1
 		;;
 	--display-logfile | --displaylogfile | --display-log | --displaylog)
 		CATLOGFILE=1
@@ -1219,6 +1352,18 @@ while [ $# -ge 1 ]; do
 	-h | --help)
 		help
 		exit 0
+		;;
+	--md5)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			MD5_CMD="$1"
+			;;
+		esac
 		;;
 	--noappend-log | --no-append-log | --noappendlog)
 		APPEND_LOG=0
@@ -1375,28 +1520,22 @@ fi
 
 
 #
-# To perfrom the 'known bad' check requires an MD5 command.
-# Here we look for the command or use the supplied perl script
-# if possible.
+# If we can find no hash function to use, then skip the checks.
+#
+
+if [ -z "${HASH_FUNC}" ]; then
+	SKIP_HASHCHECK=1
+	logtext "Warning: Unable to find any hash function command to perform hash checks."
+fi
+
+
+#
+# To perform the 'known bad' check requires an MD5 command.
 #
 
 if [ $PERFORMKNOWNBAD -eq 1 -a -z "${MD5_CMD}" ]; then
-	MD5_CMD=`find_cmd md5sum`
-
-	if [ -z "${MD5_CMD}" ]; then
-		MD5_CMD=`find_cmd md5`
-	fi
-
-	if [ -z "${MD5_CMD}" ]; then
-		MOD_INSTALLED=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
-
-		if [ -n "${MOD_INSTALLED}" ]; then
-			MD5_CMD="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
-		else
-			echo "Unable to find any MD5 command to perform 'known bad' hash file checks."
-			exit 1
-		fi
-	fi
+	echo "Unable to perform 'known bad' check - no MD5 command can be found."
+	exit 1
 fi
 
 
@@ -1452,13 +1591,26 @@ fi
 
 logtext "Info: Using '${BINPATHS}' as command directories"
 
-if [ $HASHCHECK_SKIP -eq 0 ]; then
-	if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
-		logtext "Info: Using the perl script for SHA1 hash checks"
-	elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
-		logtext "Info: Using the perl script for MD5 hash checks"
+if [ $SKIP_HASHCHECK -eq 0 ]; then
+	if [ $PRELINKED -eq 1 ]; then
+		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+		if [ -z "`echo ${HCMD} | egrep -i 'sha1|md5'`" ]; then
+			logtext "Warning: This system uses prelinking, but the hash function (${HCMD}) does not look like SHA1 or MD5."
+		elif [ -n "`echo ${HCMD} | egrep -i 'sha1'`" ]; then
+			logtext "Info: System is using prelinking - using SHA1 (${HCMD}) for hash checks"
+		else
+			logtext "Info: System is using prelinking - using MD5 (${HCMD}) for hash checks"
+		fi
 	else
-		logtext "Info: Using ${HASH_FUNC} for the hash checks"
+		logtext "Info: System is not using prelinking"
+
+		if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
+			logtext "Info: Using the perl script for SHA1 hash checks"
+		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
+			logtext "Info: Using the perl script for MD5 hash checks"
+		else
+			logtext "Info: Using ${HASH_FUNC} for the hash checks"
+		fi
 	fi
 fi
 
@@ -1479,7 +1631,7 @@ fi
 
 FINDFOUND=0; IFCONFIGFOUND=0; IPFOUND=0; LYNXFOUND=0;
 LSATTRFOUND=0; LSFOUND=0; LSMODFOUND=0; LSOFFOUND=0;
-MD5FOUND=0; NMAPFOUND=0; PERLFOUND=0; PRELINKFOUND=0;
+NMAPFOUND=0; PERLFOUND=0;
 PSFOUND=0; STATFOUND=0; STRINGSFOUND=0; WGETFOUND=0;
 SKDETFOUND=0; READLINKFOUND=0;
 
@@ -1495,10 +1647,7 @@ for I in ${BINPATHS}; do
 	J=${I}"/lsattr";     	if [ -x ${J} ]; then logtext "Found ${J}"; LSATTRFOUND=1;  	 LSATTRBINARY=${J};     fi
 	J=${I}"/lsmod";      	if [ -x ${J} ]; then logtext "Found ${J}"; LSMODFOUND=1;    	 LSMODBINARY=${J};      fi
 	J=${I}"/lsof";    	if [ -x ${J} ]; then logtext "Found ${J}"; LSOFFOUND=1;    	 LSOFBINARY=${J};       fi
-	J=${I}"/md5";     	if [ -x ${J} ]; then logtext "Found ${J}"; MD5FOUND=1;     	 MD5BINARY=${J};        fi
-	J=${I}"/md5sum";  	if [ -x ${J} ]; then logtext "Found ${J}"; MD5FOUND=1;     	 MD5BINARY=${J};        fi
 	J=${I}"/nmap";    	if [ -x ${J} ]; then logtext "Found ${J}"; NMAPFOUND=1;    	 NMAPBINARY=${J};       fi
-	J=${I}"/prelink";   	if [ -x ${J} ]; then logtext "Found ${J}"; PRELINKFOUND=1; 	 PRELINKBINARY=${J};    fi
 	J=${I}"/ps";      	if [ -x ${J} ]; then logtext "Found ${J}"; PSFOUND=1;      	 PSBINARY=${J};         fi
 	J=${I}"/stat";		if [ -x ${J} ]; then logtext "Found ${J}"; STATFOUND=1;	   	 STATBINARY=${J};       fi
 	J=${I}"/strings"; 	if [ -x ${J} ]; then logtext "Found ${J}"; STRINGSFOUND=1; 	 STRINGSBINARY=${J};    fi
@@ -1543,10 +1692,6 @@ fi
 
 
 logtext "Application scan ended"
-
-if [ ! "${MD5BINARY}" = "" ]; then
-	md5=${MD5BINARY}
-fi
 
 
 BACKDOORPORTS="2006"
@@ -2810,7 +2955,7 @@ if [ "${CHECK}" -eq 1 ]; then
 			logtext "Debug: You have a 'RELEASE' version of FreeBSD"
 		else
 			logtext "Debug: You do not have a 'RELEASE' version of FreeBSD: hash scan will be skipped"
-			HASHCHECK_SKIP=1
+			SKIP_HASHCHECK=1
 		fi
 	fi
 
@@ -2829,10 +2974,6 @@ if [ "${CHECK}" -eq 1 ]; then
 	fos_name=`echo "${full_osname}" | sed -e 's/\./\\\./g'`
 	os_string=`grep "${fos_name}:" ${DB_PATH}/os.dat`
 	os_id=`echo ${os_string} | cut -d ":" -f1`
-	md5=`echo ${os_string} | cut -d ":" -f3`
-	if [ -z "${md5}" ]; then
-		md5="${MD5BINARY}"
-	fi
 	binroot=`echo ${os_string} | cut -d ":" -f4`
 
 	if [ "${os_id}" = "" ]; then
@@ -2844,7 +2985,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		displaytext "Warning: This operating system is not fully supported!"
 		logtext "Warning: This operating system is not fully supported!"
 		os_id="NA"
-		HASHCHECK_SKIP=1
+		SKIP_HASHCHECK=1
 		if [ ${HASHOPT} -eq 0 ]; then
 			displaytext "All hash checks will be skipped!"
 			logtext "All hash checks will be skipped!"
@@ -2856,52 +2997,10 @@ if [ "${CHECK}" -eq 1 ]; then
 	logtext "Info: Full OS name = ${full_osname}"
 	logtext "Info: OS ID = ${os_id}"
 
-	if [ $HASHCHECK_SKIP -eq 0 ]; then
-		if [ -n "${md5}" ]; then
-			if [ -e `echo ${md5} | cut -d " " -f1` ]; then
-				logtext "Info: Found MD5 command ${md5}"
-			else
-				logtext "Warning: Cannot find MD5 command ${md5}"
-				md5=
-			fi
-		fi
-	fi
-
 	if [ "${PERLFOUND}" -eq 1 ]; then
 		logtext "Info: Perl version ${PERLVERSION} found"
-
-		if [ $HASHCHECK_SKIP -eq 0 ]; then
-			# Only use Perl MD5 module if we have it installed
-			# If we can find it then skip the md5(sum) utility
-			perlmd5installed=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::MD5 installed'`
-			perlsha1installed=`${INSTALLDIR}/lib/rkhunter/scripts/check_modules.pl | grep 'Digest::SHA1 installed'`
-
-			if [ ! "${perlmd5installed}" = "" ]; then
-				logtext "Info: Perl module ${perlmd5installed}"
-				md5="${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl"
-			fi
-
-			if [ ! "${perlsha1installed}" = "" ]; then
-				logtext "Info: Perl module ${perlsha1installed}"
-				sha1="${INSTALLDIR}/lib/rkhunter/scripts/filehashsha1.pl"
-			fi
-		fi
 	else
 		logtext "Info: Perl not found"
-	fi
-
-	if [ $HASHCHECK_SKIP -eq 0 ]; then
-		if [ -n "${md5}" ]; then
-			if [ "${md5}" = "${INSTALLDIR}/lib/rkhunter/scripts/filehashmd5.pl" ]; then
-				logtext "Info: Using perl module Digest::MD5 to verify MD5 hashes"
-			else
-				logtext "Info: Using command ${md5} to verify MD5 hashes"
-			fi
-		else
-			HASHCHECK_SKIP=1
-			logtext "Warning: Cannot find any MD5 command: All MD5 checks will be skipped"
-			displaytext "Warning: Cannot find any MD5 command: All MD5 checks will be skipped"
-		fi
 	fi
 
 	if [ -d ${TMPDIR} ]; then
@@ -3008,16 +3107,8 @@ if [ "${CHECK}" -eq 1 ]; then
 
 	displaytext "${test}* System tools${NORMAL}"
 
-	if [ $HASHCHECK_SKIP -eq 0 ]; then
-		logtext "Starting hash checksum test (${md5})"
-
-		PRELINKING=0
-		if [ -e ${ROOTDIR}etc/prelink.cache ]; then
-			PRELINKING=1
-			logtext "Found cache file of prelinked files"
-			logtext "Using prelink binary: ${PRELINKBINARY}"
-			displaytext "Info: prelinked files found"
-		fi
+	if [ $SKIP_HASHCHECK -eq 0 ]; then
+		logtext "Starting hash checksum test"
 
 		# Check if we have any 'known good' checksums for this operating system
 		# If not, we perform a 'known bad' check.
@@ -3033,7 +3124,11 @@ if [ "${CHECK}" -eq 1 ]; then
 					displaytext -n "   ${I}"
 					SIZE=`echo "${I}" | wc -c | tr -d ' '`
 					ISBAD=""
-					MD5SUM=`${md5} ${I}`
+					MD5SUM=`${MD5_CMD} ${I} | cut -d' ' -f1`
+
+					if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${MD5_CMD}" = "/bin/md5" ]; then
+						MD5SUM=`echo ${MD5SUM} | cut -d ' ' -f4 | tr -d ' '`
+					fi
 
 					ISBAD=`grep ${MD5SUM} ${DB_PATH}/md5blacklist.dat`
 
@@ -3065,21 +3160,21 @@ if [ "${CHECK}" -eq 1 ]; then
 			if [ ! "${file}" = "${lastfile}" ]; then
 				if [ -e "${file}"  ]; then
 					FILEHASHES=`grep "^${os_id}:${file}:" ${DB_PATH}/defaulthashes.dat | cut -d : -f 3`
-					MYPACKAGES=`grep "^${os_id}:${file}:" ${DB_PATH}/defaulthashes.dat | cut -d : -f 6`
 					#FILEHASHES=`echo ${i} | cut -d : -f 3`
 					for J in ${FILEHASHES}; do
-						if [ "$PRELINKING" -eq "1" -a "$PRELINKFOUND" -eq "1" ]; then
-							${PRELINKBINARY} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
+						if [ $PRELINKED -eq 1 ]; then
+							${PRELINK_CMD} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
 # JH - prelink/SELinux workaround (11-10-06)
 							if [ ! -s "${TMPDIR}/prelink.tst" ]; then
-								runcon -t unconfined_t -- ${PRELINKBINARY} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
+								runcon -t unconfined_t -- ${PRELINK_CMD} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
 							fi
-							myhash=`${md5} ${TMPDIR}/prelink.tst | cut -d " " -f 1`
+							myhash=`${HASH_FUNC} ${TMPDIR}/prelink.tst | cut -d " " -f 1`
 						else
-							myhash=`${md5} ${file} | cut -d " " -f 1`
+							myhash=`${HASH_FUNC} ${file} | cut -d " " -f 1`
 						fi
+
 						# Fix for OpenBSD's version of MD5 (doesn't support -q option)
-						if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${md5}" = "/bin/md5" ]; then
+						if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HASH_FUNC}" = "/bin/md5" ]; then
 							myhash=`echo ${myhash} | cut -d ' ' -f4 | tr -d ' '`
 						fi
 
@@ -3089,14 +3184,14 @@ if [ "${CHECK}" -eq 1 ]; then
 							FOUND=1
 							logtext "${file} hash valid, found in database"
 						else
-							logtext "${file} Hash NOT valid (My MD5: ${myhash}, expected: ${hash})"
+							logtext "${file} Hash NOT valid (Found: ${myhash}, expected: ${hash})"
 						fi
 					done
 
 					if [ ${FOUND} -eq 0 ]; then
 						# Compare against whitelist
-						logtext "Using whitelists to compare MD5 hash (searching for ${myhash})"
-						for WHITELISTSTRING in `grep '^MD5WHITELIST=' ${CONFIGFILE} | sed -e 's/MD5WHITELIST=//g'`; do
+						logtext "Using whitelists to compare hash value (searching for ${myhash})"
+						for WHITELISTSTRING in `grep '^HASHWHITELIST=' ${CONFIGFILE} | sed -e 's/HASHWHITELIST=//g'`; do
 							WHITELISTFILE=`echo ${WHITELISTSTRING} | cut -d ':' -f1`
 							WHITELISTHASH=`echo ${WHITELISTSTRING} | cut -d ':' -f2`
 							logtext "Checking ${WHITELISTHASH} (${WHITELISTFILE})"
@@ -3106,8 +3201,8 @@ if [ "${CHECK}" -eq 1 ]; then
 							fi
 						done
 						if [ ${FOUND} -eq 0 ]; then
-							logtext "No whitelisted MD5 hash found for ${file}"
-							logtext "MD5 hash for my file (${file}) is ${myhash}, but is not in database"
+							logtext "No whitelisted hash value found for ${file}"
+							logtext "Hash value for my file (${file}) is ${myhash}, but is not in database"
 						fi
 
 						logtext "End of whitelist compare"
@@ -3124,11 +3219,6 @@ if [ "${CHECK}" -eq 1 ]; then
 						insertlayout
 						displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 						logtext "Checking ${file} against hashes in database (${FILEHASHES}) failed"
-						if [ -f /bin/rpm ]; then
-							RPMPACKAGE=`rpm -qf ${file}`
-							logtext "RPM info: your package '${RPMPACKAGE}'"
-							logtext "RPM info: packages in database: ${MYPACKAGES}"
-						fi
 						WARNING=1
 
 						logtext "---"
@@ -4785,7 +4875,7 @@ vlogger.o
 	##################################################################################################
 
 
-	if [ ${PASSWDCHECK_SKIP} -eq 0 ]; then
+	if [ $SKIP_PASSWDCHECK -eq 0 ]; then
 		displaytext -n "   Checking for differences in user accounts... "
 		if [ -e "/etc/passwd" ]; then
 			if [ -e "${TMPDIR}/passwd" ]; then
@@ -5683,7 +5773,7 @@ nonvulnerable:%2.4.24%
 
 	displaytext ""
 	displaytext "${YELLOW}Hash scan${NORMAL}"
-	if [ ${HASHCHECK_SKIP} -eq 0 ]; then
+	if [ $SKIP_HASHCHECK -eq 0 ]; then
 		displaytext "Scanned files: ${HASH_COUNT}"
 		displaytext -n "Incorrect hash checksums: "
 		if [ "${HASH_DIFFERENT}" -eq 0 ]; then
@@ -5751,7 +5841,7 @@ nonvulnerable:%2.4.24%
 		# Force output (because we are in quiet mode)
 		echo ""
 		echo "* Hash scan"
-		if [ ${HASHCHECK_SKIP} -eq 0 ]; then
+		if [ $SKIP_HASHCHECK -eq 0 ]; then
 			echo "Hash compared            : ${HASH_COUNT}"
 			echo "Incorrect hash checksums : ${HASH_DIFFERENT}"
 		else

@@ -35,6 +35,9 @@
    characters on a white screen. The command-line option --cs2 will enable it.
  - Added special config file and command-line option, -x/-X, to detect if X
    is in use. If detected then second colour set will be used.
+ - Added '--md5' cli option and MD5_CMD configuration file option. This
+   allows the user to specify the command to use for the MD5 known bad
+   hashes check.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -49,11 +52,16 @@
    directories for Solaris users.
  - Added command-line option --dac as alias for --disable-application-check.
  - Versioncheck now checks the versions numerically.
+ - The MD5WHITELIST configuration file option has changed name to HASHWHITELIST.
+ - The '--disable-md5-check/--dmc' option has been changed to
+   '--disable-hash-check/--dhc'.
 
  Bugfixes:
  - Corrected SHV4/Tripwire check
  - Command-line options requiring an argument now work correctly under Solaris
  - The -h/--help option now works as expected.
+ - The OpenBSD check for known bad hashes was not matching the checksum
+   correctly. The known good check, however, was.
 
  --
 
