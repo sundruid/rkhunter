@@ -1,20 +1,26 @@
+%define name rkhunter
+%define ver 1.2.9
+%define rel 1
+%define epoch 0
+%define _prefix /usr/local
+
 # We can't let RPM do the dependencies automatic because it'll then pick up
 # a correct but undesirable perl dependency, which rkhunter does not require
 # in order to function properly.
 AutoReqProv: no
 
-Summary:	Rootkit scans for rootkits, backdoors and local exploits.
-Name:		rkhunter
-Version:	1.2.9
-Release:	1
-Epoch:		0
-License:	GPL
-Group:          Applications/System
-URL:		http://rkhunter.sourceforge.net/
-Source0:	%{name}-%{version}.tar.gz
-BuildArch:	noarch
-Requires:	/bin/sh, /bin/ps, /bin/ls, /bin/cat, /bin/egrep
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+Name: %{name}
+Summary: %{name} scans for rootkits, backdoors and local exploits.
+Version: %{ver}
+Release: %{rel}
+Epoch: %{epoch}
+Copyright: GPL
+Group: Applications/System
+Source0: %{name}-%{version}.tar.gz
+Requires: filesystem, bash, grep, findutils, net-tools, coreutils, e2fsprogs, modutils, procps, binutils, wget
+Provides: %{name}
+URL: http://rkhunter.sourceforge.net/
+BuildRoot: %{_tmppath}/%{name}-%{version}
 
 %description
 Rootkit scanner is scanning tool to ensure you for about 99.9%% you're
@@ -33,68 +39,13 @@ Rootkit Hunter is released as a GPL licensed project and free for everyone to us
 
 
 %prep
-%setup
+%setup -q
 
 %build
-#%%configure ...
-# We have nothing to configure... yet...
 
 %install
-# Well... This could be a bit smaller if the install
-# script was able to handle DSTDIR for example...
+sh ./installer.sh --install --layout RPM
 
-# (cjo) remove old version of build root, if it exists
-%{__rm} -rf ${RPM_BUILD_ROOT}
-
-%{__mkdir} -p ${RPM_BUILD_ROOT}%{_bindir}
-%{__mkdir} -p ${RPM_BUILD_ROOT}%{_sysconfdir}
-%{__mkdir} -p ${RPM_BUILD_ROOT}%{_libdir}
-%{__mkdir} -p ${RPM_BUILD_ROOT}%{_libdir}/rkhunter/scripts
-%{__mkdir} -p ${RPM_BUILD_ROOT}%{_docdir}/rkhunter-%{version}
-%{__mkdir} -p ${RPM_BUILD_ROOT}%{_mandir}/man8
-%{__mkdir} -p ${RPM_BUILD_ROOT}%{_var}/rkhunter/{db,tmp}
-%{__chmod} ug+rwx,o-rwx ${RPM_BUILD_ROOT}%{_var}/rkhunter/tmp
-
-%{__install} -m750 -p files/rkhunter		${RPM_BUILD_ROOT}%{_bindir}/
-
-%{__install} -m640 -p files/backdoorports.dat	${RPM_BUILD_ROOT}%{_var}/rkhunter/db/
-%{__install} -m640 -p files/defaulthashes.dat	${RPM_BUILD_ROOT}%{_var}/rkhunter/db/
-%{__install} -m640 -p files/mirrors.dat		${RPM_BUILD_ROOT}%{_var}/rkhunter/db/
-%{__install} -m640 -p files/os.dat		${RPM_BUILD_ROOT}%{_var}/rkhunter/db/
-%{__install} -m640 -p files/md5blacklist.dat	${RPM_BUILD_ROOT}%{_var}/rkhunter/db/
-%{__install} -m640 -p files/programs_bad.dat	${RPM_BUILD_ROOT}%{_var}/rkhunter/db/
-%{__install} -m640 -p files/programs_good.dat	${RPM_BUILD_ROOT}%{_var}/rkhunter/db/
-
-%{__install} -m644 -p files/CHANGELOG		${RPM_BUILD_ROOT}%{_docdir}/rkhunter-%{version}/
-%{__install} -m644 -p files/LICENSE		${RPM_BUILD_ROOT}%{_docdir}/rkhunter-%{version}/
-%{__install} -m644 -p files/README		${RPM_BUILD_ROOT}%{_docdir}/rkhunter-%{version}/
-%{__install} -m644 -p files/WISHLIST		${RPM_BUILD_ROOT}%{_docdir}/rkhunter-%{version}/
-%{__install} -m644 -p files/development/*.8	${RPM_BUILD_ROOT}%{_mandir}/man8/
-
-%{__install} -m750 -p files/check_modules.pl	${RPM_BUILD_ROOT}%{_libdir}/rkhunter/scripts/
-%{__install} -m750 -p files/check_port.pl	${RPM_BUILD_ROOT}%{_libdir}/rkhunter/scripts/
-%{__install} -m750 -p files/filehashmd5.pl	${RPM_BUILD_ROOT}%{_libdir}/rkhunter/scripts/
-%{__install} -m750 -p files/filehashsha1.pl	${RPM_BUILD_ROOT}%{_libdir}/rkhunter/scripts/
-%{__install} -m750 -p files/showfiles.pl	${RPM_BUILD_ROOT}%{_libdir}/rkhunter/scripts/
-%{__install} -m750 -p files/check_update.sh     ${RPM_BUILD_ROOT}%{_libdir}/rkhunter/scripts/
-
-# (cjo) Put installation root in configuration file, then copy the rest
-#       of the file from the original.
-cat >> ${RPM_BUILD_ROOT}%{_sysconfdir}/rkhunter.conf << EOF
-## Next three lines installed automatically by RPM. Do not change
-## unless you know what you're doing...
-INSTALLDIR=%{_prefix}
-DBDIR=%{_var}/rkhunter/db
-TMPDIR=%{_var}/rkhunter/tmp
-
-EOF
-
-cat files/rkhunter.conf >> ${RPM_BUILD_ROOT}%{_sysconfdir}/rkhunter.conf
-%{__chmod} 640 ${RPM_BUILD_ROOT}%{_sysconfdir}/rkhunter.conf
-
-# Only root should use rkhunter (at least for now)
-%{__chmod} o-rwx -R ${RPM_BUILD_ROOT}%{_libdir}/rkhunter
-%{__chmod} o-rwx -R ${RPM_BUILD_ROOT}%{_var}/rkhunter/db
 
 # make a cron.daily file to mail us the reports
 %{__mkdir} -p "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily"
@@ -104,23 +55,39 @@ cat files/rkhunter.conf >> ${RPM_BUILD_ROOT}%{_sysconfdir}/rkhunter.conf
 EOF
 %{__chmod} a+rwx,g-w,o-rwx ${RPM_BUILD_ROOT}%{_sysconfdir}/cron.daily/01-rkhunter
 
-%clean
-%{__rm} -rf "$RPM_BUILD_ROOT"
 
+						
+%clean
+case "$RPM_BUILD_ROOT" in
+	/home/*) rm -rf $RPM_BUILD_ROOT
+	;;
+	*)
+	echo Invalid Build root \'"$RPM_BUILD_ROOT"\'
+	;;
+esac
+
+
+%define docdir %{_prefix}/share/doc/%{name}-%{version}
 %files
-%defattr(-,root,root,-)
-%{_bindir}/rkhunter
-%dir %{_libdir}/rkhunter
-%doc %{_docdir}/rkhunter-%{version}
-%{_mandir}/man8/*
-%{_libdir}/rkhunter/scripts
-%dir %{_var}/rkhunter/tmp
-%{_var}/rkhunter/db
-%config(noreplace) %verify(not mtime) %{_sysconfdir}/rkhunter.conf
+%defattr(-,root,root)
+%attr(640,root,root) %config(noreplace) %verify(not mtime) %{_sysconfdir}/%{name}.conf
+%attr(750,root,root) %{_prefix}/bin/%{name}
+%attr(750,root,root) %dir %{_var}/%{name}
+%attr(750,root,root) %dir %{_var}/%{name}/db
+%attr(640,root,root) %verify(not mtime) %{_var}/%{name}/db/*.dat
+%attr(750,root,root) %dir %{_var}/%{name}/tmp
+%attr(750,root,root) %dir %{_libdir}/%{name}/scripts
+%attr(750,root,root) %{_libdir}/%{name}/scripts/*.pl
+%attr(750,root,root) %{_libdir}/%{name}/scripts/*.sh
+%attr(644,root,root) %{_mandir}/man8/%{name}.8
+%attr(750,root,root) %{docdir}
 %{_sysconfdir}/cron.daily/01-rkhunter
 
 
 %changelog
+* Sun Nov 12 2006 unSpawn - 1.2.9
+- Re-spec, new installer
+
 * Fri Sep 29 2006 unSpawn - 1.2.9
 - Updated for release 1.2.9
 
@@ -166,4 +133,5 @@ EOF
 
 * Mon Mar 29 2004 Doncho N. Gunchev - 1.0.0-0
 - initial .spec file
+
 
