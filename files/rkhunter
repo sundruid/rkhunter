@@ -262,9 +262,19 @@ scanrootkit_suckit_extra_checks() {
 				( touch ${randf} && test -f ${randf} && rm -f ${randf} || \
 					logtext "WARNING! ${SCAN_ROOTKIT} ${ext} hiding" )
 			done
-			# If we've got skdet (check Debian), let's use it too
+			# Plugin: skdet
 			if [ "$SKDETFOUND" = "1" ]; then
-				skdet -a 2>&1 | tr -s " " | grep -i 'invis'
+				# Skdet version
+				SKDETVER=`$SKDETBINARY -v | grep '^skdet.v' | awk -F'.' '{ print $1 }'`
+				case "${SKDETVER}" in
+					*v0)
+						$SKDETOPT="-a"
+						;;
+					*v1)
+						$SKDETOPT="-c"
+						;;
+				esac
+				$SKDETBINARY $SKDETOPT 2>&1 | tr -s " " | grep 'invis'
 			fi
 		else
 			logtext "Info: Extended suckit tests skipped, due to missing stat binary"
@@ -1733,7 +1743,7 @@ FINDFOUND=0; IFCONFIGFOUND=0; IPFOUND=0; LYNXFOUND=0;
 LSATTRFOUND=0; LSFOUND=0; LSMODFOUND=0; LSOFFOUND=0;
 NMAPFOUND=0; PERLFOUND=0;
 PSFOUND=0; STATFOUND=0; STRINGSFOUND=0; WGETFOUND=0;
-SKDETFOUND=0; READLINKFOUND=0;
+SKDETFOUND=0; READLINKFOUND=0; UNHIDEFOUND=0; 
 
 
 logtext "-------------------------- Application scan ---------------------------"
@@ -1753,7 +1763,8 @@ for I in ${BINPATHS}; do
 	J=${I}"/strings"; 	if [ -x ${J} ]; then logtext "Found ${J}"; STRINGSFOUND=1; 	 STRINGSBINARY=${J};    fi
 	J=${I}"/wget";    	if [ -x ${J} ]; then logtext "Found ${J}"; WGETFOUND=1;    	 WGETBINARY=${J};       fi
 	J=${I}"/skdet";    	if [ -x ${J} ]; then logtext "Found ${J}"; SKDETFOUND=1;    	 SKDETBINARY=${J};      fi
-	J=${I}"/readlink";    if [ -x ${J} ]; then logtext "Found ${J}"; READLINKFOUND=1;    	 READLINKBINARY=${J};   fi
+	J=${I}"/readlink";	if [ -x ${J} ]; then logtext "Found ${J}"; READLINKFOUND=1;    	 READLINKBINARY=${J};   fi
+	J=${I}"/unhide";	if [ -x ${J} ]; then logtext "Found ${J}"; UNHIDEFOUND=1;	 UNHIDEBINARY=${J};	fi
 
 	# Perl
 	J=${I}"/perl";
@@ -4037,6 +4048,25 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		insertlayout
 		displaytext -e "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
 		logtext --nodate "Skipped"
+	fi
+
+	if [ $UNHIDEFOUND -eq 1 ]; then
+		logtext -n "Scanning hidden processes... "
+		SIZE="30"
+		jump=`expr ${defaultcolumn} - ${SIZE}`
+	
+		UNHIDEPROCS=`${UNHIDEBINARY} sys | grep '^F' | awk -F':' '{ print $2 }'`
+		if [ ! "${UNHIDEPROCS}" = "" ]; then
+			insertlayout
+			displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+			logtext --nodate "Bad"
+			logtext "Warning! Hidden PIDs found: ${UNHIDEPROCS}"
+		else
+			insertlayout
+			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			logtext --nodate "OK"
+		fi
+		logtext "Scanned for hidden processes"
 	fi
 
 	if [ $CHKDEL -eq 1 ]; then
