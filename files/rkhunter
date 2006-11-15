@@ -2002,6 +2002,14 @@ do_system_check_initialisation() {
 	OZ_DIRS="${ROOTDIR}dev/.oz"
 
 
+	# PHALANX
+	PHALANX_FILES="${ROOTDIR}usr/share/.home.ph1/cb
+			${ROOTDIR}etc/host.ph1
+			${ROOTDIR}bin/host.ph1
+			${ROOTDIR}usr/share/.home.ph1/phalanx"
+	PHALANX_DIRS="${ROOTDIR}usr/share/.home.ph1"
+	PHALANX_KSYMS=""
+
 	# Portacelo
 	PORTACELO_FILES="${ROOTDIR}var/lib/.../.ak ${ROOTDIR}var/lib/.../.hk
 			 ${ROOTDIR}var/lib/.../.rs ${ROOTDIR}var/lib/.../.p
@@ -2879,6 +2887,14 @@ logtext "---------------------------- System checks ----------------------------
 	SCAN_KSYMS=${DUARAWKZ_KSYMS}
 	scanrootkit
 
+	# Enye LKM
+
+	SCAN_ROOTKIT="Enye LKM"
+	SCAN_FILES=${ENYELKM_FILES}
+	SCAN_DIRS=${ENYELKM_DIRS}
+	SCAN_KSYMS=${ENYELKM_KSYMS}
+	scanrootkit
+
 	# Flea Linux rootkit
 
 	SCAN_ROOTKIT="Flea Linux Rootkit"
@@ -2912,6 +2928,7 @@ logtext "---------------------------- System checks ----------------------------
 	scanrootkit
 
 	# Heroin
+
 	SCAN_ROOTKIT="Heroin LKM"
 	SCAN_FILES=${HEROIN_FILES}
 	SCAN_DIRS=${HEROIN_DIRS}
@@ -2919,6 +2936,7 @@ logtext "---------------------------- System checks ----------------------------
 	scanrootkit
 
 	# HjC Kit
+
 	SCAN_ROOTKIT="HjC Kit"
 	SCAN_FILES=${HJCKIT_FILES}
 	SCAN_DIRS=${HJCKIT_DIRS}
@@ -2981,6 +2999,14 @@ logtext "---------------------------- System checks ----------------------------
 	SCAN_KSYMS=${LOCKIT_KSYMS}
 	scanrootkit
 
+	# Mood-NT
+
+	SCAN_ROOTKIT="Mood-NT"
+	SCAN_FILES=${MOODNT_FILES}
+	SCAN_DIRS=${MOODNT_DIRS}
+	SCAN_KSYMS=${MOODNT_KSYMS}
+	scanrootkit
+
 	# MRK (MiCrobul RootKit?)
 
 	SCAN_ROOTKIT="MRK"
@@ -3020,6 +3046,40 @@ logtext "---------------------------- System checks ----------------------------
 	SCAN_DIRS=${OZ_DIRS}
 	SCAN_KSYMS=""
 	scanrootkit
+
+	# Phalanx
+
+	SCAN_ROOTKIT="Phalanx"
+	SCAN_FILES=${PHALANX_FILES}
+	SCAN_DIRS="${PHALANX_DIRS}"
+	SCAN_KSYMS="${PHALANX_KSYMS}"
+	scanrootkit
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		STATUS=0
+		SIZE=13
+
+		logtext "Debug: Phalanx (/bin/hostname)"
+		displaytext -n "   Phalanx (/bin/hostname)"
+
+		# Search for Phalanx in /bin/hostname
+		if [ -e /bin/hostname ]; then
+			if `grep -q 'phalanx' /bin/hostname >/dev/null 2>&1`; then
+				STATUS=1
+			fi
+		fi
+
+		if [ ${STATUS} -eq 0 ]; then
+			jump=`expr ${defaultcolumn} - ${SIZE}`
+			insertlayout
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+		else
+			jump=`expr ${defaultcolumn} - ${SIZE}`
+			insertlayout
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+			displaytext "${FOUNDTRACES}"
+		fi
+	fi
 
 	# Portacelo
 
