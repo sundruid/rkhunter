@@ -30,7 +30,7 @@ OPERATING_SYSTEM=`uname`
 
 if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	if [ -z "$RANDOM" ]; then
-		if [ -z "`which bash 2>&1 | grep '^no '`" ]; then
+		if [ -n "`which bash 2>/dev/null | grep '^/'`" ]; then
 			exec bash $0 $*
 		else
 			exec ksh $0 $*
@@ -57,7 +57,22 @@ AIX|OpenBSD|SunOS)
 *)
 	E="-e"
 	ECHOOPT=""
-	MYSHELL=bash
+
+
+	#
+	# We want to get the actual shell used by this program, and
+	# so we need to test /bin/sh.
+	#
+
+	MYSHELL=/bin/sh
+	test -h ${MYSHELL} && MYSHELL=`readlink ${MYSHELL} 2>/dev/null`
+	MYSHELL=`basename ${MYSHELL} 2>/dev/null`
+
+	if [ -z "${MYSHELL}" ]; then
+		MYSHELL=bash
+	elif [ "${MYSHELL}" = "dash" -o "${MYSHELL}" = "ash" ]; then
+		E=""
+	fi
 	;;
 esac
 
@@ -67,11 +82,6 @@ esac
 # Global function definitions
 #
 ######################################################################
-
-# Jump: set position
-jump() {
-	counter=${SIZE}
-}
 
 
 # Waitkeypress: wait for a keypress after some events
@@ -98,8 +108,14 @@ keypresspause() {
 
 # Logtext: add text to logfile
 logtext() {
+	test $NOLOG -eq 1 && return
+
 	# Add date/time to logfile
-	if [ ! "$1" = "--nodate" ]; then
+	if [ "$1" = "--nodate" ]; then
+		:
+	elif [ "$1" = "--indent" ]; then
+		echo -n "           " >>${LOGFILE}
+	else
 		echo -n "`date '+[%H:%M:%S] '`" >>${LOGFILE}
 	fi
 
@@ -114,7 +130,7 @@ logtext() {
 			echo $1 "$2" >>$LOGFILE
 		fi
 	else
-		if [ "$1" = "--nodate" ]; then
+		if [ "$1" = "--nodate" -o "$1" = "--indent" ]; then
 			echo $ECHOOPT "$2" >>$LOGFILE
 		else
 			echo $ECHOOPT "$1" >>$LOGFILE
@@ -224,7 +240,7 @@ scanrootkit() {
 
 	if [ "${SCAN_STATUS}" -eq 1 ]; then
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		INFECTED_COUNT=`expr ${INFECTED_COUNT} + 1`
 		INFECTED_NAMES="${INFECTED_NAMES}${SCAN_ROOTKIT} "
 		displaytext "${FOUNDTRACES}"
@@ -233,17 +249,17 @@ scanrootkit() {
 		waitkeypress
 	else
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	fi
 }
 
 
 scanrootkit_suckit_extra_checks() {
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-		if [ ${STATFOUND} -eq 1 ]; then
+		if [ -n "${STAT_CMD}" -a -z "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
 			# Let's check the amount of links /sbin/init has
 			unset i;
-			i=`stat -t /sbin/init | cut -d ' ' -f9`
+			i=`${STAT_CMD} -t /sbin/init | cut -d ' ' -f9`
 			case ${i} in
 			1)
 				;;
@@ -262,26 +278,113 @@ scanrootkit_suckit_extra_checks() {
 				( touch ${randf} && test -f ${randf} && rm -f ${randf} || \
 					logtext "WARNING! ${SCAN_ROOTKIT} ${ext} hiding" )
 			done
+
 			# Plugin: skdet
-			if [ "$SKDETFOUND" = "1" ]; then
+			SKDET_CMD=`find_cmd skdet`
+			if [ -n "${SKDET_CMD}" ]; then
 				# Skdet version
-				SKDETVER=`$SKDETBINARY -v | grep '^skdet.v' | awk -F'.' '{ print $1 }'`
+				SKDETVER=`${SKDET_CMD} -v 2>&1 | grep '^skdet.v' | awk -F'.' '{ print $1 }'`
 				case "${SKDETVER}" in
 					*v0)
-						$SKDETOPT="-a"
+						SKDETOPT="-a"
 						;;
 					*v1)
-						$SKDETOPT="-c"
+						SKDETOPT="-c"
 						;;
 				esac
-				$SKDETBINARY $SKDETOPT 2>&1 | tr -s " " | grep 'invis'
+				${SKDET_CMD} ${SKDETOPT} 2>&1 | tr -s " " | grep -i 'invis'
 			fi
 		else
-			logtext "Info: Extended suckit tests skipped, due to missing stat binary"
+			logtext "Info: Extended suckit tests skipped, due to missing stat command"
 		fi
 	else
-		logtext "Info: Extended suckit tests skipped for this operating system (no Linux architecture)"
+		logtext "Info: Extended suckit tests skipped for this operating system (not Linux architecture)"
 	fi
+}
+
+
+check_required_commands() {
+
+	#
+	# This function checks that some required commands are
+	# present on the system. The function takes one argument
+	# which is a list of directories to look in.
+	#
+
+	for CMD in grep sed tail; do
+		SEEN=0
+
+		for DIR in $1; do
+			test ! -d ${DIR} && continue
+
+			if [ -f "${DIR}/${CMD}" -a -x "${DIR}/${CMD}" ]; then
+				SEEN=1
+				break
+			fi
+		done
+
+		if [ $SEEN -eq 0 ]; then
+			echo "The command '$CMD' must be present on the system in order to run rkhunter."
+			exit 1
+		fi
+	done
+
+	return
+}
+
+
+check_commands() {
+# jh - need to check where perl is used - must verify that perl is available.
+
+	#
+	# We check for some commands used in the tests. If the command
+	# is found then a variable including the command name is set.
+	# These commands are not 'required', so nothing happens if the
+	# command is not found.
+	#
+
+	for CMD in ${CMDLIST}; do
+		UCMD=`echo ${CMD} | tr [a-z] [A-Z]`
+
+		eval ${UCMD}_CMD=`find_cmd ${CMD}`
+	done
+
+
+	#
+	# If we cannot find a stat command, then see if we can use the
+	# supplied perl script.
+	#
+
+	if [ -z "${STAT_CMD}" -a -n "${PERL_CMD}" ]; then
+		STAT_CMD=`find_cmd ${SCRIPT_PATH}/stat.pl`
+		test -n "${STAT_CMD}" && STAT_CMD="${PERL_CMD} ${STAT_CMD}"
+	fi
+
+	return
+}
+
+
+get_installdir_option() {
+
+	#
+	# This function obtains the RKH installation directory. It must
+	# be set by the installer script, and has no default.
+	#
+
+	INSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | tail -1 | sed -e 's/INSTALLDIR=//' | tr -d '"' | tr -s ' '`
+
+	if [ -z "${INSTALLDIR}" -o "${INSTALLDIR}" = " " ]; then
+		echo "Invalid INSTALLDIR configuration option - no installation directory specified."
+		exit 1
+	elif [ ! -d "${INSTALLDIR}" ]; then
+		echo "Installation directory does not exist: ${INSTALLDIR}"
+		exit 1
+	elif [ ! -r "${INSTALLDIR}" ]; then
+		echo "Installation directory is not readable: ${INSTALLDIR}"
+		exit 1
+	fi
+
+	return
 }
 
 
@@ -320,7 +423,9 @@ get_logfile_option() {
 	# Now check that the given option is useable.
 	#
 
-	if [ "${LOGFILE}" != "/dev/null" ]; then
+	if [ "${LOGFILE}" = "/dev/null" ]; then
+		APPEND_LOG=0
+	else
 		LOGDIR=`echo "${LOGFILE}" | sed -e 's/\/[^/][^/]*$//'`
 
 		if [ -z "`echo ${LOGDIR} | grep '/'`" ]; then
@@ -334,11 +439,17 @@ get_logfile_option() {
 			echo "Logfile directory does not exist: ${LOGFILE}"
 			exit 1
 		elif [ ! -w "${LOGDIR}" ]; then
-			echo "Logfile directory is unwritable: ${LOGFILE}"
+			echo "Logfile directory is not writable: ${LOGFILE}"
 			exit 1
-		elif [ -L "${LOGFILE}" ]; then
-			echo "Logfile is a symbolic (soft) link: ${LOGFILE}"
+		elif [ ! -r "${LOGDIR}" ]; then
+			echo "Logfile directory is not readable: ${LOGFILE}"
+			exit 1
+		elif [ -h "${LOGFILE}" ]; then
+			echo "Logfile is a symbolic link: ${LOGFILE}"
 			echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
+			exit 1
+		elif [ -e "${LOGFILE}" -a ! -f "${LOGFILE}" ]; then
+			echo "Logfile already exists but it is not a file: ${LOGFILE}"
 			exit 1
 		fi
 
@@ -364,18 +475,6 @@ get_logfile_option() {
 			else
 				APPEND_LOG=0
 			fi
-		fi
-
-		if [ -f ${LOGFILE} ]; then
-			if [ $APPEND_LOG -eq 0 ]; then
-				rm -f ${LOGFILE} >/dev/null 2>&1
-			else
-				logtext --nodate ""
-				logtext --nodate ""
-			fi
-		elif [ -e ${LOGFILE} ]; then
-			echo "Logfile already exists but it is not a file: ${LOGFILE}"
-			exit 1
 		fi
 	fi
 
@@ -421,7 +520,10 @@ get_tmpdir_option() {
 		echo "Temporary directory does not exist: ${TMPDIR}"
 		exit 1
 	elif [ ! -w "${TMPDIR}" ]; then
-		echo "Temporary directory is unwritable: ${TMPDIR}"
+		echo "Temporary directory is not writable: ${TMPDIR}"
+		exit 1
+	elif [ ! -r "${TMPDIR}" ]; then
+		echo "Temporary directory is not readable: ${TMPDIR}"
 		exit 1
 	fi
 
@@ -467,9 +569,64 @@ get_dbdir_option() {
 		echo "Database directory does not exist: ${DB_PATH}"
 		exit 1
 	elif [ ! -w "${DB_PATH}" ]; then
-		echo "Database directory is unwritable: ${DB_PATH}"
+		echo "Database directory is not writable: ${DB_PATH}"
+		exit 1
+	elif [ ! -r "${DB_PATH}" ]; then
+		echo "Database directory is not readable: ${DB_PATH}"
 		exit 1
 	fi
+
+	return
+}
+
+
+add_extra_dirs() {
+
+	#
+	# This functions takes care of any additional directories
+	# that may exist on some systems. After the function is called
+	# the value of EXTRA_DIRS must be added to whatever variable
+	# is being used.
+	#
+
+	EXTRA_DIRS=""
+
+	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+		#
+		# Add in some other directories, and those which
+		# contain the Sun 'companion' software.
+		#
+
+		test -d /usr/sfw && EXTRA_DIRS="${EXTRA_DIRS} /usr/sfw/bin /usr/sfw/sbin /usr/sfw/libexec"
+
+		test -d /opt/sfw && EXTRA_DIRS="${EXTRA_DIRS} /opt/sfw/bin /opt/sfw/sbin /opt/sfw/libexec"
+
+		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
+
+		test -d /usr/ccs/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/ccs/bin"
+	elif [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+		test -d /usr/pkg/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/bin"
+		test -d /usr/pkg/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/sbin"
+		test -d /usr/pkg/libexec && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/libexec"
+	elif [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
+		#
+		# Cater for Fink (Mac OSX) additional software.
+		#
+
+		test -d /sw/bin && EXTRA_DIRS="${EXTRA_DIRS} /sw/bin"
+		test -d /sw/sbin && EXTRA_DIRS="${EXTRA_DIRS} /sw/sbin"
+	fi
+
+
+	#
+	# Finally check if there are any optional
+	# bin and sbin directories present.
+	#
+
+	test -d /usr/opt/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/opt/bin"
+	test -d /usr/opt/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/opt/sbin"
+	test -d /opt/bin && EXTRA_DIRS="${EXTRA_DIRS} /opt/bin"
+	test -d /opt/sbin && EXTRA_DIRS="${EXTRA_DIRS} /opt/sbin"
 
 	return
 }
@@ -507,52 +664,27 @@ get_bindir_option() {
 
 			BINPATHS=${DFLT_BINPATHS}
 
-			if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-				#
-				# Under SunOS /bin is a link to /usr/bin, so
-				# there is no need to look in it.
-				#
 
-				if [ -L /bin ]; then
+			#
+			# Under SunOS /bin is a link to /usr/bin, so
+			# there is no need to look in it.
+			#
+
+			if [ "${OPERATING_SYSTEM}" = "SunOS" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
+				if [ -h /bin ]; then
 					B=""
 
-					for dir in ${BINPATHS}; do
-						test "$dir" != "/bin" && B="${B} $dir"
+					for DIR in ${BINPATHS}; do
+						test "${DIR}" != "/bin" && B="${B} ${DIR}"
 					done
 
 					BINPATHS=`echo ${B} | sed -e 's/^ *//'`
 				fi
-
-
-				#
-				# Add in directories which contain the Sun
-				# 'companion' software.
-				#
-
-				if [ -d /usr/sfw ]; then
-					BINPATHS="${BINPATHS} /usr/sfw/bin /usr/sfw/sbin /usr/sfw/libexec"
-				fi
-
-				if [ -d /opt/sfw ]; then
-					BINPATHS="${BINPATHS} /opt/sfw/bin /opt/sfw/sbin /opt/sfw/libexec"
-				fi
 			fi
 
 
-			#
-			# Cater for Fink (Mac OSX) additional software.
-			#
-
-			test -d /sw/bin && BINPATHS="${BINPATHS} /sw/bin"
-
-
-			#
-			# Finally check if there are any optional
-			# bin directories present.
-			#
-
-			test -d /usr/opt/bin && BINPATHS="${BINPATHS} /usr/opt/bin"
-			test -d /opt/bin && BINPATHS="${BINPATHS} /opt/bin"
+			add_extra_dirs
+			BINPATHS="${BINPATHS}${EXTRA_DIRS}"
 		fi
 	fi
 
@@ -562,21 +694,15 @@ get_bindir_option() {
 	# a '.' or '/', and that the directory exists.
 	#
 
-	LEAVE=0
-
-	for dir in ${BINPATHS}; do
-		if [ -z "`echo $dir | grep '^[./]'`" ]; then
-			LEAVE=1
-			echo "Invalid BINDIR directory: $dir"
-		elif [ ! -d $dir -a $USE_DFLT -eq 0 ]; then
-			LEAVE=1
-			echo "Non-existent BINDIR directory: $dir"
+	for DIR in ${BINPATHS}; do
+		if [ -z "`echo ${DIR} | grep '^[./]'`" ]; then
+			echo "Invalid BINDIR directory: ${DIR}"
+			exit 1
+		elif [ ! -d ${DIR} -a $USE_DFLT -eq 0 ]; then
+			echo "Non-existent BINDIR directory: ${DIR}"
+			exit 1
 		fi
 	done
-
-	if [ $LEAVE -eq 1 ]; then
-		exit 1
-	fi
 
 	return
 }
@@ -602,7 +728,7 @@ get_scriptdir_option() {
 			exit 1
 		fi
 	else
-		echo "Invalid SCRIPTDIR configuration option - no directory name specified."
+		echo "The SCRIPTDIR configuration option has not been set by the installer."
 		exit 1
 	fi
 
@@ -614,7 +740,7 @@ get_scriptdir_option() {
 		echo "Script directory does not exist: ${SCRIPT_PATH}"
 		exit 1
 	elif [ ! -r "${SCRIPT_PATH}" ]; then
-		echo "Script directory is unreadable: ${SCRIPT_PATH}"
+		echo "Script directory is not readable: ${SCRIPT_PATH}"
 		exit 1
 	fi
 
@@ -687,6 +813,9 @@ get_rootdir_option() {
 	if [ ! -d "${ROOTDIR}" ]; then
 		echo "The root directory does not exist: ${ROOTDIR}"
 		exit 1
+	elif [ ! -r "${ROOTDIR}" ]; then
+		echo "The root directory is not readable: ${ROOTDIR}"
+		exit 1
 	fi
 
 	return
@@ -723,7 +852,7 @@ get_mailonwarn_option() {
 				exit 1
 			fi
 		else
-			MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${hostname}\""
+			MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
 		fi
 
 
@@ -857,9 +986,15 @@ get_if_prelinked() {
 
 		if [ -n "${PRELINK_CMD}" ]; then
 			PRELINKED=1
+
+			RUNCON_CMD=`find_cmd runcon`
+
+			if [ -n "${RUNCON_CMD}" ]; then
+				PRELINK_CMD="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD}"
+			fi
 		else
 			SKIP_HASHCHECK=1
-			PRELINK_WARN="Warning: This system uses prelinking, but no prelink command can be found."
+			PRELINK_WARN="Warning: This system uses prelinking, but no prelink command can be found.\n    The file hash check will be skipped."
 		fi
 	fi
 
@@ -902,13 +1037,17 @@ get_md5_cmd() {
 
 			if [ -z "${MD5_CMD}" ]; then
 				MD5_CMD=`find_cmd md5`
+
+				if [ "${OPERATING_SYSTEM}" = "NetBSD" -a "${MD5_CMD}" = "/usr/bin/md5" ]; then
+					MD5_CMD="${MD5_CMD} -n"
+				fi
 			fi
 
-			if [ -z "${MD5_CMD}" ]; then
-				MOD_INSTALLED=`${SCRIPT_PATH}/check_modules.pl | grep 'Digest::MD5 installed'`
+			if [ -z "${MD5_CMD}" -a -n "${PERL_CMD}" ]; then
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl 2>&1 | grep 'Digest::MD5 installed'`
 
 				if [ -n "${MOD_INSTALLED}" ]; then
-					MD5_CMD="${SCRIPT_PATH}/filehashmd5.pl"
+					MD5_CMD="${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
 				fi
 			fi
 		fi
@@ -986,13 +1125,17 @@ get_hash_function() {
 
 		if [ -z "${HF}" ]; then
 			HF=`find_cmd sha1`
+
+			if [ "${HF}" = "/usr/bin/sha1" -a "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+				HF="${HF} -n"
+			fi
 		fi
 
-		if [ -z "${HF}" ]; then
-			MOD_INSTALLED=`${SCRIPT_PATH}/check_modules.pl | grep 'Digest::SHA1 installed'`
+		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl | grep 'Digest::SHA1 installed'`
 
 			if [ -n "${MOD_INSTALLED}" ]; then
-				HASH_FUNC="${SCRIPT_PATH}/filehashsha1.pl"
+				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha1.pl"
 			else
 				HASH_FUNC=""
 			fi
@@ -1046,6 +1189,10 @@ get_configfile_options() {
 	# and, if not, then if it is specified in the configuration file.
 	#
 
+	get_installdir_option
+
+	get_bindir_option
+
 	get_logfile_option
 
 	get_tmpdir_option
@@ -1054,19 +1201,31 @@ get_configfile_options() {
 
 	get_scriptdir_option
 
-	get_bindir_option
-
 	get_rootdir_option
 
 	get_mailonwarn_option
 
 
 	#
-	# We only need the hash function options if we are going to
-	# be checking the system or updating the hash database.
+	# Now that we have processed BINDIR, we will recheck the
+	# required commands.
+	#
+	# Before proceeding too far we also check that we have certain
+	# commands available. Typically these are commands which might
+	# not have been installed as part of the core system, but are
+	# used by RKH. These commands are not 'required' though.
 	#
 
-	if [ $CHECK -eq 1 -o $HASH_UPDATE -eq 1 ]; then
+	check_required_commands "${BINPATHS}"
+
+	check_commands
+
+
+	#
+	# Some options are only required when checking the system.
+	#
+
+	if [ $CHECK -eq 1 ]; then
 		get_allow_rootssh_option
 
 		get_auto_x_option
@@ -1078,15 +1237,23 @@ get_configfile_options() {
 		#
 
 		test $PERFORMKNOWNBAD -eq 1 && get_md5_cmd
+	fi
 
 
+	#
+	# We only need the hash function options if we are going to
+	# be checking the system or updating the hash database.
+	#
+
+	if [ $CHECK -eq 1 -o $HASH_UPDATE -eq 1 ]; then
 		#
 		# For the file hash check we need to find out if we are
 		# a prelinked system, and if so, then find out which
-		# hash function to use.
+		# hash function to use. We also need to find the 'stat'
+		# command.
 		#
 
-		if [ $SKIP_HASHCHECK -eq 0 ]; then
+		if [ $SKIP_HASHCHECK -eq 0 -o $HASH_UPDATE -eq 1 ]; then
 			get_if_prelinked
 
 			test $SKIP_HASHCHECK -eq 0 && get_hash_function
@@ -1097,1533 +1264,1090 @@ get_configfile_options() {
 }
 
 
-do_hash_update() {
+rkh_dat_set_version() {
+
+	#
+	# This function calculates and writes out the 'Version:' value
+	# for the rkhunter.dat file. It looks for an old value, and adds
+	# one to it. If there is no value then simply start at one.
+	#
+
+	TODAY=`date +%Y%m%d`
+
+	OLDVER=`grep '^Version:' ${RKHDAT_FILE} 2>/dev/null | tail -1 | cut -d: -f2`
+
+	if [ -n "${OLDVER}" ]; then
+		OLDVER=`echo "${OLDVER}" | cut -c9-10`
+
+		if [ "${OLDVER}" = "99" ]; then
+			NEWVER="00"
+		else
+			NEWVER=`expr ${OLDVER} + 1`
+			test $NEWVER -lt 10 && NEWVER="0${NEWVER}"
+		fi
+	else
+		NEWVER="00"
+	fi
+
+	echo "Version:${TODAY}${NEWVER}" >>${RKHDAT_FILE}
 
 	return
 }
 
 
-help() {
+rkh_dat_get_os_info() {
 
-	echo ""
-	echo "Usage: rkhunter (--checkall | --cronjob | --update | --hashupd |"
-	echo "                 --versioncheck | --version | --help) [option]..."
-	echo ""
+	#
+	# This function obtains information about the local computer
+	# system. This is then written into the rkhunter.dat file
+	# using a simple 'keyword:<value>' format. The OSNAME and
+	# ARCH values are not important, but are simply used to check
+	# whether they have changed since RKH was last run.
+	#
+	# Obtaining the OSNAME is somewhat tricky. There is no sure
+	# way of finding the information, so we have to use some tricks
+	# to locate the correct file. First we look for certain specific
+	# O/S release files, and then at the /etc/release file, but not
+	# if it is a link. Next we look for a generic /etc/*-release
+	# file, again not as a link. This should find most O/S versions.
+	# Overall this should also save users having to ask us to support
+	# their O/S. In other cases, we will have to ask what file does
+	# contain their O/S release information.
+	#
 
-	echo "Current options are:"
-	echo "       --append-log                    Append to the logfile, do not overwrite"
-	echo "       --bindir '<bindir>...'          Use <bindir> instead of default"
-	echo "                                       command directories"
-	echo "   -c, --checkall                      Check the local system"
-	echo "       --color-set2                    Use second color set for output"
-	echo "       --configfile <file>             Use specified configuration file"
-	echo "       --cronjob                       Run as a cronjob"
-	echo "                                       (implies -c, -sk and --nocolors options)"
-	echo "       --dbdir <dir>                   Use specified database directory"
-	echo "       --display-logfile               Display the logfile at the end"
-	echo "       --hash                          Specify the hash function to use"
-	echo "       --hashupd                       Update the local file hash database"
-	echo "   -h, --help                          Display this help menu and exit"
-	echo "   -l, --logfile [logfile]             Write to a logfile"
-	echo "                                       (default is $DFLT_LOGFILE)"
-	echo "       --md5                           Specify the MD5 command to use for the"
-	echo "                                       'known bad' hash check"
-	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
-	echo "       --nocolors                      Use black and white output"
-	echo "       --nolog                         Do not write to a logfile"
-	echo "   -q, --quiet                         Quiet mode (only show warnings)"
-	echo "       --report-mode                   Only show interesting information"
-	echo "       --report-warnings-only          Show only warnings (less output than"
-	echo "                                       --report-mode more than --quiet)"
-	echo "   -r, --rootdir <rootdir>             Use <rootdir> instead of '/'"
-	echo "  -sk, --skip-keypress                 Don't wait for a keypress after each test"
-	echo "       --tmpdir <tempdir>              Use specified temporary directory"
-	echo "       --update                        Check for updates to database files"
-	echo "   -V, --version                       Display version and exit"
-	echo "       --versioncheck                  Check for latest version of program"
-	echo "   -x                                  Do not automatically detect if X is in use"
-	echo "   -X                                  Automatically detect if X is in use"
-	echo ""
+	ARCH=`uname -m 2>/dev/null`
 
-	echo "Specific scan options:"
-	echo "       --allow-ssh-root-user           Allow the 'root can login via SSH' check"
-	echo "       --check-deleted                 Perform a 'deleted files' check"
-	echo "       --check-listen                  Perform a 'listening applications' check"
-	echo "       --dac, --disable-application-check"
-	echo "                                       Disable application version checks"
-	echo "       --dhc, --disable-hash-check     Disable the hash checks"
-	echo "       --dpc, --disable-passwd-check   Disable passwd/group file checks"
-	echo "       --scan-knownbad-files           Perform a 'known bad' MD5 hash check"
-	echo ""
+	REL_FILES="${ROOTDIR}etc/lsb-release ${ROOTDIR}etc/debian_version ${ROOTDIR}etc/slackware-version ${ROOTDIR}var/ipcop/general-functions.pl ${ROOTDIR}etc/release ${ROOTDIR}etc/*-release"
 
-	return
-}
+	for FNAME in ${REL_FILES}; do
+		if [ -f "${FNAME}" -a ! -h "${FNAME}" ]; then
+			RELEASE=${FNAME}
 
-######################################################################
-#
-# End of global function definitions
-#
-######################################################################
+			case "${RELEASE}" in
+			${ROOTDIR}etc/lsb-release)
+				OSNAME=`cat ${RELEASE} | grep '^DISTRIB_DESCRIPTION=' | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
+				;;
+			${ROOTDIR}etc/SuSE-release)
+				OSNAME=`grep -i 'SuSE Linux' ${RELEASE}`
+				;;
+			${ROOTDIR}etc/SLOX-release)
+				OSNAME=`grep -i 'SuSE Linux' ${RELEASE}`
+				;;
+			${ROOTDIR}etc/gentoo-release)
+				if [ -h ${ROOTDIR}etc/make.profile ]; then
+					OSNAME="Gentoo `ls -l ${ROOTDIR}etc/make.profile 2>/dev/null | sed -e 's/^.*\/\([^\/]*\)$/\1/'`"
+				else
+					OSNAME=`head -n 1 ${RELEASE} | tr -s ' '`
+				fi
+				;;
+			${ROOTDIR}var/ipcop/general-functions.pl)
+				OSNAME=`grep 'version *=' ${RELEASE} | head -n 1`
+				;;
+			${ROOTDIR}etc/debian_version)
+				OSNAME="Debian `cat ${RELEASE}`"
+				;;
+			*)
+				OSNAME=`head -n 1 ${RELEASE} | tr -s ' '`
+				;;
+			esac
+
+			test "${OSNAME}" = " " && OSNAME=""
 
 
-#
-# First we initialise variables used throughout the program.
-#
+			#
+			# If we have a release file but the first line seems
+			# to be blank, we take a quick look at the second
+			# line.
+			#
 
-PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="1.2.9"
-PROGRAM_copyright_owner="Michael Boelen"
-PROGRAM_copyright="Copyright (c) 2003-2006, ${PROGRAM_copyright_owner}"
-PROGRAM_license="
-${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
+			if [ -z "${OSNAME}" -a `wc -l ${RELEASE} | awk '{ print $1 }'` -gt 1 ]; then
+				OSNAME=`head -n 2 ${RELEASE} | tail -1 | tr -s ' '`
+			fi
 
-Under active development by the ${PROGRAM_NAME} project team. For reporting
-bugs, updates, patches, comments and questions please go to: http://rkhunter.sourceforge.net
-
-${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY. This is free software,
-and you are welcome to redistribute it under the terms of the GNU General
-Public License. See LICENSE for details.
-"
-
-# Set to run as a cronjob
-CRONJOB=0
-CHECK=0
-
-# Set to display the logfile at the end
-CATLOGFILE=0
-
-LOGFILE=""
-DFLT_LOGFILE="/var/log/rkhunter.log"
-
-# Set to have the logfile appended to rather than overwritten.
-APPEND_LOG=0
-APPEND_OPT=0
-
-DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
-
-MD5_CMD=""
-HASH_FUNC=""
-
-PRELINKED=0
-PRELINK_CMD=""
-PRELINK_WARN=""
-
-UPDATE=0
-HASH_UPDATE=0
-VERSIONCHECK=0
-
-# By default use coloured output.
-COLORS=1
-CLRSET2=0
-
-# Set to automatically detect if X is in use, and hence use the second colour set.
-AUTO_X_DTCT=0
-AUTO_X_OPT=0
-
-# Set to skip the hash checks
-HASHOPT=0
-SKIP_HASHCHECK=0
-HASHCHECK_WARN=""
-
-# Set to skip the passwd/group check
-SKIP_PASSWDCHECK=0
-
-# Perform the application check
-APPLICATION_CHECK=1
-VULNERABLE_ITEM_COUNT=0
-
-# Patched software versions?
-USE_PATCHED_SOFTWARE=0
-
-CHKDEL=0
-CHKLISTEN=0
-
-PREVIOUSTEXT=""
-
-# Set to be quiet (only show warnings)
-QUIET=0
-
-# Set to only show warnings
-SHOWWARNINGSONLY=0
-
-# Set to perform check of known bad checksums
-PERFORMKNOWNBAD=0
-
-ROOTDIR="/"
-
-# Set to use report mode (do not show footer and make a 'professional' report)
-REPORTMODE=0
-
-# Default 'id' command. Solaris will reset this.
-ID_CMD="id"
-
-# Wait for a keypress after each test
-PAUSEAFTERTESTS=1
-
-# Wait for a keypress after a warning
-WAITONWARNING=1
-
-# Is the operating system Gentoo?
-GENTOO=0
-
-# Set to allow SSH root login
-ALLOW_SSH_ROOT_USER=0
-
-INFECTED_COUNT=0
-INFECTED_NAMES=""
-SCANNED_COUNT=0
-HASH_COUNT=0
-HASH_DIFFERENT=0
-
-FOUNDFILE=0
-FOUNDRCSIGNS=0
-
-# Initialize grsec (grsec check)
-GRSECINSTALLED=0
-
-# This is set if a problem is found
-WARNING=0
-
-# Default display column width
-defaultcolumn=60
-
-# Initialise default status
-STATUS=0
-
-# Record for logging the command-line being used
-CMD_LINE="$0 $*"
-
-# Create a spaced-separated PATH variable
-SPACEDPATH=`echo ${PATH} | tr : ' '`
+			test -n "${OSNAME}" && break
+		fi
+	done
 
 
-#
-# Display the help menu if no options were given.
-#
+	test -z "${OSNAME}" && RELEASE=""
 
-if [ $# -eq 0 ]; then
-	help
-	exit 0
-fi
-
-
-#
-# Check the command-line options. If set, these will override the
-# configuration file options.
-#
-
-while [ $# -ge 1 ]; do
-	case $1 in
-	--allow-ssh-root-user)
-		ALLOW_SSH_ROOT_USER=1
+	case "${OPERATING_SYSTEM}" in
+	SunOS)
+		ARCH=`uname -p`
 		;;
-	--append-log | --appendlog)
-		APPEND_LOG=1
-		APPEND_OPT=1
+	FreeBSD)
+		ARCH=`sysctl -n hw.machine_arch 2>/dev/null`
+		OSNAME=`uname -v | cut -d' ' -f1,2`
 		;;
-	-c | --check | --checkall)
-		CHECK=1
+	OpenBSD)
+		OSNAME="OpenBSD `uname -r`"
 		;;
-	--check-deleted)
-		CHKDEL=1
+	Darwin)
+		OSNAME=`sw_vers 2>/dev/null | grep 'ProductName' | sed -e 's/^ProductName: *//'`
+		OSNAME="${OSNAME} `sysctl kern.version 2>/dev/null | sed -e 's/^kern.version = //' | cut -d: -f1`"
 		;;
-	--check-listen)
-		CHKLISTEN=1
-		;;
-	--cs2 | --colorset2 | --color-set2)
-		CLRSET2=1
-		;;
-	--bindir)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			BINPATHS="$1"
-			;;
-		esac
-		;;
-	--configfile)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			CONFIGFILE="$1"
-			;;
-		esac
-		;;
-	--cronjob)
-		CHECK=1
-		CRONJOB=1
-		COLORS=0
-		PAUSEAFTERTESTS=0
-		WAITONWARNING=0
-		;;
-	-l | --log | --logfile | --createlogfile | --createlog | --create-log | --create-logfile)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			LOGFILE="$1"
-			;;
-		esac
-		;;
-	--dbdir)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			DB_PATH="$1"
-			;;
-		esac
-		;;
-	--disable-application-check | --disable-applicationcheck | --dac | --skip-application-check | --skipapplicationcheck | --skip-applicationcheck)
-		APPLICATION_CHECK=0
-		;;
-	--disable-hash-check | --disable-hashcheck | --dhc | --disable-md5-check | --disable-md5check | --dmc)
-		HASHOPT=1
-		SKIP_HASHCHECK=1
-		;;
-	--disable-passwd-check | --dpc)
-		SKIP_PASSWDCHECK=1
-		;;
-	--display-logfile | --displaylogfile | --display-log | --displaylog)
-		CATLOGFILE=1
-		;;
-	--hash)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			HASH_FUNC="$1"
-			;;
-		esac
-		;;
-	--hashupd | --hash-update | --hashupdate)
-		HASH_UPDATE=1
-		;;
-	-h | --help)
-		help
-		exit 0
-		;;
-	--md5)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			MD5_CMD="$1"
-			;;
-		esac
-		;;
-	--noappend-log | --no-append-log | --noappendlog)
-		APPEND_LOG=0
-		APPEND_OPT=1
-		;;
-	--nocolors | --no-colors | --nocolor | --no-color)
-		COLORS=0
-		;;
-	--nolog | --no-log)
-		LOGFILE="/dev/null"
-		;;
-	-q | --quiet)
-		QUIET=1
-		;;
-	--report-mode | --reportmode)
-		QUIET=1
-		REPORTMODE=1
-		;;
-	--report-warnings-only)
-		QUIET=1
-		SHOWWARNINGSONLY=1
-		;;
-	-r | --rootdir)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			ROOTDIR="$1"
-			;;
-		esac
-		;;
-	--scan-knownbad-files)
-		PERFORMKNOWNBAD=1
-		;;
-	--skip-keypress | --skipkeypress | -sk)
-		PAUSEAFTERTESTS=0
-		WAITONWARNING=0
-		;;
-	--tmpdir)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			TMPDIR="$1"
-			;;
-		esac
-		;;
-	--update)
-		UPDATE=1
-		;;
-	-V | --version)
-		echo $ECHOOPT "${PROGRAM_NAME} ${PROGRAM_version}"
-		exit 0
-		;;
-	--versioncheck)
-		VERSIONCHECK=1
-		;;
-	-x)
-		AUTO_X_OPT=1
-		AUTO_X_DTCT=0
-		;;
-	-X)
-		AUTO_X_OPT=1
-		AUTO_X_DTCT=1
-		;;
-	*)
-		echo "Invalid option specified: $1"
-		exit 1
+	AIX)
+		ARCH=`uname -p`
+		OSNAME="IBM AIX `oslevel`"
 		;;
 	esac
 
-	shift
-done
+	return
+}
 
 
-#
-# We first check that we are root. If we are not, then only the
-# help and version options are valid.
-#
+get_hash_value() {
 
-test "${OPERATING_SYSTEM}" = "SunOS" && ID_CMD="/usr/xpg4/bin/id"
+	#
+	# This function simply runs the hash function command for the
+	# given file. The environment variable HCMD must have been
+	# previously set to the command to use.
+	#
 
-if [ "`${ID_CMD} -u`" != "0" ]; then
-	echo "You must be the root user to run this program."
-	exit 1
-fi
+	HSHVAL=`${HCMD} $1 2>/dev/null`
 
-
-#
-# Now we check for the configuration file, and then check the various
-# variables within it.
-#
-
-if [ -z "${CONFIGFILE}" ]; then
-	if [ -f /etc/rkhunter.conf ]; then
-		CONFIGFILE="/etc/rkhunter.conf"
+	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
+		echo ${HSHVAL} | cut -d' ' -f4 | tr -d ' '
 	else
-		CONFIGFILE="/usr/local/etc/rkhunter.conf"
-	fi
-fi
-
-if [ ! -f ${CONFIGFILE} ]; then
-	echo "Unable to find configuration file: ${CONFIGFILE}"
-	exit 1
-fi
-
-
-INSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | tail -1 | sed -e 's/INSTALLDIR=//'`
-
-if [ -z "${INSTALLDIR}" ]; then
-	echo "Unable to find INSTALLDIR option in configuration file: ${CONFIGFILE}"
-	exit 1
-elif [ ! -d "${INSTALLDIR}" ]; then
-	echo "Installation directory does not exist: ${CONFIGFILE}"
-	exit 1
-fi
-
-
-get_configfile_options
-
-
-#
-# Next set up some final variables based on the combination
-# of options we have been given.
-#
-
-if [ $CHECK -eq 1 ]; then
-	#
-	# If the logfile has been disabled, then we cannot let the program
-	# run when certain options are used. If we did, the user would see
-	# no output and might assume that all was well.
-	#
-
-	if [ "${LOGFILE}" = "/dev/null" ]; then
-		if [ $SHOWWARNINGSONLY -eq 1 ]; then
-			echo "The logfile has been disabled - unable to report warnings."
-			exit 1
-		fi
-
-		if [ $CATLOGFILE -eq 1 ]; then
-			echo "The logfile has been disabled - unable to display the log file."
-			exit 1
-		fi
+		echo ${HSHVAL} | cut -d' ' -f1
 	fi
 
+	return
+}
+
+
+rkh_dat_set_file_hash() {
 
 	#
-	# To perform the 'known bad' check requires an MD5 command.
+	# This function determines various bits of information about
+	# the files to be checked. The format in the rkhunter.dat file is:
+	#
+	#     File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
+	#          <date/time modified>
 	#
 
-	if [ $PERFORMKNOWNBAD -eq 1 -a -z "${MD5_CMD}" ]; then
-		echo "Unable to perform 'known bad' check - no MD5 command can be found."
-		exit 1
-	fi
-
-
 	#
-	# Set up the colors to be used.
+	# To save time in the loops below, we determine the exact commands
+	# required before entering them.
 	#
 
-	if [ $COLORS -eq 1 ]; then
-		NORMAL="[0;39m"		# Foreground colour to default
-
-		if [ $CLRSET2 -eq 0 ]; then
-			RED="[1;31m"		# Bright red
-			GREEN="[1;32m"	# Bright green
-			YELLOW="[1;33m"	# Bright yellow
-			WHITE="[1;37m"	# White
-		else
-			RED="[1;31m"		# Bright red
-			GREEN="[0;32m"	# Green
-			YELLOW="[0;35m"	# Purple
-			WHITE="[0;30m"	# Black
-		fi
-	fi
-fi
-
-
-#
-# If we can find no hash function to use, then skip the
-# check or update.
-#
-
-if [ $CHECK -eq 1 -o $HASH_UPDATE -eq 1 ]; then
-	if [ -z "${HASH_FUNC}" ]; then
-		SKIP_HASHCHECK=1
-		HASHCHECK_WARN="Warning: Unable to find any hash function command to perform hash checks."
-	fi
-fi
-
-
-hostname=`hostname`
-
-BEGINTIME=`perl -e 'printf "%d\n", time;'`
-
-FOUNDTRACES="
----------------------------------------------------------------------------------
-Found parts of this rootkit/trojan by checking the default files and directories.
-Please inspect the available files, by checking the logfile ($LOGFILE).
----------------------------------------------------------------------------------
-"
-
-
-#
-# Write out various information messages to the logfile.
-#
-
-if [ -n "${hostname}" ]; then
-	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${hostname}"
-else
-	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version}"
-fi
-
-logtext --nodate "${PROGRAM_license}"
-
-logtext "Info: Start date is `date`"
-
-logtext "Info: Environment shell is ${SHELL}; rkhunter is using ${MYSHELL}"
-
-logtext "Info: Command line is ${CMD_LINE}"
-
-logtext "Parsing configuration file ${CONFIGFILE}"
-
-if [ -z "${MAILONWARNING}" ]; then
-	logtext "Info: No mail-on-warning address configured"
-else
-	logtext "Info: Emailing warnings to \"${MAILONWARNING}\" using command \"${MAIL_CMD}\""
-fi
-
-logtext "Info: Using ${TMPDIR} as temporary directory"
-
-if [ "${TMPDIR}" = "/tmp" ]; then
-	logtext "Warning: Do not use /tmp as your temporary directory. It will contain"
-	logtext "some important system files! Please choose another directory in"
-	logtext "your configuration file, or use the --tmpdir command-line option."
-	displaytext "Warning! Using /tmp as your temporary directory can be a security risk!"
-	displaytext "Check the logfile for more information about this issue."
-fi
-
-logtext "Info: Using ${DB_PATH} as database directory"
-
-logtext "Info: Using ${SCRIPT_PATH} as script directory"
-
-if [ $ALLOW_SSH_ROOT_USER -eq 1 ]; then
-	logtext "Info: Explicit option set to allow root logins via SSH (don't mark test BAD when"
-	logtext "rkhunter finds it in the SSH configuration file)"
-fi
-
-logtext "Info: Using '${BINPATHS}' as command directories"
-
-test -n "${PRELINK_WARN}" && logtext "${PRELINK_WARN}"
-
-test -n "${HASHCHECK_WARN}" && logtext "${HASHCHECK_WARN}"
-
-
-if [ $SKIP_HASHCHECK -eq 0 ]; then
-	if [ $PRELINKED -eq 1 ]; then
-		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
-		if [ -z "`echo ${HCMD} | egrep -i 'sha1|md5'`" ]; then
-			logtext "Warning: This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
-		elif [ -n "`echo ${HCMD} | egrep -i 'sha1'`" ]; then
-			logtext "Info: System is using prelinking - using SHA1 (${HASH_FUNC}) for hash checks"
-		else
-			logtext "Info: System is using prelinking - using MD5 (${HASH_FUNC}) for hash checks"
-		fi
+	if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
+		SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
 	else
-		logtext "Info: System is not using prelinking"
-
-		if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
-			logtext "Info: Using the perl script for SHA1 hash checks"
-		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
-			logtext "Info: Using the perl script for MD5 hash checks"
+		if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
 		else
-			logtext "Info: Using ${HASH_FUNC} for the hash checks"
+			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
 		fi
 	fi
-fi
 
-if [ $PERFORMKNOWNBAD -eq 1 ]; then
-	if [ -n "`echo "${MD5_CMD}" | grep '/filehashmd5\.pl$'`" ]; then
-		logtext "Info: Using the perl script for 'known bad' MD5 hash checks"
+	if [ $PRELINKED -eq 0 ]; then
+		HCMD=${HASH_FUNC}
 	else
-		logtext "Info: Using ${MD5_CMD} for the 'known bad' MD5 hash checks"
+		if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
+			HCMD="${PRELINK_CMD} --verify --md5"
+		else
+			HCMD="${PRELINK_CMD} --verify --sha"
+		fi
 	fi
-fi
 
 
-#
-# Carry out the local file hash database update if requested.
-#
+	#
+	# Now loop through the directories looking for the files.
+	#
 
-if [ $HASH_UPDATE -eq 1 ]; then
-	do_hash_update
-fi
+# jh - set counters in this loop to record how many hashes out of how many were added.
+	for DIR in ${HASHDIRS}; do
+		test ! -d ${DIR} && continue
+
+		for FNAME in ${HASHFILES}; do
+			test ! -f ${DIR}/${FNAME} && continue
+
+			SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
+
+			FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+
+			echo "File:${DIR}/${FNAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
+		done
+	done
+
+	return
+}
 
 
-##################################################################################################
-#
-# Application checks
-#
-##################################################################################################
+do_hash_update() {
 
-FINDFOUND=0; IFCONFIGFOUND=0; IPFOUND=0; LYNXFOUND=0;
-LSATTRFOUND=0; LSFOUND=0; LSMODFOUND=0; LSOFFOUND=0;
-NMAPFOUND=0; PERLFOUND=0;
-PSFOUND=0; STATFOUND=0; STRINGSFOUND=0; WGETFOUND=0;
-SKDETFOUND=0; READLINKFOUND=0; UNHIDEFOUND=0; 
+	#
+	# This function updates the local hosts rkhunter.dat file
+	# with O/S information and file hash values.
+	#
 
+	#
+	# If the rkhunter.dat file is a link then we alert the user.
+	# This is a security problem, because we are about to
+	# write a lot of data to the file.
+	#
 
-logtext "-------------------------- Application scan ---------------------------"
+	if [ -h "${DB_PATH}/rkhunter.dat" ]; then
+		echo "The rkhunter.dat file is a symbolic link: ${DB_PATH}/rkhunter.dat"
+		echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
 
-for I in ${BINPATHS}; do
-	J=${I}"/find";      	if [ -x ${J} ]; then logtext "Found ${J}"; FINDFOUND=1;    	 FINDBINARY=${J};      	fi
-	J=${I}"/ip";      	if [ -x ${J} ]; then logtext "Found ${J}"; IPFOUND=1;    	 IPBINARY=${J};      	fi
-	J=${I}"/ifconfig";	if [ -x ${J} ]; then logtext "Found ${J}"; IFCONFIGFOUND=1;      IFCONFIGBINARY=${J};   fi
-	J=${I}"/lynx";    	if [ -x ${J} ]; then logtext "Found ${J}"; LYNXFOUND=1;	 	 LYNXBINARY=${J};       fi
-	J=${I}"/ls";      	if [ -x ${J} ]; then logtext "Found ${J}"; LSFOUND=1;   	 LSBINARY=${J};         fi
-	J=${I}"/lsattr";     	if [ -x ${J} ]; then logtext "Found ${J}"; LSATTRFOUND=1;  	 LSATTRBINARY=${J};     fi
-	J=${I}"/lsmod";      	if [ -x ${J} ]; then logtext "Found ${J}"; LSMODFOUND=1;    	 LSMODBINARY=${J};      fi
-	J=${I}"/lsof";    	if [ -x ${J} ]; then logtext "Found ${J}"; LSOFFOUND=1;    	 LSOFBINARY=${J};       fi
-	J=${I}"/nmap";    	if [ -x ${J} ]; then logtext "Found ${J}"; NMAPFOUND=1;    	 NMAPBINARY=${J};       fi
-	J=${I}"/ps";      	if [ -x ${J} ]; then logtext "Found ${J}"; PSFOUND=1;      	 PSBINARY=${J};         fi
-	J=${I}"/stat";		if [ -x ${J} ]; then logtext "Found ${J}"; STATFOUND=1;	   	 STATBINARY=${J};       fi
-	J=${I}"/strings"; 	if [ -x ${J} ]; then logtext "Found ${J}"; STRINGSFOUND=1; 	 STRINGSBINARY=${J};    fi
-	J=${I}"/wget";    	if [ -x ${J} ]; then logtext "Found ${J}"; WGETFOUND=1;    	 WGETBINARY=${J};       fi
-	J=${I}"/skdet";    	if [ -x ${J} ]; then logtext "Found ${J}"; SKDETFOUND=1;    	 SKDETBINARY=${J};      fi
-	J=${I}"/readlink";	if [ -x ${J} ]; then logtext "Found ${J}"; READLINKFOUND=1;    	 READLINKBINARY=${J};   fi
-	J=${I}"/unhide";	if [ -x ${J} ]; then logtext "Found ${J}"; UNHIDEFOUND=1;	 UNHIDEBINARY=${J};	fi
-
-	# Perl
-	J=${I}"/perl";
-	if [ -x ${J} ]; then
-		PERLFOUND=1
-		PERLBINARY=${J}
-		#PERLVERSION=`${J} -V:version | tr -d "version" | tr -d '=' | tr -d "'" | tr -d ";" `
-		PERLVERSION=`${J} -V:version | ${J} -pi -e "s/^version='(.*)';$/\1/"`
-		logtext "Found ${J} (version ${PERLVERSION})"
+		RET_CODE=1
+		return
 	fi
-done
-
-if [ "${WGETFOUND}" -eq 1 ]; then
-	logtext "Info: WGET found"
-else
-	logtext "Info: WGET not found"
-fi
-
-if [ "${NMAPFOUND}" -eq 1 ]; then
-	logtext "Info: NMAP found"
-else
-	logtext "Info: NMAP not found"
-fi
-
-if [ "${LSOFFOUND}" -eq 1 ]; then
-	logtext "Info: LSOF found"
-else
-	logtext "Info: LSOF not found"
-fi
-
-if [ "${IPFOUND}" -eq 1 ]; then
-	logtext "Info: ip found"
-else
-	logtext "Info: ip not found"
-fi
-
-
-logtext "Application scan ended"
-
-
-BACKDOORPORTS="2006"
-
-#################################################################################
-#
-# Default rootkit files and directories
-#
-#################################################################################
-#
-
-# 55808 Variant A
-W55808A_FILES="${ROOTDIR}tmp/.../r ${ROOTDIR}tmp/.../a"
-
-# AjaKit
-AJAKIT_FILES="
-${ROOTDIR}dev/tux/.addr
-${ROOTDIR}dev/tux/.proc
-${ROOTDIR}dev/tux/.file
-${ROOTDIR}lib/.libgh-gh/cleaner
-${ROOTDIR}lib/.libgh-gh/Patch/patch
-${ROOTDIR}lib/.libgh-gh/sb0k
-"
-
-AJAKIT_DIRS="
-${ROOTDIR}dev/tux
-${ROOTDIR}lib/.libgh-gh
-"
-
-AJAKIT_KSYMS=""
-
-# aPa Kit
-APAKIT_FILES="${ROOTDIR}usr/share/.aPa"
-APAKIT_DIRS=""
-APAKIT_KSYMS=""
-
-# Apache Worm
-APACHEWORM_FILES="${ROOTDIR}bin/.log"
-
-# Ambient (ark) Rootkit
-ARK_FILES="${ROOTDIR}usr/lib/.ark? ${ROOTDIR}dev/ptyxx/.log ${ROOTDIR}dev/ptyxx/.file"
-ARK_DIRS="${ROOTDIR}dev/ptyxx"
-
-# Balaur Rootkit 2.0 (LRK5 based)
-BALAUR_FILES="
-${ROOTDIR}usr/lib/liblog.o
-"
-BALAUR_DIRS="
-${ROOTDIR}usr/lib/.kinetic
-${ROOTDIR}usr/lib/.egcs
-${ROOTDIR}usr/lib/.wormie
-"
-
-BALAUR_KSYMS=""
-
-# Beastkit
-BEASTKIT_FILES="${ROOTDIR}usr/sbin/arobia ${ROOTDIR}usr/sbin/idrun ${ROOTDIR}usr/lib/elm/arobia/elm ${ROOTDIR}usr/lib/elm/arobia/elm/hk ${ROOTDIR}usr/lib/elm/arobia/elm/hk.pub ${ROOTDIR}usr/lib/elm/arobia/elm/sc ${ROOTDIR}usr/lib/elm/arobia/elm/sd.pp ${ROOTDIR}usr/lib/elm/arobia/elm/sdco ${ROOTDIR}usr/lib/elm/arobia/elm/srsd"
-BEASTKIT_DIRS="${ROOTDIR}lib/ldd.so/bktools"
-
-# beX2
-BEX_FILES=""
-BEX_DIRS="${ROOTDIR}/usr/include/bex"
-BEX_KSYMS=""
-
-# BOBkit
-BOBKIT_FILES="
-${ROOTDIR}usr/sbin/ntpsx
-${ROOTDIR}usr/lib/.../ls
-${ROOTDIR}usr/lib/.../netstat
-${ROOTDIR}usr/lib/.../lsof
-${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shdcfg
-${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shhk
-${ROOTDIR}usr/lib/.../bkit-ssh/bkit-pw
-${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shrs
-${ROOTDIR}usr/lib/.../uconf.inv
-${ROOTDIR}usr/lib/.../psr
-${ROOTDIR}usr/lib/.../find
-${ROOTDIR}usr/lib/.../pstree
-${ROOTDIR}usr/lib/.../slocate
-${ROOTDIR}usr/lib/.../du
-${ROOTDIR}usr/lib/.../top
-"
-
-BOBKIT_DIRS="
-${ROOTDIR}usr/lib/...
-${ROOTDIR}usr/lib/.../bkit-ssh
-${ROOTDIR}usr/lib/.bkit-
-${ROOTDIR}tmp/.bkp
-"
-
-# CiNIK Worm (Slapper.B variant)
-CINIK_DIRS="${ROOTDIR}tmp/.font-unix/.cinik"
-CINIK_FILES="${ROOTDIR}tmp/.cinik"
-
-# Danny-Boy's Abuse Kit
-DANNYBOY_FILES="${ROOTDIR}dev/mdev ${ROOTDIR}usr/lib/libX.a"
-DANNYBOY_DIRS=""
-DANNYBOY_KSYMS=""
-
-# Devil
-DEVIL_FILES="
-${ROOTDIR}var/lib/games/.src
-${ROOTDIR}dev/dsx
-${ROOTDIR}dev/caca
-"
-
-# Dica (T0rn variant)
-DICA_FILES="
-${ROOTDIR}lib/.sso
-${ROOTDIR}lib/.so
-${ROOTDIR}var/run/...dica/clean
-${ROOTDIR}var/run/...dica/xl
-${ROOTDIR}var/run/...dica/xdr
-${ROOTDIR}var/run/...dica/psg
-${ROOTDIR}var/run/...dica/secure
-${ROOTDIR}var/run/...dica/rdx
-${ROOTDIR}var/run/...dica/va
-${ROOTDIR}var/run/...dica/cl.sh
-${ROOTDIR}usr/bin/.etc
-"
-
-DICA_DIRS="
-${ROOTDIR}var/run/...dica
-${ROOTDIR}var/run/...dica/mh
-${ROOTDIR}var/run/...dica/scan
-"
-
-DICA_KSYMS=""
-
-# Dreams
-DREAMS_FILES="
-${ROOTDIR}dev/ttyoa
-${ROOTDIR}dev/ttyof
-${ROOTDIR}dev/ttyop
-${ROOTDIR}usr/bin/sense
-${ROOTDIR}usr/bin/sl2
-${ROOTDIR}usr/bin/logclear
-${ROOTDIR}usr/bin/(swapd)
-${ROOTDIR}usr/bin/snfs
-${ROOTDIR}usr/lib/libsss
-"
-
-DREAMS_DIRS="${ROOTDIR}dev/ida/.hpd"
-DREAMS_KSYMS=""
-
-# Duarawkz
-DUARAWKZ_FILES="${ROOTDIR}usr/bin/duarawkz/loginpass"
-DUARAWKZ_DIRS="${ROOTDIR}usr/bin/duarawkz"
-DUARAWKZ_KSYMS=""
-
-# Flea Linux rootkit
-FLEA_FILES="
-${ROOTDIR}etc/ld.so.hash
-${ROOTDIR}lib/security/.config/ssh/ssh_host_key
-${ROOTDIR}lib/security/.config/ssh/ssh_host_key.pub
-${ROOTDIR}lib/security/.config/ssh/ssh_random_seed
-${ROOTDIR}usr/bin/ssh2d
-${ROOTDIR}usr/lib/ldlibns.so
-${ROOTDIR}usr/lib/ldlibpst.so
-${ROOTDIR}usr/lib/ldlibdu.so
-${ROOTDIR}usr/lib/ldlibct.so
-"
-
-FLEA_DIRS="${ROOTDIR}lib/security/.config/ssh ${ROOTDIR}dev/..0 ${ROOTDIR}dev/..0/backup"
-FLEA_KSYMS=""
-
-# FreeBSD Rootkit
-FREEBSD_RK_FILES="
-${ROOTDIR}usr/lib/.fx/sched_host.2
-${ROOTDIR}usr/lib/.fx/random_d.2
-${ROOTDIR}usr/lib/.fx/set_pid.2
-${ROOTDIR}usr/lib/.fx/cons.saver
-${ROOTDIR}usr/lib/.fx/adore/adore/adore.ko
-${ROOTDIR}bin/sysback
-${ROOTDIR}usr/local/bin/sysback
-"
-
-FREEBSD_RK_DIRS="${ROOTDIR}usr/lib/.fx ${ROOTDIR}usr/lib/.fx/adore"
-
-# Fuckit Rootkit
-FUCKIT_FILES="
-${ROOTDIR}dev/proc/fuckit/hax0r
-${ROOTDIR}dev/proc/fuckit/hax0rshell
-${ROOTDIR}dev/proc/fuckit/config/lports
-${ROOTDIR}dev/proc/fuckit/config/rports
-${ROOTDIR}dev/proc/fuckit/config/rkconf
-${ROOTDIR}dev/proc/fuckit/config/password
-${ROOTDIR}dev/proc/fuckit/config/progs
-${ROOTDIR}dev/proc/system-bins/init
-"
-
-# GasKit Rootkit
-GASKIT_FILES="${ROOTDIR}dev/dev/gaskit/sshd/sshdd"
-GASKIT_DIRS="${ROOTDIR}dev/dev ${ROOTDIR}dev/dev/gaskit ${ROOTDIR}dev/dev/gaskit/sshd"
-
-# Heroin LKM
-HEROIN_FILES=""
-HEROIN_DIRS=""
-HEROIN_KSYMS="heroin"
-
-# HjC Kit
-HJCKIT_FILES=""
-HJCKIT_DIRS="${ROOTDIR}dev/.hijackerz"
-HJCKIT_KSYMS=""
-
-# ignoKit
-IGNOKIT_FILES="
-${ROOTDIR}lib/defs/p
-${ROOTDIR}lib/defs/q
-${ROOTDIR}lib/defs/r
-${ROOTDIR}lib/defs/s
-${ROOTDIR}lib/defs/t
-${ROOTDIR}usr/lib/defs/p
-${ROOTDIR}usr/lib/defs/p
-${ROOTDIR}usr/lib/defs/p
-${ROOTDIR}usr/lib/defs/p
-${ROOTDIR}usr/lib/defs/p
-${ROOTDIR}usr/lib/.libigno/pkunsec
-${ROOTDIR}usr/lib/.libigno/.igno/psybnc/psybnc
-"
-
-IGNOKIT_DIRS="
-${ROOTDIR}usr/lib/.libigno
-${ROOTDIR}usr/lib/.libigno/.igno/
-"
-
-IGNOKIT_KSYMS=""
-
-# ImperalsS-FBRK (FreeBSD Rootkit)
-IMPFRB_DIRS="${ROOTDIR}dev/fd/.88 ${ROOTDIR}dev/fd/.99"
-
-# Irix Rootkit (for Irix 6.x)
-IRIXRK_FILES=""
-IRIXRK_DIRS="
-${ROOTDIR}dev/pts/01
-${ROOTDIR}dev/pts/01/backup
-${ROOTDIR}dev/pts/01/etc
-${ROOTDIR}dev/pts/01/tmp
-"
-IRIXRK_KSYMS=""
-
-# Kitko
-KITKO_FILES=""
-KITKO_DIRS="${ROOTDIR}usr/src/redhat/SRPMS/..."
-KITKO_KSYMS=""
-
-# Knark
-KNARK_FILES="${ROOTDIR}proc/knark/pids"
-KNARK_DIRS="${ROOTDIR}proc/knark"
-KNARK_KSYMS=""
-
-# Lion Worm
-LION_FILES="
-${ROOTDIR}bin/in.telnetd
-${ROOTDIR}bin/mjy
-${ROOTDIR}usr/man/man1/man1/lib/.lib/mjy
-${ROOTDIR}usr/man/man1/man1/lib/.lib/in.telnetd
-${ROOTDIR}usr/man/man1/man1/lib/.lib/.x
-${ROOTDIR}dev/.lib/lib/scan/1i0n.sh
-${ROOTDIR}dev/.lib/lib/scan/hack.sh
-${ROOTDIR}dev/.lib/lib/scan/bind
-${ROOTDIR}dev/.lib/lib/scan/randb
-${ROOTDIR}dev/.lib/lib/scan/scan.sh
-${ROOTDIR}dev/.lib/lib/scan/pscan
-${ROOTDIR}dev/.lib/lib/scan/star.sh
-${ROOTDIR}dev/.lib/lib/scan/bindx.sh
-${ROOTDIR}dev/.lib/lib/scan/bindname.log
-${ROOTDIR}dev/.lib/lib/1i0n.sh
-${ROOTDIR}dev/.lib/lib/lib/netstat
-${ROOTDIR}dev/.lib/lib/lib/dev/.1addr
-${ROOTDIR}dev/.lib/lib/lib/dev/.1logz
-${ROOTDIR}dev/.lib/lib/lib/dev/.1proc
-${ROOTDIR}dev/.lib/lib/lib/dev/.1file
-"
-
-# Lockit (a.k.a. LJK2)
-LOCKIT_FILES="
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_config
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_host_key
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_random_seed*
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/sshd_config
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/du
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ifconfig
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/inetd.conf
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/locate
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/login
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ls
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/netstat
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ps
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/pstree
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/rc.sysinit
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/syslogd
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/tcpd
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/top
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/clean/RK1sauber
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/clean/RK1wted
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/hack/RK1parser
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/hack/RK1sniff
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1addr
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1dir
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1log
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1proc
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/RK1phidemod.c
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/README.modules
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/RK1hidem.c
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/RK1phide
-${ROOTDIR}usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh
-"
-
-LOCKIT_DIRS="${ROOTDIR}usr/lib/libmen.oo/.LJK2"
-LOCKIT_KSYMS=""
-
-# MRK (MiCrobul RootKit?, based on Devil RootKit )
-MRK_FILES="
-${ROOTDIR}dev/ida/.inet/pid
-${ROOTDIR}dev/ida/.inet/ssh_host_key
-${ROOTDIR}dev/ida/.inet/ssh_random_seed
-${ROOTDIR}dev/ida/.inet/tcp.log
-"
-
-MRK_DIRS="
-${ROOTDIR}dev/ida/.inet
-${ROOTDIR}var/spool/cron/.sh
-"
-
-# Ni0 Rootkit
-NIO_FILES="
-${ROOTDIR}var/lock/subsys/...datafile.../...net...
-${ROOTDIR}var/lock/subsys/...datafile.../...port...
-${ROOTDIR}var/lock/subsys/...datafile.../...ps...
-${ROOTDIR}var/lock/subsys/...datafile.../...file...
-"
-
-NIO_DIRS="
-${ROOTDIR}tmp/waza
-${ROOTDIR}var/lock/subsys/...datafile...
-${ROOTDIR}usr/sbin/es
-"
-
-NIO_KSYMS=""
-
-# RootKit for SunOS / NSDAP
-NSDAP_FILES="
-${ROOTDIR}usr/lib/vold/nsdap/.kit
-${ROOTDIR}usr/lib/vold/nsdap/defines
-${ROOTDIR}usr/lib/vold/nsdap/patcher
-${ROOTDIR}usr/lib/vold/nsdap/pg
-${ROOTDIR}usr/lib/vold/nsdap/cleaner
-${ROOTDIR}usr/lib/vold/nsdap/utime
-${ROOTDIR}usr/lib/vold/nsdap/crypt
-${ROOTDIR}usr/lib/vold/nsdap/findkit
-${ROOTDIR}usr/lib/vold/nsdap/sn2
-${ROOTDIR}usr/lib/vold/nsdap/sniffload
-${ROOTDIR}usr/lib/vold/nsdap/runsniff
-${ROOTDIR}usr/lib/lpset
-"
-NSDAP_DIRS="${ROOTDIR}usr/lib/vold/nsdap"
-NSDAP_KSYMS=""
-
-# Ohhara Rootkit
-OHHARA_FILES="${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../in.smbd.log"
-OHHARA_DIRS="
-${ROOTDIR}var/lock/subsys/...datafile...
-${ROOTDIR}var/lock/subsys/...datafile.../...datafile...
-${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../bin
-${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../usr/bin
-${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../usr/sbin
-${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../lib/security
-"
-
-# Optic Kit (Tux variant)
-OPTICKIT_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}usr/bin/xchk ${ROOTDIR}usr/bin/xsf ${ROOTDIR}usr/bin/ssh2d"
-
-# Oz Rootkit
-OZ_FILES="${ROOTDIR}dev/.oz/.nap/rkit/terror"
-OZ_DIRS="${ROOTDIR}dev/.oz"
-
-PORTACELO_FILES="
-/var/lib/.../.ak
-/var/lib/.../.hk
-/var/lib/.../.rs
-/var/lib/.../.p
-/var/lib/.../getty
-/var/lib/.../lkt.o
-/var/lib/.../show
-/var/lib/.../nlkt.o
-/var/lib/.../ssshrc
-/var/lib/.../sssh_equiv
-/var/lib/.../sssh_known_hosts
-/var/lib/.../sssh_pid
-~/.sssh/known_hosts
-"
-
-# R3dstorm Toolkit
-REDSTORM_FILES="
-/var/log/tk02/see_all
-/bin/.../sshd/sbin/sshd1
-/bin/.../hate/sk
-/bin/.../see_all
-"
-
-REDSTORM_DIRS="
-/var/log/tk02
-/var/log/tk02/old
-/bin/...
-"
-
-REDSTORM_KSYMS=""
-
-# RH-Sharpe's rootkit
-RHSHARPES_FILES="
-${ROOTDIR}bin/lps
-${ROOTDIR}usr/bin/lpstree
-${ROOTDIR}usr/bin/ltop
-${ROOTDIR}usr/bin/lkillall
-${ROOTDIR}usr/bin/ldu
-${ROOTDIR}usr/bin/lnetstat
-${ROOTDIR}usr/bin/wp
-${ROOTDIR}usr/bin/shad
-${ROOTDIR}usr/bin/vadim
-${ROOTDIR}usr/bin/slice
-${ROOTDIR}usr/bin/cleaner
-${ROOTDIR}usr/include/rpcsvc/du
-"
-RHSHARPES_DIRS=""
-RHSHARPES_KSYMS=""
-
-# RSHA's rootkit
-RSHA_FILES="
-${ROOTDIR}bin/kr4p
-${ROOTDIR}usr/bin/n3tstat
-${ROOTDIR}usr/bin/chsh2
-${ROOTDIR}usr/bin/slice2
-${ROOTDIR}usr/src/linux/arch/alpha/lib/.lib/.1proc
-${ROOTDIR}etc/rc.d/arch/alpha/lib/.lib/.1addr
-"
-
-RSHA_DIRS="
-${ROOTDIR}etc/rc.d/rsha
-${ROOTDIR}etc/rc.d/arch/alpha/lib/.lib
-"
-
-RSHA_KSYMS=""
-
-# Shutdown
-SHUTDOWN_DIRS="${ROOTDIR}usr/man/man5/..%%/.dir/ ${ROOTDIR}usr/man/man5/..%%/.dir/scannah ${ROOTDIR}etc/rc.d/rc0.d/..%%/.dir"
-SHUTDOWN_FILES="${ROOTDIR}usr/man/man5/..%%/.dir/scannah/asus ${ROOTDIR}usr/man/man5/..%%/.dir/see ${ROOTDIR}usr/man/man5/..%%/.dir/nscd ${ROOTDIR}usr/man/man5/..%%/.dir/alpd ${ROOTDIR}etc/rc.d/rc.local%%"
-
-# Scalper (FreeBSD.Scalper.Worm)
-SCALPER_FILES="${ROOTDIR}tmp/.a ${ROOTDIR}tmp/.uua"
-
-# SHV4
-SHV4_FILES="
-${ROOTDIR}etc/ld.so.hash
-${ROOTDIR}lib/libext-2.so.7
-${ROOTDIR}lib/lidps1.so
-${ROOTDIR}usr/sbin/xntps
-"
-
-SHV4_DIRS="${ROOTDIR}lib/security/.config ${ROOTDIR}lib/security/.config/ssh"
-
-# SHV5
-SHV5_FILES="
-${ROOTDIR}etc/sh.conf
-${ROOTDIR}dev/srd0
-"
-
-SHV5_DIRS="/usr/lib/libsh"
-SHV5_KSYMS=""
-
-# Sin Rootkit
-SINROOTKIT_FILES="
-${ROOTDIR}dev/.haos/haos1/.f/Denyed
-${ROOTDIR}dev/ttyoa
-${ROOTDIR}dev/ttyof
-${ROOTDIR}dev/ttyop
-${ROOTDIR}dev/ttyos
-${ROOTDIR}usr/lib/.lib
-${ROOTDIR}usr/lib/sn/.X
-${ROOTDIR}usr/lib/sn/.sys
-${ROOTDIR}usr/lib/ld/.X
-${ROOTDIR}usr/man/man1/...
-${ROOTDIR}usr/man/man1/.../.m
-${ROOTDIR}usr/man/man1/.../.w
-"
-
-SINROOTKIT_DIRS="${ROOTDIR}usr/lib/sn ${ROOTDIR}usr/lib/man1/... ${ROOTDIR}dev/.haos"
-
-# Slapper
-SLAPPER_FILES="${ROOTDIR}tmp/.bugtraq ${ROOTDIR}tmp/.uubugtraq ${ROOTDIR}tmp/.bugtraq.c ${ROOTDIR}tmp/httpd ${ROOTDIR}tmp/.unlock ${ROOTDIR}tmp/update ${ROOTDIR}tmp/.cinik ${ROOTDIR}tmp/.b"
-
-# Sneakin Rootkit
-SNEAKIN_DIRS="${ROOTDIR}tmp/.X11-unix/.../rk"
-
-# Suckit Rootkit
-SUCKIT_FILES="
-${ROOTDIR}sbin/initsk12
-${ROOTDIR}sbin/initxrk
-${ROOTDIR}usr/bin/null
-${ROOTDIR}usr/share/locale/sk/.sk12/sk
-${ROOTDIR}etc/rc.d/rc0.d/S23kmdac
-${ROOTDIR}etc/rc.d/rc1.d/S23kmdac
-${ROOTDIR}etc/rc.d/rc2.d/S23kmdac
-${ROOTDIR}etc/rc.d/rc3.d/S23kmdac
-${ROOTDIR}etc/rc.d/rc4.d/S23kmdac
-${ROOTDIR}etc/rc.d/rc5.d/S23kmdac
-${ROOTDIR}etc/rc.d/rc6.d/S23kmdac
-"
-
-SUCKIT_DIRS="
-${ROOTDIR}dev/sdhu0/tehdrakg
-${ROOTDIR}etc/.MG
-${ROOTDIR}usr/share/locale/sk/.sk12
-${ROOTDIR}usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist
-"
-
-# SunOS Rootkit
-SUNOSROOTKIT_FILES="
-${ROOTDIR}etc/ld.so.hash
-${ROOTDIR}lib/libext-2.so.7
-${ROOTDIR}usr/bin/ssh2d
-${ROOTDIR}bin/xlogin
-${ROOTDIR}usr/lib/crth.o
-${ROOTDIR}usr/lib/crtz.o
-${ROOTDIR}sbin/login
-${ROOTDIR}lib/security/.config/sn
-${ROOTDIR}lib/security/.config/lpsched
-${ROOTDIR}dev/kmod
-${ROOTDIR}dev/dos
-"
-
-# Superkit
-SUPERKIT_FILES="${ROOTDIR}usr/man/.sman/sk"
-SUPERKIT_DIRS=""
-SUPERKIT_KSYMS=""
-
-# Telnet Backdoor
-TBD_FILES="${ROOTDIR}usr/lib/.tbd"
-
-# TeLeKiT
-TELEKIT_FILES="
-${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/sniff
-${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/telnetd
-${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/teleulo
-${ROOTDIR}usr/man/man3/.../cl
-${ROOTDIR}dev/ptyr
-${ROOTDIR}dev/ptyp
-${ROOTDIR}dev/ptyq
-${ROOTDIR}dev/hda06
-${ROOTDIR}usr/info/libc1.so
-"
-
-TELEKIT_DIRS="${ROOTDIR}usr/man/man3/... ${ROOTDIR}usr/man/man3/.../lsniff ${ROOTDIR}usr/man/man3/.../TeLeKiT"
-TELEKIT_KSYMS=""
-
-# Torn (and misc)
-TORN_FILES="
-${ROOTDIR}dev/.lib/lib/lib/t0rns
-${ROOTDIR}dev/.lib/lib/lib/du
-${ROOTDIR}dev/.lib/lib/lib/ls
-${ROOTDIR}dev/.lib/lib/lib/t0rnsb
-${ROOTDIR}dev/.lib/lib/lib/ps
-${ROOTDIR}dev/.lib/lib/lib/t0rnp
-${ROOTDIR}dev/.lib/lib/lib/find
-${ROOTDIR}dev/.lib/lib/lib/ifconfig
-${ROOTDIR}dev/.lib/lib/lib/pg
-${ROOTDIR}dev/.lib/lib/lib/ssh.tgz
-${ROOTDIR}dev/.lib/lib/lib/top
-${ROOTDIR}dev/.lib/lib/lib/sz
-${ROOTDIR}dev/.lib/lib/lib/login
-${ROOTDIR}dev/.lib/lib/lib/in.fingerd
-${ROOTDIR}dev/.lib/lib/lib/1i0n.sh
-${ROOTDIR}dev/.lib/lib/lib/pstree
-${ROOTDIR}dev/.lib/lib/lib/in.telnetd
-${ROOTDIR}dev/.lib/lib/lib/mjy
-${ROOTDIR}dev/.lib/lib/lib/sush
-${ROOTDIR}dev/.lib/lib/lib/tfn
-${ROOTDIR}dev/.lib/lib/lib/name
-${ROOTDIR}dev/.lib/lib/lib/getip.sh
-${ROOTDIR}usr/info/.torn/sh*
-${ROOTDIR}usr/src/.puta/
-${ROOTDIR}usr/src/.puta/.1addr
-${ROOTDIR}usr/src/.puta/.1file
-${ROOTDIR}usr/src/.puta/.1proc
-${ROOTDIR}usr/src/.puta/.1logz
-${ROOTDIR}usr/info/.t0rn/
-"
-
-TORN_DIRS="
-${ROOTDIR}dev/.lib/
-${ROOTDIR}dev/.lib/lib/
-${ROOTDIR}dev/.lib/lib/lib/
-${ROOTDIR}dev/.lib/lib/lib/dev/
-${ROOTDIR}dev/.lib/lib/scan/
-${ROOTDIR}usr/src/.puta/
-${ROOTDIR}usr/man/man1/man1/
-${ROOTDIR}usr/man/man1/man1/lib/
-${ROOTDIR}usr/man/man1/man1/lib/.lib/
-${ROOTDIR}usr/man/man1/man1/lib/.lib/.backup/
-"
-
-TROJANIT_FILES="
-${ROOTDIR}bin/.ls
-${ROOTDIR}bin/.ps
-${ROOTDIR}bin/.netstat
-${ROOTDIR}usr/bin/.nop
-${ROOTDIR}usr/bin/.who
-"
-
-TPACK_FILES=""
-TPACK_DIRS=""
-
-# Tuxtendo (Tuxkit)
-TUXTENDO_FILES="
-${ROOTDIR}dev/tux/.addr
-${ROOTDIR}dev/tux/.cron
-${ROOTDIR}dev/tux/.file
-${ROOTDIR}dev/tux/.log
-${ROOTDIR}dev/tux/.proc
-${ROOTDIR}dev/tux/backup/crontab
-${ROOTDIR}dev/tux/backup/df
-${ROOTDIR}dev/tux/backup/dir
-${ROOTDIR}dev/tux/backup/find
-${ROOTDIR}dev/tux/backup/ifconfig
-${ROOTDIR}dev/tux/backup/locate
-${ROOTDIR}dev/tux/backup/netstat
-${ROOTDIR}dev/tux/backup/ps
-${ROOTDIR}dev/tux/backup/pstree
-${ROOTDIR}dev/tux/backup/syslogd
-${ROOTDIR}dev/tux/backup/tcpd
-${ROOTDIR}dev/tux/backup/top
-${ROOTDIR}dev/tux/backup/updatedb
-${ROOTDIR}dev/tux/backup/vdir
-"
-
-TUXTENDO_DIRS="
-${ROOTDIR}dev/tux
-${ROOTDIR}dev/tux/ssh2
-${ROOTDIR}dev/tux/backup
-"
-
-TUXTENDO_KSYMS=""
-
-# URK (Universal Root Kit)
-URK_FILES="
-${ROOTDIR}usr/man/man1/xxxxxxbin/find
-${ROOTDIR}usr/man/man1/xxxxxxbin/du
-${ROOTDIR}usr/man/man1/xxxxxxbin/ps
-${ROOTDIR}tmp/conf.inf
-"
-
-URK_DIRS="
-${ROOTDIR}usr/man/man1/xxxxxxbin
-"
-# VcKit
-VCKIT_FILES=""
-VCKIT_DIRS="${ROOTDIR}usr/include/linux/modules/lib.so ${ROOTDIR}usr/include/linux/modules/lib.so/bin"
-
-# Volc Rootkit
-VOLC_FILES=""
-VOLC_DIRS="
-${ROOTDIR}var/spool/.recent
-${ROOTDIR}var/spool/.recent/.files
-${ROOTDIR}usr/lib/volc
-${ROOTDIR}usr/lib/volc/backup
-"
-
-# X-Org SunOS Rootkit
-XORGSUNOS_FILES="
-${ROOTDIR}usr/lib/libX.a/bin/tmpfl
-${ROOTDIR}usr/lib/libX.a/bin/rps
-${ROOTDIR}usr/bin/srload
-${ROOTDIR}usr/lib/libX.a/bin/sparcv7/rps
-${ROOTDIR}usr/sbin/modcheck
-"
-
-XORGSUNOS_DIRS="
-${ROOTDIR}usr/lib/libX.a
-${ROOTDIR}usr/lib/libX.a/bin
-${ROOTDIR}usr/lib/libX.a/bin/sparcv7
-${ROOTDIR}usr/share/man...
-"
-
-
-# zaRwT.KiT
-ZARWT_FILES="
-${ROOTDIR}dev/rd/s/sendmeil
-${ROOTDIR}dev/ttyf
-${ROOTDIR}dev/ttyp
-${ROOTDIR}dev/ttyn
-${ROOTDIR}rk/tulz
-"
-
-ZARWT_DIRS="
-${ROOTDIR}rk
-${ROOTDIR}dev/rd/s
-"
-
-ZARWT_LOGS="
-.zarwt.
-sendmeil
-:60922
-cky.
-"
-
-# Miscellaneous login backdoors
-LOGIN_BACKDOOR_FILES="${ROOTDIR}bin/.login ${ROOTDIR}sbin/.login"
-
-# Misc Apache Backdoors
-APACHEBDOORS_STRINGS="gotcha"
-
-# Suspicious files in /dev
-# v1rootkit does use some files here to hide processes, UIDs en GIDs.
-# Files: /dev/ttyp, /dev/ttypr, /dev/ttypp, /dev/ttypq (Checked: FreeBSD and RedHat doesn't have this files by default)
-# Files: /dev/ptyxx/.list /dev/ptyxx/.proc
-# Files: ${ROOTDIR}tmp/tr/td:
-
-SUSPICIOUS1_FILES="
-.list:Unknown file:
-.proc:Unknown file:
-psybnc:IRC%%bouncer:
-td:Unknown file:
-ttyp:Unknown file:
-ttypr:Unknown file:
-ttypp:Unknown file:
-ttypq:Unknown file:
-"
-
-# Suspicious directories
-SUSPICIOUS1_DIRS="/usr/X11R6/bin/.,/copy/ /dev/rd"
-
-
-# Evil strings
-STRINGSCAN="
-bin:test2:abc:Test
-bin:init:/dev/proc/fuckit:Fuckit%%Rootkit
-bin:init:FUCK:Possible%%Suckit%%Rootkit%%found
-bin:init:backdoor:Possible%%backdoored%%init%%file%%(Suckit)
-bin:login:vt200:Possible%%Linux%%Rootkit
-bin:login:/usr/bin/xstat:Possible%%Linux%%Rootkit
-bin:login:/bin/envpc:Unknown
-bin:login:l4m3r0x:Unknown
-bin:login:/usr/lib/.tbd:TBD%%Rootkit
-bin:ls:/dev/ptyxx/.file:Dica%%(T0rn%%variant)
-bin:ls:/dev/sgk:Unknown
-bin:ls:/var/lock/subsys/...datafile...:Ohhara%%Rootkit
-bin:ls:/usr/lib/.tbd:TBD%%Rootkit
-bin:netstat:/dev/proc/fuckit:Fuckit%%Rootkit
-bin:netstat:/lib/.sso:Dica%%(T0rn%%variant)
-bin:netstat:/var/lock/subsys/...datafile...:Ohhara%%Rootkit
-bin:netstat:/dev/caca:MRK
-bin:netstat:/dev/ttyoa:Sin%%Rootkit
-bin:netstat:syg:Possible%%trojaned%%netstat
-bin:nscd:sshd_config:Possible%%backdoor%%shell%%installed%%(SSH)
-bin:ps:/dev/pts/01:SunOS%%Rootkit
-bin:ps:tw33dl3:SunOS%%Rootkit
-bin:ps:psniff:SunOS%%Rootkit
-bin:ps:/var/lock/subsys/...datafile...:Ohhara%%Rootkit%%or%%Ni0%%Rootkit
-bin:rpc.nfsd:cant%%open%%log:Possible%%sniffer%%installed
-bin:rpc.nfsd:sniff.pid:Possible%%sniffer%%installed
-bin:rpc.nfsd:tcp.log:Possible%%sniffer%%installed
-bin:sshd:/dev/ptyxx:OpenBSD%%Rootkit
-bin:syslogd:promiscuous:Possible%%sniffer%%installed
-bin:syslogd:/usr/lib/.tbd:TBD%%Rootkit
-bin:tcpd:/dev/xdta:Dica%%(T0rn%%variant)
-bin:top:/usr/lib/.tbd:TBD%%Rootkit
-bin:xtty:/bin/sh:Possible%%backdoor%%shell%%installed
-etc:passwd:r00t:Possible%%GasKit
-etc:passwd:t00r:Possible%%GasKit
-libs:libproc.so.2.0.7:/dev/proc/fuckit:Fuckit%%Rootkit
-rc.d:boot:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
-rc.d:functions:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
-rc.inet1:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
-"
-
-# bin: /bin, /usr/bin, /usr/local/bin, /usr/sbin, /usr/local/sbin
-# etc: /etc
-# rc.d: /etc/rc.d /etc/rc.d/init.d
-# rc.sysinit: /etc/rc.d
-
-# Slackware /etc/rc.d/sysvinit
-
-RCSTRINGS="
-sshdu:Possible%%trojaned%%SSH%%Daemon
-sshd1:Possible%%trojaned%%SSH%%Daemon
-linsniffer:Possible%%keyboard%%sniffer%%found
-startadore:Possible%%Adore%%rootkit%%found
-ava:Possible%%PID%%hider%%found
-.lsd:Torn%%based%%part%%found
-/usr/bin/hdparm%%-t1%%-X53%%-p:MRK%%part%%found
-"
-
-BASHPROFILESTRINGS="
-/dev/proc/fucking/config:Possible%%Rootkit%%found
-/dev/proc/toolz/scan:Possible%%Rootkit%%found
-/script:Possible%%background%%logger%%found
-"
-
-# Files
-FILESCAN="
-file:${ROOTDIR}dev/sdr0:Possible%%MD5%%hash%%database
-file:${ROOTDIR}tmp/.syshackfile:Trojaned%%syslog%%daemon
-file:${ROOTDIR}tmp/.bash_history:Possible%%Lite5-r%%rootkit
-file:${ROOTDIR}usr/info/.clib:Possible%%backdoor
-file:${ROOTDIR}usr/sbin/tcp.log:Possible%%sniffer
-file:${ROOTDIR}usr/bin/take/pid:Trojaned%%SSH%%daemon
-file:${ROOTDIR}sbin/create:MzOzD%%Local%%backdoor%%found
-file:${ROOTDIR}dev/ttypz:Found%%spwn%%login%%backdoor
-dir:${ROOTDIR}usr/bin/take:Trojaned%%SSH%%daemon
-dir:${ROOTDIR}usr/src/.lib:Unusual%%directory
-dir:${ROOTDIR}usr/share/man/man1/.1c:Possible%%Eggdrop%%installed
-dir:${ROOTDIR}lib/lblip.tk:Directory%%with%%backdoored%%SSH-configuration
-dir:${ROOTDIR}usr/sbin/...:Unusual%%directory
-dir:${ROOTDIR}usr/share/.gun:Unusual%%directory
-"
-
-
-# Evil strings for *BSD KLD (Dynamic Kernel Linker modules)
-KLDSTATKEYWORDS="backd00r backdoor"
+
+
+	#
+	# We must have access to either the 'stat' command, or the
+	# supplied perl script. If neither can be found then we
+	# must exit.
+	#
+
+	if [ -z "${STAT_CMD}" ]; then
+		echo "No 'stat' command can be found to perform the update."
+
+		RET_CODE=1
+		return
+	fi
+
+
+	#
+	# We need now to create a unique temporary file to store
+	# the new data. We either use mktemp if it is available,
+	# or simply use the RANDOM environment variable.
+	#
+
+	MKTEMP_CMD=`find_cmd mktemp`
+
+	if [ -n "${MKTEMP_CMD}" ]; then
+		RKHDAT_FILE=`${MKTEMP_CMD} ${TMPDIR}/rkhunter.dat.XXXXXX`
+
+		logtext "Info: Found 'mktemp' command: ${MKTEMP_CMD}"
+	else
+		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDOM"
+		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
+
+		logtext "Info: Unable to find 'mktemp' command: using random number instead"
+	fi
+
+	logtext "Info: Created temporary file ${RKHDAT_FILE}"
+
+
+	#
+	# We now start to write out information about this system
+	# to the file. Some information we already have available,
+	# but for others we call functions to obtain what is wanted.
+	#
+
+	ARCH=""
+	OSNAME=""
+	RELEASE=""
+
+	rkh_dat_set_version
+
+	rkh_dat_get_os_info
+
+	echo "Host:${HOST_NAME}" >>${RKHDAT_FILE}
+
+	test -n "${ARCH}" && echo "Arch:${ARCH}" >>${RKHDAT_FILE}
+
+	if [ -n "${RELEASE}" ]; then
+		logtext "Info: Found release file: ${RELEASE}"
+	else
+		logtext "Info: Unable to find a release file: LS output shows:"
+		logtext --indent "`ls -d /etc/*release* /etc/*version* 2>/dev/null`"
+	fi
+
+	if [ -n "${OSNAME}" ]; then
+		echo "OS:${OSNAME}" >>${RKHDAT_FILE}
+		logtext "Info: Found O/S name: ${OSNAME}"
+	fi
+
+	if [ $PRELINKED -eq 0 ]; then
+		echo "Prelinked:No" >>${RKHDAT_FILE}
+	else
+		echo "Prelinked:Yes" >>${RKHDAT_FILE}
+	fi
+
+	logtext "Info: O/S info obtained"
+
+
+	rkh_dat_set_file_hash
+
+	logtext "Info: File hashes obtained"
+
+
+	#
+	# Now put the new rkhunter.dat file in place.
+	#
+
+	cp -f ${DB_PATH}/rkhunter.dat ${DB_PATH}/rkhunter.dat.old >/dev/null 2>&1
+	cp ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
+	rm -f ${RKHDAT_FILE} >/dev/null 2>&1
+
+	logtext "Info: New rkhunter.dat file put in place"
+
+	return
+}
+
+
+do_update() {
+
+	#
+	# This function checks to see if any of the supplied RKH
+	# *.dat files needs updating. If it does, then the new file
+	# is downloaded.
+	#
+
+# jh - put this script in-line?
+	${SCRIPT_PATH}/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
+	RET_CODE=$?
+
+	return
+}
+
+
+do_versioncheck() {
+
+# jh - go through this function. Sort out messages; forcing update; use of quiet option; add logtext msgs, etc.
+	#
+	# This function performs a program version check.
+	#
+
+	LATESTVERSION="unknown"
+
+	if [ -f ${TMPDIR}/rkhunter.upd ]; then
+		rm -f ${TMPDIR}/rkhunter.upd >/dev/null 2>&1
+	fi
+
+	URLPREFIX=`grep -v 'version=' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d '=' -f2`
+
+	VERSIONUPDATEURL=`grep 'LATESTVERSION=' ${CONFIGFILE} | sed -e 's/LATESTVERSION=//g'`
+
+# jh - put check in here to use wget, lynx, links, elinks, curl, GET.
+	if [ -n "${WGET_CMD}" ]; then
+		${WGET_CMD} -q -O ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL}
+		displaytext "${URLPREFIX}${VERSIONUPDATEURL}"
+		LATESTVERSION=`cat ${TMPDIR}/rkhunter.upd`
+	fi
+
+	if [ $QUIET -eq 0 ]; then
+		displaytext ""
+		displaytext "${PROGRAM_NAME} ${PROGRAM_version}, copyright ${PROGRAM_copyright_owner}"
+		displaytext ""
+		displaytext "This version:   ${PROGRAM_version}"
+		displaytext "Latest version: ${LATESTVERSION}"
+	fi
+
+	if [ -z "${LATESTVERSION}" ]; then
+		echo "Unable to fetch latest rkhunter version number from mirror."
+		echo "${WHITE}Please check manually for updates${NORMAL}"
+	else
+		PROG_VERS=`echo "${PROGRAM_version}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
+		LATEST_VERS=`echo "${LATESTVERSION}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
+
+		if [ ${PROG_VERS} -lt ${LATEST_VERS} ]; then
+			echo "${WHITE}Update available${NORMAL}"
+		fi
+	fi
+
+	if [ $QUIET -eq 0 ]; then
+		displaytext ""; displaytext ""; displaytext "";
+	fi
+
+	return
+}
+
+
+do_system_check_initialisation() {
+
+	#
+	# This function simply initialises the default rootkit
+	# files and directories.
+	#
+
+
+	# 55808 Variant A
+	W55808A_FILES="${ROOTDIR}tmp/.../r ${ROOTDIR}tmp/.../a"
+
+
+	# AjaKit
+	AJAKIT_FILES="${ROOTDIR}dev/tux/.addr ${ROOTDIR}dev/tux/.proc
+		      ${ROOTDIR}dev/tux/.file ${ROOTDIR}lib/.libgh-gh/cleaner
+		      ${ROOTDIR}lib/.libgh-gh/Patch/patch
+		      ${ROOTDIR}lib/.libgh-gh/sb0k"
+
+	AJAKIT_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}lib/.libgh-gh"
+
+	AJAKIT_KSYMS=""
+
+
+	# aPa Kit
+	APAKIT_FILES="${ROOTDIR}usr/share/.aPa"
+	APAKIT_DIRS=""
+	APAKIT_KSYMS=""
+
+
+	# Apache Worm
+	APACHEWORM_FILES="${ROOTDIR}bin/.log"
+
+
+	# Ambient (ark) Rootkit
+	ARK_FILES="${ROOTDIR}usr/lib/.ark? ${ROOTDIR}dev/ptyxx/.log
+		   ${ROOTDIR}dev/ptyxx/.file"
+	ARK_DIRS="${ROOTDIR}dev/ptyxx"
+
+
+	# Balaur Rootkit 2.0 (LRK5 based)
+	BALAUR_FILES="${ROOTDIR}usr/lib/liblog.o"
+	BALAUR_DIRS="${ROOTDIR}usr/lib/.kinetic ${ROOTDIR}usr/lib/.egcs
+		     ${ROOTDIR}usr/lib/.wormie"
+
+	BALAUR_KSYMS=""
+
+
+	# Beastkit
+	BEASTKIT_FILES="${ROOTDIR}usr/sbin/arobia ${ROOTDIR}usr/sbin/idrun
+			${ROOTDIR}usr/lib/elm/arobia/elm
+			${ROOTDIR}usr/lib/elm/arobia/elm/hk
+			${ROOTDIR}usr/lib/elm/arobia/elm/hk.pub
+			${ROOTDIR}usr/lib/elm/arobia/elm/sc
+			${ROOTDIR}usr/lib/elm/arobia/elm/sd.pp
+			${ROOTDIR}usr/lib/elm/arobia/elm/sdco
+			${ROOTDIR}usr/lib/elm/arobia/elm/srsd"
+	BEASTKIT_DIRS="${ROOTDIR}lib/ldd.so/bktools"
+
+
+	# beX2
+	BEX_FILES=""
+	BEX_DIRS="${ROOTDIR}/usr/include/bex"
+	BEX_KSYMS=""
+
+
+	# BOBkit
+	BOBKIT_FILES="${ROOTDIR}usr/sbin/ntpsx ${ROOTDIR}usr/lib/.../ls
+		      ${ROOTDIR}usr/lib/.../netstat ${ROOTDIR}usr/lib/.../lsof
+		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shdcfg
+		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shhk
+		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-pw
+		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shrs
+		      ${ROOTDIR}usr/lib/.../uconf.inv ${ROOTDIR}usr/lib/.../psr
+		      ${ROOTDIR}usr/lib/.../find ${ROOTDIR}usr/lib/.../pstree
+		      ${ROOTDIR}usr/lib/.../slocate ${ROOTDIR}usr/lib/.../du
+		      ${ROOTDIR}usr/lib/.../top"
+	BOBKIT_DIRS="${ROOTDIR}usr/lib/... ${ROOTDIR}usr/lib/.../bkit-ssh
+		     ${ROOTDIR}usr/lib/.bkit- ${ROOTDIR}tmp/.bkp"
+
+
+	# CiNIK Worm (Slapper.B variant)
+	CINIK_DIRS="${ROOTDIR}tmp/.font-unix/.cinik"
+	CINIK_FILES="${ROOTDIR}tmp/.cinik"
+
+
+	# Danny-Boy's Abuse Kit
+	DANNYBOY_FILES="${ROOTDIR}dev/mdev ${ROOTDIR}usr/lib/libX.a"
+	DANNYBOY_DIRS=""
+	DANNYBOY_KSYMS=""
+
+
+	# Devil
+	DEVIL_FILES="${ROOTDIR}var/lib/games/.src ${ROOTDIR}dev/dsx
+		     ${ROOTDIR}dev/caca"
+
+
+	# Dica (T0rn variant)
+	DICA_FILES="${ROOTDIR}lib/.sso ${ROOTDIR}lib/.so
+		    ${ROOTDIR}var/run/...dica/clean
+		    ${ROOTDIR}var/run/...dica/xl ${ROOTDIR}var/run/...dica/xdr
+		    ${ROOTDIR}var/run/...dica/psg
+		    ${ROOTDIR}var/run/...dica/secure
+		    ${ROOTDIR}var/run/...dica/rdx ${ROOTDIR}var/run/...dica/va
+		    ${ROOTDIR}var/run/...dica/cl.sh ${ROOTDIR}usr/bin/.etc"
+	DICA_DIRS="${ROOTDIR}var/run/...dica ${ROOTDIR}var/run/...dica/mh
+		   ${ROOTDIR}var/run/...dica/scan"
+	DICA_KSYMS=""
+
+
+	# Dreams
+	DREAMS_FILES="${ROOTDIR}dev/ttyoa ${ROOTDIR}dev/ttyof
+		      ${ROOTDIR}dev/ttyop ${ROOTDIR}usr/bin/sense
+		      ${ROOTDIR}usr/bin/sl2 ${ROOTDIR}usr/bin/logclear
+		      ${ROOTDIR}usr/bin/(swapd) ${ROOTDIR}usr/bin/snfs
+		      ${ROOTDIR}usr/lib/libsss"
+	DREAMS_DIRS="${ROOTDIR}dev/ida/.hpd"
+	DREAMS_KSYMS=""
+
+
+	# Duarawkz
+	DUARAWKZ_FILES="${ROOTDIR}usr/bin/duarawkz/loginpass"
+	DUARAWKZ_DIRS="${ROOTDIR}usr/bin/duarawkz"
+	DUARAWKZ_KSYMS=""
+
+
+	# Flea Linux rootkit
+	FLEA_FILES="${ROOTDIR}etc/ld.so.hash
+		    ${ROOTDIR}lib/security/.config/ssh/ssh_host_key
+		    ${ROOTDIR}lib/security/.config/ssh/ssh_host_key.pub
+		    ${ROOTDIR}lib/security/.config/ssh/ssh_random_seed
+		    ${ROOTDIR}usr/bin/ssh2d ${ROOTDIR}usr/lib/ldlibns.so
+		    ${ROOTDIR}usr/lib/ldlibpst.so ${ROOTDIR}usr/lib/ldlibdu.so
+		    ${ROOTDIR}usr/lib/ldlibct.so"
+	FLEA_DIRS="${ROOTDIR}lib/security/.config/ssh ${ROOTDIR}dev/..0
+		   ${ROOTDIR}dev/..0/backup"
+	FLEA_KSYMS=""
+
+
+	# FreeBSD Rootkit
+	FREEBSD_RK_FILES="${ROOTDIR}usr/lib/.fx/sched_host.2
+			  ${ROOTDIR}usr/lib/.fx/random_d.2
+			  ${ROOTDIR}usr/lib/.fx/set_pid.2
+			  ${ROOTDIR}usr/lib/.fx/cons.saver
+			  ${ROOTDIR}usr/lib/.fx/adore/adore/adore.ko
+			  ${ROOTDIR}bin/sysback
+			  ${ROOTDIR}usr/local/bin/sysback"
+	FREEBSD_RK_DIRS="${ROOTDIR}usr/lib/.fx ${ROOTDIR}usr/lib/.fx/adore"
+
+
+	# Fuckit Rootkit
+	FUCKIT_FILES="${ROOTDIR}dev/proc/fuckit/hax0r
+		      ${ROOTDIR}dev/proc/fuckit/hax0rshell
+		      ${ROOTDIR}dev/proc/fuckit/config/lports
+		      ${ROOTDIR}dev/proc/fuckit/config/rports
+		      ${ROOTDIR}dev/proc/fuckit/config/rkconf
+		      ${ROOTDIR}dev/proc/fuckit/config/password
+		      ${ROOTDIR}dev/proc/fuckit/config/progs
+		      ${ROOTDIR}dev/proc/system-bins/init"
+
+
+	# GasKit Rootkit
+	GASKIT_FILES="${ROOTDIR}dev/dev/gaskit/sshd/sshdd"
+	GASKIT_DIRS="${ROOTDIR}dev/dev ${ROOTDIR}dev/dev/gaskit
+		     ${ROOTDIR}dev/dev/gaskit/sshd"
+
+
+	# Heroin LKM
+	HEROIN_FILES=""
+	HEROIN_DIRS=""
+	HEROIN_KSYMS="heroin"
+
+
+	# HjC Kit
+	HJCKIT_FILES=""
+	HJCKIT_DIRS="${ROOTDIR}dev/.hijackerz"
+	HJCKIT_KSYMS=""
+
+
+	# ignoKit
+	IGNOKIT_FILES="${ROOTDIR}lib/defs/p ${ROOTDIR}lib/defs/q
+		       ${ROOTDIR}lib/defs/r ${ROOTDIR}lib/defs/s
+		       ${ROOTDIR}lib/defs/t ${ROOTDIR}usr/lib/defs/p
+		       ${ROOTDIR}usr/lib/defs/q ${ROOTDIR}usr/lib/defs/r
+		       ${ROOTDIR}usr/lib/defs/s ${ROOTDIR}usr/lib/defs/t
+		       ${ROOTDIR}usr/lib/.libigno/pkunsec
+		       ${ROOTDIR}usr/lib/.libigno/.igno/psybnc/psybnc"
+	IGNOKIT_DIRS="${ROOTDIR}usr/lib/.libigno
+		      ${ROOTDIR}usr/lib/.libigno/.igno/"
+	IGNOKIT_KSYMS=""
+
+
+	# ImperalsS-FBRK (FreeBSD Rootkit)
+	IMPFRB_DIRS="${ROOTDIR}dev/fd/.88 ${ROOTDIR}dev/fd/.99"
+
+
+	# Irix Rootkit (for Irix 6.x)
+	IRIXRK_FILES=""
+	IRIXRK_DIRS="${ROOTDIR}dev/pts/01 ${ROOTDIR}dev/pts/01/backup
+		     ${ROOTDIR}dev/pts/01/etc ${ROOTDIR}dev/pts/01/tmp"
+	IRIXRK_KSYMS=""
+
+
+	# Kitko
+	KITKO_FILES=""
+	KITKO_DIRS="${ROOTDIR}usr/src/redhat/SRPMS/..."
+	KITKO_KSYMS=""
+
+
+	# Knark
+	KNARK_FILES="${ROOTDIR}proc/knark/pids"
+	KNARK_DIRS="${ROOTDIR}proc/knark"
+	KNARK_KSYMS=""
+
+
+	# Lion Worm
+	LION_FILES="${ROOTDIR}bin/in.telnetd ${ROOTDIR}bin/mjy
+		    ${ROOTDIR}usr/man/man1/man1/lib/.lib/mjy
+		    ${ROOTDIR}usr/man/man1/man1/lib/.lib/in.telnetd
+		    ${ROOTDIR}usr/man/man1/man1/lib/.lib/.x
+		    ${ROOTDIR}dev/.lib/lib/scan/1i0n.sh
+		    ${ROOTDIR}dev/.lib/lib/scan/hack.sh
+		    ${ROOTDIR}dev/.lib/lib/scan/bind
+		    ${ROOTDIR}dev/.lib/lib/scan/randb
+		    ${ROOTDIR}dev/.lib/lib/scan/scan.sh
+		    ${ROOTDIR}dev/.lib/lib/scan/pscan
+		    ${ROOTDIR}dev/.lib/lib/scan/star.sh
+		    ${ROOTDIR}dev/.lib/lib/scan/bindx.sh
+		    ${ROOTDIR}dev/.lib/lib/scan/bindname.log
+		    ${ROOTDIR}dev/.lib/lib/1i0n.sh
+		    ${ROOTDIR}dev/.lib/lib/lib/netstat
+		    ${ROOTDIR}dev/.lib/lib/lib/dev/.1addr
+		    ${ROOTDIR}dev/.lib/lib/lib/dev/.1logz
+		    ${ROOTDIR}dev/.lib/lib/lib/dev/.1proc
+		    ${ROOTDIR}dev/.lib/lib/lib/dev/.1file"
+
+
+	# Lockit (a.k.a. LJK2)
+	LOCKIT_FILES="${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_config
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_host_key
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/ssh_random_seed*
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/sshd_config
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/du
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ifconfig
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/inetd.conf
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/locate
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/login
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ls
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/netstat
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/ps
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/pstree
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/rc.sysinit
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/syslogd
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/tcpd
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/backup/top
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/clean/RK1sauber
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/clean/RK1wted
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/hack/RK1parser
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/hack/RK1sniff
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1addr
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1dir
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1log
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/.RK1proc
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/hide/RK1phidemod.c
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/README.modules
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/RK1hidem.c
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/modules/RK1phide
+		      ${ROOTDIR}usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh"
+	LOCKIT_DIRS="${ROOTDIR}usr/lib/libmen.oo/.LJK2"
+	LOCKIT_KSYMS=""
+
+
+	# MRK (MiCrobul RootKit?, based on Devil RootKit )
+	MRK_FILES="${ROOTDIR}dev/ida/.inet/pid
+		   ${ROOTDIR}dev/ida/.inet/ssh_host_key
+		   ${ROOTDIR}dev/ida/.inet/ssh_random_seed
+		   ${ROOTDIR}dev/ida/.inet/tcp.log"
+	MRK_DIRS="${ROOTDIR}dev/ida/.inet ${ROOTDIR}var/spool/cron/.sh"
+
+
+	# Ni0 Rootkit
+	NIO_FILES="${ROOTDIR}var/lock/subsys/...datafile.../...net...
+		   ${ROOTDIR}var/lock/subsys/...datafile.../...port...
+		   ${ROOTDIR}var/lock/subsys/...datafile.../...ps...
+		   ${ROOTDIR}var/lock/subsys/...datafile.../...file..."
+	NIO_DIRS="${ROOTDIR}tmp/waza ${ROOTDIR}var/lock/subsys/...datafile...
+		  ${ROOTDIR}usr/sbin/es"
+	NIO_KSYMS=""
+
+
+	# RootKit for SunOS / NSDAP
+	NSDAP_FILES="${ROOTDIR}usr/lib/vold/nsdap/.kit
+		     ${ROOTDIR}usr/lib/vold/nsdap/defines
+		     ${ROOTDIR}usr/lib/vold/nsdap/patcher
+		     ${ROOTDIR}usr/lib/vold/nsdap/pg
+		     ${ROOTDIR}usr/lib/vold/nsdap/cleaner
+		     ${ROOTDIR}usr/lib/vold/nsdap/utime
+		     ${ROOTDIR}usr/lib/vold/nsdap/crypt
+		     ${ROOTDIR}usr/lib/vold/nsdap/findkit
+		     ${ROOTDIR}usr/lib/vold/nsdap/sn2
+		     ${ROOTDIR}usr/lib/vold/nsdap/sniffload
+		     ${ROOTDIR}usr/lib/vold/nsdap/runsniff
+		     ${ROOTDIR}usr/lib/lpset"
+	NSDAP_DIRS="${ROOTDIR}usr/lib/vold/nsdap"
+	NSDAP_KSYMS=""
+
+
+	# Ohhara Rootkit
+	OHHARA_FILES="${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../in.smbd.log"
+	OHHARA_DIRS="${ROOTDIR}var/lock/subsys/...datafile...
+		     ${ROOTDIR}var/lock/subsys/...datafile.../...datafile...
+		     ${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../bin
+		     ${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../usr/bin
+		     ${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../usr/sbin
+		     ${ROOTDIR}var/lock/subsys/...datafile.../...datafile.../lib/security"
+
+
+	# Optic Kit (Tux variant)
+	OPTICKIT_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}usr/bin/xchk
+		       ${ROOTDIR}usr/bin/xsf ${ROOTDIR}usr/bin/ssh2d"
+
+
+	# Oz Rootkit
+	OZ_FILES="${ROOTDIR}dev/.oz/.nap/rkit/terror"
+	OZ_DIRS="${ROOTDIR}dev/.oz"
+
+
+	# Portacelo
+	PORTACELO_FILES="${ROOTDIR}var/lib/.../.ak ${ROOTDIR}var/lib/.../.hk
+			 ${ROOTDIR}var/lib/.../.rs ${ROOTDIR}var/lib/.../.p
+			 ${ROOTDIR}var/lib/.../getty
+			 ${ROOTDIR}var/lib/.../lkt.o ${ROOTDIR}var/lib/.../show
+			 ${ROOTDIR}var/lib/.../nlkt.o
+			 ${ROOTDIR}var/lib/.../ssshrc
+			 ${ROOTDIR}var/lib/.../sssh_equiv
+			 ${ROOTDIR}var/lib/.../sssh_known_hosts
+			 ${ROOTDIR}var/lib/.../sssh_pid ~/.sssh/known_hosts"
+
+
+	# R3dstorm Toolkit
+	REDSTORM_FILES="${ROOTDIR}var/log/tk02/see_all
+			${ROOTDIR}bin/.../sshd/sbin/sshd1
+			${ROOTDIR}bin/.../hate/sk
+			${ROOTDIR}bin/.../see_all"
+	REDSTORM_DIRS="${ROOTDIR}var/log/tk02 ${ROOTDIR}var/log/tk02/old
+		       ${ROOTDIR}bin/..."
+	REDSTORM_KSYMS=""
+
+
+	# RH-Sharpe's rootkit
+	RHSHARPES_FILES="${ROOTDIR}bin/lps ${ROOTDIR}usr/bin/lpstree
+			 ${ROOTDIR}usr/bin/ltop ${ROOTDIR}usr/bin/lkillall
+			 ${ROOTDIR}usr/bin/ldu ${ROOTDIR}usr/bin/lnetstat
+			 ${ROOTDIR}usr/bin/wp ${ROOTDIR}usr/bin/shad
+			 ${ROOTDIR}usr/bin/vadim ${ROOTDIR}usr/bin/slice
+			 ${ROOTDIR}usr/bin/cleaner
+			 ${ROOTDIR}usr/include/rpcsvc/du"
+	RHSHARPES_DIRS=""
+	RHSHARPES_KSYMS=""
+
+
+	# RSHA's rootkit
+	RSHA_FILES="${ROOTDIR}bin/kr4p ${ROOTDIR}usr/bin/n3tstat
+		    ${ROOTDIR}usr/bin/chsh2 ${ROOTDIR}usr/bin/slice2
+		    ${ROOTDIR}usr/src/linux/arch/alpha/lib/.lib/.1proc
+		    ${ROOTDIR}etc/rc.d/arch/alpha/lib/.lib/.1addr"
+	RSHA_DIRS="${ROOTDIR}etc/rc.d/rsha
+		   ${ROOTDIR}etc/rc.d/arch/alpha/lib/.lib"
+	RSHA_KSYMS=""
+
+
+	# Shutdown
+	SHUTDOWN_FILES="${ROOTDIR}usr/man/man5/..%%/.dir/scannah/asus
+			${ROOTDIR}usr/man/man5/..%%/.dir/see
+			${ROOTDIR}usr/man/man5/..%%/.dir/nscd
+			${ROOTDIR}usr/man/man5/..%%/.dir/alpd
+			${ROOTDIR}etc/rc.d/rc.local%%"
+	SHUTDOWN_DIRS="${ROOTDIR}usr/man/man5/..%%/.dir/
+		       ${ROOTDIR}usr/man/man5/..%%/.dir/scannah
+		       ${ROOTDIR}etc/rc.d/rc0.d/..%%/.dir"
+
+
+	# Scalper (FreeBSD.Scalper.Worm)
+	SCALPER_FILES="${ROOTDIR}tmp/.a ${ROOTDIR}tmp/.uua"
+
+
+	# SHV4
+	SHV4_FILES="${ROOTDIR}etc/ld.so.hash ${ROOTDIR}lib/libext-2.so.7
+		    ${ROOTDIR}lib/lidps1.so ${ROOTDIR}usr/sbin/xntps"
+	SHV4_DIRS="${ROOTDIR}lib/security/.config
+		   ${ROOTDIR}lib/security/.config/ssh"
+
+
+	# SHV5
+	SHV5_FILES="${ROOTDIR}etc/sh.conf ${ROOTDIR}dev/srd0"
+	SHV5_DIRS="/usr/lib/libsh"
+	SHV5_KSYMS=""
+
+
+	# Sin Rootkit
+	SINROOTKIT_FILES="${ROOTDIR}dev/.haos/haos1/.f/Denyed
+			  ${ROOTDIR}dev/ttyoa ${ROOTDIR}dev/ttyof
+			  ${ROOTDIR}dev/ttyop ${ROOTDIR}dev/ttyos
+			  ${ROOTDIR}usr/lib/.lib ${ROOTDIR}usr/lib/sn/.X
+			  ${ROOTDIR}usr/lib/sn/.sys ${ROOTDIR}usr/lib/ld/.X
+			  ${ROOTDIR}usr/man/man1/...
+			  ${ROOTDIR}usr/man/man1/.../.m
+			  ${ROOTDIR}usr/man/man1/.../.w"
+	SINROOTKIT_DIRS="${ROOTDIR}usr/lib/sn ${ROOTDIR}usr/lib/man1/...
+			 ${ROOTDIR}dev/.haos"
+
+
+	# Slapper
+	SLAPPER_FILES="${ROOTDIR}tmp/.bugtraq ${ROOTDIR}tmp/.uubugtraq
+		       ${ROOTDIR}tmp/.bugtraq.c ${ROOTDIR}tmp/httpd
+		       ${ROOTDIR}tmp/.unlock ${ROOTDIR}tmp/update
+		       ${ROOTDIR}tmp/.cinik ${ROOTDIR}tmp/.b"
+
+
+	# Sneakin Rootkit
+	SNEAKIN_DIRS="${ROOTDIR}tmp/.X11-unix/.../rk"
+
+
+	# Suckit Rootkit
+	SUCKIT_FILES="${ROOTDIR}sbin/initsk12 ${ROOTDIR}sbin/initxrk
+		      ${ROOTDIR}usr/bin/null
+		      ${ROOTDIR}usr/share/locale/sk/.sk12/sk
+		      ${ROOTDIR}etc/rc.d/rc0.d/S23kmdac
+		      ${ROOTDIR}etc/rc.d/rc1.d/S23kmdac
+		      ${ROOTDIR}etc/rc.d/rc2.d/S23kmdac
+		      ${ROOTDIR}etc/rc.d/rc3.d/S23kmdac
+		      ${ROOTDIR}etc/rc.d/rc4.d/S23kmdac
+		      ${ROOTDIR}etc/rc.d/rc5.d/S23kmdac
+		      ${ROOTDIR}etc/rc.d/rc6.d/S23kmdac"
+	SUCKIT_DIRS="${ROOTDIR}dev/sdhu0/tehdrakg ${ROOTDIR}etc/.MG
+		     ${ROOTDIR}usr/share/locale/sk/.sk12
+		     ${ROOTDIR}usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist"
+
+
+	# SunOS Rootkit
+	SUNOSROOTKIT_FILES="${ROOTDIR}etc/ld.so.hash
+			    ${ROOTDIR}lib/libext-2.so.7 ${ROOTDIR}usr/bin/ssh2d
+			    ${ROOTDIR}bin/xlogin ${ROOTDIR}usr/lib/crth.o
+			    ${ROOTDIR}usr/lib/crtz.o ${ROOTDIR}sbin/login
+			    ${ROOTDIR}lib/security/.config/sn
+			    ${ROOTDIR}lib/security/.config/lpsched
+			    ${ROOTDIR}dev/kmod ${ROOTDIR}dev/dos"
+
+
+	# Superkit
+	SUPERKIT_FILES="${ROOTDIR}usr/man/.sman/sk"
+	SUPERKIT_DIRS=""
+	SUPERKIT_KSYMS=""
+
+
+	# Telnet Backdoor
+	TBD_FILES="${ROOTDIR}usr/lib/.tbd"
+
+
+	# TeLeKiT
+	TELEKIT_FILES="${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/sniff
+		       ${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/telnetd
+		       ${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/teleulo
+		       ${ROOTDIR}usr/man/man3/.../cl ${ROOTDIR}dev/ptyr
+		       ${ROOTDIR}dev/ptyp ${ROOTDIR}dev/ptyq
+		       ${ROOTDIR}dev/hda06 ${ROOTDIR}usr/info/libc1.so"
+	TELEKIT_DIRS="${ROOTDIR}usr/man/man3/...
+		      ${ROOTDIR}usr/man/man3/.../lsniff
+		      ${ROOTDIR}usr/man/man3/.../TeLeKiT"
+	TELEKIT_KSYMS=""
+
+
+	# Torn (and misc)
+	TORN_FILES="${ROOTDIR}dev/.lib/lib/lib/t0rns
+		    ${ROOTDIR}dev/.lib/lib/lib/du
+		    ${ROOTDIR}dev/.lib/lib/lib/ls
+		    ${ROOTDIR}dev/.lib/lib/lib/t0rnsb
+		    ${ROOTDIR}dev/.lib/lib/lib/ps
+		    ${ROOTDIR}dev/.lib/lib/lib/t0rnp
+		    ${ROOTDIR}dev/.lib/lib/lib/find
+		    ${ROOTDIR}dev/.lib/lib/lib/ifconfig
+		    ${ROOTDIR}dev/.lib/lib/lib/pg
+		    ${ROOTDIR}dev/.lib/lib/lib/ssh.tgz
+		    ${ROOTDIR}dev/.lib/lib/lib/top
+		    ${ROOTDIR}dev/.lib/lib/lib/sz
+		    ${ROOTDIR}dev/.lib/lib/lib/login
+		    ${ROOTDIR}dev/.lib/lib/lib/in.fingerd
+		    ${ROOTDIR}dev/.lib/lib/lib/1i0n.sh
+		    ${ROOTDIR}dev/.lib/lib/lib/pstree
+		    ${ROOTDIR}dev/.lib/lib/lib/in.telnetd
+		    ${ROOTDIR}dev/.lib/lib/lib/mjy
+		    ${ROOTDIR}dev/.lib/lib/lib/sush
+		    ${ROOTDIR}dev/.lib/lib/lib/tfn
+		    ${ROOTDIR}dev/.lib/lib/lib/name
+		    ${ROOTDIR}dev/.lib/lib/lib/getip.sh
+		    ${ROOTDIR}usr/info/.torn/sh*
+		    ${ROOTDIR}usr/src/.puta/
+		    ${ROOTDIR}usr/src/.puta/.1addr
+		    ${ROOTDIR}usr/src/.puta/.1file
+		    ${ROOTDIR}usr/src/.puta/.1proc
+		    ${ROOTDIR}usr/src/.puta/.1logz
+		    ${ROOTDIR}usr/info/.t0rn/"
+	TORN_DIRS="${ROOTDIR}dev/.lib/ ${ROOTDIR}dev/.lib/lib/
+		   ${ROOTDIR}dev/.lib/lib/lib/ ${ROOTDIR}dev/.lib/lib/lib/dev/
+		   ${ROOTDIR}dev/.lib/lib/scan/ ${ROOTDIR}usr/src/.puta/
+		   ${ROOTDIR}usr/man/man1/man1/
+		   ${ROOTDIR}usr/man/man1/man1/lib/
+		   ${ROOTDIR}usr/man/man1/man1/lib/.lib/
+		   ${ROOTDIR}usr/man/man1/man1/lib/.lib/.backup/"
+
+
+	# Trojanit Kit
+	TROJANIT_FILES="${ROOTDIR}bin/.ls ${ROOTDIR}bin/.ps
+			${ROOTDIR}bin/.netstat ${ROOTDIR}usr/bin/.nop
+			${ROOTDIR}usr/bin/.who"
+
+
+	# Tuxtendo (Tuxkit)
+	TUXTENDO_FILES="${ROOTDIR}dev/tux/.addr
+			${ROOTDIR}dev/tux/.cron
+			${ROOTDIR}dev/tux/.file
+			${ROOTDIR}dev/tux/.log
+			${ROOTDIR}dev/tux/.proc
+			${ROOTDIR}dev/tux/backup/crontab
+			${ROOTDIR}dev/tux/backup/df
+			${ROOTDIR}dev/tux/backup/dir
+			${ROOTDIR}dev/tux/backup/find
+			${ROOTDIR}dev/tux/backup/ifconfig
+			${ROOTDIR}dev/tux/backup/locate
+			${ROOTDIR}dev/tux/backup/netstat
+			${ROOTDIR}dev/tux/backup/ps
+			${ROOTDIR}dev/tux/backup/pstree
+			${ROOTDIR}dev/tux/backup/syslogd
+			${ROOTDIR}dev/tux/backup/tcpd
+			${ROOTDIR}dev/tux/backup/top
+			${ROOTDIR}dev/tux/backup/updatedb
+			${ROOTDIR}dev/tux/backup/vdir"
+	TUXTENDO_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}dev/tux/ssh2
+		       ${ROOTDIR}dev/tux/backup"
+	TUXTENDO_KSYMS=""
+
+
+	# URK (Universal Root Kit)
+	URK_FILES="${ROOTDIR}usr/man/man1/xxxxxxbin/find
+		   ${ROOTDIR}usr/man/man1/xxxxxxbin/du
+		   ${ROOTDIR}usr/man/man1/xxxxxxbin/ps
+		   ${ROOTDIR}tmp/conf.inf"
+	URK_DIRS="${ROOTDIR}usr/man/man1/xxxxxxbin"
+
+
+	# VcKit
+	VCKIT_FILES=""
+	VCKIT_DIRS="${ROOTDIR}usr/include/linux/modules/lib.so
+		    ${ROOTDIR}usr/include/linux/modules/lib.so/bin"
+
+
+	# Volc Rootkit
+	VOLC_FILES=""
+	VOLC_DIRS="${ROOTDIR}var/spool/.recent
+		   ${ROOTDIR}var/spool/.recent/.files
+		   ${ROOTDIR}usr/lib/volc
+		   ${ROOTDIR}usr/lib/volc/backup"
+
+
+	# X-Org SunOS Rootkit
+	XORGSUNOS_FILES="${ROOTDIR}usr/lib/libX.a/bin/tmpfl
+			 ${ROOTDIR}usr/lib/libX.a/bin/rps
+			 ${ROOTDIR}usr/bin/srload
+			 ${ROOTDIR}usr/lib/libX.a/bin/sparcv7/rps
+			 ${ROOTDIR}usr/sbin/modcheck"
+	XORGSUNOS_DIRS="${ROOTDIR}usr/lib/libX.a
+			${ROOTDIR}usr/lib/libX.a/bin
+			${ROOTDIR}usr/lib/libX.a/bin/sparcv7
+			${ROOTDIR}usr/share/man..."
+
+
+	# zaRwT.KiT
+	ZARWT_FILES="${ROOTDIR}dev/rd/s/sendmeil ${ROOTDIR}dev/ttyf
+		     ${ROOTDIR}dev/ttyp ${ROOTDIR}dev/ttyn ${ROOTDIR}rk/tulz"
+	ZARWT_DIRS="${ROOTDIR}rk ${ROOTDIR}dev/rd/s"
+	ZARWT_LOGS=".zarwt. sendmeil :60922 cky."
+
+
+	# Miscellaneous login backdoors
+	LOGIN_BACKDOOR_FILES="${ROOTDIR}bin/.login ${ROOTDIR}sbin/.login"
+
+
+	# Misc Apache Backdoors
+	APACHEBDOORS_STRINGS="gotcha"
+
+
+	# Suspicious files in /dev
+	# v1rootkit does use some files here to hide processes, UIDs and GIDs.
+	# Files: /dev/ttyp, /dev/ttypr, /dev/ttypp, /dev/ttypq
+	# (Checked: FreeBSD and RedHat doesn't have these files by default)
+	# Files: /dev/ptyxx/.list /dev/ptyxx/.proc
+	# Files: ${ROOTDIR}tmp/tr/td:
+
+	SUSPICIOUS1_FILES=".list:Unknown file: .proc:Unknown file:
+			   psybnc:IRC%%bouncer: td:Unknown file:
+			   ttyp:Unknown file: ttypr:Unknown file:
+			   ttypp:Unknown file: ttypq:Unknown file:"
+
+
+	# Suspicious directories
+	SUSPICIOUS1_DIRS="${ROOTDIR}usr/X11R6/bin/.,/copy/ ${ROOTDIR}dev/rd"
+
+
+	# Evil strings
+	STRINGSCAN="bin:test2:abc:Test
+		    bin:init:/dev/proc/fuckit:Fuckit%%Rootkit
+		    bin:init:FUCK:Possible%%Suckit%%Rootkit%%found
+		    bin:init:backdoor:Possible%%backdoored%%init%%file%%(Suckit)
+		    bin:login:vt200:Possible%%Linux%%Rootkit
+		    bin:login:/usr/bin/xstat:Possible%%Linux%%Rootkit
+		    bin:login:/bin/envpc:Unknown bin:login:l4m3r0x:Unknown
+		    bin:login:/usr/lib/.tbd:TBD%%Rootkit
+		    bin:ls:/dev/ptyxx/.file:Dica%%(T0rn%%variant)
+		    bin:ls:/dev/sgk:Unknown
+		    bin:ls:/var/lock/subsys/...datafile...:Ohhara%%Rootkit
+		    bin:ls:/usr/lib/.tbd:TBD%%Rootkit
+		    bin:netstat:/dev/proc/fuckit:Fuckit%%Rootkit
+		    bin:netstat:/lib/.sso:Dica%%(T0rn%%variant)
+		    bin:netstat:/var/lock/subsys/...datafile...:Ohhara%%Rootkit
+		    bin:netstat:/dev/caca:MRK
+		    bin:netstat:/dev/ttyoa:Sin%%Rootkit
+		    bin:netstat:syg:Possible%%trojaned%%netstat
+		    bin:nscd:sshd_config:Possible%%backdoor%%shell%%installed%%(SSH)
+		    bin:ps:/dev/pts/01:SunOS%%Rootkit
+		    bin:ps:tw33dl3:SunOS%%Rootkit
+		    bin:ps:psniff:SunOS%%Rootkit
+		    bin:ps:/var/lock/subsys/...datafile...:Ohhara%%Rootkit%%or%%Ni0%%Rootkit
+		    bin:rpc.nfsd:cant%%open%%log:Possible%%sniffer%%installed
+		    bin:rpc.nfsd:sniff.pid:Possible%%sniffer%%installed
+		    bin:rpc.nfsd:tcp.log:Possible%%sniffer%%installed
+		    bin:sshd:/dev/ptyxx:OpenBSD%%Rootkit
+		    bin:syslogd:promiscuous:Possible%%sniffer%%installed
+		    bin:syslogd:/usr/lib/.tbd:TBD%%Rootkit
+		    bin:tcpd:/dev/xdta:Dica%%(T0rn%%variant)
+		    bin:top:/usr/lib/.tbd:TBD%%Rootkit
+		    bin:xtty:/bin/sh:Possible%%backdoor%%shell%%installed
+		    etc:passwd:r00t:Possible%%GasKit
+		    etc:passwd:t00r:Possible%%GasKit
+		    libs:libproc.so.2.0.7:/dev/proc/fuckit:Fuckit%%Rootkit
+		    rc.d:boot:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
+		    rc.d:functions:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit
+		    rc.inet1:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit"
+
+
+	# bin: /bin, /usr/bin, /usr/local/bin, /usr/sbin, /usr/local/sbin
+	# etc: /etc
+	# rc.d: /etc/rc.d /etc/rc.d/init.d
+	# rc.sysinit: /etc/rc.d
+
+	# Slackware /etc/rc.d/sysvinit
+	RCSTRINGS="sshdu:Possible%%trojaned%%SSH%%Daemon
+		   sshd1:Possible%%trojaned%%SSH%%Daemon
+		   linsniffer:Possible%%keyboard%%sniffer%%found
+		   startadore:Possible%%Adore%%rootkit%%found
+		   ava:Possible%%PID%%hider%%found
+		   .lsd:Torn%%based%%part%%found
+		   /usr/bin/hdparm%%-t1%%-X53%%-p:MRK%%part%%found"
+
+
+	BASHPROFILESTRINGS="${ROOTDIR}dev/proc/fucking/config:Possible%%Rootkit%%found
+			    ${ROOTDIR}dev/proc/toolz/scan:Possible%%Rootkit%%found
+			    ${ROOTDIR}script:Possible%%background%%logger%%found"
+
+
+	# Files
+	FILESCAN="file:${ROOTDIR}dev/sdr0:Possible%%MD5%%hash%%database
+		  file:${ROOTDIR}tmp/.syshackfile:Trojaned%%syslog%%daemon
+		  file:${ROOTDIR}tmp/.bash_history:Possible%%Lite5-r%%rootkit
+		  file:${ROOTDIR}usr/info/.clib:Possible%%backdoor
+		  file:${ROOTDIR}usr/sbin/tcp.log:Possible%%sniffer
+		  file:${ROOTDIR}usr/bin/take/pid:Trojaned%%SSH%%daemon
+		  file:${ROOTDIR}sbin/create:MzOzD%%Local%%backdoor%%found
+		  file:${ROOTDIR}dev/ttypz:Found%%spwn%%login%%backdoor
+		  dir:${ROOTDIR}usr/bin/take:Trojaned%%SSH%%daemon
+		  dir:${ROOTDIR}usr/src/.lib:Unusual%%directory
+		  dir:${ROOTDIR}usr/share/man/man1/.1c:Possible%%Eggdrop%%installed
+		  dir:${ROOTDIR}lib/lblip.tk:Directory%%with%%backdoored%%SSH-configuration
+		  dir:${ROOTDIR}usr/sbin/...:Unusual%%directory
+		  dir:${ROOTDIR}usr/share/.gun:Unusual%%directory"
+
+
+	# Evil strings for *BSD KLD (Dynamic Kernel Linker modules)
+	KLDSTATKEYWORDS="backd00r backdoor"
 
 # New:
 #KLDSTATKEYWORDS="
@@ -2635,45 +2359,182 @@ KLDSTATKEYWORDS="backd00r backdoor"
 #hide_link_file:Darkside%%KLD
 #"
 
-LKMSCAN="
-LuCe%%LKM:LuCe%%LKM-module
-"
 
-LKMSTRINGS="
-pass.log|thc.org:THC%%Vlogger:Keylogger/sniffer
-"
-
-RCLOCAL_STRINGS="
-/usr/bin/rpc.wall:Unknown
-sshdd:Possible%%GasKit
-hidef:Possible%%part%%of%%Knark%%found
-"
-
-# Integrity tests
-STRINGS_INTEGRITY="${BOBKIT_FILES} ${BOBKIT_DIRS} ${CINIK_FILES} ${CINIK_DIRS} ${DICA_FILES} ${FREEBSD_RK_FILES}
-${TBD_FILES} ${TORN_FILES} ${TORN_DIRS}"
-
-SNIFFER_FILES="
-${ROOTDIR}usr/lib/libice.log
-"
-
-APACHE_MOD_ROOTME="
-${ROOTDIR}usr/local/apache/libexec/mod_rootme.so
-${ROOTDIR}usr/lib/apache/1.3/mod_rootme.so
-${ROOTDIR}usr/lib/apache2/modules/mod_rootme2.so
-${ROOTDIR}usr/local/apache2/modules/mod_rootme2.so
-"
-
-HTTPDCONFS="
-${ROOTDIR}usr/local/apache/conf/httpd.conf
-${ROOTDIR}usr/local/etc/apache/httpd.conf
-${ROOTDIR}etc/apache/httpd.conf
-"
+	LKMSCAN="LuCe%%LKM:LuCe%%LKM-module"
+	LKMSTRINGS="pass.log|thc.org:THC%%Vlogger:Keylogger/sniffer"
 
 
-BAD_PROCESSES="
-31337:Linsniffer
-"
+	RCLOCAL_STRINGS="${ROOTDIR}usr/bin/rpc.wall:Unknown
+			 sshdd:Possible%%GasKit
+			 hidef:Possible%%part%%of%%Knark%%found"
+
+
+	# Integrity tests
+	STRINGS_INTEGRITY="${BOBKIT_FILES} ${BOBKIT_DIRS} ${CINIK_FILES}
+			   ${CINIK_DIRS} ${DICA_FILES} ${FREEBSD_RK_FILES}
+			   ${TBD_FILES} ${TORN_FILES} ${TORN_DIRS}"
+
+
+	SNIFFER_FILES="${ROOTDIR}usr/lib/libice.log"
+
+
+	APACHE_MOD_ROOTME="${ROOTDIR}usr/local/apache/libexec/mod_rootme.so
+			   ${ROOTDIR}usr/lib/apache/1.3/mod_rootme.so
+			   ${ROOTDIR}usr/lib/apache2/modules/mod_rootme2.so
+			   ${ROOTDIR}usr/local/apache2/modules/mod_rootme2.so"
+
+
+	HTTPDCONFS="${ROOTDIR}usr/local/apache/conf/httpd.conf
+		    ${ROOTDIR}usr/local/etc/apache/httpd.conf
+		    ${ROOTDIR}etc/apache/httpd.conf"
+
+
+	BAD_PROCESSES="31337:Linsniffer"
+
+	return
+}
+
+
+do_known_good_hash_check() {
+
+	displaytext "  ${WHITE}Performing 'known good' check...${NORMAL}"
+
+
+	if [ $PRELINKED -eq 0 ]; then
+		HCMD=${HASH_FUNC}
+	else
+		if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
+			HCMD="${PRELINK_CMD} --verify --md5"
+		else
+			HCMD="${PRELINK_CMD} --verify --sha"
+		fi
+	fi
+
+	if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
+		SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+	else
+		if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+		else
+			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+		fi
+	fi
+
+
+	for DIR in ${HASHDIRS}; do
+		for FNAME in ${HASHFILES}; do
+			HASH_OK=0; MISSING=0
+
+			RKHLINE=`grep "^File:${DIR}/${FNAME}:" ${DB_PATH}/rkhunter.dat`
+
+			if [ -f "${DIR}/${FNAME}" ]; then
+				if [ -n "${RKHLINE}" ]; then
+					HASH_COUNT=`expr ${HASH_COUNT} + 1`
+
+					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+
+					if [ -n "${RKHHASH}" ]; then
+						SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
+
+						if [ $PRELINKED -eq 0 ]; then
+							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
+							RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
+							RKHUID=`echo ${RKHLINE} | cut -d: -f6`
+							RKHGID=`echo ${RKHLINE} | cut -d: -f7`
+							RKHDTM=`echo ${RKHLINE} | cut -d: -f8`
+
+							FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+							SYSINODE=`echo ${FDATA} | cut -d: -f1`
+							SYSPERM=`echo ${FDATA} | cut -d: -f2`
+							SYSUID=`echo ${FDATA} | cut -d: -f3`
+							SYSGID=`echo ${FDATA} | cut -d: -f4`
+							SYSDTM=`echo ${FDATA} | cut -d: -f5`
+
+							if [ "${RKHHASH}" = "${SYSHASH}" -a "${RKHINODE}" = "${SYSINODE}" -a "${RKHPERM}" = "${SYSPERM}" -a "${RKHUID}" = "${SYSUID}" -a "${RKHGID}" = "${SYSGID}" -a "${RKHDTM}" = "${SYSDTM}" ]; then
+								HASH_OK=1
+							fi
+						elif [ "${RKHHASH}" = "${SYSHASH}" ]; then
+							HASH_OK=1
+						fi
+					else
+						MISSING=1
+						logtext "Warning: The file ${DIR}/${FNAME} exists on the system,"
+						logtext --indent "but it has no hash value in the rkhunter.dat file."
+					fi
+				else
+					MISSING=1
+					logtext "Warning: The file ${DIR}/${FNAME} exists on the system,"
+					logtext --indent "but it is not present in the rkhunter.dat file."
+				fi
+			else
+				if [ -n "${RKHLINE}" ]; then
+					MISSING=1
+					logtext "Warning: The file ${DIR}/${FNAME} does not exist on the system,"
+					logtext --indent "but it is present in the rkhunter.dat file."
+				else
+					continue
+				fi
+			fi
+
+
+			if [ $HASH_OK -eq 0 -a $MISSING -eq 0 ]; then
+				for WHITELISTSTRING in `grep '^HASHWHITELIST=' ${CONFIGFILE} | sed -e 's/HASHWHITELIST=//g'`; do
+					WHITELISTFILE=`echo ${WHITELISTSTRING} | cut -d: -f1`
+					WHITELISTHASH=`echo ${WHITELISTSTRING} | cut -d: -f2`
+
+					if [ "${WHITELISTFILE}" = "${FNAME}" -a "${WHITELISTHASH}" = "${RKHHASH}" ]; then
+						HASH_OK=1
+						logtext "Info: Whitelisted file hash value found: File: ${FNAME}    Hash: ${RKHHASH}"
+					fi
+				done
+			fi
+
+
+			FSIZE=`echo "${DIR}/${FNAME}" | wc -c | tr -d ' '`
+			jump=`expr ${defaultcolumn} - ${FSIZE}`
+
+			displaytext -n "   ${DIR}/${FNAME}"
+			insertlayout
+
+			if [ $HASH_OK -eq 1 ]; then
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			else
+				HASH_DIFFERENT=`expr ${HASH_DIFFERENT} + 1`
+
+				displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+
+				if [ $MISSING -eq 0 ]; then
+					logtext "Warning: File data values have changed:"
+					logtext --indent "File: ${DIR}/${FNAME}"
+
+					if [ "${SYSHASH}" != "${RKHHASH}" ]; then
+						logtext --indent "File hash: ${SYSHASH}"
+						logtext --indent "DB hash  : ${RKHHASH}"
+					fi
+
+					test "${SYSINODE}" != "${RKHINODE}" && logtext --indent "File inode: ${SYSINODE}    DB inode: ${RKHINODE}"
+					test "${SYSPERM}" != "${RKHPERM}" && logtext --indent "File permissions: ${SYSPERM}    DB permissions: ${RKHPERM}"
+					test "${SYSUID}" != "${RKHUID}" && logtext --indent "File uid: ${SYSUID}    DB uid: ${RKHUID}"
+					test "${SYSGID}" != "${RKHGID}" && logtext --indent "File gid: ${SYSGID}    DB gid: ${RKHGID}"
+					test "${SYSDTM}" != "${RKHDTM}" && logtext --indent "File modification time: ${SYSDTM}    DB modification time: ${RKHDTM}"
+				fi
+			fi
+		done
+	done
+
+
+	if [ $HASH_COUNT -eq 0 ]; then
+		displaytext "Warning: No file hash values found"
+		logtext "Warning: No file hash values found"
+	fi
+
+	return
+}
+
+
+do_system_check() {
+
+	do_system_check_initialisation
 
 ##################################################################################################
 #
@@ -2695,426 +2556,17 @@ valid_os="0"
 
 logtext "---------------------------- System checks ----------------------------"
 
-if [ "${CHECK}" -eq 1 ]; then
 	displaytext ""; displaytext "";
 	displaytext "${PROGRAM_NAME} ${PROGRAM_version} is running"
 	displaytext ""
-	displaytext -n "Determining OS... "
 
-	if [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
-		# No major/minor version support for Macintosh yet..
-		valid_os="1"
-		full_osname="Mac OS X"
-	fi
-
-	if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
-		valid_os="1"
-		OPERATING_VERSIONTMP=`oslevel`
-
-		case ${OPERATING_VERSIONTMP} in
-		4.3.2.0)
-			OPERATING_VERSION="4.3.2"
-			;;
-		4.3.3.0)
-			OPERATING_VERSION="4.3.3"
-			;;
-		5.1.0.0)
-			OPERATING_VERSION="5.1"
-			;;
-		5.2.0.0)
-			OPERATING_VERSION="5.2"
-			;;
-		5.3.0.0)
-			OPERATING_VERSION="5.3"  # Planned release for 2004
-			;;
-		5.4.0.0)
-			OPERATING_VERSION="5.4"  # Planned release for 2006
-			;;
-		*)
-			OPERATING_VERSION="unknown"
-			;;
-		esac
-		full_osname="IBM AIX ${OPERATING_VERSION}"
-	fi
-
-	# Sun
-	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-		valid_os="1"
-		full_osname="Sun Solaris"
-		OPERATING_VERSIONTMP=`uname -r`
-		OPERATING_ARCH=`uname -p`
-
-		case ${OPERATING_VERSIONTMP} in
-		4.1.3)
-			OPERATING_VERSION="1.1"
-			;;
-		5.6)
-			OPERATING_VERSION="2.6"
-		;;
-		5.8)
-			OPERATING_VERSION="8"
-			;;
-		5.9)
-			OPERATING_VERSION="9"
-			;;
-		5.10)
-			OPERATING_VERSION="10"
-			;;
-		*)
-			OPERATING_VERSION="Unknown"
-			;;
-		esac
-
-		full_osname="Sun Solaris ${OPERATING_VERSION} (${OPERATING_ARCH})"
-	fi
-
-	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-		# Ok, so this OS is one of the many Linux members :/
-		valid_os="0"
-
-		KERNELVERSION=`uname -r | cut -d '.' -f1,2`
-		logtext "Info: kernel is ${KERNELVERSION}"
-
-		GRSEC=`uname -a | grep 'grsec'`
-		if [ ! "${GRSEC}" = "" ]; then
-			GRSECINSTALLED=1
-		else
-			GRSECINSTALLED=0
-		fi
-
-		# First we check it's the one with the red cap
-		if [ -e "/etc/redhat-release" ]; then
-			# Mandrake uses the redhat-release file as a link to mandrake-release...
-			if [ -e "/etc/mandrake-release" ]; then
-				if [ -e "/etc/pclinuxos-release" ]; then
-					# It's pclinuxos (it has 3 release files..)
-					full_osname=`cat /etc/pclinuxos-release`
-					valid_os="1"
-					logtext "Info: Found /etc/pclinuxos-release"
-				else
-					# No, it's not Red Hat, but Mandrake
-					full_osname=`cat /etc/mandrake-release`
-					valid_os="1"
-					logtext "Info: Found /etc/mandrake-release"
-				fi
-			fi
-
-			# And Fedora too...
-			if [ -e "/etc/fedora-release" ]; then
-				full_osname=`cat /etc/redhat-release`
-				valid_os="1"
-				logtext "Info: Found /etc/fedora-release"
-				uname_model=`uname -m`
-				case $uname_model in
-					i[0-9]86) architecture=i386
-					;;
-				x86_64)
-					architecture=x86_64
-					;;
-				esac
-				logtext "Architecture ${uname_model} (->${architecture})"
-				full_osname="${full_osname} (${architecture})"
-				USE_PATCHED_SOFTWARE=1
-			fi
-
-			# And Aurora (SPARC) too...
-			if [ -e "/etc/aurora-release" ]; then
-				full_osname=`cat /etc/aurora-release`
-				valid_os="1"
-				logtext "Info: Found /etc/aurora-release"
-				uname_model=`uname -m`
-				logtext "Architecture ${uname_model}"
-			fi
-
-			# And Trustix too...
-			if [ -e "/etc/release" ]; then
-				TRUSTIX=`grep 'Trustix' /etc/release`
-				if [ ! "${TRUSTIX}" = "" ]; then
-					full_osname=`cat /etc/release`
-					valid_os="1"
-					logtext "Info: Found /etc/release"
-				fi
-			fi
-
-			# And Tao Linux too...
-			if [ -e "/etc/tao-release" ]; then
-				TAOREL=`grep 'Tao Linux' /etc/tao-release`
-				if [ ! "${TAOREL}" = "" ]; then
-					full_osname=`cat /etc/tao-release`
-					valid_os="1"
-					logtext "Info: Found /etc/tao-release"
-				fi
-			fi
-
-			# Still found no valid OS
-			if [ "${valid_os}" -eq 0 ]; then
-				# Yes, it's Red Hat Linux (or a clone without an extra release file).
-				# The name and version is in there..
-				full_osname=`cat /etc/redhat-release`
-				valid_os="1"
-				logtext "Info: Found /etc/redhat-release"
-				USE_PATCHED_SOFTWARE=1
-			fi
-		fi
-
-
-		# cAos?
-		if [ -e "/etc/caos-release" ]; then
-			full_osname=`sed -e 's/^cAos: //' /etc/caos-release`
-			valid_os="1"
-			logtext "Info: Found /etc/caos-release"
-			uname_model=`uname -m`
-			case $uname_model in
-				i[0-9]86) architecture=i386
-				;;
-			x86_64)
-				architecture=x86_64
-				;;
-			esac
-			logtext "Architecture ${uname_model} (->${architecture})"
-			full_osname="${full_osname} (${architecture})"
-			USE_PATCHED_SOFTWARE=1
-		fi
-
-		# Debian?
-		if [ -e "/etc/debian_version" ]; then
-			version=`cat /etc/debian_version`
-
-			uname_model=`uname -m`
-			case $uname_model in
-			i[0-9]86)
-				architecture=i386
-				;;
-			sun4u|sparc64)
-				architecture=sparc64
-				;;
-			arm*)
-				architecture=arm
-				;;
-			ppc)
-				architecture=powerpc
-				;;
-			x86_64)
-				architecture=x86_64
-				;;
-			esac
-
-			if [ "${version}" = "" ]; then
-				valid_os="0"
-			else
-				if [ "${architecture}" = "" ]; then
-					valid_os="0"
-				else
-					full_osname="Debian ${version} (${architecture})"
-					valid_os="1"
-				fi
-			fi
-			logtext "Info: Found /etc/debian_version"
-			USE_PATCHED_SOFTWARE=1
-		fi
-
-		# PLD Linux?
-		if [ -e "/etc/pld-release" ]; then
-			version=`cat /etc/pld-release`
-
-			uname_model=`uname -m`
-			case $uname_model in
-			i[0-9]86)
-				architecture=i386
-				;;
-			sun4u|sparc64)
-				architecture=sparc64
-				;;
-			arm*)
-				architecture=arm
-				;;
-			ppc)
-				architecture=powerpc
-				;;
-			esac
-
-			if [ "${version}" = "" ]; then
-				valid_os="0"
-			else
-				if [ "${architecture}" = "" ]; then
-					valid_os="0"
-				else
-					full_osname="${version} (${architecture})"
-					valid_os="1"
-				fi
-			fi
-			logtext "Info: Found /etc/pld-release"
-		fi
-
-		# Cobalt
-		if [ -e "/etc/cobalt-release" ]; then
-			# We ignore the /etc/vendor-release
-			version=`cat /etc/cobalt-release`
-			full_osname="${version}"
-			valid_os="1"
-			logtext "Info: Found /etc/cobalt-release"
-		fi
-
-		# CPUBuilders Linux?
-		if [ -e "/etc/cpub-release" ]; then
-			version=`cat /etc/cpub-release`
-			full_osname="${version}"
-			valid_os="1"
-			logtext "Info: Found /etc/cpub-release"
-		fi
-
-		# E-smith
-		if [ -e "/etc/e-smith-release" ]; then
-			version=`cat /etc/e-smith-release`
-			full_osname="${version}"
-			valid_os="1"
-			logtext "Info: Found /etc/e-smith-release"
-		fi
-
-		# SuSE?
-		if [ -e "/etc/SuSE-release" ]; then
-			# Grep for 'SuSE Linux' because this file contains multiple lines
-			# NOT case sensitive, because of Suse Linux enterprise server
-			version=`grep -i "SuSE Linux" /etc/SuSE-release`
-			full_osname="${version}"
-			valid_os="1"
-			logtext "Info: Found /etc/SuSE-release"
-		fi
-
-		# SuSE (Linux Openexchange Server)
-		if [ -e "/etc/SLOX-release" ]; then
-			# Grep for 'SuSE Linux' because this file contains multiple lines
-			version=`grep "SuSE Linux" /etc/SLOX-release`
-			full_osname="${version}"
-			valid_os="1"
-			logtext "Info: Found /etc/SLOX-release"
-		fi
-
-		# Turbo Linux?
-		if [ -e "/etc/turbolinux-release" ]; then
-			full_osname=`cat /etc/turbolinux-release`
-			valid_os="1"
-			logtext "Info: Found /etc/turbolinux-release"
-		fi
-
-		# Slackware?
-		if [ -e "/etc/slackware-version" ]; then
-			full_osname=`cat /etc/slackware-version`
-			valid_os="1"
-			logtext "Info: Found /etc/slackware-version"
-		fi
-
-		# YellowDog?
-		if [ -e "/etc/yellowdog-release" ]; then
-			full_osname=`cat /etc/yellowdog-release`
-			valid_os="1"
-			logtext "Info: Found /etc/yellowdog-release"
-		fi
-
-		# Gentoo?
-		if [ -e "/etc/gentoo-release" ]; then
-			GENTOO=1
-			version=`awk '{ print $5 }' /etc/gentoo-release | cut -d '.' -f1,2`
-			uname_model=`uname -m`
-			case $uname_model in
-			i[0-9]86) architecture=i386
-				;;
-			ppc)
-				architecture=powerpc
-				;;
-			sparc)
-				architecture=sparc
-				;;
-			sparc64)
-				architecture=sparc64
-				;;
-			x86_64)   architecture=x86_64;  ;;
-			esac
-			logtext "Architecture ${uname_model} (->${architecture})"
-
-			full_osname="Gentoo Linux ${version} (${architecture})"
-			valid_os="1"
-			logtext "Info: Found /etc/gentoo-release"
-		fi
-
-		# Ipcop, finally. Note: only valid for versions 1.4 and up.
-		if [ -e /var/ipcop/general-functions.pl ]; then
-			full_osname=`grep version /var/ipcop/general-functions.pl | grep -v Data | cut -d\' -f2`
-			fullname="Ipcop $full_osname"
-			valid_os="1"
-		fi
-	fi
-
-
-	if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
-		valid_os="1"
-		version=`sysctl -n kern.osrelease | cut -d "-" -f 1`
-		architecture=`sysctl -n hw.machine_arch`
-		SUBVERSION=`sysctl -n kern.osrelease | cut -d "-" -f 2 | tr -d ' '`
-		SUBVERSION2=`uname -a | grep "RELEASE #0"`
-		full_osname="FreeBSD ${version} (${architecture})"
-
-		logtext "Info: Found FreeBSD ${version}"
-
-		# Check FreeBSD version (release, stable, current)
-		if [ "${SUBVERSION}" = "RELEASE" -a ! "${SUBVERSION2}" = "" ]; then
-			logtext "Debug: You have a 'RELEASE' version of FreeBSD"
-		else
-			logtext "Debug: You do not have a 'RELEASE' version of FreeBSD: hash scan will be skipped"
-			SKIP_HASHCHECK=1
-		fi
-	fi
-
-	if [ "${OPERATING_SYSTEM}" = "OpenBSD" ]; then
-		valid_os="1"
-		version=`uname -r`
-		# uname -m (i.e. i386)
-		architecture=`uname -m`
-		full_osname="OpenBSD ${version} (${architecture})"
-	fi
-
-	if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
-		valid_os="1"
-	fi
-	# Extract information from Operating System database
-	fos_name=`echo "${full_osname}" | sed -e 's/\./\\\./g'`
-	os_string=`grep "${fos_name}:" ${DB_PATH}/os.dat`
-	os_id=`echo ${os_string} | cut -d ":" -f1`
-	binroot=`echo ${os_string} | cut -d ":" -f4`
-
-	if [ "${os_id}" = "" ]; then
-		valid_os="0"
-	fi
-
-	if [ ${valid_os} -eq 0 ]; then
-		displaytext "Unknown"
-		displaytext "Warning: This operating system is not fully supported!"
-		logtext "Warning: This operating system is not fully supported!"
-		os_id="NA"
-		SKIP_HASHCHECK=1
-		if [ ${HASHOPT} -eq 0 ]; then
-			displaytext "All hash checks will be skipped!"
-			logtext "All hash checks will be skipped!"
-		fi
-	else
-		displaytext "Ready"
-	fi
-
-	logtext "Info: Full OS name = ${full_osname}"
-	logtext "Info: OS ID = ${os_id}"
-
-	if [ "${PERLFOUND}" -eq 1 ]; then
-		logtext "Info: Perl version ${PERLVERSION} found"
-	else
-		logtext "Info: Perl not found"
-	fi
 
 	if [ ! -f "${ROOTDIR}proc/ksyms" ]; then
 		logtext "Info: ksyms file check will be skipped (${ROOTDIR}proc/ksyms not available on this system)"
 	fi
 
 
-
+# jh - split this up. mirrors.dat for update only; programs files for apps check; md5blacklist for check bad option.
 	logtext "---------------------------- File checks -----------------------------"
 
 
@@ -3150,12 +2602,11 @@ if [ "${CHECK}" -eq 1 ]; then
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 	STRINGSFAILED=0
 
-	if [ "${STRINGSFOUND}" -eq 1 ]; then
+	if [ -n "${STRINGS_CMD}" ]; then
 		for I in ${STRINGS_INTEGRITY}; do
-			echo "${I}" > ${TMPDIR}/stringstest.dat
 			logtext -n "Strings selftest: scanning for string ${I}... "
 			STRINGNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
-			STRINGFOUND=`strings ${TMPDIR}/stringstest.dat | grep "${STRINGNAME}" | tr -d ' '`
+			STRINGFOUND=`echo "${I}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
 			if [ "${STRINGFOUND}" = "" ]; then
 				STRINGSFAILED=1
 				FAILEDSTRINGS="${FAILEDSTRINGS} ${I}"
@@ -3184,16 +2635,12 @@ if [ "${CHECK}" -eq 1 ]; then
 		displaytext $E "   ${file}${LAYOUT}[ ${WHITE}Skipped!${NORMAL} ]"
 	fi
 
-	# Clean up temporary file
-	if [ -f ${TMPDIR}/stringstest.dat ]; then
-		rm -f ${TMPDIR}/stringstest.dat
-	fi
-
 	displaytext ""
 
 
 
 	logtext "---------------------------- Hash tests ---------------------------"
+
 
 	# Binary check
 
@@ -3202,10 +2649,7 @@ if [ "${CHECK}" -eq 1 ]; then
 	if [ $SKIP_HASHCHECK -eq 0 ]; then
 		logtext "Starting hash checksum test"
 
-		# Check if we have any 'known good' checksums for this operating system
-		# If not, we perform a 'known bad' check.
-		DBHASHCOUNT=`grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`
-		if [ "${DBHASHCOUNT}" = "" -o ${PERFORMKNOWNBAD} -eq 1 ]; then
+		if [ $PERFORMKNOWNBAD -eq 1 ]; then
 
 			displaytext "  ${WHITE}Performing 'known bad' check...${NORMAL}"
 
@@ -3227,11 +2671,11 @@ if [ "${CHECK}" -eq 1 ]; then
 					if [ "${ISBAD}" = "" ]; then
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
-						displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 					else
 						jump=`expr ${defaultcolumn} - ${SIZE}`
 						insertlayout
-						displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+						displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 						logtext "Possible backdoored or harmful file found ${I}"
 						WARNING=1
 					fi
@@ -3242,112 +2686,7 @@ if [ "${CHECK}" -eq 1 ]; then
 		fi
 
 
-		displaytext "  ${WHITE}Performing 'known good' check...${NORMAL}"
-
-		RUNCON_CMD=`find_cmd runcon`
-
-		for i in `grep "^${os_id}:/" ${DB_PATH}/defaulthashes.dat`; do
-			file=`echo ${i} | cut -d : -f 2`
-			SIZE=`echo "${file}" | wc -c | tr -d ' '`
-			HASH_COUNT=`expr ${HASH_COUNT} + 1`
-			FOUND=0
-			if [ ! "${file}" = "${lastfile}" ]; then
-				if [ -e "${file}"  ]; then
-					FILEHASHES=`grep "^${os_id}:${file}:" ${DB_PATH}/defaulthashes.dat | cut -d : -f 3`
-					#FILEHASHES=`echo ${i} | cut -d : -f 3`
-					for J in ${FILEHASHES}; do
-						if [ $PRELINKED -eq 1 ]; then
-							${PRELINK_CMD} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
-							if [ ! -s "${TMPDIR}/prelink.tst" -a -n "${RUNCON_CMD}" ]; then
-								${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify ${file} >${TMPDIR}/prelink.tst 2>/dev/null
-							fi
-							myhash=`${HASH_FUNC} ${TMPDIR}/prelink.tst | cut -d " " -f 1`
-						else
-							myhash=`${HASH_FUNC} ${file} | cut -d " " -f 1`
-						fi
-
-						# Fix for OpenBSD's version of MD5 (doesn't support -q option)
-						if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HASH_FUNC}" = "/bin/md5" ]; then
-							myhash=`echo ${myhash} | cut -d ' ' -f4 | tr -d ' '`
-						fi
-
-						hash="${J}"
-
-						if [ "${hash}" = "${myhash}" ]; then
-							FOUND=1
-							logtext "${file} hash valid, found in database"
-						else
-							logtext "${file} Hash NOT valid (Found: ${myhash}, expected: ${hash})"
-						fi
-					done
-
-					if [ ${FOUND} -eq 0 ]; then
-						# Compare against whitelist
-						logtext "Using whitelists to compare hash value (searching for ${myhash})"
-						for WHITELISTSTRING in `grep '^HASHWHITELIST=' ${CONFIGFILE} | sed -e 's/HASHWHITELIST=//g'`; do
-							WHITELISTFILE=`echo ${WHITELISTSTRING} | cut -d ':' -f1`
-							WHITELISTHASH=`echo ${WHITELISTSTRING} | cut -d ':' -f2`
-							logtext "Checking ${WHITELISTHASH} (${WHITELISTFILE})"
-							if [ "${WHITELISTFILE}" = "${file}" -a "${WHITELISTHASH}" = "${myhash}" ]; then
-								FOUND=1
-								logtext "Whitelisted hash found"
-							fi
-						done
-						if [ ${FOUND} -eq 0 ]; then
-							logtext "No whitelisted hash value found for ${file}"
-							logtext "Hash value for my file (${file}) is ${myhash}, but is not in database"
-						fi
-
-						logtext "End of whitelist compare"
-					fi
-
-					displaytext -n "   ${file}"
-					if [ ${FOUND} -eq 1 ]; then
-						jump=`expr ${defaultcolumn} - ${SIZE}`
-						insertlayout
-						displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-					else
-						HASH_DIFFERENT=`expr ${HASH_DIFFERENT} + 1`
-						jump=`expr ${defaultcolumn} - ${SIZE}`
-						insertlayout
-						displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
-						logtext "Checking ${file} against hashes in database (${FILEHASHES}) failed"
-						WARNING=1
-
-						logtext "---"
-						logtext "${os_id}:${file}:${myhash}:-:-:${RPMPACKAGE}"
-						logtext "---"
-					fi
-
-				else
-
-					jump=`expr ${defaultcolumn} - ${SIZE}`
-					displaytext -n "   ${file}"
-					insertlayout
-					displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
-				fi
-			fi
-			lastfile="${file}"
-		done
-
-		# Cleanup temporary file
-		if [ -f ${TMPDIR}/prelink.tst ]; then
-			rm -f ${TMPDIR}/prelink.tst
-		fi
-
-		if [ $HASH_COUNT -eq 0 ]; then
-			displaytext "Info: Check skipped - no hashes available"
-			logtext "Info: Check skipped - no hashes available"
-		fi
-
-		if [ ${WARNING} -eq 1 ]; then
-			displaytext "--------------------------------------------------------------------------------"
-			displaytext "Rootkit Hunter has found some bad or unknown hashes. This can happen due to replaced"
-			displaytext "binaries or updated packages (which give other hashes). Be sure your hashes are"
-			displaytext "up-to-date (rkhunter --update). If you are in doubt about these hashes, contact"
-			displaytext "us through the Rootkit Hunter mailing list at rkhunter-users@lists.sourceforge.net"
-			displaytext "--------------------------------------------------------------------------------"
-		fi
+		do_known_good_hash_check
 
 		keypresspause
 
@@ -3906,7 +3245,7 @@ if [ "${CHECK}" -eq 1 ]; then
 	displaytext -n "   Scanning for known rootkit strings"
 	logtext "[Start string tests]"
 
-	if [ ${STRINGSFOUND} -eq 1 ]; then
+	if [ -n "${STRINGS_CMD}" ]; then
 		FOUND=0
 		for I in ${STRINGSCAN}; do
 			TYPE=`echo $I | cut -d ':' -f1`
@@ -3920,7 +3259,7 @@ if [ "${CHECK}" -eq 1 ]; then
 					FILENAME="${I}/${FILE}"
 					if [ -f $FILENAME ]; then
 						FSTRING=`echo "${FILESTRING}" | sed -e 's/\./\\\./g'`
-						FOUNDSTRING=`${STRINGSBINARY} $FILENAME | grep "${FSTRING}"`
+						FOUNDSTRING=`${STRINGS_CMD} $FILENAME | grep "${FSTRING}"`
 						if [ "${FOUNDSTRING}" = "" ]; then
 							logtext "${FILENAME} clean (string: $FILESTRING)"
 						else
@@ -4023,49 +3362,51 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	SIZE="30"
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
-	if [ ${LSOFFOUND} -eq 1 ]; then
+	if [ -n "${LSOF_CMD}" ]; then
 		SUSP_FILES="backdoor"
 		# Add more suspicious files to the check
 		for I in ${SUSP_FILES_INFO}; do
 			FILENAME=`echo ${I} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
 			SUSP_FILES="${SUSP_FILES}|${FILENAME}"
 		done
-		SEARCHFILES=`${LSOFBINARY} -F n -w | sort | uniq | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})$"`
+		SEARCHFILES=`${LSOF_CMD} -F n -w | sort | uniq | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})$"`
 		if [ ! "${SEARCHFILES}" = "" ]; then
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 			logtext --nodate "Bad"
 			logtext "Warning! Found possible harmful files. Please inspect"
 			logtext "Warning! Output of test: ${SEARCHFILES}"
 		else
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext --nodate "OK"
 		fi
 		SUSP_FILES=`echo "${SUSP_FILES}" | sed -e 's/\\\././g'`
 		logtext "Scanned for '${SUSP_FILES}'"
 	else
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
 		logtext --nodate "Skipped"
 	fi
 
-	if [ $UNHIDEFOUND -eq 1 ]; then
+	UNHIDE_CMD=`find_cmd unhide`
+	if [ -n "${UNHIDE_CMD}" ]; then
 		logtext -n "Scanning hidden processes... "
 		SIZE="30"
 		jump=`expr ${defaultcolumn} - ${SIZE}`
-	
-		UNHIDEPROCS=`${UNHIDEBINARY} sys | grep '^F' | awk -F':' '{ print $2 }'`
-		if [ ! "${UNHIDEPROCS}" = "" ]; then
+
+		UNHIDEPROCS=`${UNHIDE_CMD} sys | grep '^F' | awk -F':' '{ print $2 }'`
+		if [ -n "${UNHIDEPROCS}" ]; then
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 			logtext --nodate "Bad"
 			logtext "Warning! Hidden PIDs found: ${UNHIDEPROCS}"
 		else
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext --nodate "OK"
 		fi
+
 		logtext "Scanned for hidden processes"
 	fi
 
@@ -4075,16 +3416,16 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		SIZE="41"
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 
-		if [ ${LSOFFOUND} -eq 1 ]; then
+		if [ -n "${LSOF_CMD}" ]; then
 			STATUS=0
 			WHITEPROC=""; BLACKPROC=""
-			SEARCHFILES=`${LSOFBINARY} -n -l -w | grep "(dele" | head -n 1`
+			SEARCHFILES=`${LSOF_CMD} -n -l -w | grep "(dele" | head -n 1`
 			if [ ! "${SEARCHFILES}" = "" ]; then
 				PMATCH=1; PIDLIST=""
 				OLDIFS=$IFS
 				IFS="
 "
-				for line in `${LSOFBINARY} -n -l -w | grep "(dele"`; do
+				for line in `${LSOF_CMD} -n -l -w | grep "(dele"`; do
 					lproc=`echo $line | awk '{ print $1 }'`
 					lpid=`echo $line | awk '{ print $2 }'`
 					l8=`echo $line | awk '{ print $8 }'`
@@ -4096,9 +3437,9 @@ hydra.restore:THC-Hydra%%(password%%capture)
 						fi
 					done
 					if [ $PMATCH -eq 1 ]; then
-						if [ ${READLINKFOUND} -eq 1 ]; then
-							if [ "${OPERATING_SYSTEM}" != "SunOS" -o -L /proc/${lpid}/exe ]; then
-								lproc=`readlink /proc/${lpid}/exe`
+						if [ -n "${READLINK_CMD}" ]; then
+							if [ "${OPERATING_SYSTEM}" != "SunOS" -o -h /proc/${lpid}/exe ]; then
+								lproc=`${READLINK_CMD} /proc/${lpid}/exe`
 							fi
 						fi
 						# If $lfile is not a pathname then look at $l8
@@ -4118,7 +3459,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 								FMATCH=0; break
 							fi
 						done
-						if [ ${READLINKFOUND} -eq 0 ]; then
+						if [ -z "${READLINK_CMD}" ]; then
 							lproc="\"$lproc\""
 						fi
 						if [ $FMATCH -eq 0 ]; then
@@ -4138,10 +3479,10 @@ hydra.restore:THC-Hydra%%(password%%capture)
 			insertlayout
 
 			if [ $STATUS -eq 0 ]; then
-				displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 				logtext --nodate "OK"
 			else
-				displaytext -e "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
 				logtext --nodate "Bad"
 				logtext "Warning! Found deleted files in use. Please inspect:"
 
@@ -4161,7 +3502,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 			logtext "Scanned for deleted files"
 		else
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
 			logtext --nodate "Skipped"
 		fi
 	fi # end CHKDEL
@@ -4371,15 +3712,15 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	if [ -f /etc/inetd.conf ]; then
 		FOUND=0
 		if [ -e /etc/inetd.conf ]; then
-			grep '/bin/csh' /etc/inetd.conf > /dev/null && FOUND=1
-			grep '/bin/bash' /etc/inetd.conf > /dev/null && FOUND=1
-			grep '/bin/tcsh' /etc/inetd.conf > /dev/null && FOUND=1
-			grep '/bin/ksh' /etc/inetd.conf > /dev/null && FOUND=1
-			grep '/bin/bash' /etc/inetd.conf > /dev/null && FOUND=1
-			grep '/bin/sh' /etc/inetd.conf > /dev/null && FOUND=1
-			grep '/bin/ash' /etc/inetd.conf > /dev/null && FOUND=1
-			grep '/bin/zsh' /etc/inetd.conf > /dev/null && FOUND=1
-			grep 'in\.cfinger' /etc/inetd.conf > /dev/null && FOUND=1
+			grep '/bin/csh' /etc/inetd.conf >/dev/null && FOUND=1
+			grep '/bin/bash' /etc/inetd.conf >/dev/null && FOUND=1
+			grep '/bin/tcsh' /etc/inetd.conf >/dev/null && FOUND=1
+			grep '/bin/ksh' /etc/inetd.conf >/dev/null && FOUND=1
+			grep '/bin/bash' /etc/inetd.conf >/dev/null && FOUND=1
+			grep '/bin/sh' /etc/inetd.conf >/dev/null && FOUND=1
+			grep '/bin/ash' /etc/inetd.conf >/dev/null && FOUND=1
+			grep '/bin/zsh' /etc/inetd.conf >/dev/null && FOUND=1
+			grep 'in\.cfinger' /etc/inetd.conf >/dev/null && FOUND=1
 		fi
 
 		if [ ${FOUND} -eq 1 ]; then
@@ -4460,10 +3801,10 @@ ${ROOTDIR}bin/login
 			RIGHTS=`ls -l ${I} | cut -c 1-10`
 			if [ "${RIGHTS}" = "-rwxrwxrwx" ]; then
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} (chmod 777 found, possible trojaned) ]"
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (chmod 777 found, possible trojaned) ]"
 			else
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
 			fi
 		else
 			logtext "Checking ${I}... Not found"
@@ -4494,7 +3835,7 @@ ${ROOTDIR}bin/login
 
 			if ! $FILEOK; then
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 				displaytext "(script replacement found, possible trojaned)"
 				logtext "Checking ${I}... [ WARNING ]"
 				logtext "Possible script replacement found. Please inspect this file (check the file type, contents and size)"
@@ -4598,24 +3939,26 @@ ${ROOTDIR}bin/login
 		displaytext -n "     Checking loaded kernel modules... "
 
 		# Is /proc/modules file available?
-		if [ -f /proc/modules ]; then
+
+		temp1=""; temp2=""
+		if [ -f /proc/modules -a -n "${LSMOD_CMD}" ]; then
 			if [ "${KERNELVERSION}" = "2.2" -o "${KERNELVERSION}" = "2.4" ]; then
 				# show information found in /proc/modules (Linux-only) and get rid of the spaces
 				temp1=`cat /proc/modules | sort | tr -d ' '`
 
 				# show output from lsmod. Throw away spaces, because they don't match the content
 				# of /proc/modules
-				temp2=`${LSMODBINARY} | grep -v "Size  Used by" | sort | tr -d ' '`
+				temp2=`${LSMOD_CMD} | grep -v "Size  Used by" | sort | tr -d ' '`
 			else
 				if [ "${KERNELVERSION}" = "2.6" ]; then
 					temp1=`cat /proc/modules | sort | tr -s ' ' | cut -d " " -f1`
-					temp2=`${LSMODBINARY} | grep -v "Size  Used by" | sort | tr -s ' ' | cut -d " " -f1`
+					temp2=`${LSMOD_CMD} | grep -v "Size  Used by" | sort | tr -s ' ' | cut -d " " -f1`
 				fi
 			fi
 		fi
 
-		if [ ! "${temp1}" = "" ]; then
-			if [ "${temp1}" = "${temp2}"  ]; then
+		if [ -n "${temp1}" ]; then
+			if [ "${temp1}" = "${temp2}" ]; then
 				insertlayout
 				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			else
@@ -4624,7 +3967,11 @@ ${ROOTDIR}bin/login
 			fi
 		else
 			displaytext "${WHITE}Skipped!${NORMAL}"
-			logtext "Info: no /proc/modules found. Lsmod test skipped"
+			if [ -n "${LSMOD_CMD}" ]; then
+				logtext "Info: no /proc/modules found. Lsmod test skipped"
+			else
+				logtext "Info: no 'lsmod' command found. Lsmod test skipped"
+			fi
 		fi
 
 #		displaytext -n "   Checking all kernelmodules..."
@@ -4676,13 +4023,13 @@ ${ROOTDIR}bin/login
 
 		FOUND=0
 
-		if [ ${LSATTRFOUND} -eq 1 ]; then
+		if [ -n "${LSATTR_CMD}" ]; then
 			for I in ${BINPATHS}; do
 				logtext "Checking $I file attributes"
 				if [ -d ${I} ]; then
 					for J in `ls ${I}`; do
-						LSAT=`${LSATTRBINARY} ${I}/${J} 2>/dev/null | cut -c 4`
-						if [ "${LSAT}" = "i" ]; then
+						LSAT=`${LSATTR_CMD} ${I}/${J} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+						if [ -n "${LSAT}" ]; then
 							FOUND=1
 							logtext "Found 'immutable' binary (${I}/${J})"
 						fi
@@ -4723,8 +4070,8 @@ vlogger.o
 		displaytext -n "     Checking LKM module path"
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 
-		if [ -d ${LKMPATH} ]; then
-			for J in `${FINDBINARY} ${LKMPATH} -name "*.o" -print`; do
+		if [ -d ${LKMPATH} -a -n "${FIND_CMD}" ]; then
+			for J in `${FIND_CMD} ${LKMPATH} -name "*.o" -print`; do
 				for I in ${LKM_BADNAMES}; do
 					FNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
 					if [ ! "`echo ${J} | grep \"/${FNAME}\$\"`" = "" ]; then
@@ -4746,7 +4093,11 @@ vlogger.o
 		else
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${WHITE}Skipped!${NORMAL} ]"
-			logtext "LKM module filename check skipped, because path (${LKMPATH}) doesn't exist"
+			if [ -n "${FIND_CMD}" ]; then
+				logtext "LKM module filename check skipped, because path (${LKMPATH}) doesn't exist"
+			else
+				logtext "LKM module filename check skipped, because 'find' command doesn't exist"
+			fi
 		fi
 
 		# End Linux tests
@@ -4823,33 +4174,33 @@ vlogger.o
 	PROMISCSCAN1=""; PROMISCSCAN2=""
 
 	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
-		PROMISCSCAN1=`${IFCONFIGBINARY} -a | grep -v 'pflog' | grep 'PROMISC'`
-	elif [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-		PROMISCSCAN1=`${IFCONFIGBINARY} -a | grep 'PROMISC'`
+		PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>/dev/null | grep -v 'pflog' | grep 'PROMISC'`
+	elif [ "${OPERATING_SYSTEM}" = "SunOS" -o "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+		PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>/dev/null | grep 'PROMISC'`
 	else
-		PROMISCSCAN1=`${IFCONFIGBINARY} | grep 'PROMISC'`
+		PROMISCSCAN1=`${IFCONFIG_CMD} 2>/dev/null | grep 'PROMISC'`
 	fi
 
-	if [ "${OPERATING_SYSTEM}" = "Linux" -a ${IPFOUND} -eq 1 ]; then
-		PROMISCSCAN2=`${IPBINARY} -s link | grep 'PROMISC'`
+	if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${IP_CMD}" ]; then
+		PROMISCSCAN2=`${IP_CMD} -s link | grep 'PROMISC'`
 	fi
 
 	if [ "${PROMISCSCAN1}" = "" -a "${PROMISCSCAN2}" = "" ]; then
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		logtext "${LOGTEXT}[ OK ]"
-		if [ "${OPERATING_SYSTEM}" = "Linux" -a ${IPFOUND} -eq 1 ]; then
-			logtext "Performed successful test with \`ip\`"
+		if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${IP_CMD}" ]; then
+			logtext "Performed successful test with 'ip' command"
 		fi
 	else
 		insertlayout
-		displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		displaytext "Warning! Found promiscuous interface. Please check the logfile."
 		logtext "${LOGTEXT}[ WARNING ]"
 		logtext "Possible promisc interfaces:"
 		logtext "Output test 1: ${PROMISCSCAN1}"
-		if [ "${OPERATING_SYSTEM}" = "Linux" -a "${PROMISCSCAN2}" != "" ]; then
-			PROMISCSCAN2IFACES=`${IPBINARY} -s link | grep 'PROMISC' | cut -d ":" -f2`
+		if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${PROMISCSCAN2}" ]; then
+			PROMISCSCAN2IFACES=`${IP_CMD} -s link | grep 'PROMISC' | cut -d ":" -f2`
 			for if in $PROMISCSCAN2IFACES ; do
 				logtext "Output test 2: $if in promiscuous mode"
 			done
@@ -4860,7 +4211,7 @@ vlogger.o
 	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
 		SKIPNEXT=1
 	fi
-	if [ "${LSOFFOUND}" -eq 0 ]; then
+	if [ -z "${LSOF_CMD}" ]; then
 		SKIPNEXT=1
 	fi
 	if [ ! -f "/proc/net/packet" ]; then
@@ -4878,9 +4229,9 @@ vlogger.o
 		LIBPCAPRES=`egrep -v "^sk|888e" /proc/net/packet | cut -c 1`
 		if [ -n "${LIBPCAPRES}" ]; then
 			for inode in `egrep -v "^sk|888e" /proc/net/packet | awk '{print $9}'`; do
-				for pid in `${LSOFBINARY} -lMnP | grep "$inode" | awk '{print $2}'`; do
-					if [ "${READLINKFOUND}" -eq 1 ]; then
-						name=`readlink -f /proc/$pid/exe`
+				for pid in `${LSOF_CMD} -lMnP | grep "$inode" | awk '{print $2}'`; do
+					if [ -n "${READLINK_CMD}" ]; then
+						name=`${READLINK_CMD} -f /proc/$pid/exe`
 					else
 						name=`grep "^Name:." /proc/$pid/status | sed -e 's/^Name:.//'`
 					fi
@@ -4907,10 +4258,10 @@ vlogger.o
 		insertlayout
 
 		if [ $STATUS -eq 0 ]; then
-			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 			logtext --nodate "OK"
 		else
-			displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 			displaytext "Warning! Found packet capturing application. Please check the logfile."
 
 			logtext --nodate "Warning"
@@ -4946,10 +4297,10 @@ vlogger.o
 	displaytext "${test}* Allround tests${NORMAL}"
 
 	displaytext -n "   Checking hostname... "
-	if [ "${hostname}" = "" ]; then
+	if [ "${HOST_NAME}" = "" ]; then
 		displaytext "${RED}Warning. ${NORMAL}Found empty hostname. Some programs don't like this."
 	else
-		displaytext "${GREEN}Found. ${NORMAL}Hostname is ${hostname}"
+		displaytext "${GREEN}Found. ${NORMAL}Hostname is ${HOST_NAME}"
 	fi
 
 	##################################################################################################
@@ -5156,10 +4507,10 @@ vlogger.o
 
 		if [ "${FOUNDRCSIGN}" -eq 1 ]; then
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 		else
 			insertlayout
-			displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		fi
 	fi
 
@@ -5169,7 +4520,7 @@ vlogger.o
 #	displaytext -n "   Checking binaries..."
 #	jump=`expr ${defaultcolumn} - ${SIZE}`
 
-#	if [ ${STRINGSFOUND} -eq 1 ]; then
+#	if [ -n "${STRINGS_CMD}" ]; then
 #		FOUND=0
 #		for I in ${BINPATHS}; do
 
@@ -5180,7 +4531,7 @@ vlogger.o
 
 #			for J in ${I}; do
 #				for K in `ls ${J}/*`; do
-#					UPXED=`${STRINGSBINARY} ${K} | grep " UPX "`
+#					UPXED=`${STRINGS_CMD} ${K} | grep " UPX "`
 #					logtext -n "Checking ${K}... "
 #					if [ ! "${UPXED}" = "" ]; then
 #						FOUND=1
@@ -5262,7 +4613,7 @@ vlogger.o
 
 	displaytext -n "   Scanning for hidden files..."
 
-	SEARCHINDIRS="/dev /bin /usr /usr/man /usr/man/man1 /usr/man/man8 /usr/bin /usr/sbin /sbin /etc"
+	SEARCHINDIRS="/dev /bin /usr /usr/man /usr/share/man /usr/man/man1 /usr/share/man/man1 /usr/man/man8 /usr/share/man/man8 /usr/bin /usr/sbin /sbin /etc"
 	# Only reset status once
 	STATUS=0
 
@@ -5273,7 +4624,7 @@ vlogger.o
 		logtext "Start scanning for hidden files in ${I}..."
 
 		if [ -d "${I}" ]; then
-			HIDDENDIRS=`${SCRIPT_PATH}/showfiles.pl ${I}`
+			HIDDENDIRS=`${PERL_CMD} ${SCRIPT_PATH}/showfiles.pl ${I}`
 			logtext "Value of hiddendirs: ${HIDDENDIRS}"
 		fi
 
@@ -5737,13 +5088,13 @@ nonvulnerable:%2.4.24%
 					SIZE=36
 					jump=`expr ${defaultcolumn} - ${SIZE}`
 					insertlayout
-					displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login permitted by explicit option) ]"
+					displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login permitted by explicit option) ]"
 				fi
 			else
 				SIZE=36
 				jump=`expr ${defaultcolumn} - ${SIZE}`
 				insertlayout
-				displaytext -e "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login disabled) ]"
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login disabled) ]"
 			fi
 
 			displaytext -n "   Checking for allowed protocols... "
@@ -5862,16 +5213,20 @@ nonvulnerable:%2.4.24%
 
 	keypresspause
 
-	ENDTIME=`perl -e 'printf "%d\n", time;'`
+	ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 
 	TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
 	TOTALMINS=`expr ${TOTALTIME} / 60`
 	TOTALSECS=`expr ${TOTALTIME} % 60`
 
-	if [ $TOTALMINS -eq 1 ]; then
-		TOTALTIME="${TOTALMINS} minute, "
+	if [ $TOTALMINS -gt 0 ]; then
+		if [ $TOTALMINS -eq 1 ]; then
+			TOTALTIME="${TOTALMINS} minute and "
+		else
+			TOTALTIME="${TOTALMINS} minutes and "
+		fi
 	else
-		TOTALTIME="${TOTALMINS} minutes, "
+		TOTALTIME=""
 	fi
 
 	if [ $TOTALSECS -eq 1 ]; then
@@ -5990,14 +5345,13 @@ nonvulnerable:%2.4.24%
 
 	fi
 
-	logtext "Info: End date is `date`"
-
 	if [ $CATLOGFILE -eq 1 ]; then
 		cat $LOGFILE
 	fi
 
 	if [ ${WARNING} -eq 1 ]; then
-		if [ ${SHOWWARNINGSONLY} -eq 1 ]; then
+		if [ $SHOWWARNINGSONLY -eq 1 ]; then
+# jh - rewrite this to look for the warnings 'stanza'.
 			echo "-----------------------------------------------------------------"
 			echo ""
 			echo "Found warnings:"
@@ -6015,7 +5369,7 @@ nonvulnerable:%2.4.24%
 
 		# If we use the --quiet option, tell the user he has to inspect the machine
 		if [ ${QUIET} -eq 1 ]; then
-			echo "Some errors have been found while checking. Please perform a manual check on this machine (${hostname})"
+			echo "Some errors have been found while checking. Please perform a manual check on this machine (${HOST_NAME})"
 		fi
 
 		# Something was wrong. So end with a nonzero exit state for scripters/coders ;-)
@@ -6023,73 +5377,1007 @@ nonvulnerable:%2.4.24%
 	else
 		exit 0
 	fi
-else
-	if [ ${VERSIONCHECK} -eq 0 -a ${UPDATE} -eq 0 -a $HASH_UPDATE -eq 0 ]; then
-		displaytext "You don't want to check your system?"
-		displaytext "Please submit a parameter like --checkall or --cronjob"
-	fi
-fi
 
-if [ "${UPDATE}" -eq 1 ]; then
-	displaytext "Running updater..."
-	displaytext ""
-	${SCRIPT_PATH}/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
-	displaytext ""
-	displaytext "Ready."
-fi
+	return
+}
 
-if [ "${VERSIONCHECK}" -eq 1 ]; then
-	LATESTVERSION="unknown"
-	if [ -f ${TMPDIR}/rkhunter.upd ]; then
-		rm -f ${TMPDIR}/rkhunter.upd
-	fi
 
-	URLPREFIX=`grep -v 'version=' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d '=' -f2`
+check_os_info() {
 
-	VERSIONUPDATEURL=`grep 'LATESTVERSION=' ${CONFIGFILE} | sed -e 's/LATESTVERSION=//g'`
+	#
+	# This function checks the current O/S information against
+	# that stored in the rkhunter.dat file. Any change could
+	# mean that file hash checks will give several false-positive
+	# answers. As such we warn users that a change has occurred.
+	#
 
-	if [ "${WGETFOUND}" -eq 1 ]; then
-		${WGETBINARY} -q -O ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL}
-		displaytext "${URLPREFIX}${VERSIONUPDATEURL}"
-		LATESTVERSION=`cat ${TMPDIR}/rkhunter.upd`
+
+	#
+	# First check if the host name has changed.
+	#
+
+	RUNHASHUPD=0
+
+	OLD_HOST=`grep '^Host:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+
+	if [ "${HOST_NAME}" != "${OLD_HOST}" ]; then
+		RUNHASHUPD=1
+		logtext "Warning: The system hostname has changed since the last run:"
+		logtext --indent "Old value: ${OLD_HOST}    New value: ${HOST_NAME}"
 	fi
 
-	if [ $QUIET -eq 0 ]; then
-		displaytext ""
-		displaytext "${PROGRAM_NAME} ${PROGRAM_version}, copyright ${PROGRAM_copyright_owner}"
-		displaytext ""
-		displaytext "This version:   ${PROGRAM_version}"
-		displaytext "Latest version: ${LATESTVERSION}"
+
+	#
+	# Next check if the O/S name has changed.
+	#
+
+	OLD_OSNAME=`grep '^OS:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+
+	if [ "${OSNAME}" != "${OLD_OSNAME}" ]; then
+		RUNHASHUPD=1
+		logtext "Warning: The operating system name or version has changed since the last run:"
+		logtext --indent "Old value: ${OLD_OSNAME}    New value: ${OSNAME}"
 	fi
 
-	if [ "${LATESTVERSION}" = "" ]; then
-		echo "Unable to fetch latest rkhunter version number from mirror."
-		echo "${WHITE}Please check manually for updates${NORMAL}"
+
+	#
+	# Check if the prelinking status has changed.
+	#
+
+	if [ -z "`grep '^Prelinked:Yes' ${DB_PATH}/rkhunter.dat`" ]; then
+		OLD_PRELINK=0
 	else
-		PROG_VERS=`echo "${PROGRAM_version}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
-		LATEST_VERS=`echo "${LATESTVERSION}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
-		if [ ${PROG_VERS} -lt ${LATEST_VERS} ]; then
-			echo "${WHITE}Update available${NORMAL}"
+		OLD_PRELINK=1
+	fi
+
+	if [ $PRELINKED -ne $OLD_PRELINK ]; then
+		RUNHASHUPD=1
+		if [ $PRELINKED -eq 1 ]; then
+			logtext "Warning: The system has changed to using prelinking since the last run."
+		else
+			logtext "Warning: The system has changed to not using prelinking since the last run."
 		fi
 	fi
 
-	if [ $QUIET -eq 0 ]; then
-		displaytext "" ; displaytext "" ; displaytext ""
+
+	#
+	# Check if the system architecture has changed. We treat
+	# the i386-type architectures as the same. We also treat
+	# the sun-type archictures the same as 'sparc'.
+	#
+
+	OLD_ARCH=`grep '^Arch:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+
+	if [ -n "`echo ${OLD_ARCH} | grep 'i[0-9]86'`" ]; then
+		OLD_ARCH_TYPE="i386"
+	elif [ -n "`echo ${OLD_ARCH} | grep 'sun[0-9][a-z]'`" -o -n "`echo ${OLD_ARCH} | grep 'sparc'`" ]; then
+		OLD_ARCH_TYPE="sparc"
+	else
+		OLD_ARCH_TYPE=${OLD_ARCH}
+	fi
+
+	if [ -n "`echo ${ARCH} | grep 'i[0-9]86'`" ]; then
+		ARCH_TYPE="i386"
+	elif [ -n "`echo ${ARCH} | grep 'sun[0-9][a-z]'`" -o -n "`echo ${ARCH} | grep 'sparc'`" ]; then
+		ARCH_TYPE="sparc"
+	else
+		ARCH_TYPE=${ARCH}
+	fi
+
+	if [ "${OLD_ARCH_TYPE}" != "${ARCH_TYPE}" ]; then
+		RUNHASHUPD=1
+		logtext "Warning: The system seems to have changed CPU type:"
+		logtext --indent "Old value: ${OLD_ARCH}    New value: ${ARCH}"
+	fi
+
+
+	if [ $RUNHASHUPD -eq 1 ]; then
+		logtext --indent "The file hash check may give some false-positive results. If you are sure that none"
+		logtext --indent "of the files have been tampered with, then you should re-run rkhunter with the '--hashupd' option."
+	fi
+
+	return
+}
+
+
+set_hash_dirs_files() {
+
+	#
+	# This function sets up the list of directories we look in,
+	# and the list of files we look for, in order to perform
+	# the file hash check.
+	#
+
+	HASHDIRS="${ROOTDIR}bin ${ROOTDIR}sbin ${ROOTDIR}usr/bin ${ROOTDIR}usr/sbin ${ROOTDIR}usr/local/bin ${ROOTDIR}usr/local/sbin"
+
+	HASHFILES="adduser amd basename cat chattr checkproc chkconfig chmod
+	    chown chroot cron csh date depmod df dirname dmesg du echo ed egrep
+	    env fgrep file find grep groupadd groupdel groupmod groups grpck
+	    head id ifconfig ifdown ifstatus ifup inetd init insmod ip kill
+	    killall kldload kldstat kldunload ksyms kudzu last lastlog less
+	    locate logger login ls lsattr lsmod lynx md5 md5sum mlocate modinfo
+	    modload modprobe modstat modunload more mount netstat newgrp
+	    newsyslog nologin passwd ps pstree pwck rmmod runlevel sh sha1
+	    sha1sum size slocate sockstat sort stat strace strings su sudo
+	    sulogin sysctl syslogd systat tail tcpd test top touch uname
+	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
+	    whereis which who whoami xinetd"
+
+
+	#
+	# Under SunOS /bin is a link to /usr/bin, so there is no need
+	# to look in it. Also add in some extra commands to check.
+	#
+
+	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+		if [ -h ${ROOTDIR}bin ]; then
+			B=""
+
+			for DIR in ${HASHDIRS}; do
+				test "${DIR}" != "${ROOTDIR}bin" && B="${B} ${DIR}"
+			done
+
+			HASHDIRS=`echo ${B} | sed -e 's/^ *//'`
+		fi
+
+		HASHFILES="${HASHFILES} gbasename gcat gchmod gchown gdate
+		    gdirname gecho gfind gfile ggroups ghead gid glocate
+		    gmd5sum gsize gtail gtest gtouch guname gusers truss"
+	fi
+
+
+	add_extra_dirs
+	HASHDIRS="${HASHDIRS}{EXTRA_DIRS}"
+
+	return
+}
+
+
+help() {
+
+	echo ""
+	echo "Usage: rkhunter (--check | --cronjob | --update | --hashupd |"
+	echo "                 --versioncheck | --version | --help) [option]..."
+	echo ""
+
+	echo "Current options are:"
+	echo "       --append-log                    Append to the logfile, do not overwrite"
+	echo "       --bindir '<bindir>...'          Use <bindir> instead of default"
+	echo "                                       command directories"
+	echo "   -c, --check                         Check the local system"
+	echo "       --color-set2                    Use second color set for output"
+	echo "       --configfile <file>             Use specified configuration file"
+	echo "       --cronjob                       Run as a cronjob"
+	echo "                                       (implies -c, -sk and --nocolors options)"
+	echo "       --dbdir <dir>                   Use specified database directory"
+	echo "       --display-logfile               Display the logfile at the end"
+	echo "       --hash                          Specify the hash function to use"
+	echo "       --hashupd                       Update the local file hash database"
+	echo "   -h, --help                          Display this help menu and exit"
+	echo "   -l, --logfile [logfile]             Write to a logfile"
+	echo "                                       (default is $DFLT_LOGFILE)"
+	echo "       --md5                           Specify the MD5 command to use for the"
+	echo "                                       'known bad' hash check"
+	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
+	echo "       --nocolors                      Use black and white output"
+	echo "       --nolog                         Do not write to a logfile"
+	echo "   -q, --quiet                         Quiet mode (only show warnings)"
+	echo "       --report-mode                   Only show interesting information"
+	echo "       --report-warnings-only          Show only warnings (less output than"
+	echo "                                       --report-mode more than --quiet)"
+	echo "   -r, --rootdir <rootdir>             Use <rootdir> instead of '/'"
+	echo "  -sk, --skip-keypress                 Don't wait for a keypress after each test"
+	echo "       --tmpdir <tempdir>              Use specified temporary directory"
+	echo "       --update                        Check for updates to database files"
+	echo "   -V, --version                       Display version and exit"
+	echo "       --versioncheck                  Check for latest version of program"
+	echo "   -x                                  Do not automatically detect if X is in use"
+	echo "   -X                                  Automatically detect if X is in use"
+	echo ""
+
+	echo "Specific scan options:"
+	echo "       --allow-ssh-root-user           Allow the 'root can login via SSH' check"
+	echo "       --check-deleted                 Perform a 'deleted files' check"
+	echo "       --check-listen                  Perform a 'listening applications' check"
+	echo "       --dac, --disable-application-check"
+	echo "                                       Disable application version checks"
+	echo "       --dhc, --disable-hash-check     Disable the hash checks"
+	echo "       --dpc, --disable-passwd-check   Disable passwd/group file checks"
+	echo "       --scan-knownbad-files           Perform a 'known bad' MD5 hash check"
+	echo ""
+
+	return
+}
+
+
+######################################################################
+#
+# Initialisation
+#
+######################################################################
+
+
+#
+# First we initialise variables used throughout the program.
+#
+
+PROGRAM_NAME="Rootkit Hunter"
+PROGRAM_version="1.2.9"
+PROGRAM_copyright_owner="Michael Boelen"
+PROGRAM_copyright="Copyright (c) 2003-2006, ${PROGRAM_copyright_owner}"
+PROGRAM_license="
+${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
+
+Under active development by the ${PROGRAM_NAME} project team. For reporting
+bugs, updates, patches, comments and questions please go to: http://rkhunter.sourceforge.net
+
+${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under the terms of the GNU General
+Public License. See LICENSE for details.
+"
+
+# Set to run as a cronjob
+CRONJOB=0
+CHECK=0
+
+# Set to display the logfile at the end
+CATLOGFILE=0
+
+NOLOG=0
+LOGFILE=""
+DFLT_LOGFILE="/var/log/rkhunter.log"
+
+# Set to have the logfile appended to rather than overwritten.
+APPEND_LOG=0
+APPEND_OPT=0
+
+DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
+
+MD5_CMD=""
+HASH_FUNC=""
+HASHDIRS=""
+HASHFILES=""
+
+PRELINKED=0
+PRELINK_CMD=""
+PRELINK_WARN=""
+
+UPDATE=0
+HASH_UPDATE=0
+VERSIONCHECK=0
+
+# By default use coloured output.
+COLORS=1
+CLRSET2=0
+
+# Set to automatically detect if X is in use, and
+# hence use the second colour set.
+AUTO_X_DTCT=0
+AUTO_X_OPT=0
+
+# Set to skip the hash checks
+HASHOPT=0
+SKIP_HASHCHECK=0
+HASHCHECK_WARN=""
+
+# Set to skip the passwd/group check
+SKIP_PASSWDCHECK=0
+
+# Perform the application check
+APPLICATION_CHECK=1
+VULNERABLE_ITEM_COUNT=0
+
+CHKDEL=0
+CHKLISTEN=0
+
+PREVIOUSTEXT=""
+
+# Set to be quiet (only show warnings)
+QUIET=0
+
+# Set to only show warnings
+SHOWWARNINGSONLY=0
+
+# Set to perform check of known bad checksums
+# jh - allow user to whitelist/disable this
+PERFORMKNOWNBAD=1
+
+ROOTDIR="/"
+
+# Set to use report mode (do not show footer and make a 'professional' report)
+REPORTMODE=0
+
+# Default 'id' command. Solaris will reset this.
+ID_CMD="id"
+
+# Wait for a keypress after each test
+PAUSEAFTERTESTS=1
+
+# Wait for a keypress after a warning
+WAITONWARNING=1
+
+# Is the operating system Gentoo?
+GENTOO=0
+
+# Set to allow SSH root login
+ALLOW_SSH_ROOT_USER=0
+
+INFECTED_COUNT=0
+INFECTED_NAMES=""
+SCANNED_COUNT=0
+HASH_COUNT=0
+HASH_DIFFERENT=0
+
+FOUNDFILE=0
+FOUNDRCSIGNS=0
+
+# Set if grsec is installed
+GRSECINSTALLED=0
+
+# This is set if a problem is found
+WARNING=0
+
+# Default display column width
+defaultcolumn=60
+
+# Initialise default status
+STATUS=0
+
+# Record for logging the command-line being used
+CMD_LINE="$0 $*"
+
+# Create a spaced-separated PATH variable
+SPACEDPATH=`echo ${PATH} | tr : ' '`
+
+# List of commands used during RKH. If a command does not exist, then
+# the code may use an alternative method.
+CMDLIST="curl elinks file find ifconfig ip links lsattr lsmod lsof lynx perl readlink stat strings wget GET"
+
+
+HOST_NAME=`hostname`
+
+if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+	USE_PATCHED_SOFTWARE=1
+else
+	USE_PATCHED_SOFTWARE=0
+fi
+
+# This is the return code for the program actions - update, check, etc.
+RET_CODE=0
+
+
+######################################################################
+#
+# Command-line option processing
+#
+######################################################################
+
+
+#
+# Display the help menu if no options were given.
+#
+
+if [ $# -eq 0 ]; then
+	help
+	exit 0
+fi
+
+
+#
+# Check the command-line options. If set, these will override the
+# configuration file options.
+#
+
+while [ $# -ge 1 ]; do
+	case $1 in
+	--allow-ssh-root-user)
+		ALLOW_SSH_ROOT_USER=1
+		;;
+	--append-log | --appendlog)
+		APPEND_LOG=1
+		APPEND_OPT=1
+		;;
+	-c | --check | --checkall)
+		CHECK=1
+		;;
+	--check-deleted)
+		CHKDEL=1
+		;;
+	--check-listen)
+		CHKLISTEN=1
+		;;
+	--cs2 | --colorset2 | --color-set2)
+		CLRSET2=1
+		;;
+	--bindir)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			BINPATHS="$1"
+			;;
+		esac
+		;;
+	--configfile)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			CONFIGFILE="$1"
+			;;
+		esac
+		;;
+	--cronjob)
+		CHECK=1
+		CRONJOB=1
+		COLORS=0
+		PAUSEAFTERTESTS=0
+		WAITONWARNING=0
+		;;
+	-l | --log | --logfile | --createlogfile | --createlog | --create-log | --create-logfile)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			LOGFILE="$1"
+			;;
+		esac
+		;;
+	--dbdir)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			DB_PATH="$1"
+			;;
+		esac
+		;;
+	--disable-application-check | --disable-applicationcheck | --dac | --skip-application-check | --skipapplicationcheck | --skip-applicationcheck)
+		APPLICATION_CHECK=0
+		;;
+	--disable-hash-check | --disable-hashcheck | --dhc | --disable-md5-check | --disable-md5check | --dmc)
+		HASHOPT=1
+		SKIP_HASHCHECK=1
+		;;
+	--disable-passwd-check | --dpc)
+		SKIP_PASSWDCHECK=1
+		;;
+	--display-logfile | --displaylogfile | --display-log | --displaylog)
+		CATLOGFILE=1
+		;;
+	--hash)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			HASH_FUNC="$1"
+			;;
+		esac
+		;;
+	--hashupd | --hash-update | --hashupdate)
+		HASH_UPDATE=1
+		;;
+	-h | --help)
+		help
+		exit 0
+		;;
+	--md5)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			MD5_CMD="$1"
+			;;
+		esac
+		;;
+	--noappend-log | --no-append-log | --noappendlog)
+		APPEND_LOG=0
+		APPEND_OPT=1
+		;;
+	--nocolors | --no-colors | --nocolor | --no-color)
+		COLORS=0
+		;;
+	--nolog | --no-log)
+		LOGFILE="/dev/null"
+		;;
+	-q | --quiet)
+		QUIET=1
+		;;
+	--report-mode | --reportmode)
+		QUIET=1
+		REPORTMODE=1
+		;;
+	--report-warnings-only)
+		QUIET=1
+		SHOWWARNINGSONLY=1
+		;;
+	-r | --rootdir)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			ROOTDIR="$1"
+			;;
+		esac
+		;;
+	--scan-knownbad-files)
+		PERFORMKNOWNBAD=1
+		;;
+	--skip-keypress | --skipkeypress | -sk | --sk)
+		PAUSEAFTERTESTS=0
+		WAITONWARNING=0
+		;;
+	--tmpdir)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			TMPDIR="$1"
+			;;
+		esac
+		;;
+	--update)
+		UPDATE=1
+		;;
+	-V | --version)
+		echo $ECHOOPT "${PROGRAM_NAME} ${PROGRAM_version}"
+		exit 0
+		;;
+	--versioncheck)
+		VERSIONCHECK=1
+		;;
+	-x)
+		AUTO_X_OPT=1
+		AUTO_X_DTCT=0
+		;;
+	-X)
+		AUTO_X_OPT=1
+		AUTO_X_DTCT=1
+		;;
+	*)
+		echo "Invalid option specified: $1"
+		exit 1
+		;;
+	esac
+
+	shift
+done
+
+
+#
+# We check that we are root. If we are not, then only the
+# help and version command-line options are valid.
+#
+
+test "${OPERATING_SYSTEM}" = "SunOS" && ID_CMD="/usr/xpg4/bin/id"
+
+if [ "`${ID_CMD} -u 2>/dev/null`" != "0" ]; then
+	echo "You must be the root user to run this program."
+	exit 1
+fi
+
+
+#
+# Before going too much further we need to ensure that some basic
+# commands are present on the system. We cannot do this using
+# the BINDIR option because that requires processing the configuration
+# file, which in turn requires the commands we want to check on. As
+# such we use the default command directory list. We do not assign
+# these commands to variables, but will do for other commands which we
+# look for later on.
+#
+
+check_required_commands "${SPACEDPATH} ${DFLT_BINPATHS}"
+
+
+######################################################################
+#
+# Configuration file processing
+#
+######################################################################
+
+
+#
+# Now we check for the configuration file, and then check the various
+# options within it.
+#
+
+if [ -z "${CONFIGFILE}" ]; then
+	if [ -f /etc/rkhunter.conf ]; then
+		CONFIGFILE="/etc/rkhunter.conf"
+	else
+		CONFIGFILE="/usr/local/etc/rkhunter.conf"
+	fi
+fi
+
+if [ ! -f "${CONFIGFILE}" ]; then
+	echo "Unable to find configuration file: ${CONFIGFILE}"
+	exit 1
+elif [ ! -r "${CONFIGFILE}" ]; then
+	echo "Configuration file is not readable: ${CONFIGFILE}"
+	exit 1
+fi
+
+
+get_configfile_options
+
+
+######################################################################
+#
+# Option processing
+#
+######################################################################
+
+
+#
+# Next set up some final variables based on the combination
+# of options we have been given.
+#
+
+if [ $CHECK -eq 1 ]; then
+
+	#
+	# If the logfile has been disabled, then we cannot let the program
+	# run when certain options are used. If we did, the user would see
+	# no output and might assume that all was well.
+	#
+
+	if [ "${LOGFILE}" = "/dev/null" ]; then
+		if [ $SHOWWARNINGSONLY -eq 1 ]; then
+			echo "The logfile has been disabled - unable to report warnings."
+			exit 1
+		elif [ $CATLOGFILE -eq 1 ]; then
+			echo "The logfile has been disabled - unable to display the log file."
+			exit 1
+		fi
+	fi
+
+
+	#
+	# To perform the 'known bad' check requires an MD5 command.
+	#
+
+	if [ $PERFORMKNOWNBAD -eq 1 -a -z "${MD5_CMD}" ]; then
+		echo "Unable to perform 'known bad' check - no MD5 command can be found."
+		exit 1
+	fi
+
+
+	#
+	# Set up the colors to be used.
+	#
+
+	if [ $COLORS -eq 1 ]; then
+		NORMAL="[0;39m"		# Foreground colour to default
+
+		if [ $CLRSET2 -eq 0 ]; then
+			RED="[1;31m"		# Bright red
+			GREEN="[1;32m"	# Bright green
+			YELLOW="[1;33m"	# Bright yellow
+			WHITE="[1;37m"	# White
+		else
+			RED="[1;31m"		# Bright red
+			GREEN="[0;32m"	# Green
+			YELLOW="[0;35m"	# Purple
+			WHITE="[0;30m"	# Black
+		fi
 	fi
 fi
 
 
-# end of parameter check
-
 #
-# To Do:
-#
-# - FreeBSD MD5 test:
-# ( md5 -x | grep -v 'verified correct' | grep -v 'MD5 test suite:' )
-# Portacelo:
-# String: 'big mess of a failure', 'Here today, gone tommorow' (sshd)
-# find `lsof -F n | sort | uniq | grep '^n/' | cut -b 2,256 | egrep 'ASCII|ELF'` | cut -d ':' -f1
-#
+# If we can find no hash function to use, then skip the
+# check. Additionally, if no option is given for the
+# program to action, then say so and exit.
 #
 
-exit 0
+if [ $HASH_UPDATE -eq 1 -o \( $CHECK -eq 1 -a $SKIP_HASHCHECK -eq 0 \) ]; then
+
+	#
+	# For a hash update we must have a valid hash function to use.
+	#
+
+	if [ $HASH_UPDATE -eq 1 ]; then
+		if [ -z "${HASH_FUNC}" ]; then
+			echo "Unable to find any hash function command to perform hash update."
+			exit 1
+		elif [ $PRELINKED -eq 1 ]; then
+			HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+			if [ -z "`echo ${HCMD} | egrep -i 'sha1|md5'`" ]; then
+				echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+				exit 1
+			fi
+		fi
+	fi
+
+
+	#
+	# We need to set the list of files to use for checking hash values.
+	#
+
+	set_hash_dirs_files
+
+
+	if [ -z "${HASH_FUNC}" ]; then
+		SKIP_HASHCHECK=1
+		HASHCHECK_WARN="Warning: Unable to find any hash function command to perform hash checks.\n    The file hash check will be skipped."
+	fi
+elif [ $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 ]; then
+	echo "You must enter an option for the program to perform."
+	echo "Type in 'rkhunter --help' to see the available options,"
+	echo "or read the rkhunter man page."
+	exit 1
+fi
+
+
+#
+# See if we have GRSEC installed.
+#
+
+if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "`uname -a | grep 'grsec'`" ]; then
+	GRSECINSTALLED=1
+fi
+
+
+#
+# Sort out the logfile before we write to it. If we have no log file,
+# then record this. The 'logtext' function will still be called, but
+# will return straight away.
+#
+
+if [ "${LOGFILE}" = "/dev/null" ]; then
+	NOLOG=1
+else
+	if [ $APPEND_LOG -eq 0 ]; then
+		mv -f ${LOGFILE} ${LOGFILE}.old >/dev/null 2>&1
+	else
+		logtext --nodate ""
+		logtext --nodate ""
+	fi
+fi
+
+
+FOUNDTRACES="
+-----------------------------------------------------------------------
+Found parts of this rootkit/trojan by checking the default files and directories.
+Please inspect the available files, by checking the logfile ($LOGFILE).
+-----------------------------------------------------------------------
+"
+
+
+######################################################################
+#
+# Initial logging
+#
+######################################################################
+
+
+test $CHECK -eq 1 && BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
+
+#
+# Write out various information messages to the logfile.
+#
+
+if [ -n "${HOST_NAME}" ]; then
+	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${HOST_NAME}"
+else
+	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version}"
+fi
+
+logtext --nodate "${PROGRAM_license}"
+
+logtext "Info: Start date is `date`"
+
+logtext "Info: Environment shell is ${SHELL}; rkhunter is using ${MYSHELL}"
+
+logtext "Info: Command line is ${CMD_LINE}"
+
+logtext "Info: Using configuration file ${CONFIGFILE}"
+
+logtext "Info: Installation directory is ${INSTALLDIR}"
+
+if [ -z "${MAILONWARNING}" ]; then
+	logtext "Info: No mail-on-warning address configured"
+else
+	logtext "Info: Emailing warnings to \"${MAILONWARNING}\" using command \"${MAIL_CMD}\""
+fi
+
+logtext "Info: Using ${TMPDIR} as temporary directory"
+
+if [ "${TMPDIR}" = "/tmp" ]; then
+	logtext "Warning: Do not use /tmp as your temporary directory. It will contain"
+	logtext --indent "some important system files. Please set another directory in"
+	logtext --indent "your configuration file, or use the --tmpdir command-line option."
+
+	displaytext "Warning! Using /tmp as your temporary directory can be a security risk."
+	displaytext "Check the logfile for more information about this issue."
+fi
+
+logtext "Info: Using ${DB_PATH} as database directory"
+
+logtext "Info: Using ${SCRIPT_PATH} as script directory"
+
+if [ $ALLOW_SSH_ROOT_USER -eq 1 ]; then
+	logtext "Info: Explicit option set to allow root logins via SSH"
+fi
+
+logtext "Info: Using '${BINPATHS}' as command directories"
+
+logtext "Info: Using '${ROOTDIR}' as the root directory"
+
+test $AUTO_X_DTCT -eq 1 && logtext "Info: X is automatically detected"
+test $CLRSET2 -eq 1 && logtext "Info: Using second color set"
+
+for CMD in ${CMDLIST}; do
+	UCMD=`echo ${CMD} | tr [a-z] [A-Z]`
+	UCMD=`eval echo "\\$${UCMD}_CMD"`
+	if [ -n "${UCMD}" ]; then
+		logtext "Info: Found '${CMD}' command: ${UCMD}"
+	else
+		logtext "Info: Unable to find '${CMD}' command"
+	fi
+done
+
+test -n "${PRELINK_WARN}" && logtext "${PRELINK_WARN}"
+
+test -n "${HASHCHECK_WARN}" && logtext "${HASHCHECK_WARN}"
+
+
+if [ $HASH_UPDATE -eq 1 -o \( $CHECK -eq 1 -a $SKIP_HASHCHECK -eq 0 \) ]; then
+	if [ $PRELINKED -eq 1 ]; then
+		UCMD=${PRELINK_CMD}
+		test -n "${RUNCON_CMD}" && UCMD=`echo "${UCMD}" | cut -d' ' -f5`
+
+		logtext "Info: Found 'prelink' command: ${UCMD}"
+
+		if [ -n "${RUNCON_CMD}" ]; then
+			logtext "Info: Found 'runcon' command: ${RUNCON_CMD}"
+		else
+			logtext "Info: Unable to find 'runcon' command"
+		fi
+
+		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+		if [ -z "`echo ${HCMD} | egrep -i 'sha1|md5'`" ]; then
+			SKIP_HASHCHECK=1
+			logtext "Warning: This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5.\n    The file hash check will be skipped."
+		elif [ -n "`echo ${HCMD} | egrep -i 'sha1'`" ]; then
+			logtext "Info: System is using prelinking - using SHA1 (${HASH_FUNC}) for hash checks"
+		else
+			logtext "Info: System is using prelinking - using MD5 (${HASH_FUNC}) for hash checks"
+		fi
+	else
+		logtext "Info: System is not using prelinking"
+
+		if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
+			logtext "Info: Using the perl script for SHA1 hash checks"
+		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
+			logtext "Info: Using the perl script for MD5 hash checks"
+		else
+			logtext "Info: Using ${HASH_FUNC} for the hash checks"
+		fi
+	fi
+
+	if [ $PERFORMKNOWNBAD -eq 1 -a -n "${MD5_CMD}" ]; then
+		if [ -n "`echo "${MD5_CMD}" | grep '/filehashmd5\.pl$'`" ]; then
+			logtext "Info: Using the perl script for 'known bad' MD5 hash checks"
+		else
+			logtext "Info: Using ${MD5_CMD} for the 'known bad' MD5 hash checks"
+		fi
+	fi
+fi
+
+test $GRSECINSTALLED -eq 1 && logtext "Info: Found GRSEC installed"
+
+
+######################################################################
+#
+# Start of program actions and checks
+#
+######################################################################
+
+
+#
+# We can now start to run the actions the user has requested on
+# the command-line. We run the update type commands first before
+# doing any full system check.
+#
+
+#
+# If the user wants to run a system check, then the rkhunter.dat
+# file must exist. If it does not, or is empty, then we log the
+# fact and inform the user to run RKH with the --hashupd option.
+# The program will continue, but without the file hash checking.
+#
+
+if [ $HASH_UPDATE -eq 0 ]; then
+	if [ $CHECK -eq 1 -a $SKIP_HASHCHECK -eq 0 ]; then
+		if [ ! -f "${DB_PATH}/rkhunter.dat" -o ! -s "${DB_PATH}/rkhunter.dat" ]; then
+			SKIP_HASHCHECK=1
+			logtext "Warning: This program needs to know certain information about your computer."
+
+			if [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
+				logtext --indent "The file holding this information does not exist, and so must be created."
+			else
+				logtext --indent "The file holding this information is empty, and so must be recreated."
+			fi
+
+			logtext --indent "To do this type in 'rkhunter --hashupd'."
+			logtext --indent ""
+			logtext --indent "Continuing without the file hash checks."
+		else
+
+			#
+			# We perform a simple check of some of the stored
+			# O/S information, and compare it to the current
+			# info. Basically we are just seeing if the system
+			# has changed at all because it could affect the
+			# file hash check. If it does then log it.
+			#
+
+			rkh_dat_get_os_info
+
+			check_os_info
+		fi
+	fi
+else
+	#
+	# The user wants to update the O/S and file hash data.
+	#
+
+	logtext ""
+	logtext "Info: Starting file hash data update"
+
+	do_hash_update
+
+	logtext "Info: Finished file hash data update"
+	logtext ""
+fi
+
+
+#
+# The user wants to update the supplied RKH *.dat files.
+#
+
+test $UPDATE -eq 1 && do_update
+
+
+#
+# The user wants to check for the latest program version.
+#
+
+test $VERSIONCHECK -eq 1 && do_versioncheck
+
+
+#
+# The user wants to check the local system for anomalies.
+#
+
+test $CHECK -eq 1 && do_system_check
+
+logtext "Info: End date is `date`"
+
+exit $RET_CODE

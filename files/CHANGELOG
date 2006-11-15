@@ -36,8 +36,33 @@
  - Added special config file and command-line option, -x/-X, to detect if X
    is in use. If detected then second colour set will be used.
  - Added '--md5' cli option and MD5_CMD configuration file option. This
-   allows the user to specify the command to use for the MD5 known bad
-   hashes check.
+   allows the user to specify the command to use for the MD5 'known bad'
+   file hash check.
+ - Added '--hashupd' option. This allows a user to create the rkhunter.dat
+   file. This file contains the O/S name, file hash values and other bits of
+   information. If the file hash values change, perhaps due to new versions
+   of software, then the user simply runs RKH with the option again. If the
+   user has not run RKH with this option, then the 'known good' hash check is
+   skipped. This option obsoletes the 'hashupd.sh' script previously
+   recommended to users.
+ - Added '--hash' option. This allows a user to select what hash function they
+   want to use for the 'known good' hash file check. By default SHA1 will be
+   used. This can be overridden via the command line, or in the configuration
+   file using the HASH_FUNC option. For prelinked systems, the function must
+   be either MD5 or SHA1. For the 'known bad' check, the MD5 hash function
+   must be used (see above), but is separate from the 'known good' function.
+ - The files for the file hash checks are now 'looked for'. The code will
+   search the command directories, and check the relevant files in all the
+   directories. Additional commands and directories are used for both
+   Solaris and MAC OS X systems. Overall more commands will be checked.
+ - Added support for Ubuntu and the 'dash' shell.
+ - If the O/S name, architecture or prelinking status changes from one RKH
+   run to the next, then a warning message is written to the log file. The
+   change may well cause the file hash checks to show false positives. (The
+   user should rerun RKH with the --hashupd option.)
+ - RKH will now check that certain commands are present before starting
+   any checks. This avoids spurious 'command not found' type messages
+   suddenly appearing.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -55,13 +80,40 @@
  - The MD5WHITELIST configuration file option has changed name to HASHWHITELIST.
  - The '--disable-md5-check/--dmc' option has been changed to
    '--disable-hash-check/--dhc'.
+ - The '--checkall' option has been changed to '--check'. The old option is
+   still recognised, but will be deprecated at some time.
+ - If a logfile is to be written, but not appended to, then the old log file
+   is moved to '<logfile name>.old' now. The same happens to the rkhunter.dat
+   file if the --hashupd option is used.
+ - The 'known bad' file hash check is now enabled by default.
+ - The 'known good' hash check now also checks the files inode, uid, gid,
+   permissions and modification date/time, for any changes. This is only
+   for non-prelinked systems. As before, in all cases, the hash is checked.
+ - Improved the O/S detection mechanism. Rather than requiring users to send
+   us details, RKH actively looks at the 'release' file(s) to find the
+   O/S name.
+ - If the --hashupd or --update options are used, as well as the system
+   check option --check, then the update checks are performed before the
+   system is checked. Previously the update occurred after the system was
+   checked.
+ - Hidden file shearch now checks /usr/share/man directories.
+ - Improved NetBSD support.
+ - The supplied perl scripts, providing the stat command, md5 and sha1,
+   can now be executed without perl being in the default directory (/usr/bin).
 
  Bugfixes:
- - Corrected SHV4/Tripwire check
- - Command-line options requiring an argument now work correctly under Solaris
+ - Corrected SHV4/Tripwire check.
+ - Command-line options requiring an argument now work correctly under Solaris.
  - The -h/--help option now works as expected.
- - The OpenBSD check for known bad hashes was not matching the checksum
+ - The OpenBSD check for 'known bad' hashes was not matching the checksum
    correctly. The known good check, however, was.
+ - The ignoKit rootkit check was not checking all the required files.
+ - Some checks were not respecting the ROOTDIR option in their pathnames. This
+   has now been corrected.
+ - The file hash prelink test should now work, even if SELinux objects to the
+   prelink command (requires the 'runcon' command).
+ - Corrected file attributes check - previously the immutable flag would never
+   have been found.
 
  --
 

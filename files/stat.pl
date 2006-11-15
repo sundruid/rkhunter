@@ -3,7 +3,7 @@ use File::stat qw/:FIELDS/;
 #=head1 NAME
 #stat - display information about a file
 #=head1 SYNOPSIS
-#stat [--follow] [--octal] [--raw] [--<key>] file
+#stat [--follow] [--octal] [--modeoct] [--raw] [--<key>] file
 #=head1 DESCRIPTION
 #stat prints information about a file:
 #         dev      device number of filesystem
@@ -33,11 +33,12 @@ use File::stat qw/:FIELDS/;
 #The --octal prints numbers (excluding the time keys) in octal.
 #The --raw option just prints out the value, and not the key name. If more than
 # one key is used, they are space separated.
+#The --modeoct option prints only the mode in octal, and only the lower byte.
 #=head1 AUTHOR
 #wybo@servalys.nl
 #=cut
 use Getopt::Long;
-use vars qw /$opt_octal $opt_follow $opt_raw/;
+use vars qw /$opt_octal $opt_follow $opt_raw $opt_modeoct/;
 
 @h=qw/ dev ino mode nlink
        uid gid rdev size
@@ -47,7 +48,7 @@ use vars qw /$opt_octal $opt_follow $opt_raw/;
 /;
 @h2=();
 Getopt::Long::Configure(no_ignore_case);
-GetOptions(@h,'follow','octal','raw');
+GetOptions(@h,'follow','octal','raw','modeoct');
 
 for (@h) {
   $o="opt_$_";
@@ -57,7 +58,21 @@ for (@h) {
 @h2=@h if (@h2 < 1);
 
 $file=shift or die "Usage: stat file\n";
--e $file or die "File $file does not exist\n";
+if ($file eq '-') {
+	while (defined($file=<STDIN>)) {
+		chomp($file);
+		last unless $file;
+		&do_it();
+	}
+}
+else {
+	&do_it();
+}
+
+exit;
+
+sub do_it {
+-e $file or do { print STDERR "File $file does not exist\n"; return; };
 if ($opt_follow) { stat $file } else { lstat $file }
 for (@h2) {
   if (/^[AMC]/) {
@@ -68,6 +83,7 @@ for (@h2) {
     $v=$$v;
   }
   $opt_octal && ! /time/ and ($v=sprintf("0%o",$v))=~s/^00/0/;
+  if ($opt_modeoct && /mode/) {$v=sprintf("%04o",$v & 07777)}
   if (@h2>1 && ! $opt_raw) { write } else { print "$v " }
 }
 
@@ -77,6 +93,9 @@ format =
 @>>>>> @<<<<<<<<<<<<<  @<<<<<<<<<<<<<
 $_,      $v,            '' # $link ? $y : ''    
 .
+
+return;
+}
 
 sub conv {
   my $t=shift;
