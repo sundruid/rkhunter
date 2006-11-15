@@ -1783,6 +1783,11 @@ do_system_check_initialisation() {
 	DUARAWKZ_DIRS="${ROOTDIR}usr/bin/duarawkz"
 	DUARAWKZ_KSYMS=""
 
+	# ENYELKM v1.1
+	# Installer default.
+	ENYELKM_FILES="${ROOTDIR}etc/.enyelkmHIDE^IT.ko"
+	ENYELKM_DIRS=""
+	ENYELKM_KSYMS=""
 
 	# Flea Linux rootkit
 	FLEA_FILES="${ROOTDIR}etc/ld.so.hash
@@ -1939,6 +1944,16 @@ do_system_check_initialisation() {
 		   ${ROOTDIR}dev/ida/.inet/tcp.log"
 	MRK_DIRS="${ROOTDIR}dev/ida/.inet ${ROOTDIR}var/spool/cron/.sh"
 
+	# Mood-NT
+	# Binary is by default called "mood-nt" but can be anywhere.
+	# Here we look for collaterals, from include/prefs.h defaults
+	# until sig-based dirscan() is added.
+	MOODNT_FILES="${ROOTDIR}sbin/init__mood-nt-_-_cthulhu
+			${ROOTDIR}_cthulhu/mood-nt.init
+			${ROOTDIR}_cthulhu/mood-nt.conf
+			${ROOTDIR}_cthulhu/mood-nt.sniff"
+	MOODNT_DIRS="${ROOTDIR}_cthulhu"
+	MOODNT_KSYMS=""
 
 	# Ni0 Rootkit
 	NIO_FILES="${ROOTDIR}var/lock/subsys/...datafile.../...net...
@@ -3699,6 +3714,17 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		else
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
+		fi
+		
+		if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+			displaytext -n "       Test 4"
+			if [ "`grep '.*#<HIDE_.*>' ${RCFILE}`" ]; then
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (possible ENYELKM) ]"
+			else
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
+			fi
 		fi
 	else
 		insertlayout
