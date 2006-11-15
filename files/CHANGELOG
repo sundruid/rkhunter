@@ -54,8 +54,8 @@
  - The files for the file hash checks are now 'looked for'. The code will
    search the command directories, and check the relevant files in all the
    directories. Additional commands and directories are used for both
-   Solaris and MAC OS X systems. Overall more commands will be checked.
- - Added support for Ubuntu and the 'dash' shell.
+   Solaris, MAC OS X and NetBSD systems. Overall more commands will be checked.
+ - Added support for Ubuntu, the 'dash' and 'ash' shell.
  - If the O/S name, architecture or prelinking status changes from one RKH
    run to the next, then a warning message is written to the log file. The
    change may well cause the file hash checks to show false positives. (The
@@ -73,8 +73,10 @@
  - Added BINDIR and ROOTDIR options to the config file.
  - Split out the README file in to README and FAQ files.
  - Solaris will now use the bash shell if available.
- - Expanded the command PATH used to include the /opt/sfw/ and usr/sfw
+ - Expanded the command PATH used to include the /opt/sfw and usr/sfw
    directories for Solaris users.
+ - Expanded the command PATH used to include the /usr/pkg directory for
+   NetBSD users.
  - Added command-line option --dac as alias for --disable-application-check.
  - Versioncheck now checks the versions numerically.
  - The MD5WHITELIST configuration file option has changed name to HASHWHITELIST.
@@ -100,6 +102,7 @@
  - Improved NetBSD support.
  - The supplied perl scripts, providing the stat command, md5 and sha1,
    can now be executed without perl being in the default directory (/usr/bin).
+ - Included the /usr/share/man directories when looking for hidden files.
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.
