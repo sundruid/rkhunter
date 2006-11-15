@@ -3346,7 +3346,7 @@ logtext "---------------------------- System checks ----------------------------
 	logtext "-------------------------- Open files tests ---------------------------"
 
 	SUSP_FILES_INFO="
-adore.so:Adore%%LKM%%rootkit
+adore.o:Adore%%LKM%%rootkit
 mod_rootme.so:Apache%%mod_rootme%%backdoor
 phide_mod.o:PID%%hider%%LKM
 lbk.ko:LBK%%FreeBSD%%kernel%%module
@@ -4055,7 +4055,7 @@ ${ROOTDIR}bin/login
 		logtext "----------------------------- LKM modules -----------------------------"
 
 		LKM_BADNAMES="
-adore.so
+adore.o
 cleaner.o
 flkm.o
 phide_mod.o
@@ -4075,7 +4075,7 @@ vlogger.o
 				for I in ${LKM_BADNAMES}; do
 					FNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
 					if [ ! "`echo ${J} | grep \"/${FNAME}\$\"`" = "" ]; then
-						logtext "Warning, possible unwanted LKM (filename: ${J} string: ${I}) installed!"
+						logtext "Warning, possible malicious LKM (filename: ${J} string: ${I}) installed!"
 						FOUND=1
 					#else
 					#	logtext "Checking ${I} in ${J}... Not found"
