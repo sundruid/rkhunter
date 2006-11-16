@@ -121,7 +121,7 @@ case "$1" in
 				#else
 					case "${PREFIX}" in
 						.)
-							echo "Rewriting for local install. (On the TODO list)."
+							echo "Rewriting for local install."
 							;;
 						.*|/.*)
 							echo $E "Bad prefix chosen, exiting."
@@ -142,7 +142,7 @@ case "$1" in
 				;;
 			*)
 				if [ ! -d "${PREFIX}" ]; then
-					echo $E "Bad prefix chosen, exiting."
+					echo $E "Bad prefix chosen (nonexistent dirname), exiting."
 					exit 1
 				fi
 				;;
@@ -209,7 +209,7 @@ showTemplate() { # Take input from the "--installdir parameter"
 	case "$1" in
 		custom_.)
 			# Dump *everything* in the current dir.
-			echo "Rewrite on for local install. (TODO)"
+			echo "Rewrite on for local install."
 			;;
 		*)
 			selectTemplate "$1"
@@ -510,11 +510,17 @@ RANDVAL=`perl -e 'printf "%d\n", time;'`
 		chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${FILE}"
 
 		echo "" >> "${RKHINST_ETC_DIR}/${FILE}"
-		echo "INSTALLDIR=${PREFIX}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
-		echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
-		echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
-		echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
-
+		if [ -n "${RPM_BUILD_ROOT}" ]; then
+			echo "INSTALLDIR=${PREFIX}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+		else
+			echo "INSTALLDIR=${PREFIX}" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "DBDIR=${RKHINST_DB_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "TMPDIR=${RKHINST_TMP_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
+		fi
 	fi
 done
 } # End doInstall
