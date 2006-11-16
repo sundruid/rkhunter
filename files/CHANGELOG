@@ -103,6 +103,7 @@
  - The supplied perl scripts, providing the stat command, md5 and sha1,
    can now be executed without perl being in the default directory (/usr/bin).
  - Included the /usr/share/man directories when looking for hidden files.
+ - Check for symbol entries in kallsyms file if ksyms does not exist.
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.

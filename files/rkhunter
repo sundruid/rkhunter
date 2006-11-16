@@ -228,13 +228,13 @@ scanrootkit() {
 		fi
 	done
 
-	# Scan ksyms file
-	if [ ! "${SCAN_KSYMS}" = "" -a -f ${ROOTDIR}proc/ksyms ]; then
-		SEARCHTEXT=`grep ${SCAN_KSYMS} ${ROOTDIR}proc/ksyms`
-		if [ ! "${SEARCHTEXT}" = "" ]; then
+	# Scan ksyms or kallsyms file
+	if [ -n "${SCAN_KSYMS}" -a -n "${KSYMS_FILE}" ]; then
+		SEARCHTEXT=`grep ${SCAN_KSYMS} ${KSYMS_FILE}`
+		if [ -n "${SEARCHTEXT}" ]; then
 			logtext "WARNING! Found ${SCAN_KSYMS}"
 		else
-			logtext "ksyms file seems to be clean"
+			logtext "${KSYMS_FILE} file seems to be clean"
 		fi
 	fi
 
@@ -1676,9 +1676,7 @@ do_system_check_initialisation() {
 		      ${ROOTDIR}dev/tux/.file ${ROOTDIR}lib/.libgh-gh/cleaner
 		      ${ROOTDIR}lib/.libgh-gh/Patch/patch
 		      ${ROOTDIR}lib/.libgh-gh/sb0k"
-
 	AJAKIT_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}lib/.libgh-gh"
-
 	AJAKIT_KSYMS=""
 
 
@@ -1702,7 +1700,6 @@ do_system_check_initialisation() {
 	BALAUR_FILES="${ROOTDIR}usr/lib/liblog.o"
 	BALAUR_DIRS="${ROOTDIR}usr/lib/.kinetic ${ROOTDIR}usr/lib/.egcs
 		     ${ROOTDIR}usr/lib/.wormie"
-
 	BALAUR_KSYMS=""
 
 
@@ -2584,8 +2581,8 @@ logtext "---------------------------- System checks ----------------------------
 	displaytext ""
 
 
-	if [ ! -f "${ROOTDIR}proc/ksyms" ]; then
-		logtext "Info: ksyms file check will be skipped (${ROOTDIR}proc/ksyms not available on this system)"
+	if [ -z "${KSYMS_FILE}" ]; then
+		logtext "Info: ksyms and kallsyms file checks will be skipped (files not present on this system)"
 	fi
 
 
@@ -2677,7 +2674,7 @@ logtext "---------------------------- System checks ----------------------------
 			displaytext "  ${WHITE}Performing 'known bad' check...${NORMAL}"
 
 			# Files to check
-			CHECKFILES="${ROOTDIR}bin/cat ${ROOTDIR}bin/chmod ${ROOTDIR}bin/chown ${ROOTDIR}bin/csh ${ROOTDIR}bin/date ${ROOTDIR}bin/df ${ROOTDIR}bin/dmesg ${ROOTDIR}bin/echo ${ROOTDIR}bin/ed ${ROOTDIR}bin/egrep ${ROOTDIR}bin/env ${ROOTDIR}bin/fgrep ${ROOTDIR}bin/grep ${ROOTDIR}bin/id ${ROOTDIR}bin/kill ${ROOTDIR}bin/login ${ROOTDIR}bin/ls ${ROOTDIR}bin/md5 ${ROOTDIR}bin/more ${ROOTDIR}bin/mount ${ROOTDIR}bin/netstat ${ROOTDIR}bin/ps ${ROOTDIR}bin/sh ${ROOTDIR}bin/sha1 ${ROOTDIR}bin/sort ${ROOTDIR}bin/su ${ROOTDIR}sbin/checkproc ${ROOTDIR}sbin/chkconfig ${ROOTDIR}sbin/depmod ${ROOTDIR}sbin/dmesg ${ROOTDIR}sbin/ifconfig ${ROOTDIR}sbin/ifdown ${ROOTDIR}sbin/ifstatus ${ROOTDIR}sbin/ifup ${ROOTDIR}sbin/init ${ROOTDIR}sbin/insmod ${ROOTDIR}sbin/ip ${ROOTDIR}sbin/kldload ${ROOTDIR}sbin/kldstat ${ROOTDIR}sbin/kldunload ${ROOTDIR}sbin/ksyms ${ROOTDIR}sbin/lsmod ${ROOTDIR}sbin/md5 ${ROOTDIR}sbin/modinfo ${ROOTDIR}sbin/modload ${ROOTDIR}sbin/modprobe ${ROOTDIR}sbin/modunload ${ROOTDIR}sbin/nologin ${ROOTDIR}sbin/rmmod ${ROOTDIR}sbin/runlevel ${ROOTDIR}sbin/sulogin ${ROOTDIR}sbin/sysctl ${ROOTDIR}sbin/syslogd ${ROOTDIR}usr/bin/basename ${ROOTDIR}usr/bin/chattr ${ROOTDIR}usr/bin/du ${ROOTDIR}usr/bin/egrep ${ROOTDIR}usr/bin/fgrep ${ROOTDIR}usr/bin/file ${ROOTDIR}usr/bin/find ${ROOTDIR}usr/bin/groups ${ROOTDIR}usr/bin/head ${ROOTDIR}usr/bin/kill ${ROOTDIR}usr/bin/killall ${ROOTDIR}usr/bin/last ${ROOTDIR}usr/bin/lastlog ${ROOTDIR}usr/bin/less ${ROOTDIR}usr/bin/locate ${ROOTDIR}usr/bin/logger ${ROOTDIR}usr/bin/login ${ROOTDIR}usr/bin/lsattr ${ROOTDIR}usr/bin/md5sum ${ROOTDIR}usr/bin/modstat ${ROOTDIR}usr/bin/more ${ROOTDIR}usr/bin/netstat ${ROOTDIR}usr/bin/newsyslog ${ROOTDIR}usr/bin/passwd ${ROOTDIR}usr/bin/pstree ${ROOTDIR}usr/bin/sha1sum ${ROOTDIR}usr/bin/size ${ROOTDIR}usr/bin/slocate ${ROOTDIR}usr/bin/sockstat ${ROOTDIR}usr/bin/sort ${ROOTDIR}usr/bin/stat ${ROOTDIR}usr/bin/strace ${ROOTDIR}usr/bin/strings ${ROOTDIR}usr/bin/su ${ROOTDIR}usr/bin/systat ${ROOTDIR}usr/bin/test ${ROOTDIR}usr/bin/top ${ROOTDIR}usr/bin/touch ${ROOTDIR}usr/bin/uname ${ROOTDIR}usr/bin/users ${ROOTDIR}usr/bin/vmstat ${ROOTDIR}usr/bin/w ${ROOTDIR}usr/bin/watch ${ROOTDIR}usr/bin/wc ${ROOTDIR}usr/bin/wget ${ROOTDIR}usr/bin/whatis ${ROOTDIR}usr/bin/whereis ${ROOTDIR}usr/bin/which ${ROOTDIR}usr/bin/who ${ROOTDIR}usr/bin/whoami ${ROOTDIR}usr/sbin/adduser ${ROOTDIR}usr/sbin/amd ${ROOTDIR}usr/sbin/chroot ${ROOTDIR}usr/sbin/cron ${ROOTDIR}usr/sbin/inetd ${ROOTDIR}usr/sbin/kudzu ${ROOTDIR}usr/sbin/syslogd ${ROOTDIR}usr/sbin/tcpd ${ROOTDIR}usr/sbin/useradd ${ROOTDIR}usr/sbin/usermod ${ROOTDIR}usr/sbin/vipw ${ROOTDIR}usr/sbin/xinetd"
+			CHECKFILES="${ROOTDIR}bin/cat ${ROOTDIR}bin/chmod ${ROOTDIR}bin/chown ${ROOTDIR}bin/csh ${ROOTDIR}bin/date ${ROOTDIR}bin/df ${ROOTDIR}bin/dmesg ${ROOTDIR}bin/echo ${ROOTDIR}bin/ed ${ROOTDIR}bin/egrep ${ROOTDIR}bin/env ${ROOTDIR}bin/fgrep ${ROOTDIR}bin/grep ${ROOTDIR}bin/id ${ROOTDIR}bin/kill ${ROOTDIR}bin/login ${ROOTDIR}bin/ls ${ROOTDIR}bin/md5 ${ROOTDIR}bin/more ${ROOTDIR}bin/mount ${ROOTDIR}bin/netstat ${ROOTDIR}bin/ps ${ROOTDIR}bin/sh ${ROOTDIR}bin/sha1 ${ROOTDIR}bin/sort ${ROOTDIR}bin/su ${ROOTDIR}sbin/checkproc ${ROOTDIR}sbin/chkconfig ${ROOTDIR}sbin/depmod ${ROOTDIR}sbin/dmesg ${ROOTDIR}sbin/ifconfig ${ROOTDIR}sbin/ifdown ${ROOTDIR}sbin/ifstatus ${ROOTDIR}sbin/ifup ${ROOTDIR}sbin/init ${ROOTDIR}sbin/insmod ${ROOTDIR}sbin/ip ${ROOTDIR}sbin/kldload ${ROOTDIR}sbin/kldstat ${ROOTDIR}sbin/kldunload ${ROOTDIR}sbin/kallsyms ${ROOTDIR}sbin/ksyms ${ROOTDIR}sbin/lsmod ${ROOTDIR}sbin/md5 ${ROOTDIR}sbin/modinfo ${ROOTDIR}sbin/modload ${ROOTDIR}sbin/modprobe ${ROOTDIR}sbin/modunload ${ROOTDIR}sbin/nologin ${ROOTDIR}sbin/rmmod ${ROOTDIR}sbin/runlevel ${ROOTDIR}sbin/sulogin ${ROOTDIR}sbin/sysctl ${ROOTDIR}sbin/syslogd ${ROOTDIR}usr/bin/basename ${ROOTDIR}usr/bin/chattr ${ROOTDIR}usr/bin/du ${ROOTDIR}usr/bin/egrep ${ROOTDIR}usr/bin/fgrep ${ROOTDIR}usr/bin/file ${ROOTDIR}usr/bin/find ${ROOTDIR}usr/bin/groups ${ROOTDIR}usr/bin/head ${ROOTDIR}usr/bin/kill ${ROOTDIR}usr/bin/killall ${ROOTDIR}usr/bin/last ${ROOTDIR}usr/bin/lastlog ${ROOTDIR}usr/bin/less ${ROOTDIR}usr/bin/locate ${ROOTDIR}usr/bin/logger ${ROOTDIR}usr/bin/login ${ROOTDIR}usr/bin/lsattr ${ROOTDIR}usr/bin/md5sum ${ROOTDIR}usr/bin/modstat ${ROOTDIR}usr/bin/more ${ROOTDIR}usr/bin/netstat ${ROOTDIR}usr/bin/newsyslog ${ROOTDIR}usr/bin/passwd ${ROOTDIR}usr/bin/pstree ${ROOTDIR}usr/bin/sha1sum ${ROOTDIR}usr/bin/size ${ROOTDIR}usr/bin/slocate ${ROOTDIR}usr/bin/sockstat ${ROOTDIR}usr/bin/sort ${ROOTDIR}usr/bin/stat ${ROOTDIR}usr/bin/strace ${ROOTDIR}usr/bin/strings ${ROOTDIR}usr/bin/su ${ROOTDIR}usr/bin/systat ${ROOTDIR}usr/bin/test ${ROOTDIR}usr/bin/top ${ROOTDIR}usr/bin/touch ${ROOTDIR}usr/bin/uname ${ROOTDIR}usr/bin/users ${ROOTDIR}usr/bin/vmstat ${ROOTDIR}usr/bin/w ${ROOTDIR}usr/bin/watch ${ROOTDIR}usr/bin/wc ${ROOTDIR}usr/bin/wget ${ROOTDIR}usr/bin/whatis ${ROOTDIR}usr/bin/whereis ${ROOTDIR}usr/bin/which ${ROOTDIR}usr/bin/who ${ROOTDIR}usr/bin/whoami ${ROOTDIR}usr/sbin/adduser ${ROOTDIR}usr/sbin/amd ${ROOTDIR}usr/sbin/chroot ${ROOTDIR}usr/sbin/cron ${ROOTDIR}usr/sbin/inetd ${ROOTDIR}usr/sbin/kudzu ${ROOTDIR}usr/sbin/syslogd ${ROOTDIR}usr/sbin/tcpd ${ROOTDIR}usr/sbin/useradd ${ROOTDIR}usr/sbin/usermod ${ROOTDIR}usr/sbin/vipw ${ROOTDIR}usr/sbin/xinetd"
 			for I in ${CHECKFILES}; do
 				if [ -f ${I} ]; then
 					displaytext -n "   ${I}"
@@ -3121,9 +3118,9 @@ logtext "---------------------------- System checks ----------------------------
 	logtext "Debug: Sebek LKM"
 	displaytext -n "   Sebek LKM..."
 
-	# Search for signs of Sebek in ksyms file
-	if [ -f /proc/ksyms ]; then
-		if `egrep -i 'adore|sebek' < /proc/ksyms >/dev/null 2>&1`; then
+	# Search for signs of Sebek in ksyms and kallsyms files
+	if [ -n "${KSYMS_FILE}" ]; then
+		if `egrep -i 'adore|sebek' ${KSYMS_FILE} >/dev/null 2>&1`; then
 			STATUS=1
 		fi
 	fi
@@ -5459,9 +5456,7 @@ nonvulnerable:%2.4.24%
 		fi
 
 		# Something was wrong. So end with a nonzero exit state for scripters/coders ;-)
-		exit 1
-	else
-		exit 0
+		RET_CODE=1
 	fi
 
 	return
@@ -5579,12 +5574,12 @@ set_hash_dirs_files() {
 	HASHFILES="adduser amd basename cat chattr checkproc chkconfig chmod
 	    chown chroot cron csh date depmod df dirname dmesg du echo ed egrep
 	    env fgrep file find grep groupadd groupdel groupmod groups grpck
-	    head id ifconfig ifdown ifstatus ifup inetd init insmod ip kill
-	    killall kldload kldstat kldunload ksyms kudzu last lastlog less
-	    locate logger login ls lsattr lsmod lynx md5 md5sum mlocate modinfo
-	    modload modprobe modstat modunload more mount netstat newgrp
-	    newsyslog nologin passwd ps pstree pwck rmmod runlevel sh sha1
-	    sha1sum size slocate sockstat sort stat strace strings su sudo
+	    head id ifconfig ifdown ifstatus ifup inetd init insmod ip kallsyms
+	    kill killall kldload kldstat kldunload ksyms kudzu last lastlog
+	    less locate logger login ls lsattr lsmod lynx md5 md5sum mlocate
+	    modinfo modload modprobe modstat modunload more mount netstat
+	    newgrp newsyslog nologin passwd ps pstree pwck rmmod runlevel sh
+	    sha1 sha1sum size slocate sockstat sort stat strace strings su sudo
 	    sulogin sysctl syslogd systat tail tcpd test top touch uname
 	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"
@@ -5808,6 +5803,9 @@ defaultcolumn=60
 
 # Initialise default status
 STATUS=0
+
+# Ksyms or kallsyms file used in some checks
+KSYMS_FILE=""
 
 # Record for logging the command-line being used
 CMD_LINE="$0 $*"
@@ -6171,6 +6169,17 @@ if [ $CHECK -eq 1 ]; then
 			YELLOW="[0;35m"	# Purple
 			WHITE="[0;30m"	# Black
 		fi
+	fi
+
+
+	#
+	# Check if we have a ksyms or kallsyms file.
+	#
+
+	if [ -f "${ROOTDIR}proc/ksyms" ]; then
+		KSYMS_FILE="${ROOTDIR}proc/ksyms"
+	elif [ -f "${ROOTDIR}proc/kallsyms" ]; then
+		KSYMS_FILE="${ROOTDIR}proc/kallsyms"
 	fi
 fi
 
