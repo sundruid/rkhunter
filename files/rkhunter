@@ -26,7 +26,7 @@
 # Otherwise SunOS will complain about some of the ksh/bash syntax.
 #
 
-OPERATING_SYSTEM=`uname`
+OPERATING_SYSTEM=`uname 2>/dev/null`
 
 if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	if [ -z "$RANDOM" ]; then
@@ -259,8 +259,8 @@ scanrootkit_suckit_extra_checks() {
 		if [ -n "${STAT_CMD}" -a -z "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
 			# Let's check the amount of links /sbin/init has
 			unset i;
-			i=`${STAT_CMD} -t /sbin/init | cut -d ' ' -f9`
-			case ${i} in
+			i=`${STAT_CMD} -t /sbin/init | cut -d' ' -f9`
+			case "${i}" in
 			1)
 				;;
 			*)
@@ -274,8 +274,8 @@ scanrootkit_suckit_extra_checks() {
 			umask 027
 			for ext in xrk mem; do
 				randf="${TMPDIR}/${__RANDOM}.${ext}"
-				test -f ${randf} || \
-				( touch ${randf} && test -f ${randf} && rm -f ${randf} || \
+				test -f "${randf}" || \
+				( touch ${randf} && test -f "${randf}" && rm -f ${randf} || \
 					logtext "WARNING! ${SCAN_ROOTKIT} ${ext} hiding" )
 			done
 
@@ -311,11 +311,11 @@ check_required_commands() {
 	# which is a list of directories to look in.
 	#
 
-	for CMD in grep sed tail; do
+	for CMD in ${REQCMDS}; do
 		SEEN=0
 
 		for DIR in $1; do
-			test ! -d ${DIR} && continue
+			test ! -d "${DIR}" && continue
 
 			if [ -f "${DIR}/${CMD}" -a -x "${DIR}/${CMD}" ]; then
 				SEEN=1
@@ -334,7 +334,6 @@ check_required_commands() {
 
 
 check_commands() {
-# jh - need to check where perl is used - must verify that perl is available.
 
 	#
 	# We check for some commands used in the tests. If the command
@@ -698,7 +697,7 @@ get_bindir_option() {
 		if [ -z "`echo ${DIR} | grep '^[./]'`" ]; then
 			echo "Invalid BINDIR directory: ${DIR}"
 			exit 1
-		elif [ ! -d ${DIR} -a $USE_DFLT -eq 0 ]; then
+		elif [ ! -d "${DIR}" -a $USE_DFLT -eq 0 ]; then
 			echo "Non-existent BINDIR directory: ${DIR}"
 			exit 1
 		fi
@@ -981,7 +980,7 @@ get_if_prelinked() {
 	# regardless of the hash checks.
 	#
 
-	if [ -f ${ROOTDIR}etc/prelink.cache ]; then
+	if [ -f "${ROOTDIR}etc/prelink.cache" ]; then
 		PRELINK_CMD=`find_cmd prelink`
 
 		if [ -n "${PRELINK_CMD}" ]; then
@@ -1373,22 +1372,22 @@ rkh_dat_get_os_info() {
 
 	case "${OPERATING_SYSTEM}" in
 	SunOS)
-		ARCH=`uname -p`
+		ARCH=`uname -p 2>/dev/null`
 		;;
 	FreeBSD)
 		ARCH=`sysctl -n hw.machine_arch 2>/dev/null`
-		OSNAME=`uname -v | cut -d' ' -f1,2`
+		OSNAME=`uname -v 2>/dev/null | cut -d' ' -f1,2`
 		;;
 	OpenBSD)
-		OSNAME="OpenBSD `uname -r`"
+		OSNAME="OpenBSD `uname -r 2>/dev/null`"
 		;;
 	Darwin)
 		OSNAME=`sw_vers 2>/dev/null | grep 'ProductName' | sed -e 's/^ProductName: *//'`
 		OSNAME="${OSNAME} `sysctl kern.version 2>/dev/null | sed -e 's/^kern.version = //' | cut -d: -f1`"
 		;;
 	AIX)
-		ARCH=`uname -p`
-		OSNAME="IBM AIX `oslevel`"
+		ARCH=`uname -p 2>/dev/null`
+		OSNAME="IBM AIX `oslevel 2>/dev/null`"
 		;;
 	esac
 
@@ -1458,10 +1457,10 @@ rkh_dat_set_file_hash() {
 
 # jh - set counters in this loop to record how many hashes out of how many were added.
 	for DIR in ${HASHDIRS}; do
-		test ! -d ${DIR} && continue
+		test ! -d "${DIR}" && continue
 
 		for FNAME in ${HASHFILES}; do
-			test ! -f ${DIR}/${FNAME} && continue
+			test ! -f "${DIR}/${FNAME}" && continue
 
 			SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
 
@@ -1522,12 +1521,18 @@ do_hash_update() {
 	if [ -n "${MKTEMP_CMD}" ]; then
 		RKHDAT_FILE=`${MKTEMP_CMD} ${TMPDIR}/rkhunter.dat.XXXXXX`
 
-		logtext "Info: Found 'mktemp' command: ${MKTEMP_CMD}"
-	else
+		logtext "Info: Using 'mktemp' command (${MKTEMP_CMD}) for rkhunter.dat file"
+	elif [ -n "$RANDOM" ]; then
 		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDOM"
 		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
 
-		logtext "Info: Unable to find 'mktemp' command: using random number instead"
+		logtext "Info: Using random number for rkhunter.dat file"
+	else
+		RANDNUM=$$$(date +%s)
+		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDNUM"
+		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
+
+		logtext "Info: Using PID number and date for rkhunter.dat file"
 	fi
 
 	logtext "Info: Created temporary file ${RKHDAT_FILE}"
@@ -1616,15 +1621,15 @@ do_versioncheck() {
 
 	LATESTVERSION="unknown"
 
-	if [ -f ${TMPDIR}/rkhunter.upd ]; then
+	if [ -f "${TMPDIR}/rkhunter.upd" ]; then
 		rm -f ${TMPDIR}/rkhunter.upd >/dev/null 2>&1
 	fi
 
-	URLPREFIX=`grep -v 'version=' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d '=' -f2`
+	URLPREFIX=`grep -v 'version=' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d'=' -f2`
 
 	VERSIONUPDATEURL=`grep 'LATESTVERSION=' ${CONFIGFILE} | sed -e 's/LATESTVERSION=//g'`
 
-# jh - put check in here to use wget, lynx, links, elinks, curl, GET.
+# jh - put check in here to use wget, lynx, links, elinks, curl, GET. or bget.
 	if [ -n "${WGET_CMD}" ]; then
 		${WGET_CMD} -q -O ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL}
 		displaytext "${URLPREFIX}${VERSIONUPDATEURL}"
@@ -2566,6 +2571,21 @@ do_system_check() {
 valid_os="0"
 
 
+#
+# Record the start time if we can. The total time taken for
+# scanning will only be calculated and displayed if the
+# start time can be set.
+#
+BEGINTIME=0
+ENDTIME=0
+
+if [ -n "$SECONDS" ]; then
+	BEGINTIME=$SECONDS
+elif [ -n "${PERL_CMD}" ]; then
+	BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
+fi
+
+
 # Begin parameters
 
 ##################################################################################################
@@ -2676,17 +2696,17 @@ logtext "---------------------------- System checks ----------------------------
 			# Files to check
 			CHECKFILES="${ROOTDIR}bin/cat ${ROOTDIR}bin/chmod ${ROOTDIR}bin/chown ${ROOTDIR}bin/csh ${ROOTDIR}bin/date ${ROOTDIR}bin/df ${ROOTDIR}bin/dmesg ${ROOTDIR}bin/echo ${ROOTDIR}bin/ed ${ROOTDIR}bin/egrep ${ROOTDIR}bin/env ${ROOTDIR}bin/fgrep ${ROOTDIR}bin/grep ${ROOTDIR}bin/id ${ROOTDIR}bin/kill ${ROOTDIR}bin/login ${ROOTDIR}bin/ls ${ROOTDIR}bin/md5 ${ROOTDIR}bin/more ${ROOTDIR}bin/mount ${ROOTDIR}bin/netstat ${ROOTDIR}bin/ps ${ROOTDIR}bin/sh ${ROOTDIR}bin/sha1 ${ROOTDIR}bin/sort ${ROOTDIR}bin/su ${ROOTDIR}sbin/checkproc ${ROOTDIR}sbin/chkconfig ${ROOTDIR}sbin/depmod ${ROOTDIR}sbin/dmesg ${ROOTDIR}sbin/ifconfig ${ROOTDIR}sbin/ifdown ${ROOTDIR}sbin/ifstatus ${ROOTDIR}sbin/ifup ${ROOTDIR}sbin/init ${ROOTDIR}sbin/insmod ${ROOTDIR}sbin/ip ${ROOTDIR}sbin/kldload ${ROOTDIR}sbin/kldstat ${ROOTDIR}sbin/kldunload ${ROOTDIR}sbin/kallsyms ${ROOTDIR}sbin/ksyms ${ROOTDIR}sbin/lsmod ${ROOTDIR}sbin/md5 ${ROOTDIR}sbin/modinfo ${ROOTDIR}sbin/modload ${ROOTDIR}sbin/modprobe ${ROOTDIR}sbin/modunload ${ROOTDIR}sbin/nologin ${ROOTDIR}sbin/rmmod ${ROOTDIR}sbin/runlevel ${ROOTDIR}sbin/sulogin ${ROOTDIR}sbin/sysctl ${ROOTDIR}sbin/syslogd ${ROOTDIR}usr/bin/basename ${ROOTDIR}usr/bin/chattr ${ROOTDIR}usr/bin/du ${ROOTDIR}usr/bin/egrep ${ROOTDIR}usr/bin/fgrep ${ROOTDIR}usr/bin/file ${ROOTDIR}usr/bin/find ${ROOTDIR}usr/bin/groups ${ROOTDIR}usr/bin/head ${ROOTDIR}usr/bin/kill ${ROOTDIR}usr/bin/killall ${ROOTDIR}usr/bin/last ${ROOTDIR}usr/bin/lastlog ${ROOTDIR}usr/bin/less ${ROOTDIR}usr/bin/locate ${ROOTDIR}usr/bin/logger ${ROOTDIR}usr/bin/login ${ROOTDIR}usr/bin/lsattr ${ROOTDIR}usr/bin/md5sum ${ROOTDIR}usr/bin/modstat ${ROOTDIR}usr/bin/more ${ROOTDIR}usr/bin/netstat ${ROOTDIR}usr/bin/newsyslog ${ROOTDIR}usr/bin/passwd ${ROOTDIR}usr/bin/pstree ${ROOTDIR}usr/bin/sha1sum ${ROOTDIR}usr/bin/size ${ROOTDIR}usr/bin/slocate ${ROOTDIR}usr/bin/sockstat ${ROOTDIR}usr/bin/sort ${ROOTDIR}usr/bin/stat ${ROOTDIR}usr/bin/strace ${ROOTDIR}usr/bin/strings ${ROOTDIR}usr/bin/su ${ROOTDIR}usr/bin/systat ${ROOTDIR}usr/bin/test ${ROOTDIR}usr/bin/top ${ROOTDIR}usr/bin/touch ${ROOTDIR}usr/bin/uname ${ROOTDIR}usr/bin/users ${ROOTDIR}usr/bin/vmstat ${ROOTDIR}usr/bin/w ${ROOTDIR}usr/bin/watch ${ROOTDIR}usr/bin/wc ${ROOTDIR}usr/bin/wget ${ROOTDIR}usr/bin/whatis ${ROOTDIR}usr/bin/whereis ${ROOTDIR}usr/bin/which ${ROOTDIR}usr/bin/who ${ROOTDIR}usr/bin/whoami ${ROOTDIR}usr/sbin/adduser ${ROOTDIR}usr/sbin/amd ${ROOTDIR}usr/sbin/chroot ${ROOTDIR}usr/sbin/cron ${ROOTDIR}usr/sbin/inetd ${ROOTDIR}usr/sbin/kudzu ${ROOTDIR}usr/sbin/syslogd ${ROOTDIR}usr/sbin/tcpd ${ROOTDIR}usr/sbin/useradd ${ROOTDIR}usr/sbin/usermod ${ROOTDIR}usr/sbin/vipw ${ROOTDIR}usr/sbin/xinetd"
 			for I in ${CHECKFILES}; do
-				if [ -f ${I} ]; then
+				if [ -f "${I}" ]; then
 					displaytext -n "   ${I}"
 					SIZE=`echo "${I}" | wc -c | tr -d ' '`
 					ISBAD=""
 					MD5SUM=`${MD5_CMD} ${I} | cut -d' ' -f1`
 
 					if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${MD5_CMD}" = "/bin/md5" ]; then
-						MD5SUM=`echo ${MD5SUM} | cut -d ' ' -f4 | tr -d ' '`
+						MD5SUM=`echo ${MD5SUM} | cut -d' ' -f4 | tr -d ' '`
 					fi
 
-					ISBAD=`grep ${MD5SUM} ${DB_PATH}/md5blacklist.dat`
+					ISBAD=`grep "${MD5SUM}" ${DB_PATH}/md5blacklist.dat`
 
 					if [ "${ISBAD}" = "" ]; then
 						jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -2756,9 +2776,9 @@ logtext "---------------------------- System checks ----------------------------
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
 	displaytext -n "   ADM Worm... "
-	if [ -e /etc/passwd ]; then
+	if [ -f "${ROOTDIR}etc/passwd" ]; then
 		logtext "Checking /etc/passwd for presence of ADM worm"
-		WORM=`grep 'w0rm' /etc/passwd`
+		WORM=`grep 'w0rm' ${ROOTDIR}etc/passwd`
 		if [ "${WORM}" = "" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
@@ -3054,13 +3074,13 @@ logtext "---------------------------- System checks ----------------------------
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 		STATUS=0
-		SIZE=13
+		SIZE=24
 
 		logtext "Debug: Phalanx (/bin/hostname)"
 		displaytext -n "   Phalanx (/bin/hostname)"
 
 		# Search for Phalanx in /bin/hostname
-		if [ -e /bin/hostname ]; then
+		if [ -f "${ROOTDIR}bin/hostname" ]; then
 			if `grep -q 'phalanx' /bin/hostname >/dev/null 2>&1`; then
 				STATUS=1
 			fi
@@ -3320,16 +3340,16 @@ logtext "---------------------------- System checks ----------------------------
 	if [ -n "${STRINGS_CMD}" ]; then
 		FOUND=0
 		for I in ${STRINGSCAN}; do
-			TYPE=`echo $I | cut -d ':' -f1`
-			FILE=`echo $I | cut -d ':' -f2 | sed -e 's/%%/ /g'`
-			FILESTRING=`echo $I | cut -d ':' -f3 | sed -e 's/%%/ /g'`
-			INFO=`echo $I | cut -d ':' -f4 | sed -e 's/%%/ /g'`
+			TYPE=`echo $I | cut -d: -f1`
+			FILE=`echo $I | cut -d: -f2 | sed -e 's/%%/ /g'`
+			FILESTRING=`echo $I | cut -d: -f3 | sed -e 's/%%/ /g'`
+			INFO=`echo $I | cut -d: -f4 | sed -e 's/%%/ /g'`
 			FOUNDFILE=0
-			case ${TYPE} in
+			case "${TYPE}" in
 			bin)
 				for I in ${BINPATHS}; do
 					FILENAME="${I}/${FILE}"
-					if [ -f $FILENAME ]; then
+					if [ -f "$FILENAME" ]; then
 						FSTRING=`echo "${FILESTRING}" | sed -e 's/\./\\\./g'`
 						FOUNDSTRING=`${STRINGS_CMD} $FILENAME | grep "${FSTRING}"`
 						if [ "${FOUNDSTRING}" = "" ]; then
@@ -3360,7 +3380,7 @@ logtext "---------------------------- System checks ----------------------------
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
-		logtext "Skipped stringtest (rootkit strings), due to missing `strings`"
+		logtext "Skipped stringtest (rootkit strings), due to missing 'strings' command"
 	fi
 
 	logtext "[End string tests]"
@@ -3369,15 +3389,15 @@ logtext "---------------------------- System checks ----------------------------
 	displaytext -n "   Scanning for known rootkit files"
 
 	for I in ${FILESCAN}; do
-		TYPE=`echo $I | cut -d ':' -f1`
-		FILE=`echo $I | cut -d ':' -f2`
-		INFO=`echo $I | cut -d ':' -f3`
+		TYPE=`echo $I | cut -d: -f1`
+		FILE=`echo $I | cut -d: -f2`
+		INFO=`echo $I | cut -d: -f3`
 		FOUNDFILE=0
 		FILE=`echo ${FILE} | sed -e 's/%%/ /g'`
 		INFO=`echo ${INFO} | sed -e 's/%%/ /g'`
 
 		logtext -n "Scanning for presence of ${FILE} (${TYPE})... "
-		case ${TYPE} in
+		case "${TYPE}" in
 		dir)
 			if [ -d "${FILE}" ]; then
 				FOUNDFILE=1
@@ -3438,7 +3458,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		SUSP_FILES="backdoor"
 		# Add more suspicious files to the check
 		for I in ${SUSP_FILES_INFO}; do
-			FILENAME=`echo ${I} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+			FILENAME=`echo ${I} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 			SUSP_FILES="${SUSP_FILES}|${FILENAME}"
 		done
 		SEARCHFILES=`${LSOF_CMD} -F n -w | sort | uniq | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})$"`
@@ -3491,13 +3511,13 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		if [ -n "${LSOF_CMD}" ]; then
 			STATUS=0
 			WHITEPROC=""; BLACKPROC=""
-			SEARCHFILES=`${LSOF_CMD} -n -l -w | grep "(dele" | head -n 1`
+			SEARCHFILES=`${LSOF_CMD} -n -l -w | grep '(dele' | head -n 1`
 			if [ ! "${SEARCHFILES}" = "" ]; then
 				PMATCH=1; PIDLIST=""
 				OLDIFS=$IFS
 				IFS="
 "
-				for line in `${LSOF_CMD} -n -l -w | grep "(dele"`; do
+				for line in `${LSOF_CMD} -n -l -w | grep '(dele'`; do
 					lproc=`echo $line | awk '{ print $1 }'`
 					lpid=`echo $line | awk '{ print $2 }'`
 					l8=`echo $line | awk '{ print $8 }'`
@@ -3522,7 +3542,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 						fi
 						# Remove anything after the pathname
 						if [ -n "`echo ${lfile} | grep '^/'`" ]; then
-							lfile=`echo ${lfile} | cut -f1 -d' '`
+							lfile=`echo ${lfile} | cut -d' ' -f1`
 						fi
 						ALLOWPROCDELFILES=`grep '^ALLOWPROCDELFILE=' ${CONFIGFILE} | sed -e 's/ALLOWPROCDELFILE=//g'`
 						FMATCH=1
@@ -3591,7 +3611,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	displaytext -n "   Miscellaneous Login backdoors"
 
 	for I in ${LOGIN_BACKDOORS_FILES}; do
-		if [ -d ${I} ]; then
+		if [ -d "${I}" ]; then
 			STATUS=1
 			logtext "${I} found! Possible part of a rootkit/trojan."
 		else
@@ -3645,7 +3665,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 
 	for I in ${SUSPICIOUS1_DIRS}; do
 		logtext -n "Checking ${I}... "
-		if [ -f ${I} ]; then
+		if [ -f "${I}" ]; then
 			STATUS=1
 			logtext --nodate "[ WARNING! ] Possible part of a rootkit/trojan."
 		else
@@ -3672,7 +3692,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	displaytext -n "   Software related files"
 	logtext "Scanning for software related files and intrusions..."
 
-	TRIPWIREFILE="${ROOTDIR}var/lib/tripwire/`uname -n`.twd"
+	TRIPWIREFILE="${ROOTDIR}var/lib/tripwire/`uname -n 2>/dev/null`.twd"
 
 	if [ -f "${TRIPWIREFILE}" ]; then
 		FOUND=1
@@ -3707,7 +3727,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 
 	for I in ${SNIFFER_FILES}; do
 		logtext -n "Checking ${I}... "
-		if [ -f ${I} ]; then
+		if [ -f "${I}" ]; then
 			STATUS=1
 			logtext --nodate "[ WARNING! ] Possible sniffer log found."
 		else
@@ -3740,7 +3760,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		RCFILE="/etc/rc.d/rc.sysinit"
 	fi
 	displaytext -n "     Checking ${RCFILE}"
-	if [ -f ${RCFILE} ]; then
+	if [ -f "${RCFILE}" ]; then
 		# Insert end-of-line
 		displaytext ""
 		SIZE="11"
@@ -3756,7 +3776,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		fi
 
 		displaytext -n "       Test 2"
-		if [ "`grep 'bin/xchk' ${RCFILE}`" ]; then
+		if [ -n "`grep 'bin/xchk' ${RCFILE}`" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
 		else
@@ -3765,7 +3785,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		fi
 
 		displaytext -n "       Test 3"
-		if [ "`grep 'bin/xsf' ${RCFILE}`" ]; then
+		if [ -n "`grep 'bin/xsf' ${RCFILE}`" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (possible Optic Kit / Tuxkit) ]"
 		else
@@ -3775,7 +3795,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		
 		if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 			displaytext -n "       Test 4"
-			if [ "`grep '.*#<HIDE_.*>' ${RCFILE}`" ]; then
+			if [ -n "`grep '.*#<HIDE_.*>' ${RCFILE}`" ]; then
 				insertlayout
 				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (possible ENYELKM) ]"
 			else
@@ -3792,24 +3812,22 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 	displaytext -n "     Checking /etc/inetd.conf"
 
-	if [ -f /etc/inetd.conf ]; then
+	if [ -f "${ROOTDIR}etc/inetd.conf" ]; then
 		FOUND=0
-		if [ -e /etc/inetd.conf ]; then
-			grep '/bin/csh' /etc/inetd.conf >/dev/null && FOUND=1
-			grep '/bin/bash' /etc/inetd.conf >/dev/null && FOUND=1
-			grep '/bin/tcsh' /etc/inetd.conf >/dev/null && FOUND=1
-			grep '/bin/ksh' /etc/inetd.conf >/dev/null && FOUND=1
-			grep '/bin/bash' /etc/inetd.conf >/dev/null && FOUND=1
-			grep '/bin/sh' /etc/inetd.conf >/dev/null && FOUND=1
-			grep '/bin/ash' /etc/inetd.conf >/dev/null && FOUND=1
-			grep '/bin/zsh' /etc/inetd.conf >/dev/null && FOUND=1
-			grep 'in\.cfinger' /etc/inetd.conf >/dev/null && FOUND=1
-		fi
 
-		if [ ${FOUND} -eq 1 ]; then
+		grep '/bin/csh' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+		grep '/bin/bash' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+		grep '/bin/tcsh' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+		grep '/bin/ksh' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+		grep '/bin/sh' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+		grep '/bin/ash' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+		grep '/bin/zsh' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+		grep 'in\.cfinger' ${ROOTDIR}etc/inetd.conf >/dev/null && FOUND=1
+
+		if [ $FOUND -eq 1 ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-			logtext "Possible bad string found in /etc/inetd.conf. Please check this file manually."
+			logtext "Possible bad string found in ${ROOTDIR}etc/inetd.conf. Please check this file manually."
 		else
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
@@ -3825,17 +3843,17 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	displaytext -n "     Checking /etc/xinetd.conf"
 
 	# Only check when operating system is Linux and we have a xinetd configuration
-	if [ "${OPERATING_SYSTEM}" = "Linux" -a -f /etc/xinetd.conf ]; then
+	if [ "${OPERATING_SYSTEM}" = "Linux" -a -f "${ROOTDIR}etc/xinetd.conf" ]; then
 		FOUND=0
 		logtext "Operating system is Linux and /etc/xinetd.conf found. Starting xinetd configuration scan..."
 
-		incl=`grep 'includedir' /etc/xinetd.conf | cut -d" " -f2-`
+		incl=`grep 'includedir' ${ROOTDIR}etc/xinetd.conf | cut -d' ' -f2-`
 		if [ -n "$incl" ]; then
 			I=`find $incl/ -type f`
 			WARNINGMSG=""
 			for J in ${I}; do
-				svc=`grep ".*service." ${J} | grep -v "^#" | cut -d" " -f2-`
-				FOUNDSERVICES=`grep ".*disable.*=.*yes" ${J} | grep -v "#"`
+				svc=`grep ".*service." ${J} | grep -v '^#' | cut -d' ' -f2-`
+				FOUNDSERVICES=`grep ".*disable.*=.*yes" ${J} | grep -v '#'`
 				if [ "${FOUNDSERVICES}" = "" ]; then
 					logtext "Info: Service ${J} enabled"
 				fi
@@ -3879,9 +3897,9 @@ ${ROOTDIR}bin/login
 		SIZE=`echo "${I}" | wc -c | tr -d ' '`
 		SIZE=`expr ${SIZE} + 11`
 		jump=`expr ${defaultcolumn} - ${SIZE}`
-		if [ -f ${I} ]; then
+		if [ -f "${I}" ]; then
 			displaytext -n "     Checking ${I}"
-			RIGHTS=`ls -l ${I} | cut -c 1-10`
+			RIGHTS=`ls -l ${I} | cut -c1-10`
 			if [ "${RIGHTS}" = "-rwxrwxrwx" ]; then
 				insertlayout
 				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (chmod 777 found, possible trojaned) ]"
@@ -3901,18 +3919,18 @@ ${ROOTDIR}bin/login
 		SIZE=`echo "${I}" | wc -c | tr -d ' '`
 		SIZE=`expr ${SIZE} + 11`
 		jump=`expr ${defaultcolumn} - ${SIZE}`
-		if [ -f ${I} ]; then
+		if [ -f "${I}" ]; then
 			displaytext -n "     Checking ${I}"
 			FILEOK=true
 			case "${OPERATING_SYSTEM}" in
 			AIX)
-				file ${I} | grep -q "shell script" && FILEOK=false
+				file ${I} | grep -q 'shell script' && FILEOK=false
 				;;
 			SunOS)
-				file ${I} | grep "shell script" >/dev/null 2>&1 && FILEOK=false
+				file ${I} | grep 'shell script' >/dev/null 2>&1 && FILEOK=false
 				;;
 			*)
-				file -b ${I} | grep -q "shell script" && FILEOK=false
+				file -b ${I} | grep -q 'shell script' && FILEOK=false
 				;;
 			esac
 
@@ -3936,29 +3954,9 @@ ${ROOTDIR}bin/login
 	displaytext ""
 	displaytext "${test}* OS dependent tests${NORMAL}"
 
-	if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
-		displaytext "   ${WHITE}FreeBSD${NORMAL}"
-		SIZE=38
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-		displaytext -n "     Checking presence of KLD signatures"
-		STATUS=0
-
-		for I in ${KLDSTATKEYWORDS}; do
-			FNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
-			PRESENCE=`kldstat -v | grep "${FNAME}"`
-			if [ ! "${PRESENCE}" = "" ]; then
-				STATUS=1
-				FOUNDKEYS="${FOUNDKEYS}${I} "
-			fi
-		done
-
-		if [ "${STATUS}" -eq 1 ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found terms: ${FOUNDKEYS}) ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		fi
+	case "${OPERATING_SYSTEM}" in
+	*BSD)
+		displaytext "   ${WHITE}*BSD${NORMAL}"
 
 		logtext "--------------------- Netstat / Sockstat checks -----------------------"
 
@@ -3967,49 +3965,109 @@ ${ROOTDIR}bin/login
 
 		displaytext -n "     Comparing output sockstat and netstat"
 		logtext -n "Comparing output of sockstat and netstat... "
-		SOCKSTAT=`sockstat | grep '*:*' | cut -c 1-55 | grep '*:' | cut -c 39-47 | tr -d ' ' | sort| grep -v '*' | uniq`
-		NETSTAT=`netstat -an | grep -v 'TIME_WAIT' | grep -v 'ESTABLISHED' | grep -v 'SYN_SENT' | grep -v 'CLOSE_WAIT' | grep -v 'LAST_ACK' | grep -v 'SYN_RECV' | grep -v 'CLOSING' | cut -c 1-44 | grep '*.' | cut -c 24-32 | tr -d ' ' | tr -d '\t' | grep -v '*' | sort | uniq`
 
-		if [ "${SOCKSTAT}" = "${NETSTAT}" ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-			logtext --nodate "OK"
+		SOCKSTAT_CMD=`find_cmd sockstat`
+		NETSTAT_CMD=`find_cmd netstat`
+
+		if [ -n "${SOCKSTAT_CMD}" -a -n "${NETSTAT_CMD}" -a -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
+			SOCKSTAT=`${SOCKSTAT_CMD} -n | grep '\*[:.]\*' | cut -c1-55 | grep '\*[:.]' | cut -c39-47 | grep -v '\*' | tr -d ' ' | ${SORT_CMD} | ${UNIQ_CMD}`
+			NETSTAT=`${NETSTAT_CMD} -an | egrep -v 'TIME_WAIT|ESTABLISHED|SYN_SENT|CLOSE_WAIT|LAST_ACK|SYN_RECV|CLOSING' | cut -c1-44 | grep '\*\.' | cut -c24-32 | grep -v '\*' | tr -d ' ' | tr -d '\t' | ${SORT_CMD} | ${UNIQ_CMD}`
+
+			if [ "${SOCKSTAT}" = "${NETSTAT}" ]; then
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+				logtext --nodate "OK"
+			else
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+				logtext --nodate "WARNING!"
+				logtext "Sockstat tested output: ${SOCKSTAT}"
+				logtext "Netstat tested output: ${NETSTAT}"
+			fi
 		else
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-			logtext --nodate "WARNING!"
-			logtext "Sockstat tested output: ${SOCKSTAT}"
-			logtext "Netstat tested output: ${NETSTAT}"
+			displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+			logtext --nodate "Skipped"
+			test -z "${SOCKSTAT_CMD}" && logtext "No sockstat command found"
+			test -z "${NETSTAT_CMD}" && logtext "No netstat command found"
+			test -z "${SORT_CMD}" && logtext "No sort command found"
+			test -z "${UNIQ_CMD}" && logtext "No uniq command found"
+		fi
+
+		displaytext ""
+		logtext ""
+		;;
+	esac
+
+
+	if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
+		displaytext "   ${WHITE}FreeBSD${NORMAL}"
+
+		SIZE=38
+		jump=`expr ${defaultcolumn} - ${SIZE}`
+		displaytext -n "     Checking presence of KLD signatures"
+		logtext -n "Checking presence of KLD signatures "
+		STATUS=0
+		KLDSTAT_CMD=`find_cmd kldstat`
+
+		if [ -n "${KLDSTAT_CMD}" ]; then
+			for I in ${KLDSTATKEYWORDS}; do
+				FNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
+				PRESENCE=`${KLDSTAT_CMD} -v | grep "${FNAME}"`
+				if [ -n "${PRESENCE}" ]; then
+					STATUS=1
+					FOUNDKEYS="${FOUNDKEYS}${I} "
+				fi
+			done
+
+			if [ "${STATUS}" -eq 1 ]; then
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found terms: ${FOUNDKEYS}) ]"
+				logtext --nodate "WARNING!"
+			else
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+				logtext --nodate "OK"
+			fi
+		else
+			insertlayout
+			displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+			logtext --nodate "Skipped"
+			logtext "No kldstat command found"
 		fi
 
 		logtext "---------------------- Packages database check ------------------------"
 
 
-		if [ -f /usr/local/sbin/pkgdb ]; then
-			SIZE=29
-			jump=`expr ${defaultcolumn} - ${SIZE}`
-			displaytext -n "     Checking packages database"
+		PKGDB_CMD=`find_cmd pkgdb`
+		SIZE=29
+		jump=`expr ${defaultcolumn} - ${SIZE}`
+		displaytext -n "     Checking packages database"
+		logtext -n "Checking packages database "
 
-			RESULT=`/usr/local/sbin/pkgdb -Fa -v | grep "Skipped\."`
+		if [ -n "${PKGDB_CMD}" ]; then
+			RESULT=`${PKGDB_CMD} -Fa -v | grep 'Skipped\.'`
 
-			if [ "${RESULT}" = "" ]; then
+			if [ -z "${RESULT}" ]; then
 				insertlayout
 				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-				logtext "OK"
+				logtext --nodate "OK"
 			else
 				insertlayout
-				displaytext $E "${LAYOUT}[ ${YELLOW}Please check${NORMAL} ]"
+				displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} ]"
+				logtext --nodate "Warning"
 				logtext "Your package databases seems to have inconsistenties. Please run pkgdb -F to"
-				logtext "do manually checking. Although this isn't a security issue, you need to be sure"
+				logtext "do manual checking. Although this isn't a security issue, you need to be sure"
 				logtext "your applications are using the correct dependencies"
 			fi
+		else
+			insertlayout
+			displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+			logtext --nodate "Skipped"
+			logtext "No pkgdb command found"
 		fi
-
-#		KLDLOADS=`grep -r 'kldload' /etc/*`
-#	    for I in "${KLDLOADS}"; do
-#			echo "${I}"
-#	    done
 	fi
+
 
 	if [ ${OPERATING_SYSTEM} = "Linux" ]; then
 		temp1=""; temp2=""
@@ -4021,22 +4079,23 @@ ${ROOTDIR}bin/login
 
 		displaytext -n "     Checking loaded kernel modules... "
 
+		temp1=""; temp2=""
+
+		KERNELVERSION=`uname -r | cut -d. -f1,2`
+
 		# Is /proc/modules file available?
 
-		temp1=""; temp2=""
-		if [ -f /proc/modules -a -n "${LSMOD_CMD}" ]; then
+		if [ -f "${ROOTDIR}proc/modules" -a -n "${LSMOD_CMD}" ]; then
 			if [ "${KERNELVERSION}" = "2.2" -o "${KERNELVERSION}" = "2.4" ]; then
 				# show information found in /proc/modules (Linux-only) and get rid of the spaces
-				temp1=`cat /proc/modules | sort | tr -d ' '`
+				temp1=`cat ${ROOTDIR}proc/modules | sort | tr -d ' '`
 
 				# show output from lsmod. Throw away spaces, because they don't match the content
 				# of /proc/modules
-				temp2=`${LSMOD_CMD} | grep -v "Size  Used by" | sort | tr -d ' '`
-			else
-				if [ "${KERNELVERSION}" = "2.6" ]; then
-					temp1=`cat /proc/modules | sort | tr -s ' ' | cut -d " " -f1`
-					temp2=`${LSMOD_CMD} | grep -v "Size  Used by" | sort | tr -s ' ' | cut -d " " -f1`
-				fi
+				temp2=`${LSMOD_CMD} | grep -v 'Size  Used by' | sort | tr -d ' '`
+			elif [ "${KERNELVERSION}" = "2.6" ]; then
+				temp1=`cat ${ROOTDIR}proc/modules | sort | tr -s ' ' | cut -d' ' -f1`
+				temp2=`${LSMOD_CMD} | grep -v 'Size  Used by' | sort | tr -s ' ' | cut -d' ' -f1`
 			fi
 		fi
 
@@ -4109,7 +4168,7 @@ ${ROOTDIR}bin/login
 		if [ -n "${LSATTR_CMD}" ]; then
 			for I in ${BINPATHS}; do
 				logtext "Checking $I file attributes"
-				if [ -d ${I} ]; then
+				if [ -d "${I}" ]; then
 					for J in `ls ${I}`; do
 						LSAT=`${LSATTR_CMD} ${I}/${J} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
 						if [ -n "${LSAT}" ]; then
@@ -4145,7 +4204,7 @@ phide_mod.o
 vlogger.o
 "
 
-		LKMPATH="/lib/modules/`uname -r`"
+		LKMPATH="/lib/modules/`uname -r 2>/dev/null`"
 		FOUND=0
 
 
@@ -4153,7 +4212,7 @@ vlogger.o
 		displaytext -n "     Checking LKM module path"
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 
-		if [ -d ${LKMPATH} -a -n "${FIND_CMD}" ]; then
+		if [ -d "${LKMPATH}" -a -n "${FIND_CMD}" ]; then
 			for J in `${FIND_CMD} ${LKMPATH} -name "*.o" -print`; do
 				for I in ${LKM_BADNAMES}; do
 					FNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
@@ -4194,37 +4253,35 @@ vlogger.o
 
 	displaytext "${test}* Check: frequently used backdoors${NORMAL}"
 
-	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-		donetstat="1"
-	fi
-	if [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
-		donetstat="1"
-	fi
-	if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
-		donetstat="1"
-	fi
-	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-		donetstat="1"
-	fi
+	case "${OPERATING_SYSTEM}" in
+	Linux|AIX|SunOS)
+		donetstat=1
+		;;
+	*BSD)
+		donetstat=1
+		;;
+	*)
+		donetstat=0
+		;;
+	esac
 
 	# Skip tests when GRSEC is available (because of the locking of /proc/*)
-	if [ ${GRSECINSTALLED} -eq 1 ]; then
-		donetstat="0"
-	fi
+	test $GRSECINSTALLED -eq 1 && donetstat=0
 
-	if [ "${donetstat}" = "1" ]; then
+	if [ $donetstat -eq 1 ]; then
 		for i in `cat ${DB_PATH}/backdoorports.dat`; do
-			port=`echo ${i} | cut -d ':' -f 1`
-			DESCRIPTION=`echo ${i} | cut -d ':' -f 2`
+			port=`echo ${i} | cut -d: -f1`
+			DESCRIPTION=`echo ${i} | cut -d: -f2`
 			DESCRIPTION=`echo ${DESCRIPTION} | sed -e 's/%%/ /g'`
 
-			if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-				checkport=`netstat -an | grep "LISTEN" | grep ":${port} "`
-			fi
-
-			if [ "${OPERATING_SYSTEM}" = "FreeBSD" -o "${OPERATING_SYSTEM}" = "AIX" -o "${OPERATING_SYSTEM}" = "SunOS" ]; then
-				checkport=`netstat -an | grep "LISTEN" | grep "\.${port} "`
-			fi
+			case "${OPERATING_SYSTEM}" in
+			Linux)
+				checkport=`netstat -an | grep 'LISTEN' | grep ":${port} "`
+				;;
+			*BSD|AIX|SunOS)
+				checkport=`netstat -an | grep 'LISTEN' | grep "\.${port} "`
+				;;
+			esac
 
 			SIZE=`echo "   ${port}: ${DESCRIPTION} " | wc -c | tr -d ' '`
 			jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -4240,7 +4297,7 @@ vlogger.o
 		done
 	else
 		displaytext "${YELLOW}Not tested"
-		if [ ${GRSECINSTALLED} -eq 1 ]; then
+		if [ $GRSECINSTALLED -eq 1 ]; then
 			logtext "Backdoor ports test skipped, due to customized kernel (GRSEC)"
 		fi
 	fi
@@ -4283,7 +4340,7 @@ vlogger.o
 		logtext "Possible promisc interfaces:"
 		logtext "Output test 1: ${PROMISCSCAN1}"
 		if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${PROMISCSCAN2}" ]; then
-			PROMISCSCAN2IFACES=`${IP_CMD} -s link | grep 'PROMISC' | cut -d ":" -f2`
+			PROMISCSCAN2IFACES=`${IP_CMD} -s link | grep 'PROMISC' | cut -d: -f2`
 			for if in $PROMISCSCAN2IFACES ; do
 				logtext "Output test 2: $if in promiscuous mode"
 			done
@@ -4297,11 +4354,11 @@ vlogger.o
 	if [ -z "${LSOF_CMD}" ]; then
 		SKIPNEXT=1
 	fi
-	if [ ! -f "/proc/net/packet" ]; then
+	if [ ! -f "${ROOTDIR}proc/net/packet" ]; then
 		SKIPNEXT=1
 	fi
 
-	if [ "$SKIPNEXT" -eq 0 -a $CHKLISTEN -eq 1 ]; then
+	if [ $SKIPNEXT -eq 0 -a $CHKLISTEN -eq 1 ]; then
 		STATUS=0
 		WHITEPROC=""; BLACKPROC=""
 		SIZE=48
@@ -4309,14 +4366,14 @@ vlogger.o
 
 		displaytext -n "     Scanning for packet capturing applications..." # libpcap, raw
 		logtext -n "Checking for packet capturing applications... "
-		LIBPCAPRES=`egrep -v "^sk|888e" /proc/net/packet | cut -c 1`
+		LIBPCAPRES=`egrep -v '^sk|888e' ${ROOTDIR}proc/net/packet | cut -c1`
 		if [ -n "${LIBPCAPRES}" ]; then
-			for inode in `egrep -v "^sk|888e" /proc/net/packet | awk '{print $9}'`; do
+			for inode in `egrep -v '^sk|888e' ${ROOTDIR}proc/net/packet | awk '{print $9}'`; do
 				for pid in `${LSOF_CMD} -lMnP | grep "$inode" | awk '{print $2}'`; do
 					if [ -n "${READLINK_CMD}" ]; then
-						name=`${READLINK_CMD} -f /proc/$pid/exe`
+						name=`${READLINK_CMD} -f ${ROOTDIR}proc/$pid/exe`
 					else
-						name=`grep "^Name:." /proc/$pid/status | sed -e 's/^Name:.//'`
+						name=`grep '^Name:.' ${ROOTDIR}proc/$pid/status | sed -e 's/^Name:.//'`
 					fi
 					ALLOWPROCLISTENERS=`grep '^ALLOWPROCLISTEN=' ${CONFIGFILE} | sed -e 's/ALLOWPROCLISTEN=//g'`
 					AMATCH=1
@@ -4393,10 +4450,10 @@ vlogger.o
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 	displaytext -n "   Checking for passwordless user accounts... "
 	logtext "Checking for passwordless user accounts... "
-	if [ -e "/etc/shadow" ]; then
-		for I in `cat /etc/shadow`; do
-			USER=`echo "${I}" | cut -d ':' -f1`
-			PASSWORD=`echo "${I}" | cut -d ':' -f2`
+	if [ -f "${ROOTDIR}etc/shadow" ]; then
+		for I in `cat ${ROOTDIR}etc/shadow`; do
+			USER=`echo "${I}" | cut -d: -f1`
+			PASSWORD=`echo "${I}" | cut -d: -f2`
 			# Exclude NIS-user (+::::::)
 			if [ ! "${USER}" = "+" -a "x${PASSWORD}x" = "xx" ]; then
 				FOUND=1
@@ -4423,14 +4480,14 @@ vlogger.o
 
 	if [ $SKIP_PASSWDCHECK -eq 0 ]; then
 		displaytext -n "   Checking for differences in user accounts... "
-		if [ -e "/etc/passwd" ]; then
-			if [ -e "${TMPDIR}/passwd" ]; then
-				differences=`diff /etc/passwd ${TMPDIR}/passwd | grep ":"`
+		if [ -f "${ROOTDIR}etc/passwd" ]; then
+			if [ -f "${TMPDIR}/passwd" ]; then
+				differences=`diff ${ROOTDIR}etc/passwd ${TMPDIR}/passwd 2>/dev/null | grep ':'`
 				if [ "${differences}" = "" ]; then
 					displaytext "${GREEN}OK. ${NORMAL}No differences."
 				else
-					diffadded=`echo "${differences}" | grep "<"`
-					diffremoved=`echo "${differences}" | grep ">"`
+					diffadded=`echo "${differences}" | grep '<'`
+					diffremoved=`echo "${differences}" | grep '>'`
 					displaytext "${RED}Found differences${NORMAL}"
 					displaytext "   Info: "
 					displaytext "----------------------"
@@ -4443,7 +4500,7 @@ vlogger.o
 						displaytext "   Info: Some items have been removed (items marked with '>')"
 					fi
 				fi
-				rm -f ${TMPDIR}/passwd
+				rm -f ${TMPDIR}/passwd >/dev/null 2>&1
 			else
 				jump=44
 				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
@@ -4455,14 +4512,14 @@ vlogger.o
 		fi
 
 		displaytext -n "   Checking for differences in user groups... "
-		if [ -e "/etc/group" ]; then
-			if [ -e "${TMPDIR}/group" ]; then
-				differences=`diff /etc/group ${TMPDIR}/group | grep ":"`
+		if [ -f "${ROOTDIR}etc/group" ]; then
+			if [ -f "${TMPDIR}/group" ]; then
+				differences=`diff ${ROOTDIR}etc/group ${TMPDIR}/group | grep ':'`
 				if [ "${differences}" = "" ]; then
 					displaytext "${GREEN}OK. ${NORMAL}No differences."
 				else
-					diffadded=`echo "${differences}" | grep "<"`
-					diffremoved=`echo "${differences}" | grep ">"`
+					diffadded=`echo "${differences}" | grep '<'`
+					diffremoved=`echo "${differences}" | grep '>'`
 					displaytext "${RED}Found differences${NORMAL}"
 					displaytext "   Info: "
 					displaytext "----------------------"
@@ -4475,7 +4532,7 @@ vlogger.o
 						displaytext "   Info: Some items have been removed (items marked with '>')"
 					fi
 				fi
-				rm -f ${TMPDIR}/group
+				rm -f ${TMPDIR}/group >/dev/null 2>&1
 			else
 				displaytext "${YELLOW}Creating file ${NORMAL}It seems this is your first time."
 			fi
@@ -4491,7 +4548,7 @@ vlogger.o
 	displaytext "   Checking boot.local/rc.local file... "
 
 	# Gentoo: /etc/conf.d/local.start
-	RCLOCATIONS="/etc/rc.local /etc/rc.d/rc.local /usr/local/etc/rc.local /usr/local/etc/rc.d/rc.local /etc/conf.d/local.start /etc/init.d/boot.local"
+	RCLOCATIONS="${ROOTDIR}etc/rc.local ${ROOTDIR}etc/rc.d/rc.local ${ROOTDIR}usr/local/etc/rc.local ${ROOTDIR}usr/local/etc/rc.d/rc.local ${ROOTDIR}etc/conf.d/local.start ${ROOTDIR}etc/init.d/boot.local"
 	FOUNDRCSIGN=0
 
 	for FILE in ${RCLOCATIONS}; do
@@ -4502,7 +4559,7 @@ vlogger.o
 		displaytext -n "     - ${FILE}"
 		if [ -f "${FILE}" ]; then
 			for J in ${RCLOCAL_STRINGS}; do
-				STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+				STRING=`echo ${J} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 				FOUND=`grep "${STRING}" ${FILE}`
 				if [ ! "${FOUND}" = "" ]; then
 					FOUNDRCSIGN=1
@@ -4531,13 +4588,13 @@ vlogger.o
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 	displaytext -n "   Checking rc.d files... "
 
-	if [ -d /etc/rc.d ]; then
+	if [ -d "${ROOTDIR}etc/rc.d" ]; then
 		# Insert end-of-line
 		displaytext ""
 		displaytext -n "     Processing"
-		for I in `find /etc/rc.d/*`; do
+		for I in `find ${ROOTDIR}etc/rc.d/*`; do
 			# Only check files, not directories
-			if [ -f ${I} ]; then
+			if [ -f "${I}" ]; then
 				COUNTER=`expr ${COUNTER} + 1`
 				if [ ${COUNTER} -eq 40 ]; then
 					displaytext "."
@@ -4547,7 +4604,7 @@ vlogger.o
 					displaytext -n "."
 				fi
 				for J in ${RCLOCAL_STRINGS}; do
-					STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+					STRING=`echo ${J} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 					FOUND=`grep "${STRING}" ${I}`
 					if [ ! "${FOUND}" = "" ]; then
 						FOUNDRCSIGN=1
@@ -4571,7 +4628,7 @@ vlogger.o
 		displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 	fi
 
-	if [ -f ${ROOTDIR}etc/conf.d/local.start ]; then
+	if [ -f "${ROOTDIR}etc/conf.d/local.start" ]; then
 		SIZE=37
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		displaytext -n "   Checking Gentoo local.start file... "
@@ -4580,7 +4637,7 @@ vlogger.o
 		INSPECTLINES=`grep -v '^#' ${ROOTDIR}etc/conf.d/local.start | grep -v '^$'`
 
 		for J in ${RCLOCAL_STRINGS}; do
-			STRING=`echo ${J} | cut -d':' -f1 | sed -e 's/\./\\\./g'`
+			STRING=`echo ${J} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 			FOUND=`echo ${INSPECTLINES} | grep "${STRING}"`
 			if [ ! "${FOUND}" = "" ]; then
 				FOUNDRCSIGN=1
@@ -4650,8 +4707,8 @@ vlogger.o
 
 	displaytext -n "     Bourne Shell"
 
-	if [ -f /root/.bash_history ]; then
-		ATTRIBUTE=`ls -l /root/.bash_history | cut -c1`
+	if [ -f "${ROOTDIR}root/.bash_history" ]; then
+		ATTRIBUTE=`ls -l ${ROOTDIR}root/.bash_history | cut -c1`
 		if [ "${ATTRIBUTE}" = "l" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (redirection found) ]"
@@ -4668,7 +4725,7 @@ vlogger.o
 	displaytext "${test}* Filesystem checks${NORMAL}"
 	displaytext -n "   Checking /dev for suspicious files... "
 
-	if [ -d ${ROOTDIR}dev ]; then
+	if [ -d "${ROOTDIR}dev" ]; then
 		# FreeBSD (5): character special, symbolic link to,directory
 		# Linux (Debian): block special, socket, fifo (named pipe)
 		SPECIALFILES=`file "${ROOTDIR}dev/"* | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
@@ -4707,6 +4764,7 @@ vlogger.o
 		logtext "Start scanning for hidden files in ${I}..."
 
 		if [ -d "${I}" ]; then
+# jh - do we need showfiles? Could use ls cmd?
 			HIDDENDIRS=`${PERL_CMD} ${SCRIPT_PATH}/showfiles.pl ${I}`
 			logtext "Value of hiddendirs: ${HIDDENDIRS}"
 		fi
@@ -4734,7 +4792,7 @@ vlogger.o
 			fi
 
 			# Ignore some filetypes, because they are harmless
-			case ${FILETYPE} in
+			case "${FILETYPE}" in
 			"character special (8/0)" | "character special (254/0)" | "empty")
 				logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
 				;;
@@ -4807,21 +4865,19 @@ vlogger.o
 	displaytext "* Application scan"
 
 	FOUNDSTRING=0
-	SIZE=33
-	displaytext -n "   Checking Apache2 modules ... "
+	SIZE=32
+	displaytext -n "   Checking Apache2 modules... "
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
-	if [ -d /etc/apache2/mods-enabled ]; then
-		for I in `ls /etc/apache2/mods-enabled/*`; do
-			SEARCHSTRING=`egrep 'mod_rootme\.so|mod_rootme2\.so' ${I}`
-			logtext -n "Checking Apache2 modules in /etc/apache2/mods-enabled ${I}... "
-			if [ ! "${SEARCHSTRING}" = "" ]; then
-				logtext --nodate "Warning! Possible bad module found."
-				FOUNDSTRING=1
-			else
-				logtext --nodate "OK"
-			fi
-		done
+	if [ -d "${ROOTDIR}etc/apache2/mods-enabled" ]; then
+		SEARCHSTRING=`ls ${ROOTDIR}etc/apache2/mods-enabled/* | egrep 'mod_rootme2?\.so'`
+		logtext -n "Checking Apache2 modules in ${ROOTDIR}etc/apache2/mods-enabled... "
+		if [ -n "${SEARCHSTRING}" ]; then
+			logtext --nodate "Warning! Possible bad module found."
+			FOUNDSTRING=1
+		else
+			logtext --nodate "OK"
+		fi
 
 		if [ ${FOUNDSTRING} -eq 1 ]; then
 			insertlayout
@@ -4837,17 +4893,14 @@ vlogger.o
 
 	FOUNDSTRING=0
 
-	SIZE=38
-	displaytext -n "   Checking Apache configuration ... "
+	SIZE=37
+	displaytext -n "   Checking Apache configuration... "
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
 	for I in ${HTTPDCONFS}; do
-		if [ -f ${I} ]; then
-			SEARCHSTRING=`egrep 'mod_rootme\.so|mod_rootme2\.so' ${I}`
-			if [ ! "${SEARCHSTRING}" = "" ]; then
-				# Found evil module
-				FOUNDSTRING=1
-			fi
+		if [ -f "${I}" ]; then
+			SEARCHSTRING=`egrep 'mod_rootme2?\.so' ${I}`
+			test -n "${SEARCHSTRING}" && FOUNDSTRING=1
 		fi
 	done
 
@@ -4901,10 +4954,10 @@ nonvulnerable:%2.4.24%
 		FOUNDUNKNOWN=0
 
 		for J in ${SCANFILES}; do
-			APPLICATION=`echo ${J} | cut -d ':' -f1`
-			APPLICATIONNAME=`echo ${J} | cut -d ':' -f2`
-			VULNERABLE=`cat ${DB_PATH}/programs_bad.dat | cut -d ':' -f2`
-			NONVULNERABLE=`cat ${DB_PATH}/programs_good.dat | cut -d ':' -f2`
+			APPLICATION=`echo ${J} | cut -d: -f1`
+			APPLICATIONNAME=`echo ${J} | cut -d: -f2`
+			VULNERABLE=`cat ${DB_PATH}/programs_bad.dat | cut -d: -f2`
+			NONVULNERABLE=`cat ${DB_PATH}/programs_good.dat | cut -d: -f2`
 			logtext "----------------------------------------------------------"
 			logtext "Scanning ${APPLICATIONNAME}..."
 
@@ -4913,7 +4966,7 @@ nonvulnerable:%2.4.24%
 				if [ -f "${I}/${APPLICATION}" ]; then
 					FILEFOUND=1
 					VERSION=""
-					case ${APPLICATION} in
+					case "${APPLICATION}" in
 					exim)
 						VERSION=`${I}/exim -bV | grep 'Exim version' | awk '{ print $3 }'`
 						;;
@@ -4921,12 +4974,12 @@ nonvulnerable:%2.4.24%
 						VERSION=`${I}/gpg --version | grep 'GnuPG' | awk '{ print $3 }'`
 						;;
 					httpd)
-						VERSION=`${I}/httpd -v | grep 'Apache' | cut -d ' ' -f3 | cut -d '/' -f2`
+						VERSION=`${I}/httpd -v | grep 'Apache' | cut -d' ' -f3 | cut -d'/' -f2`
 						;;
 					named)
 						VERSION=`${I}/named -v | grep 'named' | grep -v '/' | awk '{ print $2 }'`
-						if [ ! "`echo ${VERSION} | grep "-"`" = "" ]; then
-							VERSION=`echo ${VERSION} | cut -d '-' -f1`
+						if [ ! "`echo ${VERSION} | grep '-'`" = "" ]; then
+							VERSION=`echo ${VERSION} | cut -d'-' -f1`
 						fi
 						TEST=`${I}/named -v | grep 'named'`
 						logtext "Debug: ${TEST}"
@@ -4951,8 +5004,8 @@ nonvulnerable:%2.4.24%
 						VERSION=`${I}/squid -v | grep 'Squid Cache' | awk '{ print $4 }'`
 						;;
 					sshd)
-						VERSION=`${I}/sshd -t -d 2>&1 | head -n 1 | awk '{ print $4 }' | cut -d '_' -f2`
-						if [ ! "`echo "${VERSION}" | grep "+"`" = "" ]; then
+						VERSION=`${I}/sshd -t -d 2>&1 | head -n 1 | awk '{ print $4 }' | cut -d'_' -f2`
+						if [ ! "`echo "${VERSION}" | grep '+'`" = "" ]; then
 							VERSION=`echo "${VERSION}" | cut -d'+' -f1`
 						fi
 						;;
@@ -5089,8 +5142,8 @@ nonvulnerable:%2.4.24%
 
 
 	displaytext "${test}* Check: Groups and Accounts${NORMAL}"
-	displaytext -n "   Searching for /etc/passwd... "
-	if [ -e "${ROOTDIR}etc/passwd" ]; then
+	displaytext -n "   Searching for ${ROOTDIR}etc/passwd... "
+	if [ -f "${ROOTDIR}etc/passwd" ]; then
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${GREEN}Found${NORMAL} ]"
 		displaytext -n "   Checking users with UID '0' (root)... "
@@ -5098,7 +5151,7 @@ nonvulnerable:%2.4.24%
 		SIZE=39
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 
-		users_with_uid0=`grep -v '^:0:0:::' ${ROOTDIR}etc/passwd | grep ":0:" | cut -d ":" -f1,3 | grep '0' | grep -v 'root:0'`
+		users_with_uid0=`grep -v '^:0:0:::' ${ROOTDIR}etc/passwd | grep ':0:' | cut -d: -f1,3 | grep '0' | grep -v 'root:0'`
 		if [ "${users_with_uid0}" = "" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
@@ -5122,28 +5175,28 @@ nonvulnerable:%2.4.24%
 	displaytext "   Searching for sshd_config... "
 	SSHDCONFIG_PLACES="${ROOTDIR}etc ${ROOTDIR}etc/ssh ${ROOTDIR}usr/local/etc ${ROOTDIR}usr/local/etc/ssh"
 	for I in ${SSHDCONFIG_PLACES}; do
-		if [ -e "${I}/sshd_config" ]; then
+		if [ -f "${I}/sshd_config" ]; then
 			FOUND=0
 			displaytext "   Found ${I}/sshd_config"
 			displaytext -n "   Checking for allowed root login... "
-			permitrootlogin=`grep "PermitRootLogin" ${I}/sshd_config | grep -v "#"`
+			permitrootlogin=`grep 'PermitRootLogin' ${I}/sshd_config | grep -v '#'`
 			if [ "${permitrootlogin}" = "PermitRootLogin yes" ]; then
 				FOUND=1
 				logtext "Info: Found 'PermitRootLogin yes'. Unsafe for production servers..."
 				logtext "Tip: Change the option in your configuration file (${I}/sshd_config)."
 				logtext "     Use normal user accounts and 'su' to obtain root permissions."
 			else
-				permitrootlogin2=`egrep "PermitRootLogin (no|without-password)" ${I}/sshd_config | grep -v "#"`
+				permitrootlogin2=`egrep 'PermitRootLogin (no|without-password)' ${I}/sshd_config | grep -v '#'`
 				if [ "${permitrootlogin2}" = "PermitRootLogin no" -o "${permitrootlogin2}" = "PermitRootLogin without-password" ]; then
 					FOUND=0
 					logtext "Info: Found 'PermitRootLogin no' or 'PermitRootLogin without-password' in SSH configuration file ${I}/sshd_config"
 				else
-					permitrootlogin2=`grep "PermitRootLogin forced-commands-only" ${I}/sshd_config | grep -v "#"`
+					permitrootlogin2=`grep 'PermitRootLogin forced-commands-only' ${I}/sshd_config | grep -v '#'`
 					if [ "${permitrootlogin2}" = "PermitRootLogin forced-commands-only" ]; then
 						FOUND=1
 						logtext "Info: Found 'PermitRootLogin forced-commands-only'"
 					else
-						permitrootlogin3=`grep "#PermitRootLogin yes" ${I}/sshd_config`
+						permitrootlogin3=`grep '#PermitRootLogin yes' ${I}/sshd_config`
 						if [ -n "${permitrootlogin3}" ]; then
 							FOUND=1
 							logtext "Info: Found no PermitRootLogin value in file ${I}/sshd_config. Default value is 'yes'."
@@ -5200,7 +5253,7 @@ nonvulnerable:%2.4.24%
 					SIZE=35
 					jump=`expr ${defaultcolumn} - ${SIZE}`
 					insertlayout
-					protocols=`grep "#Protocol" ${I}/sshd_config`
+					protocols=`grep '#Protocol' ${I}/sshd_config`
 					if [ "${protocols}" = "#Protocol 2,1" -o "${protocols}" = "#Protocol 1,2" ]; then
 						FOUND=1
 						logtext "Found default option Protocol 2,1"
@@ -5232,7 +5285,7 @@ nonvulnerable:%2.4.24%
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
 
-	if [ -e "/etc/syslog.conf" -o -e "/etc/syslog-ng/syslog-ng.conf" ]; then
+	if [ -f "${ROOTDIR}etc/syslog.conf" -o -f "${ROOTDIR}etc/syslog-ng/syslog-ng.conf" ]; then
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		SIZE=38
@@ -5242,11 +5295,11 @@ nonvulnerable:%2.4.24%
 
 		case "${OPERATING_SYSTEM}" in
 		SunOS)
-			syslogisrunning=`ps -ef | grep syslogd | grep -v "grep"`
-			syslogngisrunning=`ps -ef | grep syslog-ng | grep -v "grep"`
+			syslogisrunning=`ps -ef | grep 'syslogd' | grep -v 'grep'`
+			syslogngisrunning=`ps -ef | grep 'syslog-ng' | grep -v 'grep'`
 			;;
 		*)
-			syslogisrunning=`ps ax | egrep "syslogd|syslog-ng|metalog" | grep -v "grep"`
+			syslogisrunning=`ps ax | egrep 'syslogd|syslog-ng|metalog' | grep -v 'grep'`
 			#syslogngisrunning=`ps ax | grep syslog-ng | grep -v "grep"`
 			;;
 		esac
@@ -5266,15 +5319,15 @@ nonvulnerable:%2.4.24%
 		displaytext -n "   Checking for logging to remote system... "
 
 		# First do syslog
-		if [ -e /etc/syslog.conf ]; then
-			logtoremote=`grep "@" /etc/syslog.conf | grep -v "#"`
+		if [ -f "${ROOTDIR}etc/syslog.conf" ]; then
+			logtoremote=`grep '@' ${ROOTDIR}etc/syslog.conf | grep -v '#'`
 		else
 			# Second try syslog-ng
-			if [ -e /etc/syslog-ng/syslog-ng.conf ]; then
+			if [ -f "${ROOTDIR}etc/syslog-ng/syslog-ng.conf" ]; then
 				# Yes, we found the configuration file
 				# Gready regex necessary due to allowed formatting (indentation, destination names, destinations)
 				# As result logtxt below may contain partial lines.
-				logtoremote=`egrep -iA1 "^destination.*{" /etc/syslog-ng/syslog-ng.conf | egrep "(udp|tcp).*\(.*" | grep -v "/"`
+				logtoremote=`egrep -iA1 '^destination.*{' ${ROOTDIR}etc/syslog-ng/syslog-ng.conf | egrep '(udp|tcp).*\(' | grep -v '/'`
 			else
 				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
 				displaytext "Warning: Cannot find syslog-ng configuration file"
@@ -5296,27 +5349,35 @@ nonvulnerable:%2.4.24%
 
 	keypresspause
 
-	ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 
-	TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
-	TOTALMINS=`expr ${TOTALTIME} / 60`
-	TOTALSECS=`expr ${TOTALTIME} % 60`
-
-	if [ $TOTALMINS -gt 0 ]; then
-		if [ $TOTALMINS -eq 1 ]; then
-			TOTALTIME="${TOTALMINS} minute and "
+	if [ $BEGINTIME -ne 0 ]; then
+		if [ -n "$SECONDS" ]; then
+			ENDTIME=$SECONDS
 		else
-			TOTALTIME="${TOTALMINS} minutes and "
+			ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 		fi
-	else
-		TOTALTIME=""
+
+		TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
+		TOTALMINS=`expr ${TOTALTIME} / 60`
+		TOTALSECS=`expr ${TOTALTIME} % 60`
+
+		if [ $TOTALMINS -gt 0 ]; then
+			if [ $TOTALMINS -eq 1 ]; then
+				TOTALTIME="${TOTALMINS} minute and "
+			else
+				TOTALTIME="${TOTALMINS} minutes and "
+			fi
+		else
+			TOTALTIME=""
+		fi
+
+		if [ $TOTALSECS -eq 1 ]; then
+			TOTALTIME="${TOTALTIME}${TOTALSECS} second"
+		else
+			TOTALTIME="${TOTALTIME}${TOTALSECS} seconds"
+		fi
 	fi
 
-	if [ $TOTALSECS -eq 1 ]; then
-		TOTALTIME="${TOTALTIME}${TOTALSECS} second"
-	else
-		TOTALTIME="${TOTALTIME}${TOTALSECS} seconds"
-	fi
 
 	displaytext ""; displaytext ""
 	displaytext "---------------------------- Scan results ----------------------------"
@@ -5369,7 +5430,7 @@ nonvulnerable:%2.4.24%
 	fi
 
 	displaytext ""
-	displaytext "Scanning took ${TOTALTIME}."
+	test $BEGINTIME -ne 0 && displaytext "Scanning took ${TOTALTIME}."
 
 	if [ "${REPORTMODE}" -eq 0 ]; then
 		if [ "${LOGFILE}" != "/dev/null" ]; then
@@ -5412,7 +5473,7 @@ nonvulnerable:%2.4.24%
 			echo "Skipped"
 		fi
 		echo ""
-		echo "Scanning took ${TOTALTIME}."
+		test $BEGINTIME -ne 0 && displaytext "Scanning took ${TOTALTIME}."
 		echo ""
 		echo "*important*"
 		echo "Scan your system manually sometimes with full output enabled!"
@@ -5438,7 +5499,7 @@ nonvulnerable:%2.4.24%
 			echo "-----------------------------------------------------------------"
 			echo ""
 			echo "Found warnings:"
-			egrep "Warning|WARNING|BAD|Bad|Vulnerable" $LOGFILE
+			egrep 'Warning|WARNING|BAD|Bad|Vulnerable' $LOGFILE
 			echo ""
 			echo "-----------------------------------------------------------------"
 			echo ""
@@ -5575,14 +5636,13 @@ set_hash_dirs_files() {
 	    chown chroot cron csh date depmod df dirname dmesg du echo ed egrep
 	    env fgrep file find grep groupadd groupdel groupmod groups grpck
 	    head id ifconfig ifdown ifstatus ifup inetd init insmod ip kallsyms
-	    kill killall kldload kldstat kldunload ksyms kudzu last lastlog
-	    less locate logger login ls lsattr lsmod lynx md5 md5sum mlocate
-	    modinfo modload modprobe modstat modunload more mount netstat
-	    newgrp newsyslog nologin passwd ps pstree pwck rmmod runlevel sh
-	    sha1 sha1sum size slocate sockstat sort stat strace strings su sudo
-	    sulogin sysctl syslogd systat tail tcpd test top touch uname
-	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
-	    whereis which who whoami xinetd"
+	    kill killall ksyms kudzu last lastlog less locate logger login ls
+	    lsattr lsmod lynx md5 md5sum mlocate modinfo modload modprobe
+	    modstat modunload more mount netstat newgrp newsyslog nologin
+	    passwd ps pstree pwck rmmod runlevel sh sha1 sha1sum size slocate
+	    sockstat sort stat strace strings su sudo sulogin sysctl syslogd
+	    systat tail tcpd test top touch uname useradd userdel usermod users
+	    vipw vmstat w watch wc wget whatis whereis which who whoami xinetd"
 
 
 	#
@@ -5604,6 +5664,8 @@ set_hash_dirs_files() {
 		HASHFILES="${HASHFILES} gbasename gcat gchmod gchown gdate
 		    gdirname gecho gfind gfile ggroups ghead gid glocate
 		    gmd5sum gsize gtail gtest gtouch guname gusers truss"
+	elif [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
+		HASHFILES="${HASHFILES} kldload kldstat kldunload"
 	fi
 
 
@@ -5811,14 +5873,17 @@ KSYMS_FILE=""
 CMD_LINE="$0 $*"
 
 # Create a spaced-separated PATH variable
-SPACEDPATH=`echo ${PATH} | tr : ' '`
+SPACEDPATH=`echo ${PATH} | tr : ' ' 2>/dev/null`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="curl elinks file find ifconfig ip links lsattr lsmod lsof lynx perl readlink stat strings wget GET"
+CMDLIST="curl diff elinks file find ifconfig ip links ls lsattr lsmod lsof lynx perl readlink sort stat strings uniq wget GET"
+
+# Commands that are required to exist for RKH to run.
+REQCMDS="awk cut date egrep grep head sed tail tr uname wc"
 
 
-HOST_NAME=`hostname`
+HOST_NAME=`hostname 2>/dev/null`
 
 if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 	USE_PATCHED_SOFTWARE=1
@@ -5853,7 +5918,7 @@ fi
 #
 
 while [ $# -ge 1 ]; do
-	case $1 in
+	case "$1" in
 	--allow-ssh-root-user)
 		ALLOW_SSH_ROOT_USER=1
 		;;
@@ -6271,8 +6336,6 @@ Please inspect the available files, by checking the logfile ($LOGFILE).
 ######################################################################
 
 
-test $CHECK -eq 1 && BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
-
 #
 # Write out various information messages to the logfile.
 #
@@ -6472,6 +6535,7 @@ test $VERSIONCHECK -eq 1 && do_versioncheck
 #
 
 test $CHECK -eq 1 && do_system_check
+
 
 logtext "Info: End date is `date`"
 

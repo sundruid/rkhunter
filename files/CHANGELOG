@@ -104,6 +104,8 @@
    can now be executed without perl being in the default directory (/usr/bin).
  - Included the /usr/share/man directories when looking for hidden files.
  - Check for symbol entries in kallsyms file if ksyms does not exist.
+ - Enabled sockstat/netstat test for all BSD variants (not just FreeBSD).
+ - Enabled backdoor port test for all BSD variants (not just FreeBSD).
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.
