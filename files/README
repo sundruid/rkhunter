@@ -16,6 +16,28 @@ the list can be found at the RKH web site.
 A copy of the RKH FAQ is also available from the web site.
 
 
+ROOTKIT HUNTER REQUIREMENTS
+===========================
+
+Please note RKH has some requirements.
+
+Perl. Some test RKH runs require Perl. Also for some default system
+tools like stat, md5sum and sha1sum alternatives are supplied which
+require Perl.
+
+A tool with which to download updates. Currently wget, curl, (e)links,
+lynx and GET are supported. If your system does not allow the 
+possibility to install one of these applications but does run Perl, you
+can get "bget" from http://www.cpan.org/authors/id/E/EL/ELIJAH/.
+If you use another generic method of updating RKH please inform us.
+
+Single-purpose applications. RKH does not depend on these but will use 
+them if found because they greatly enhance RKH's detection capabilities.
+- Skdet (http://slider.decebal.org/code/skdet/): tests for SucKIT, Adore,
+Adore-NG, UNFshit, UNFkmem and frontkey.
+- Unhide (http://www.security-projects.com/?Unhide): find hidden processes.
+
+
 ROOTKIT HUNTER INSTALLATION
 ===========================
 
@@ -69,7 +91,7 @@ installed.
 To do this unpack RKH as described above, and then install it using
 the following command:
 
-    ./installer.sh --standalone
+    ./installer.sh --install --layout custom .
 
 It is then necessary to change to the 'files' directory:
 
@@ -77,11 +99,11 @@ It is then necessary to change to the 'files' directory:
 
 Within here will be a copy of the 'rkhunter.conf' configuration
 file. You can modify this file according to your requirements if you
-wish.
+wish, but note the installer has already set the necessary variables.
 
 To run RKH, enter the following command:
 
-    ./rkhunter -c --configfile ./rkhunter.conf --dbdir . --tmpdir .
+    ./rkhunter -c --configfile ./rkhunter.conf
 
 If you do not want a log file produced, then append the '--nolog'
 option to the above command.
@@ -92,8 +114,11 @@ ROOTKIT HUNTER SUPPORT
 
 When a problem is found with RKH it is recommended that users
 initially try and resolve the problem themselves. This can be done by
-first checking the FAQ file. The FAQ will contain answers to many
-common problems.
+first checking the FAQ file which is present in your installation if
+the distributed tarball is used as source. The FAQ will contain answers 
+to many common problems. The latest version of the FAQ can always be 
+found at RKH's project pages at SourceForge, in the "Documentation" 
+section.
 
 If the problem has occurred directly after upgrading RKH, then please
 check the CHANGELOG file. It will contain information about changes
@@ -133,12 +158,8 @@ THE ROOTKIT HUNTER PROJECT TEAM
 Current members of the team are:
 
 Gary Bak
-Konsolebox
-Andrej Ricnik
 Jim Mcnamara
 Sibtay Abbas
-Junaid Sahibzada
 John Horne
-Constantin Stefan
 unSpawn
 

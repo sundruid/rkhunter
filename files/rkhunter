@@ -1697,7 +1697,10 @@ do_versioncheck() {
 		${LINKS_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
 	elif [ -n "${LYNX_CMD}" ]; then
 		${LYNX_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
+	elif [ -n "${GET_CMD}" ]; then
+		${GET_CMD} ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
 	fi
+
 	if [ "${TMPDIR}/rkhunter.upd" ]; then
 		displaytext "${URLPREFIX}${VERSIONUPDATEURL}"
 		LATESTVERSION=`cat ${TMPDIR}/rkhunter.upd`
