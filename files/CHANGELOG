@@ -53,9 +53,9 @@
    must be used (see above), but is separate from the 'known good' function.
  - The files for the file hash checks are now 'looked for'. The code will
    search the command directories, and check the relevant files in all the
-   directories. Additional commands and directories are used for both
-   Solaris, MAC OS X and NetBSD systems. Overall more commands will be checked.
- - Added support for Ubuntu, the 'dash' and 'ash' shell.
+   directories. Additional commands and directories are used for Solaris,
+   MAC OS X, NetBSD and FreeBSD systems. Overall more commands will be checked.
+ - Added support for Ubuntu, and the 'dash' and 'ash' shells.
  - If the O/S name, architecture or prelinking status changes from one RKH
    run to the next, then a warning message is written to the log file. The
    change may well cause the file hash checks to show false positives. (The

@@ -387,6 +387,48 @@ get_installdir_option() {
 }
 
 
+get_language_option() {
+
+	#
+	# First get the option from the command-line or the
+	# configuration file, and do a simple check on whether
+	# it is empty or a space.
+	#
+
+	if [ -n "${LANGUAGE}" ]; then
+		LANGUAGE=`echo "${LANGUAGE}" | tr -s ' '`
+
+		if [ "${LANGUAGE}" = " " ]; then
+			echo "Invalid --language option - no language given."
+			exit 1
+		fi
+	else
+		LANGUAGE=`grep '^LANGUAGE=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${LANGUAGE}" ]; then
+			LANGUAGE=`echo "${LANGUAGE}" | sed -e 's/LANGUAGE=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${LANGUAGE}" -o "${LANGUAGE}" = " " ]; then
+				echo "Invalid LANGUAGE configuration option - no language specified."
+				exit 1
+			fi
+		fi
+	fi
+
+	#
+	# Now check that the language is available.
+	#
+
+	if [ ! -f "${DB_PATH}/i18n/${LANGUAGE}" ]; then
+		echo "The language specified is not available: ${LANGUAGE}"
+		echo "Use the '--list languages' option to see the list of available languages."
+		exit 1
+	fi
+
+	return
+}
+
+
 get_logfile_option() {
 
 	#
@@ -1186,6 +1228,9 @@ get_configfile_options() {
 	# We call separate functions to process each option. The option
 	# is checked first to see if it has been given on the command-line,
 	# and, if not, then if it is specified in the configuration file.
+	# Note that some of these functions are in a specific order. If you
+	# change them around, then make sure the functions still work
+	# correctly.
 	#
 
 	get_installdir_option
@@ -1197,6 +1242,8 @@ get_configfile_options() {
 	get_tmpdir_option
 
 	get_dbdir_option
+
+	get_language_option
 
 	get_scriptdir_option
 
@@ -2631,7 +2678,7 @@ logtext "---------------------------- System checks ----------------------------
 
 	displaytext ""; displaytext ""
 	displaytext "${YELLOW}Checking binaries${NORMAL}"
-	displaytext "${test}* Selftests${NORMAL}"
+	displaytext "* Selftests${NORMAL}"
 
 	logtext "------------------------------ Selftests ------------------------------"
 
@@ -2684,7 +2731,7 @@ logtext "---------------------------- System checks ----------------------------
 
 	# Binary check
 
-	displaytext "${test}* System tools${NORMAL}"
+	displaytext "* System tools${NORMAL}"
 
 	if [ $SKIP_HASHCHECK -eq 0 ]; then
 		logtext "Starting hash checksum test"
@@ -2737,7 +2784,7 @@ logtext "---------------------------- System checks ----------------------------
 	fi
 
 
-	#    displaytext "${test}* Searching for system files${NORMAL}"
+	#    displaytext "* Searching for system files${NORMAL}"
 
 	#	SCANFILELIST="${INSTALLDIR}/lib/rkhunter/tmp/files.lst"
 	#	if [ ${QUICKSCAN} -eq 0 ]; then
@@ -2758,7 +2805,7 @@ logtext "---------------------------- System checks ----------------------------
 
 	displaytext ""; displaytext ""
 	displaytext "${YELLOW}Check rootkits${NORMAL}"
-	displaytext "${test}* Default files and directories${NORMAL}"
+	displaytext "* Default files and directories${NORMAL}"
 
 	logtext "------------------------------ Rootkits ------------------------------"
 
@@ -3327,7 +3374,7 @@ logtext "---------------------------- System checks ----------------------------
 	##################################################################################################
 
 	displaytext ""
-	displaytext "${test}* Suspicious files and malware${NORMAL}"
+	displaytext "* Suspicious files and malware${NORMAL}"
 
 	logtext "------------------------------ Malware ------------------------------"
 
@@ -3748,7 +3795,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	keypresspause
 
 	displaytext ""
-	displaytext "${test}* Trojan specific characteristics${NORMAL}"
+	displaytext "* Trojan specific characteristics${NORMAL}"
 
 	displaytext "   shv4"
 
@@ -3878,7 +3925,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 	fi
 
 	displaytext ""
-	displaytext "${test}* Suspicious file properties${NORMAL}"
+	displaytext "* Suspicious file properties${NORMAL}"
 
 	displaytext "   ${WHITE}chmod properties${NORMAL}"
 
@@ -3952,7 +3999,7 @@ ${ROOTDIR}bin/login
 
 
 	displaytext ""
-	displaytext "${test}* OS dependent tests${NORMAL}"
+	displaytext "* OS dependent tests${NORMAL}"
 
 	case "${OPERATING_SYSTEM}" in
 	*BSD)
@@ -4251,17 +4298,13 @@ vlogger.o
 	displaytext ""; displaytext ""
 	displaytext "${YELLOW}Networking${NORMAL}"
 
-	displaytext "${test}* Check: frequently used backdoors${NORMAL}"
+	displaytext "* Check: frequently used backdoors${NORMAL}"
+
+	donetstat=0
 
 	case "${OPERATING_SYSTEM}" in
-	Linux|AIX|SunOS)
+	*BSD|Linux|AIX|SunOS)
 		donetstat=1
-		;;
-	*BSD)
-		donetstat=1
-		;;
-	*)
-		donetstat=0
 		;;
 	esac
 
@@ -4303,7 +4346,7 @@ vlogger.o
 	fi
 
 	displaytext ""
-	displaytext "${test}* Interfaces${NORMAL}"
+	displaytext "* Interfaces${NORMAL}"
 
 	SIZE=41
 	jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -4434,7 +4477,7 @@ vlogger.o
 	displaytext ""; displaytext ""
 	displaytext "${YELLOW}System checks${NORMAL}"
 
-	displaytext "${test}* Allround tests${NORMAL}"
+	displaytext "* Allround tests${NORMAL}"
 
 	displaytext -n "   Checking hostname... "
 	if [ "${HOST_NAME}" = "" ]; then
@@ -4722,7 +4765,7 @@ vlogger.o
 	fi
 
 	displaytext ""
-	displaytext "${test}* Filesystem checks${NORMAL}"
+	displaytext "* Filesystem checks${NORMAL}"
 	displaytext -n "   Checking /dev for suspicious files... "
 
 	if [ -d "${ROOTDIR}dev" ]; then
@@ -5141,7 +5184,7 @@ nonvulnerable:%2.4.24%
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
 
-	displaytext "${test}* Check: Groups and Accounts${NORMAL}"
+	displaytext "* Check: Groups and Accounts${NORMAL}"
 	displaytext -n "   Searching for ${ROOTDIR}etc/passwd... "
 	if [ -f "${ROOTDIR}etc/passwd" ]; then
 		insertlayout
@@ -5167,7 +5210,7 @@ nonvulnerable:%2.4.24%
 	fi
 
 	displaytext "";
-	displaytext "${test}* Check: SSH${NORMAL}"
+	displaytext "* Check: SSH${NORMAL}"
 
 	SIZE=39
 	jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -5278,7 +5321,7 @@ nonvulnerable:%2.4.24%
 
 
 	displaytext ""
-	displaytext "${test}* Check: Events and Logging${NORMAL}"
+	displaytext "* Check: Events and Logging${NORMAL}"
 	displaytext -n "   Search for syslog configuration... "
 
 	SIZE=36
@@ -5685,7 +5728,7 @@ help() {
 
 	echo "Current options are:"
 	echo "       --append-log                    Append to the logfile, do not overwrite"
-	echo "       --bindir '<bindir>...'          Use <bindir> instead of default"
+	echo "       --bindir <bindir>...            Use <bindir> instead of default"
 	echo "                                       command directories"
 	echo "   -c, --check                         Check the local system"
 	echo "       --color-set2                    Use second color set for output"
@@ -5696,11 +5739,15 @@ help() {
 	echo "       --display-logfile               Display the logfile at the end"
 	echo "       --hash                          Specify the hash function to use"
 	echo "       --hashupd                       Update the local file hash database"
-	echo "   -h, --help                          Display this help menu and exit"
+	echo "   -h, --help                          Display this help menu, then exit"
+	echo "       --language <language>           Specify the language (ISO code) to use"
+	echo "                                       (Default is English)"
+	echo "       --list [tests | languages]      List the available test names or"
+	echo "                                       languages"
 	echo "   -l, --logfile [logfile]             Write to a logfile"
 	echo "                                       (default is $DFLT_LOGFILE)"
 	echo "       --md5                           Specify the MD5 command to use for the"
-	echo "                                       'known bad' hash check"
+	echo "                                       'known bad' hash file check"
 	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
 	echo "       --nocolors                      Use black and white output"
 	echo "       --nolog                         Do not write to a logfile"
@@ -5712,7 +5759,7 @@ help() {
 	echo "  -sk, --skip-keypress                 Don't wait for a keypress after each test"
 	echo "       --tmpdir <tempdir>              Use specified temporary directory"
 	echo "       --update                        Check for updates to database files"
-	echo "   -V, --version                       Display version and exit"
+	echo "   -V, --version                       Display the version number, then exit"
 	echo "       --versioncheck                  Check for latest version of program"
 	echo "   -x                                  Do not automatically detect if X is in use"
 	echo "   -X                                  Automatically detect if X is in use"
@@ -5894,6 +5941,12 @@ fi
 # This is the return code for the program actions - update, check, etc.
 RET_CODE=0
 
+# Set the default language of English
+LANGUAGE=en
+SUPPORTED_LANGS=en
+
+SUPPORTED_TESTS=
+
 
 ######################################################################
 #
@@ -6025,9 +6078,40 @@ while [ $# -ge 1 ]; do
 		help
 		exit 0
 		;;
-	--md5)
+	--lang | --language)
 		case "$2" in
 		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			LANGUAGE="$1"
+			;;
+		esac
+		;;
+	--list)
+		case "$2" in
+		test|tests|check|checks)
+			echo "Available test names: ${SUPPORTED_TESTS}"
+			;;
+		lang|langs|language|languages)
+			echo "Available languages (ISO code): ${SUPPORTED_LANGS}"
+			;;
+		"")
+			echo "Available test names: ${SUPPORTED_TESTS}"
+			echo ""
+			echo "Available languages (ISO code): ${SUPPORTED_LANGS}"
+			;;
+		*)
+			echo "Invalid --list option specified: $2"
+			;;
+		esac
+		exit 0
+		;;
+	--md5)
+		case "$2" in
+		'')
 			;;
 		-*)
 			;;
@@ -6357,6 +6441,8 @@ logtext "Info: Command line is ${CMD_LINE}"
 logtext "Info: Using configuration file ${CONFIGFILE}"
 
 logtext "Info: Installation directory is ${INSTALLDIR}"
+
+logtext "Info: Using language ${LANGUAGE}"
 
 if [ -z "${MAILONWARNING}" ]; then
 	logtext "Info: No mail-on-warning address configured"
