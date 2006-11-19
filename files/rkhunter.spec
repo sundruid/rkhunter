@@ -10,11 +10,11 @@
 AutoReqProv: no
 
 Name: %{name}
-Summary: %{name} scans for rootkits, backdoors and local exploits.
+Summary: %{name} scans for rootkits, backdoors and local exploits
 Version: %{ver}
 Release: %{rel}
 Epoch: %{epoch}
-Copyright: GPL
+License: GPL
 Group: Applications/System
 Source0: %{name}-%{version}.tar.gz
 Requires: filesystem, bash, grep, findutils, net-tools, coreutils, e2fsprogs, modutils, procps, binutils, wget

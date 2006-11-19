@@ -1677,8 +1677,28 @@ do_versioncheck() {
 	VERSIONUPDATEURL=`grep 'LATESTVERSION=' ${CONFIGFILE} | sed -e 's/LATESTVERSION=//g'`
 
 # jh - put check in here to use wget, lynx, links, elinks, curl, GET. or bget.
+
+# uns - WGET_CMD (cmd, version tested, comments):
+#       wget, *, none.
+#       bget, 1.2, appends output.
+#       curl, 7.15.3: none.
+#       links/elinks, 0.4.2, decompresses output.
+#       lynx, 2.8.5dev.7, decompresses output.
+
 	if [ -n "${WGET_CMD}" ]; then
 		${WGET_CMD} -q -O ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL}
+	elif [ -n "${CURL_CMD}" ]; then
+		${CURL_CMD} --output ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL} 2>/dev/null
+	elif [ -n "${BGET_CMD}" ]; then
+		${BGET_CMD} --out ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL} 2>/dev/null
+	elif [ -n "${ELINKS_CMD}" ]; then
+		${ELINKS_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
+	elif [ -n "${LINKS_CMD}" ]; then
+		${LINKS_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
+	elif [ -n "${LYNX_CMD}" ]; then
+		${LYNX_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
+	fi
+	if [ "${TMPDIR}/rkhunter.upd" ]; then
 		displaytext "${URLPREFIX}${VERSIONUPDATEURL}"
 		LATESTVERSION=`cat ${TMPDIR}/rkhunter.upd`
 	fi
@@ -5924,7 +5944,7 @@ SPACEDPATH=`echo ${PATH} | tr : ' ' 2>/dev/null`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="curl diff elinks file find ifconfig ip links ls lsattr lsmod lsof lynx perl readlink sort stat strings uniq wget GET"
+CMDLIST="bget curl diff elinks file find ifconfig ip links ls lsattr lsmod lsof lynx perl readlink sort stat strings uniq wget GET"
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cut date egrep grep head sed tail tr uname wc"

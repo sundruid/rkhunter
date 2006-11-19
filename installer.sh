@@ -28,7 +28,6 @@ APPVERSION="1.2.9"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
-RKHINST_PERL_LOC="/usr/bin/perl"
 USE_CVS=0
 
 # rootmgu: modified for solaris
@@ -69,20 +68,20 @@ showHelp() { # Show help / version
 	echo "Usage: $0 <parameters>."
 	echo ""
 	echo "Valid parameters:"
-	echo $ECHOOPT "--help (-h)      : Show this help."
-	echo $ECHOOPT "--install        : Install according to chosen layout."
-	echo $ECHOOPT "--show           : Show chosen layout."
-	echo $ECHOOPT "--remove         : Deinstall according to chosen layout."
-	echo $ECHOOPT "--layout <value> : Chose installation template (mandatory switch)."
-	echo $ECHOOPT "                   The templates are:"
-        echo $ECHOOPT "                    - default: (FHS compliant),"
-        echo $ECHOOPT "                    - /usr,"
-        echo $ECHOOPT "                    - /usr/local,"
-	echo $ECHOOPT "                    - oldschool: previous version file locations,"
-	echo $ECHOOPT "                    - custom: supply your own prefix,"
-	echo $ECHOOPT "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
-	echo $ECHOOPT "                    If no layout value is given the default layout is used."
-	echo $ECHOOPT "--examples       : Show --layout examples."
+	echo "--help (-h)      : Show this help."
+	echo "--install        : Install according to chosen layout."
+	echo "--show           : Show chosen layout."
+	echo "--remove         : Deinstall according to chosen layout."
+	echo "--layout <value> : Chose installation template (mandatory switch)."
+	echo "                   The templates are:"
+        echo "                    - default: (FHS compliant),"
+        echo "                    - /usr,"
+        echo "                    - /usr/local,"
+	echo "                    - oldschool: previous version file locations,"
+	echo "                    - custom: supply your own prefix,"
+	echo "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
+	echo "                    If no layout value is given the default layout is used."
+	echo "--examples       : Show --layout examples."
 
 	exit 1
 }
@@ -91,20 +90,20 @@ showExamples() { # Show examples
 	echo "${INSTALLER_NAME}"
 	echo ""
 	echo "Examples: "
-	echo $ECHOOPT " Show layout, files in /usr:"
-	echo $ECHOOPT " installer.sh --show --layout /usr"
-	echo $ECHOOPT " Show custom layout, files in /opt:"
-	echo $ECHOOPT " installer.sh --show --layout custom /opt"
-	echo $ECHOOPT " Install, layout /usr/local:"
-	echo $ECHOOPT " installer.sh --install --layout /usr/local"
-	echo $ECHOOPT " Remove files, layout /usr/local:"
-	echo $ECHOOPT " installer.sh --remove --layout /usr/local"
-	echo $ECHOOPT " The installer will not remove files when RPM or custom layout is chosen."
+	echo " Show layout, files in /usr:"
+	echo " installer.sh --show --layout /usr"
+	echo " Show custom layout, files in /opt:"
+	echo " installer.sh --show --layout custom /opt"
+	echo " Install, layout /usr/local:"
+	echo " installer.sh --install --layout /usr/local"
+	echo " Remove files, layout /usr/local:"
+	echo " installer.sh --remove --layout /usr/local"
+	echo " The installer will not remove files when RPM or custom layout is chosen."
 
 	exit 1
 }
 
-showVersion() { echo $E "${INSTALLER_NAME} ${INSTALL_VERSION} ${INSTALLER_LICENSE}"; exit 1; }
+showVersion() { echo "${INSTALLER_NAME} ${INSTALL_VERSION} ${INSTALLER_LICENSE}"; exit 1; }
 
 selectTemplate() { # Take input from the "--installdir parameter"
 case "$1" in
@@ -124,12 +123,12 @@ case "$1" in
 							echo "Rewriting for local install."
 							;;
 						.*|/.*)
-							echo $E "Bad prefix chosen, exiting."
+							echo "Bad prefix chosen, exiting."
 							exit 1
 							;;
 					esac
 				echo "${PATH}" | grep -q "${PREFIX}/bin" || \
-				echo $E "MAKE SURE YOU WANT PREFIX to be ${PREFIX}"
+				echo "MAKE SURE YOU WANT PREFIX to be ${PREFIX}"
 				#fi
 				;;
 			RPM)	PREFIX="${RPM_BUILD_ROOT}/usr/local"
@@ -142,7 +141,7 @@ case "$1" in
 				;;
 			*)
 				if [ ! -d "${PREFIX}" ]; then
-					echo $E "Bad prefix chosen (nonexistent dirname), exiting."
+					echo "Bad prefix chosen (nonexistent dirname), exiting."
 					exit 1
 				fi
 				;;
@@ -161,9 +160,12 @@ case "$1" in
 				LIBDIR="${PREFIX}/lib"; VARDIR="${PREFIX}/var"
 				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
 				;;
-			RPM)
-				LIBDIR="${PREFIX}/lib"; VARDIR="${RPM_BUILD_ROOT}/var"
-				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+			RPM)	if [ `uname -m` = x86_64 ]; then
+					LIBDIR="${PREFIX}/lib64"
+				else
+					LIBDIR="${PREFIX}/lib"
+				fi
+				VARDIR="${RPM_BUILD_ROOT}/var"; SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
 				;;
 			*)
 				LIBDIR="${PREFIX}/lib"; VARDIR="/var"
@@ -177,7 +179,7 @@ case "$1" in
 		BINDIR="${PREFIX}/bin"
 		;;
 	*)	# None chosen.
-		echo $E "No template chosen, exiting."; exit 1
+		echo "No template chosen, exiting."; exit 1
 		;;
 esac
 
@@ -213,14 +215,14 @@ showTemplate() { # Take input from the "--installdir parameter"
 			;;
 		*)
 			selectTemplate "$1"
-			echo $E "PREFIX:             ${PREFIX}"
-			echo $E "Application:        ${RKHINST_BIN_DIR}"
-			echo $E "Configuration file: ${RKHINST_ETC_DIR}"
-			echo $E "Documents:          ${RKHINST_DOC_DIR}"
-			echo $E "Man page:           ${RKHINST_MAN_DIR}"
-			echo $E "Scripts:            ${RKHINST_SCRIPT_DIR}"
-			echo $E "Databases:          ${RKHINST_DB_DIR}"
-			echo $E "Temporary files:    ${RKHINST_TMP_DIR}"
+			echo "PREFIX:             ${PREFIX}"
+			echo "Application:        ${RKHINST_BIN_DIR}"
+			echo "Configuration file: ${RKHINST_ETC_DIR}"
+			echo "Documents:          ${RKHINST_DOC_DIR}"
+			echo "Man page:           ${RKHINST_MAN_DIR}"
+			echo "Scripts:            ${RKHINST_SCRIPT_DIR}"
+			echo "Databases:          ${RKHINST_DB_DIR}"
+			echo "Temporary files:    ${RKHINST_TMP_DIR}"
 			;;
 	esac
 		
@@ -237,12 +239,12 @@ searchfile() {
 
 retValChk() { 
 case "$?" in
-	0) echo $E "OK."
+	0) echo "OK."
 	   ;;
-	1) echo $E "FAILED. Exiting."
+	1) echo "FAILED. Exiting."
 	   exit 1
 	   ;;
-	*) echo $E "Exited with unhandled exit value $?. Exiting."
+	*) echo "Exited with unhandled exit value $?. Exiting."
 	   exit 1
 	   ;;
 esac
@@ -257,7 +259,7 @@ else
 	cvs -z3 -d:pserver:anonymous@rkhunter.cvs.sourceforge.net:/cvsroot/rkhunter co rkhunter
 	case "$?" in
 		0)
-		echo $E "Succeeded getting Rootkit Hunter source from CVS."
+		echo "Succeeded getting Rootkit Hunter source from CVS."
 		if [ -d "./files" ]; then
 			echo $N "Removing stale ./files directory: "
 			rm -rf "./files"; retValChk
@@ -277,10 +279,10 @@ else
 			done
 			;;
 		esac
-		echo $E "Refreshing source complete. Commence."
+		echo "Refreshing source complete. Commence."
 		;;
 		*)
-		echo $E "FAILED getting Rootkit Hunter from CVS, exiting."
+		echo "FAILED getting Rootkit Hunter from CVS, exiting."
 		exit 1
 		;;
 	esac
@@ -298,11 +300,11 @@ doInstall()  {
 clear
 
 # Preflight checks
-echo $E "Checking system for: "
+echo "Checking system for: "
 
 echo $N " ${INSTALLER_NAME} files: "
 if [ -f "./files/${APPNAME}" ]; then
-	echo $E "found. OK"
+	echo "found. OK"
 	if [ $USE_CVS -eq 1 ]; then
 		# You want it, and you got it!
 		# The hottest source in the land..
@@ -318,44 +320,35 @@ if [ -f "./files/${APPNAME}" ]; then
 		;;
 	esac
 else
-	echo $E "failed. Installer files not in "${PWD}/files". Exiting."
+	echo "failed. Installer files not in "${PWD}/files". Exiting."
 	exit 1
 fi
 
-echo $E " available file retrieval tools: "
+echo " available file retrieval tools: "
 echo $N "  wget: "
 SEARCH=`which wget 2>/dev/null`
 if [ "${SEARCH}" = "" ]; then
-	echo $E "not found." 
+	echo "not found." 
 	echo $N "  fetch: "
 	SEARCH=`which fetch 2>/dev/null`
 	if [ "${SEARCH}" = "" ]; then
-		echo $E "not found."
+		echo "not found."
 		echo $N "  curl: "
 		SEARCH=`which curl 2>/dev/null`
 		if [ "${SEARCH}" = "" ]; then
-			echo $E "NOT found: please install one of wget, fetch or curl."
+			echo "NOT found."
+			echo "Please install one of wget, fetch, curl or bget (www.cpan.org/authors/id/E/EL/ELIJAH/bget)."
 		else
-			echo $E "found. OK"
+			echo "found. OK"
 		fi
 	else
-		echo $E "found. OK"
+		echo "found. OK"
 	fi
 else
-	echo $E "found. OK"
+	echo "found. OK"
 fi
 
-echo $E " expected default tool locations: "
-echo $N "  perl: "
-if [ ! -f "${RKHINST_PERL_LOC}" ]; then
-	echo $E "FAILED."
-	echo "  Perl cannot be found in the default location,"
-	echo "  please create a symbolic link to your Perl binary:"
-	echo "  ie. ln -s <path_to>/perl "${RKHINST_PERL_LOC}""
-	echo "  and restart the installer."
-else
-	echo $E "found. OK"
-fi
+# Perl will be found in Rkhunter itself.
 
 RKHINST_DIRS="$RKHINST_DOC_DIR $RKHINST_MAN_DIR $RKHINST_ETC_DIR $RKHINST_BIN_DIR"
 RKHINST_DIRS_EXCEP="$RKHINST_SCRIPT_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR"
@@ -372,10 +365,10 @@ echo $N "Checking PREFIX $PREFIX: "
 if [ -e "${PREFIX}" ]; then
 	echo $N "exists, and is "
 	if [ ! -w "${PREFIX}" ]; then
-		echo $E "NOT writable: exiting."
+		echo "NOT writable: exiting."
 		exit 1
 	else
-		echo $E "writable. OK"
+		echo "writable. OK"
 		# That's enough for a "." install.
 		case "${PREFIX}" in
 			.)	
@@ -400,7 +393,7 @@ if [ -e "${PREFIX}" ]; then
 				echo "INSTALLDIR=$PREFIX" >> rkhunter.conf
 				sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" rkhunter > rkhunter.
 				mv -f rkhunter. rkhunter
-				echo $E "Finished install in PREFIX \"${PREFIX}\" (${PWD})."
+				echo "Finished install in PREFIX \"${PREFIX}\" (${PWD})."
 				exit 0
 			;;
 		esac
@@ -412,17 +405,17 @@ fi
 ;;
 esac # end Check PREFIX
 
-echo $ECHOOPT "Checking installation directories:"
+echo "Checking installation directories:"
 
 for DIR in ${RKHINST_DIRS}; do
 	echo $N $ECHOOPT " Directory ${DIR}: "
 	if [ -d "${DIR}" ]; then
 		echo $N "exists, and is "
 		if [ ! -w "${PREFIX}" ]; then
-			echo $E "NOT writable: exiting."
+			echo "NOT writable: exiting."
 			exit 1
 		else
-			echo $E "writable. OK"
+			echo "writable. OK"
 		fi
 	else
 		echo $N "creating: "
@@ -435,10 +428,10 @@ for DIR in ${RKHINST_DIRS_EXCEP}; do
 	if [ -d "${DIR}" ]; then
 		echo $N "exists, and is "
 		if [ ! -w "${PREFIX}" ]; then
-			echo $E "NOT writable: exiting."
+			echo "NOT writable: exiting."
 			exit 1
 		else
-			echo $E "writable. OK"
+			echo "writable. OK"
 		fi
 	else
 		echo $N "creating: "
@@ -531,13 +524,13 @@ doRemove()  {
 clear
 
 # Preflight checks
-echo $E "Checking system for: "
+echo "Checking system for: "
 
 echo $N " ${INSTALLER_NAME} files: "
 if [ -f ./files/rkhunter ]; then
-	echo $E "found. OK"
+	echo "found. OK"
 else
-	echo $E "failed. Installer files not in $PWD/files. Exiting."
+	echo "failed. Installer files not in $PWD/files. Exiting."
 	exit 1
 fi
 
@@ -552,17 +545,17 @@ echo $N "Checking PREFIX $PREFIX: "
 if [ -e "${PREFIX}" ]; then
 	echo $N "exists, and is "
 	if [ ! -w "${PREFIX}" ]; then
-		echo $E "NOT writable: exiting."
+		echo "NOT writable: exiting."
 		exit 1
 	else
-		echo $E "writable. OK"
+		echo "writable. OK"
 	fi
 else
 	echo "does NOT exist, exiting."
 	#exit 1
 fi
 
-echo $ECHOOPT "Removing installation files:"
+echo "Removing installation files:"
 
 # Man page
 for FILE in ${RKHINST_MAN_FILES}; do
@@ -586,20 +579,20 @@ for FILE in ${RKHINST_ETC_FILE}; do
 		echo $N " Removing ${RKHINST_ETC_DIR}/${FILE}: "
 		rm -f "${RKHINST_ETC_DIR}/${FILE}"; retValChk
 	fi
-	echo $E " Please remove any ${RKHINST_ETC_DIR}/${FILE}.* manually."
+	echo " Please remove any ${RKHINST_ETC_DIR}/${FILE}.* manually."
 done
 
 # Helper scripts: remove dir
 # Application documents: remove dir
 # Databases: remove dir
 
-echo $ECHOOPT "Removing installation directories:"
+echo "Removing installation directories:"
 
 for DIR in ${RKHINST_DIRS}; do
 	case "${DIR}" in 
 		*/${APPNAME}|*/${APPNAME}-${APPVERSION}) 
 			if [ -d "${DIR}" ]; then
-				echo $N " Removing ${DIR}: "
+				echo " Removing ${DIR}: "
 				rm -rf "${DIR}"; retValChk
 			fi
 			;;
@@ -640,7 +633,7 @@ while [ $# -ge 1 ]; do
 				if [ -n "$1" ]; then
 					RKHINST_LAYOUT="custom_$1"
 				else
-					echo $E "No custom layout given, exiting."
+					echo "No custom layout given, exiting."
 					exit 1
 				fi
 				;;
@@ -660,7 +653,7 @@ while [ $# -ge 1 ]; do
 			install) selectTemplate $RKHINST_LAYOUT
 				 doInstall
 				 ;;
-			*)	echo $E "No option given, exiting."
+			*)	echo "No option given, exiting."
 				exit 1
 				;;
 		esac
@@ -671,7 +664,7 @@ while [ $# -ge 1 ]; do
 		USE_CVS=1
 		;;
 	*)
-		echo $E "Wrong option given, exiting."
+		echo "Wrong option given, exiting."
 		showHelp
 		;;
 	esac
