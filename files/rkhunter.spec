@@ -1,7 +1,17 @@
+# No debuginfo:
+%define debug_package %{nil}
+
+# If you want to debug, uncomment the next line:
+#%dump
+
 %define name rkhunter
 %define ver 1.2.9
 %define rel 1
 %define epoch 0
+
+# Don't change this define or also:
+# 1. use installer.sh with like --layout /usr or --layout custom /some/dir
+# 2. rewrite the files section below.
 %define _prefix /usr/local
 
 # We can't let RPM do the dependencies automatic because it'll then pick up
@@ -17,7 +27,7 @@ Epoch: %{epoch}
 License: GPL
 Group: Applications/System
 Source0: %{name}-%{version}.tar.gz
-Requires: filesystem, bash, grep, findutils, net-tools, coreutils, e2fsprogs, modutils, procps, binutils, wget
+Requires: filesystem, bash, grep, findutils, net-tools, coreutils, e2fsprogs, modutils, procps, binutils, wget, perl
 Provides: %{name}
 URL: http://rkhunter.sourceforge.net/
 BuildRoot: %{_tmppath}/%{name}-%{version}
@@ -58,13 +68,12 @@ EOF
 
 						
 %clean
-case "$RPM_BUILD_ROOT" in
-	/home/*) rm -rf $RPM_BUILD_ROOT
-	;;
-	*)
+if [ "$RPM_BUILD_ROOT" = "/" ]; then
 	echo Invalid Build root \'"$RPM_BUILD_ROOT"\'
-	;;
-esac
+	exit 1
+else
+	rm -rf $RPM_BUILD_ROOT
+fi
 
 
 %define docdir %{_prefix}/share/doc/%{name}-%{version}
@@ -79,7 +88,7 @@ esac
 %attr(750,root,root) %dir %{_libdir}/%{name}/scripts
 %attr(750,root,root) %{_libdir}/%{name}/scripts/*.pl
 %attr(750,root,root) %{_libdir}/%{name}/scripts/*.sh
-%attr(644,root,root) %{_mandir}/man8/%{name}.8
+%attr(644,root,root) %{_prefix}/share/man8/%{name}.8
 %attr(750,root,root) %{docdir}
 %{_sysconfdir}/cron.daily/01-rkhunter
 
