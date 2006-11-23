@@ -1,8 +1,9 @@
 # No debuginfo:
 %define debug_package %{nil}
 
-# If you want to debug, uncomment the next line:
-#%dump
+# If you want to debug, uncomment the next line and remove
+# the duplicate percent sign (due to macro expansion)
+#%%dump
 
 %define name rkhunter
 %define ver 1.2.9
