@@ -89,12 +89,17 @@ fi
 %attr(750,root,root) %dir %{_libdir}/%{name}/scripts
 %attr(750,root,root) %{_libdir}/%{name}/scripts/*.pl
 %attr(750,root,root) %{_libdir}/%{name}/scripts/*.sh
-%attr(644,root,root) %{_prefix}/share/man8/%{name}.8
+%attr(644,root,root) %{_prefix}/share/man/man8/%{name}.8
 %attr(750,root,root) %{docdir}
+%attr(750,root,root) %dir %{_var}/%{name}/i18n
+%attr(640,root,root) %{_var}/%{name}/i18n/*
 %{_sysconfdir}/cron.daily/01-rkhunter
 
 
 %changelog
+* Mon Nov 27 2006 unSpawn - pre-1.3.0
+- Sync spec with fixes, installer and CVS
+
 * Sun Nov 12 2006 unSpawn - 1.2.9
 - Re-spec, new installer
 

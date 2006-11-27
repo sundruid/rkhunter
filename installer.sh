@@ -190,6 +190,7 @@ RKHINST_DB_DIR="${VARDIR}/${APPNAME}/db"
 RKHINST_TMP_DIR="${VARDIR}/${APPNAME}/tmp"
 RKHINST_DOC_DIR="${SHAREDIR}/doc/${APPNAME}-${APPVERSION}"
 RKHINST_MAN_DIR="${SHAREDIR}/man/man8"
+RKHINST_LANG_DIR="${VARDIR}/${APPNAME}/i18n"
 
 RKHINST_ETC_FILE="${APPNAME}.conf"
 RKHINST_BIN_FILES="${APPNAME}"
@@ -351,7 +352,7 @@ fi
 # Perl will be found in Rkhunter itself.
 
 RKHINST_DIRS="$RKHINST_DOC_DIR $RKHINST_MAN_DIR $RKHINST_ETC_DIR $RKHINST_BIN_DIR"
-RKHINST_DIRS_EXCEP="$RKHINST_SCRIPT_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR"
+RKHINST_DIRS_EXCEP="$RKHINST_SCRIPT_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
 
 echo "Starting installation/update"
 echo ""
@@ -468,6 +469,12 @@ for FILE in ${RKHINST_DOC_FILES}; do
 	cp -f ./files/"${FILE}" "${RKHINST_DOC_DIR}"; retValChk
 done
 
+# Language support files
+echo $N " Installing language support files: "
+find ./files/i18n -type f | while read FILE; do
+	cp "${FILE}" "${RKHINST_LANG_DIR}"
+done; retValChk
+
 # Application
 for FILE in ${RKHINST_BIN_FILES}; do
 	echo $N " Installing ${FILE}: " 
@@ -534,7 +541,7 @@ else
 	exit 1
 fi
 
-RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR"
+RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
 RKHINST_DIRS_POST="$VARDIR $SHAREDIR $PREFIX"
 
 echo "Starting deinstallation"
@@ -585,6 +592,7 @@ done
 # Helper scripts: remove dir
 # Application documents: remove dir
 # Databases: remove dir
+# Languag support: remove dir
 
 echo "Removing installation directories:"
 
