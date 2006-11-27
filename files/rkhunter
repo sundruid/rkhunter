@@ -47,16 +47,19 @@ AIX|OpenBSD|SunOS)
 		alias echo='print'
 		E=""
 		ECHOOPT="--"
+		NEWECHOOPT="--"
 		MYSHELL=ksh
 	else
 		E="-e"
 		ECHOOPT=""
+		NEWECHOOPT="-e"
 		MYSHELL=bash
 	fi
 	;;
 *)
 	E="-e"
 	ECHOOPT=""
+	NEWECHOOPT="-e"
 
 
 	#
@@ -72,6 +75,7 @@ AIX|OpenBSD|SunOS)
 		MYSHELL=bash
 	elif [ "${MYSHELL}" = "dash" -o "${MYSHELL}" = "ash" ]; then
 		E=""
+		NEWECHOOPT=""
 	fi
 	;;
 esac
@@ -82,6 +86,289 @@ esac
 # Global function definitions
 #
 ######################################################################
+
+
+display() {
+
+	#
+	# This function is used to display text messages on to the
+	# users screen, as well as in to the log file. The same
+	# message is written to both. However, the screen may have
+	# a coloured result (green for good, red for bad, etc), and
+	# the log file will have the time prefixed to the message and,
+	# optionally, additional information messages after the main
+	# message. All the messages are indexed in the language file.
+	#
+	# Syntax: display --to <destination> --type <type>
+	#		  [--screen-indent <n>] [--log-indent <n>] [--nl]
+	#		  [--result <result> --color <colour>]
+	#		  <message index> [optional message arguments]
+	#
+	# where the destination can be one of SCREEN, LOG or SCREEN+LOG.
+	# The type can be one of PLAIN, INFO or WARNING, although other
+	# values may be defined. The language file will have all the
+	# current values.
+	#
+	# The --screen-indent and --log-indent options are used to
+	# forcibly indent a message.
+	# The --nl option causes a blank-line to be output before the
+	# message.
+	#
+
+
+	#
+	# We first initialize some variables and then
+	# process the switches used.
+	#
+
+	WARN_MSG=0; NL=0; LOGINDENT=0; SCREENINDENT=0
+	WRITETO=''; TYPE=''; RESULT=''; COLOR=''; MSG=''
+	LINE1=''; LOGLINE1=''; SPACES=''
+
+	DISPLAY_LINE="display $*"
+
+	if [ $# -le 0 ]; then
+		echo "Error: Invalid display call - no arguments given"
+		return
+	fi
+
+	while [ $# -ge 1 ]; do
+		case "$1" in
+			--to)
+				case "$2" in
+					SCREEN|LOG|SCREEN+LOG)
+						WRITETO=$2
+						;;
+					*)
+						echo "Error: Invalid display destination: $2   Display line: ${DISPLAY_LINE}"
+						return
+						;;
+				esac
+
+				shift
+				;;
+			--type)
+				TYPE=`eval echo "\\$MSG_TYPE_$2"`
+
+				if [ -z "${TYPE}" -a "$2" != "PLAIN" ]; then
+					echo "Error: Invalid display type: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
+
+				test "$2" = "WARNING" && WARN_MSG=1
+
+				shift
+				;;
+			--result)
+				RESULT=`eval echo "\\$MSG_RESULT_$2"`
+
+				if [ -z "${RESULT}" ]; then
+					echo "Error: Invalid display result: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
+
+				shift
+				;;
+			--color)
+				test -n "$2" && COLOR=`eval "echo \\${$2}"`
+
+				if [ -z "${COLOR}" ]; then
+					echo "Error: Invalid display color: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
+
+				shift
+				;;
+			--log-indent)
+				LOGINDENT=$2
+
+				if [ -z "${LOGINDENT}" ]; then
+					echo "Error: No --log-indent value given.   Display line: ${DISPLAY_LINE}"
+					return
+				elif [ -z "`echo ${LOGINDENT} | grep '^[0-9]*$'`" ]; then
+					echo "Error: Invalid --log-indent value given: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
+
+				shift
+				;;
+			--screen-indent)
+				SCREENINDENT=$2
+
+				if [ -z "${SCREENINDENT}" ]; then
+					echo "Error: No --screen-indent value given.   Display line: ${DISPLAY_LINE}"
+					return
+				elif [ -z "`echo ${SCREENINDENT} | grep '^[0-9]*$'`" ]; then
+					echo "Error: Invalid --screen-indent value given: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
+
+				shift
+				;;
+			--nl)
+				NL=1
+				;;
+			-*)
+				echo "Error: Invalid display option given: $1   Display line: ${DISPLAY_LINE}"
+				return
+				;;
+			*)
+				MSG=$1
+				shift
+				break
+				;;
+		esac
+
+		shift
+	done
+
+
+	#
+	# For simplicity we now set variables as to whether the output
+	# goes to the screen and/or the log file. In some cases we do
+	# not need to output anything, and so can just return.
+	#
+
+	if [ $NOLOG -eq 1 ]; then
+		test "${WRITETO}" = "LOG" && return
+
+		test "${WRITETO}" = "SCREEN+LOG" && WRITETO="SCREEN"
+	fi
+
+	if [ $NOTTY -eq 1 ]; then
+		test "${WRITETO}" = "SCREEN" && return
+
+		test "${WRITETO}" = "SCREEN+LOG" && WRITETO="LOG"
+	fi
+
+
+	if [ "${WRITETO}" = "SCREEN" -o "${WRITETO}" = "SCREEN+LOG" ]; then
+		WRITETOTTY=1
+	else
+		WRITETOTTY=0
+	fi
+
+	if [ "${WRITETO}" = "LOG" -o "${WRITETO}" = "SCREEN+LOG" ]; then
+		WRITETOLOG=1
+	else
+		WRITETOLOG=0
+	fi
+
+
+	#
+	# Now check that the options we have been given make sense.
+	#
+
+	if [ $WRITETOTTY -eq 0 -a $WRITETOLOG -eq 0 ]; then
+		echo "Error: Invalid display destination: Display line: ${DISPLAY_LINE}"
+		return
+	elif [ $WRITETOTTY -eq 1 -a -n "${RESULT}" -a -z "${COLOR}" ]; then
+		echo "Error: Invalid display - no color given: Display line: ${DISPLAY_LINE}"
+		return
+	fi
+
+
+	#
+	# We set the variable LINE1 to contain the first line of the message.
+	# For the log file we use the variable LOGLINE1. We also set
+	# where the language file is located. If a message cannot be found
+	# in the file, then we look in the English file. This will allow RKH
+	# to still work even when the language files change.
+	#
+
+	LANG_FILE="${DB_PATH}/i18n/${LANGUAGE}"
+
+	if [ -n "${MSG}" ]; then
+		LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
+
+		if [ -z "${LINE1}" ]; then
+			LANG_FILE="${DB_PATH}/i18n/en"
+			LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
+		fi
+
+		test -n "${LINE1}" && LINE1=`eval "echo \"${LINE1}\" | sed -e 's/;/\\;/g'"`
+	fi
+
+
+	#
+	# At this point LINE1 is the text of the message. We have to
+	# see if the message is to be indented, and must prefix the
+	# time to log file messages. We must do the log file first
+	# because it uses LINE1.
+	#
+
+	if [ $WRITETOLOG -eq 1 ]; then
+		LOGLINE1=`date '+[%H:%M:%S]'`
+
+		test $NL -eq 1 && echo "${LOGLINE1}" >>${LOGFILE}
+
+		if [ -n "${TYPE}" ]; then
+			LOGLINE1="${LOGLINE1} ${TYPE}: ${LINE1}"
+		else
+			if [ $LOGINDENT -gt 0 ]; then
+				SPACES=`echo "${BLANK_LINE}" | cut -c1-$LOGINDENT`
+			fi
+
+			LOGLINE1="${LOGLINE1} ${SPACES}${LINE1}"
+		fi
+	fi
+
+	if [ $WRITETOTTY -eq 1 -a $SCREENINDENT -gt 0 ]; then
+		SPACES=`echo "${BLANK_LINE}" | cut -c1-$SCREENINDENT`
+		LINE1="${SPACES}${LINE1}"
+	fi
+
+
+	#
+	# We now check to see if a result is to be output. If it is,
+	# then we need to space-out the line and color the result.
+	#
+	if [ -n "${RESULT}" ]; then
+		if [ $WRITETOTTY -eq 1 ]; then
+			NUM_SPACES=$(( 62 - ${#LINE1} ))
+			LINE1="${LINE1}\033[${NUM_SPACES}C[ ${COLOR}${RESULT}${NORMAL} ]"
+		fi
+
+		if [ $WRITETOLOG -eq 1 ]; then
+			NUM_SPACES=$(( 62 - ${#LOGLINE1} ))
+			test $NUM_SPACES -lt 1 && NUM_SPACES=1
+			SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
+
+			LOGLINE1="${LOGLINE1}${SPACES}[ ${RESULT} ]"
+		fi
+	elif [ $WRITETOTTY -eq 1 -a -n "${COLOR}" ]; then
+		LINE1="${COLOR}${LINE1}${NORMAL}"
+	fi
+
+
+	#
+	# We can now output the message. We start with the first line, and
+	# then if this is a warning message we write to the log file any
+	# additional lines.
+	#
+
+	if [ $WRITETOTTY -eq 1 ]; then
+		test $NL -eq 1 && echo ""
+		echo $NEWECHOOPT "${LINE1}"
+	fi
+
+	if [ $WRITETOLOG -eq 1 ]; then
+		echo $NEWECHOOPT "${LOGLINE1}" >>${LOGFILE}
+
+		LINE1=1
+
+		grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | cut -d: -f2- | while read LOGLINE1; do
+			if [ $LINE1 -eq 1 ]; then
+				LINE1=0
+				continue
+			else
+				echo $NEWECHOOPT "           ${LOGLINE1}" >>${LOGFILE}
+			fi
+		done
+	fi
+
+	return
+}
 
 
 # Waitkeypress: wait for a keypress after some events
@@ -96,13 +383,19 @@ waitkeypress() {
 }
 
 
-# Keypresspause: wait for a keypress, only if option is set
 keypresspause() {
-	if [ "${PAUSEAFTERTESTS}" -eq 1 -a "${QUIET}" -eq 0 ]; then
+
+	#
+	# This function will display a prompt message to the user.
+	#
+
+	if [ $PAUSEAFTERTESTS -eq 1 -a $QUIET -eq 0 ]; then
 		echo ""
 		echo "[Press <ENTER> to continue]"
 		read a
 	fi
+
+	return
 }
 
 
@@ -343,9 +636,9 @@ check_commands() {
 	#
 
 	for CMD in ${CMDLIST}; do
-		UCMD=`echo ${CMD} | tr [a-z] [A-Z]`
+		RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
 
-		eval ${UCMD}_CMD=`find_cmd ${CMD}`
+		eval ${RKHTMPVAR}_CMD=`find_cmd ${CMD}`
 	done
 
 
@@ -565,6 +858,14 @@ get_tmpdir_option() {
 		exit 1
 	elif [ ! -r "${TMPDIR}" ]; then
 		echo "Temporary directory is not readable: ${TMPDIR}"
+		exit 1
+	elif [ "${TMPDIR}" = "${ROOTDIR}tmp" -o "${TMPDIR}" = "${ROOTDIR}var/tmp" ]; then
+		echo "Do not use ${TMPDIR} as the temporary directory."
+		echo "This directory will be used by rkhunter to contain system files, so it must be secure."
+		exit 1
+	elif [ "${TMPDIR}" = "${ROOTDIR}etc" ]; then
+		echo "Do not use ${TMPDIR} as the temporary directory."
+		echo "This directory will be used by rkhunter to copy and delete certain system files."
 		exit 1
 	fi
 
@@ -1034,8 +1335,7 @@ get_if_prelinked() {
 				PRELINK_CMD="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD}"
 			fi
 		else
-			SKIP_HASHCHECK=1
-			PRELINK_WARN="Warning: This system uses prelinking, but no prelink command can be found.\n    The file hash check will be skipped."
+			SKIP_HASHCHECK_MSG=1
 		fi
 	fi
 
@@ -1239,6 +1539,8 @@ get_configfile_options() {
 
 	get_logfile_option
 
+	get_rootdir_option
+
 	get_tmpdir_option
 
 	get_dbdir_option
@@ -1246,8 +1548,6 @@ get_configfile_options() {
 	get_language_option
 
 	get_scriptdir_option
-
-	get_rootdir_option
 
 	get_mailonwarn_option
 
@@ -1302,7 +1602,7 @@ get_configfile_options() {
 		if [ $SKIP_HASHCHECK -eq 0 -o $HASH_UPDATE -eq 1 ]; then
 			get_if_prelinked
 
-			test $SKIP_HASHCHECK -eq 0 && get_hash_function
+			test $SKIP_HASHCHECK_MSG -eq 0 && get_hash_function
 		fi
 	fi
 
@@ -1477,6 +1777,12 @@ rkh_dat_set_file_hash() {
 	# required before entering them.
 	#
 
+	FILE_COUNT=0
+	DIR_FILE_COUNT=0
+
+	display --to LOG --type PLAIN SETFILEHASH_FILE_START
+
+
 	if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
 		SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
 	else
@@ -1502,12 +1808,16 @@ rkh_dat_set_file_hash() {
 	# Now loop through the directories looking for the files.
 	#
 
-# jh - set counters in this loop to record how many hashes out of how many were added.
 	for DIR in ${HASHDIRS}; do
 		test ! -d "${DIR}" && continue
 
+		DIR_FILE_COUNT=0
+
 		for FNAME in ${HASHFILES}; do
 			test ! -f "${DIR}/${FNAME}" && continue
+
+			FILE_COUNT=`expr ${FILE_COUNT} + 1`
+			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
 
 			SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
 
@@ -1515,7 +1825,11 @@ rkh_dat_set_file_hash() {
 
 			echo "File:${DIR}/${FNAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
 		done
+
+		display --to LOG --type INFO SETFILEHASH_DIR_FILE_COUNT $DIR_FILE_COUNT "${DIR}"
 	done
+
+	display --to SCREEN+LOG --type INFO SETFILEHASH_FILE_COUNT $FILE_COUNT
 
 	return
 }
@@ -1528,34 +1842,7 @@ do_hash_update() {
 	# with O/S information and file hash values.
 	#
 
-	#
-	# If the rkhunter.dat file is a link then we alert the user.
-	# This is a security problem, because we are about to
-	# write a lot of data to the file.
-	#
-
-	if [ -h "${DB_PATH}/rkhunter.dat" ]; then
-		echo "The rkhunter.dat file is a symbolic link: ${DB_PATH}/rkhunter.dat"
-		echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
-
-		RET_CODE=1
-		return
-	fi
-
-
-	#
-	# We must have access to either the 'stat' command, or the
-	# supplied perl script. If neither can be found then we
-	# must exit.
-	#
-
-	if [ -z "${STAT_CMD}" ]; then
-		echo "No 'stat' command can be found to perform the update."
-
-		RET_CODE=1
-		return
-	fi
-
+	display --to LOG --type INFO --nl HASHUPD_START
 
 	#
 	# We need now to create a unique temporary file to store
@@ -1568,21 +1855,21 @@ do_hash_update() {
 	if [ -n "${MKTEMP_CMD}" ]; then
 		RKHDAT_FILE=`${MKTEMP_CMD} ${TMPDIR}/rkhunter.dat.XXXXXX`
 
-		logtext "Info: Using 'mktemp' command (${MKTEMP_CMD}) for rkhunter.dat file"
+		display --to LOG --type INFO HASHUPD_CMD1 "${MKTEMP_CMD}"
 	elif [ -n "$RANDOM" ]; then
 		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDOM"
 		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
 
-		logtext "Info: Using random number for rkhunter.dat file"
+		display --to LOG --type INFO HASHUPD_CMD2
 	else
 		RANDNUM=$$$(date +%s)
 		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDNUM"
 		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
 
-		logtext "Info: Using PID number and date for rkhunter.dat file"
+		display --to LOG --type INFO HASHUPD_CMD3
 	fi
 
-	logtext "Info: Created temporary file ${RKHDAT_FILE}"
+	display --to LOG --type INFO HASHUPD_CREATED_FILE "${RKHDAT_FILE}"
 
 
 	#
@@ -1597,22 +1884,28 @@ do_hash_update() {
 
 	rkh_dat_set_version
 
+
+	display --to LOG --type PLAIN HASHUPD_OSINFO_START
+
 	rkh_dat_get_os_info
 
 	echo "Host:${HOST_NAME}" >>${RKHDAT_FILE}
 
-	test -n "${ARCH}" && echo "Arch:${ARCH}" >>${RKHDAT_FILE}
+	if [ -n "${ARCH}" ]; then
+		echo "Arch:${ARCH}" >>${RKHDAT_FILE}
+		display --to LOG --type INFO HASHUPD_ARCH_FOUND "${ARCH}"
+	fi
 
 	if [ -n "${RELEASE}" ]; then
-		logtext "Info: Found release file: ${RELEASE}"
+		display --to LOG --type INFO HASHUPD_REL_FILE "${RELEASE}"
 	else
-		logtext "Info: Unable to find a release file: LS output shows:"
-		logtext --indent "`ls -d /etc/*release* /etc/*version* 2>/dev/null`"
+		display --to LOG --type INFO HASHUPD_NO_REL_FILE
+		display --to LOG --type PLAIN HASHUPD_NO_REL_FILE2 "      `ls -d ${ROOTDIR}etc/*release* ${ROOTDIR}etc/*version* 2>/dev/null | tr '\n' ' '`"
 	fi
 
 	if [ -n "${OSNAME}" ]; then
 		echo "OS:${OSNAME}" >>${RKHDAT_FILE}
-		logtext "Info: Found O/S name: ${OSNAME}"
+		display --to LOG --type INFO HASHUPD_OSNAME_FOUND "${OSNAME}"
 	fi
 
 	if [ $PRELINKED -eq 0 ]; then
@@ -1621,12 +1914,8 @@ do_hash_update() {
 		echo "Prelinked:Yes" >>${RKHDAT_FILE}
 	fi
 
-	logtext "Info: O/S info obtained"
-
 
 	rkh_dat_set_file_hash
-
-	logtext "Info: File hashes obtained"
 
 
 	#
@@ -1635,9 +1924,16 @@ do_hash_update() {
 
 	cp -f ${DB_PATH}/rkhunter.dat ${DB_PATH}/rkhunter.dat.old >/dev/null 2>&1
 	cp ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
-	rm -f ${RKHDAT_FILE} >/dev/null 2>&1
+	RKHTMPVAR=$?
 
-	logtext "Info: New rkhunter.dat file put in place"
+	if [ $RKHTMPVAR -ne 0 ]; then
+		RET_CODE=1
+		display --to SCREEN+LOG --type WARNING HASHUPD_ERROR $RKHTMPVAR
+	else
+		display --to LOG --type INFO HASHUPD_NEW_DAT_FILE
+	fi
+
+	rm -f ${RKHDAT_FILE} >/dev/null 2>&1
 
 	return
 }
@@ -1743,15 +2039,19 @@ do_system_check_initialisation() {
 
 
 	# 55808 Variant A
-	W55808A_FILES="${ROOTDIR}tmp/.../r ${ROOTDIR}tmp/.../a"
+	W55808A_FILES="${ROOTDIR}tmp/.../r
+		       ${ROOTDIR}tmp/.../a"
 
 
 	# AjaKit
-	AJAKIT_FILES="${ROOTDIR}dev/tux/.addr ${ROOTDIR}dev/tux/.proc
-		      ${ROOTDIR}dev/tux/.file ${ROOTDIR}lib/.libgh-gh/cleaner
+	AJAKIT_FILES="${ROOTDIR}dev/tux/.addr
+		      ${ROOTDIR}dev/tux/.proc
+		      ${ROOTDIR}dev/tux/.file
+		      ${ROOTDIR}lib/.libgh-gh/cleaner
 		      ${ROOTDIR}lib/.libgh-gh/Patch/patch
 		      ${ROOTDIR}lib/.libgh-gh/sb0k"
-	AJAKIT_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}lib/.libgh-gh"
+	AJAKIT_DIRS="${ROOTDIR}dev/tux
+		     ${ROOTDIR}lib/.libgh-gh"
 	AJAKIT_KSYMS=""
 
 
@@ -1766,20 +2066,23 @@ do_system_check_initialisation() {
 
 
 	# Ambient (ark) Rootkit
-	ARK_FILES="${ROOTDIR}usr/lib/.ark? ${ROOTDIR}dev/ptyxx/.log
+	ARK_FILES="${ROOTDIR}usr/lib/.ark?
+		   ${ROOTDIR}dev/ptyxx/.log
 		   ${ROOTDIR}dev/ptyxx/.file"
 	ARK_DIRS="${ROOTDIR}dev/ptyxx"
 
 
 	# Balaur Rootkit 2.0 (LRK5 based)
 	BALAUR_FILES="${ROOTDIR}usr/lib/liblog.o"
-	BALAUR_DIRS="${ROOTDIR}usr/lib/.kinetic ${ROOTDIR}usr/lib/.egcs
+	BALAUR_DIRS="${ROOTDIR}usr/lib/.kinetic
+		     ${ROOTDIR}usr/lib/.egcs
 		     ${ROOTDIR}usr/lib/.wormie"
 	BALAUR_KSYMS=""
 
 
 	# Beastkit
-	BEASTKIT_FILES="${ROOTDIR}usr/sbin/arobia ${ROOTDIR}usr/sbin/idrun
+	BEASTKIT_FILES="${ROOTDIR}usr/sbin/arobia
+			${ROOTDIR}usr/sbin/idrun
 			${ROOTDIR}usr/lib/elm/arobia/elm
 			${ROOTDIR}usr/lib/elm/arobia/elm/hk
 			${ROOTDIR}usr/lib/elm/arobia/elm/hk.pub
@@ -1797,18 +2100,25 @@ do_system_check_initialisation() {
 
 
 	# BOBkit
-	BOBKIT_FILES="${ROOTDIR}usr/sbin/ntpsx ${ROOTDIR}usr/lib/.../ls
-		      ${ROOTDIR}usr/lib/.../netstat ${ROOTDIR}usr/lib/.../lsof
+	BOBKIT_FILES="${ROOTDIR}usr/sbin/ntpsx
+		      ${ROOTDIR}usr/lib/.../ls
+		      ${ROOTDIR}usr/lib/.../netstat
+		      ${ROOTDIR}usr/lib/.../lsof
 		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shdcfg
 		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shhk
 		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-pw
 		      ${ROOTDIR}usr/lib/.../bkit-ssh/bkit-shrs
-		      ${ROOTDIR}usr/lib/.../uconf.inv ${ROOTDIR}usr/lib/.../psr
-		      ${ROOTDIR}usr/lib/.../find ${ROOTDIR}usr/lib/.../pstree
-		      ${ROOTDIR}usr/lib/.../slocate ${ROOTDIR}usr/lib/.../du
+		      ${ROOTDIR}usr/lib/.../uconf.inv
+		      ${ROOTDIR}usr/lib/.../psr
+		      ${ROOTDIR}usr/lib/.../find
+		      ${ROOTDIR}usr/lib/.../pstree
+		      ${ROOTDIR}usr/lib/.../slocate
+		      ${ROOTDIR}usr/lib/.../du
 		      ${ROOTDIR}usr/lib/.../top"
-	BOBKIT_DIRS="${ROOTDIR}usr/lib/... ${ROOTDIR}usr/lib/.../bkit-ssh
-		     ${ROOTDIR}usr/lib/.bkit- ${ROOTDIR}tmp/.bkp"
+	BOBKIT_DIRS="${ROOTDIR}usr/lib/...
+		     ${ROOTDIR}usr/lib/.../bkit-ssh
+		     ${ROOTDIR}usr/lib/.bkit-
+		     ${ROOTDIR}tmp/.bkp"
 
 
 	# CiNIK Worm (Slapper.B variant)
@@ -1817,34 +2127,45 @@ do_system_check_initialisation() {
 
 
 	# Danny-Boy's Abuse Kit
-	DANNYBOY_FILES="${ROOTDIR}dev/mdev ${ROOTDIR}usr/lib/libX.a"
+	DANNYBOY_FILES="${ROOTDIR}dev/mdev
+			${ROOTDIR}usr/lib/libX.a"
 	DANNYBOY_DIRS=""
 	DANNYBOY_KSYMS=""
 
 
 	# Devil
-	DEVIL_FILES="${ROOTDIR}var/lib/games/.src ${ROOTDIR}dev/dsx
+	DEVIL_FILES="${ROOTDIR}var/lib/games/.src
+		     ${ROOTDIR}dev/dsx
 		     ${ROOTDIR}dev/caca"
 
 
 	# Dica (T0rn variant)
-	DICA_FILES="${ROOTDIR}lib/.sso ${ROOTDIR}lib/.so
+	DICA_FILES="${ROOTDIR}lib/.sso
+		    ${ROOTDIR}lib/.so
 		    ${ROOTDIR}var/run/...dica/clean
-		    ${ROOTDIR}var/run/...dica/xl ${ROOTDIR}var/run/...dica/xdr
+		    ${ROOTDIR}var/run/...dica/xl
+		    ${ROOTDIR}var/run/...dica/xdr
 		    ${ROOTDIR}var/run/...dica/psg
 		    ${ROOTDIR}var/run/...dica/secure
-		    ${ROOTDIR}var/run/...dica/rdx ${ROOTDIR}var/run/...dica/va
-		    ${ROOTDIR}var/run/...dica/cl.sh ${ROOTDIR}usr/bin/.etc"
-	DICA_DIRS="${ROOTDIR}var/run/...dica ${ROOTDIR}var/run/...dica/mh
+		    ${ROOTDIR}var/run/...dica/rdx
+		    ${ROOTDIR}var/run/...dica/va
+		    ${ROOTDIR}var/run/...dica/cl.sh
+		    ${ROOTDIR}usr/bin/.etc"
+	DICA_DIRS="${ROOTDIR}var/run/...dica
+		   ${ROOTDIR}var/run/...dica/mh
 		   ${ROOTDIR}var/run/...dica/scan"
 	DICA_KSYMS=""
 
 
 	# Dreams
-	DREAMS_FILES="${ROOTDIR}dev/ttyoa ${ROOTDIR}dev/ttyof
-		      ${ROOTDIR}dev/ttyop ${ROOTDIR}usr/bin/sense
-		      ${ROOTDIR}usr/bin/sl2 ${ROOTDIR}usr/bin/logclear
-		      ${ROOTDIR}usr/bin/(swapd) ${ROOTDIR}usr/bin/snfs
+	DREAMS_FILES="${ROOTDIR}dev/ttyoa
+		      ${ROOTDIR}dev/ttyof
+		      ${ROOTDIR}dev/ttyop
+		      ${ROOTDIR}usr/bin/sense
+		      ${ROOTDIR}usr/bin/sl2
+		      ${ROOTDIR}usr/bin/logclear
+		      ${ROOTDIR}usr/bin/(swapd)
+		      ${ROOTDIR}usr/bin/snfs
 		      ${ROOTDIR}usr/lib/libsss"
 	DREAMS_DIRS="${ROOTDIR}dev/ida/.hpd"
 	DREAMS_KSYMS=""
@@ -1866,10 +2187,13 @@ do_system_check_initialisation() {
 		    ${ROOTDIR}lib/security/.config/ssh/ssh_host_key
 		    ${ROOTDIR}lib/security/.config/ssh/ssh_host_key.pub
 		    ${ROOTDIR}lib/security/.config/ssh/ssh_random_seed
-		    ${ROOTDIR}usr/bin/ssh2d ${ROOTDIR}usr/lib/ldlibns.so
-		    ${ROOTDIR}usr/lib/ldlibpst.so ${ROOTDIR}usr/lib/ldlibdu.so
+		    ${ROOTDIR}usr/bin/ssh2d
+		    ${ROOTDIR}usr/lib/ldlibns.so
+		    ${ROOTDIR}usr/lib/ldlibpst.so
+		    ${ROOTDIR}usr/lib/ldlibdu.so
 		    ${ROOTDIR}usr/lib/ldlibct.so"
-	FLEA_DIRS="${ROOTDIR}lib/security/.config/ssh ${ROOTDIR}dev/..0
+	FLEA_DIRS="${ROOTDIR}lib/security/.config/ssh
+		   ${ROOTDIR}dev/..0
 		   ${ROOTDIR}dev/..0/backup"
 	FLEA_KSYMS=""
 
@@ -1882,7 +2206,8 @@ do_system_check_initialisation() {
 			  ${ROOTDIR}usr/lib/.fx/adore/adore/adore.ko
 			  ${ROOTDIR}bin/sysback
 			  ${ROOTDIR}usr/local/bin/sysback"
-	FREEBSD_RK_DIRS="${ROOTDIR}usr/lib/.fx ${ROOTDIR}usr/lib/.fx/adore"
+	FREEBSD_RK_DIRS="${ROOTDIR}usr/lib/.fx
+			 ${ROOTDIR}usr/lib/.fx/adore"
 
 
 	# Fuckit Rootkit
@@ -1898,7 +2223,8 @@ do_system_check_initialisation() {
 
 	# GasKit Rootkit
 	GASKIT_FILES="${ROOTDIR}dev/dev/gaskit/sshd/sshdd"
-	GASKIT_DIRS="${ROOTDIR}dev/dev ${ROOTDIR}dev/dev/gaskit
+	GASKIT_DIRS="${ROOTDIR}dev/dev
+		     ${ROOTDIR}dev/dev/gaskit
 		     ${ROOTDIR}dev/dev/gaskit/sshd"
 
 
@@ -1915,11 +2241,16 @@ do_system_check_initialisation() {
 
 
 	# ignoKit
-	IGNOKIT_FILES="${ROOTDIR}lib/defs/p ${ROOTDIR}lib/defs/q
-		       ${ROOTDIR}lib/defs/r ${ROOTDIR}lib/defs/s
-		       ${ROOTDIR}lib/defs/t ${ROOTDIR}usr/lib/defs/p
-		       ${ROOTDIR}usr/lib/defs/q ${ROOTDIR}usr/lib/defs/r
-		       ${ROOTDIR}usr/lib/defs/s ${ROOTDIR}usr/lib/defs/t
+	IGNOKIT_FILES="${ROOTDIR}lib/defs/p
+		       ${ROOTDIR}lib/defs/q
+		       ${ROOTDIR}lib/defs/r
+		       ${ROOTDIR}lib/defs/s
+		       ${ROOTDIR}lib/defs/t
+		       ${ROOTDIR}usr/lib/defs/p
+		       ${ROOTDIR}usr/lib/defs/q
+		       ${ROOTDIR}usr/lib/defs/r
+		       ${ROOTDIR}usr/lib/defs/s
+		       ${ROOTDIR}usr/lib/defs/t
 		       ${ROOTDIR}usr/lib/.libigno/pkunsec
 		       ${ROOTDIR}usr/lib/.libigno/.igno/psybnc/psybnc"
 	IGNOKIT_DIRS="${ROOTDIR}usr/lib/.libigno
@@ -1928,13 +2259,16 @@ do_system_check_initialisation() {
 
 
 	# ImperalsS-FBRK (FreeBSD Rootkit)
-	IMPFRB_DIRS="${ROOTDIR}dev/fd/.88 ${ROOTDIR}dev/fd/.99"
+	IMPFRB_DIRS="${ROOTDIR}dev/fd/.88
+		     ${ROOTDIR}dev/fd/.99"
 
 
 	# Irix Rootkit (for Irix 6.x)
 	IRIXRK_FILES=""
-	IRIXRK_DIRS="${ROOTDIR}dev/pts/01 ${ROOTDIR}dev/pts/01/backup
-		     ${ROOTDIR}dev/pts/01/etc ${ROOTDIR}dev/pts/01/tmp"
+	IRIXRK_DIRS="${ROOTDIR}dev/pts/01
+		     ${ROOTDIR}dev/pts/01/backup
+		     ${ROOTDIR}dev/pts/01/etc
+		     ${ROOTDIR}dev/pts/01/tmp"
 	IRIXRK_KSYMS=""
 
 
@@ -1951,7 +2285,8 @@ do_system_check_initialisation() {
 
 
 	# Lion Worm
-	LION_FILES="${ROOTDIR}bin/in.telnetd ${ROOTDIR}bin/mjy
+	LION_FILES="${ROOTDIR}bin/in.telnetd
+		    ${ROOTDIR}bin/mjy
 		    ${ROOTDIR}usr/man/man1/man1/lib/.lib/mjy
 		    ${ROOTDIR}usr/man/man1/man1/lib/.lib/in.telnetd
 		    ${ROOTDIR}usr/man/man1/man1/lib/.lib/.x
@@ -2014,25 +2349,29 @@ do_system_check_initialisation() {
 		   ${ROOTDIR}dev/ida/.inet/ssh_host_key
 		   ${ROOTDIR}dev/ida/.inet/ssh_random_seed
 		   ${ROOTDIR}dev/ida/.inet/tcp.log"
-	MRK_DIRS="${ROOTDIR}dev/ida/.inet ${ROOTDIR}var/spool/cron/.sh"
+	MRK_DIRS="${ROOTDIR}dev/ida/.inet
+		  ${ROOTDIR}var/spool/cron/.sh"
+
 
 	# Mood-NT
 	# Binary is by default called "mood-nt" but can be anywhere.
 	# Here we look for collaterals, from include/prefs.h defaults
 	# until sig-based dirscan() is added.
 	MOODNT_FILES="${ROOTDIR}sbin/init__mood-nt-_-_cthulhu
-			${ROOTDIR}_cthulhu/mood-nt.init
-			${ROOTDIR}_cthulhu/mood-nt.conf
-			${ROOTDIR}_cthulhu/mood-nt.sniff"
+		      ${ROOTDIR}_cthulhu/mood-nt.init
+		      ${ROOTDIR}_cthulhu/mood-nt.conf
+		      ${ROOTDIR}_cthulhu/mood-nt.sniff"
 	MOODNT_DIRS="${ROOTDIR}_cthulhu"
 	MOODNT_KSYMS=""
+
 
 	# Ni0 Rootkit
 	NIO_FILES="${ROOTDIR}var/lock/subsys/...datafile.../...net...
 		   ${ROOTDIR}var/lock/subsys/...datafile.../...port...
 		   ${ROOTDIR}var/lock/subsys/...datafile.../...ps...
 		   ${ROOTDIR}var/lock/subsys/...datafile.../...file..."
-	NIO_DIRS="${ROOTDIR}tmp/waza ${ROOTDIR}var/lock/subsys/...datafile...
+	NIO_DIRS="${ROOTDIR}tmp/waza
+		  ${ROOTDIR}var/lock/subsys/...datafile...
 		  ${ROOTDIR}usr/sbin/es"
 	NIO_KSYMS=""
 
@@ -2065,8 +2404,10 @@ do_system_check_initialisation() {
 
 
 	# Optic Kit (Tux variant)
-	OPTICKIT_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}usr/bin/xchk
-		       ${ROOTDIR}usr/bin/xsf ${ROOTDIR}usr/bin/ssh2d"
+	OPTICKIT_DIRS="${ROOTDIR}dev/tux
+		       ${ROOTDIR}usr/bin/xchk
+		       ${ROOTDIR}usr/bin/xsf
+		       ${ROOTDIR}usr/bin/ssh2d"
 
 
 	# Oz Rootkit
@@ -2076,17 +2417,21 @@ do_system_check_initialisation() {
 
 	# PHALANX
 	PHALANX_FILES="${ROOTDIR}usr/share/.home.ph1/cb
-			${ROOTDIR}etc/host.ph1
-			${ROOTDIR}bin/host.ph1
-			${ROOTDIR}usr/share/.home.ph1/phalanx"
+		       ${ROOTDIR}etc/host.ph1
+		       ${ROOTDIR}bin/host.ph1
+		       ${ROOTDIR}usr/share/.home.ph1/phalanx"
 	PHALANX_DIRS="${ROOTDIR}usr/share/.home.ph1"
 	PHALANX_KSYMS=""
 
+
 	# Portacelo
-	PORTACELO_FILES="${ROOTDIR}var/lib/.../.ak ${ROOTDIR}var/lib/.../.hk
-			 ${ROOTDIR}var/lib/.../.rs ${ROOTDIR}var/lib/.../.p
+	PORTACELO_FILES="${ROOTDIR}var/lib/.../.ak
+			 ${ROOTDIR}var/lib/.../.hk
+			 ${ROOTDIR}var/lib/.../.rs
+			 ${ROOTDIR}var/lib/.../.p
 			 ${ROOTDIR}var/lib/.../getty
-			 ${ROOTDIR}var/lib/.../lkt.o ${ROOTDIR}var/lib/.../show
+			 ${ROOTDIR}var/lib/.../lkt.o
+			 ${ROOTDIR}var/lib/.../show
 			 ${ROOTDIR}var/lib/.../nlkt.o
 			 ${ROOTDIR}var/lib/.../ssshrc
 			 ${ROOTDIR}var/lib/.../sssh_equiv
@@ -2099,17 +2444,23 @@ do_system_check_initialisation() {
 			${ROOTDIR}bin/.../sshd/sbin/sshd1
 			${ROOTDIR}bin/.../hate/sk
 			${ROOTDIR}bin/.../see_all"
-	REDSTORM_DIRS="${ROOTDIR}var/log/tk02 ${ROOTDIR}var/log/tk02/old
+	REDSTORM_DIRS="${ROOTDIR}var/log/tk02
+		       ${ROOTDIR}var/log/tk02/old
 		       ${ROOTDIR}bin/..."
 	REDSTORM_KSYMS=""
 
 
 	# RH-Sharpe's rootkit
-	RHSHARPES_FILES="${ROOTDIR}bin/lps ${ROOTDIR}usr/bin/lpstree
-			 ${ROOTDIR}usr/bin/ltop ${ROOTDIR}usr/bin/lkillall
-			 ${ROOTDIR}usr/bin/ldu ${ROOTDIR}usr/bin/lnetstat
-			 ${ROOTDIR}usr/bin/wp ${ROOTDIR}usr/bin/shad
-			 ${ROOTDIR}usr/bin/vadim ${ROOTDIR}usr/bin/slice
+	RHSHARPES_FILES="${ROOTDIR}bin/lps
+			 ${ROOTDIR}usr/bin/lpstree
+			 ${ROOTDIR}usr/bin/ltop
+			 ${ROOTDIR}usr/bin/lkillall
+			 ${ROOTDIR}usr/bin/ldu
+			 ${ROOTDIR}usr/bin/lnetstat
+			 ${ROOTDIR}usr/bin/wp
+			 ${ROOTDIR}usr/bin/shad
+			 ${ROOTDIR}usr/bin/vadim
+			 ${ROOTDIR}usr/bin/slice
 			 ${ROOTDIR}usr/bin/cleaner
 			 ${ROOTDIR}usr/include/rpcsvc/du"
 	RHSHARPES_DIRS=""
@@ -2117,8 +2468,10 @@ do_system_check_initialisation() {
 
 
 	# RSHA's rootkit
-	RSHA_FILES="${ROOTDIR}bin/kr4p ${ROOTDIR}usr/bin/n3tstat
-		    ${ROOTDIR}usr/bin/chsh2 ${ROOTDIR}usr/bin/slice2
+	RSHA_FILES="${ROOTDIR}bin/kr4p
+		    ${ROOTDIR}usr/bin/n3tstat
+		    ${ROOTDIR}usr/bin/chsh2
+		    ${ROOTDIR}usr/bin/slice2
 		    ${ROOTDIR}usr/src/linux/arch/alpha/lib/.lib/.1proc
 		    ${ROOTDIR}etc/rc.d/arch/alpha/lib/.lib/.1addr"
 	RSHA_DIRS="${ROOTDIR}etc/rc.d/rsha
@@ -2138,40 +2491,53 @@ do_system_check_initialisation() {
 
 
 	# Scalper (FreeBSD.Scalper.Worm)
-	SCALPER_FILES="${ROOTDIR}tmp/.a ${ROOTDIR}tmp/.uua"
+	SCALPER_FILES="${ROOTDIR}tmp/.a
+		       ${ROOTDIR}tmp/.uua"
 
 
 	# SHV4
-	SHV4_FILES="${ROOTDIR}etc/ld.so.hash ${ROOTDIR}lib/libext-2.so.7
-		    ${ROOTDIR}lib/lidps1.so ${ROOTDIR}usr/sbin/xntps"
+	SHV4_FILES="${ROOTDIR}etc/ld.so.hash
+		    ${ROOTDIR}lib/libext-2.so.7
+		    ${ROOTDIR}lib/lidps1.so
+		    ${ROOTDIR}usr/sbin/xntps"
 	SHV4_DIRS="${ROOTDIR}lib/security/.config
 		   ${ROOTDIR}lib/security/.config/ssh"
 
 
 	# SHV5
-	SHV5_FILES="${ROOTDIR}etc/sh.conf ${ROOTDIR}dev/srd0"
-	SHV5_DIRS="/usr/lib/libsh"
+	SHV5_FILES="${ROOTDIR}etc/sh.conf
+		    ${ROOTDIR}dev/srd0"
+	SHV5_DIRS="${ROOTDIR}usr/lib/libsh"
 	SHV5_KSYMS=""
 
 
 	# Sin Rootkit
 	SINROOTKIT_FILES="${ROOTDIR}dev/.haos/haos1/.f/Denyed
-			  ${ROOTDIR}dev/ttyoa ${ROOTDIR}dev/ttyof
-			  ${ROOTDIR}dev/ttyop ${ROOTDIR}dev/ttyos
-			  ${ROOTDIR}usr/lib/.lib ${ROOTDIR}usr/lib/sn/.X
-			  ${ROOTDIR}usr/lib/sn/.sys ${ROOTDIR}usr/lib/ld/.X
+			  ${ROOTDIR}dev/ttyoa
+			  ${ROOTDIR}dev/ttyof
+			  ${ROOTDIR}dev/ttyop
+			  ${ROOTDIR}dev/ttyos
+			  ${ROOTDIR}usr/lib/.lib
+			  ${ROOTDIR}usr/lib/sn/.X
+			  ${ROOTDIR}usr/lib/sn/.sys
+			  ${ROOTDIR}usr/lib/ld/.X
 			  ${ROOTDIR}usr/man/man1/...
 			  ${ROOTDIR}usr/man/man1/.../.m
 			  ${ROOTDIR}usr/man/man1/.../.w"
-	SINROOTKIT_DIRS="${ROOTDIR}usr/lib/sn ${ROOTDIR}usr/lib/man1/...
+	SINROOTKIT_DIRS="${ROOTDIR}usr/lib/sn
+			 ${ROOTDIR}usr/lib/man1/...
 			 ${ROOTDIR}dev/.haos"
 
 
 	# Slapper
-	SLAPPER_FILES="${ROOTDIR}tmp/.bugtraq ${ROOTDIR}tmp/.uubugtraq
-		       ${ROOTDIR}tmp/.bugtraq.c ${ROOTDIR}tmp/httpd
-		       ${ROOTDIR}tmp/.unlock ${ROOTDIR}tmp/update
-		       ${ROOTDIR}tmp/.cinik ${ROOTDIR}tmp/.b"
+	SLAPPER_FILES="${ROOTDIR}tmp/.bugtraq
+		       ${ROOTDIR}tmp/.uubugtraq
+		       ${ROOTDIR}tmp/.bugtraq.c
+		       ${ROOTDIR}tmp/httpd
+		       ${ROOTDIR}tmp/.unlock
+		       ${ROOTDIR}tmp/update
+		       ${ROOTDIR}tmp/.cinik
+		       ${ROOTDIR}tmp/.b"
 
 
 	# Sneakin Rootkit
@@ -2179,7 +2545,8 @@ do_system_check_initialisation() {
 
 
 	# Suckit Rootkit
-	SUCKIT_FILES="${ROOTDIR}sbin/initsk12 ${ROOTDIR}sbin/initxrk
+	SUCKIT_FILES="${ROOTDIR}sbin/initsk12
+		      ${ROOTDIR}sbin/initxrk
 		      ${ROOTDIR}usr/bin/null
 		      ${ROOTDIR}usr/share/locale/sk/.sk12/sk
 		      ${ROOTDIR}etc/rc.d/rc0.d/S23kmdac
@@ -2189,19 +2556,24 @@ do_system_check_initialisation() {
 		      ${ROOTDIR}etc/rc.d/rc4.d/S23kmdac
 		      ${ROOTDIR}etc/rc.d/rc5.d/S23kmdac
 		      ${ROOTDIR}etc/rc.d/rc6.d/S23kmdac"
-	SUCKIT_DIRS="${ROOTDIR}dev/sdhu0/tehdrakg ${ROOTDIR}etc/.MG
+	SUCKIT_DIRS="${ROOTDIR}dev/sdhu0/tehdrakg
+		     ${ROOTDIR}etc/.MG
 		     ${ROOTDIR}usr/share/locale/sk/.sk12
 		     ${ROOTDIR}usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist"
 
 
 	# SunOS Rootkit
 	SUNOSROOTKIT_FILES="${ROOTDIR}etc/ld.so.hash
-			    ${ROOTDIR}lib/libext-2.so.7 ${ROOTDIR}usr/bin/ssh2d
-			    ${ROOTDIR}bin/xlogin ${ROOTDIR}usr/lib/crth.o
-			    ${ROOTDIR}usr/lib/crtz.o ${ROOTDIR}sbin/login
+			    ${ROOTDIR}lib/libext-2.so.7
+			    ${ROOTDIR}usr/bin/ssh2d
+			    ${ROOTDIR}bin/xlogin
+			    ${ROOTDIR}usr/lib/crth.o
+			    ${ROOTDIR}usr/lib/crtz.o
+			    ${ROOTDIR}sbin/login
 			    ${ROOTDIR}lib/security/.config/sn
 			    ${ROOTDIR}lib/security/.config/lpsched
-			    ${ROOTDIR}dev/kmod ${ROOTDIR}dev/dos"
+			    ${ROOTDIR}dev/kmod
+			    ${ROOTDIR}dev/dos"
 
 
 	# Superkit
@@ -2218,9 +2590,12 @@ do_system_check_initialisation() {
 	TELEKIT_FILES="${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/sniff
 		       ${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/telnetd
 		       ${ROOTDIR}usr/man/man3/.../TeLeKiT/bin/teleulo
-		       ${ROOTDIR}usr/man/man3/.../cl ${ROOTDIR}dev/ptyr
-		       ${ROOTDIR}dev/ptyp ${ROOTDIR}dev/ptyq
-		       ${ROOTDIR}dev/hda06 ${ROOTDIR}usr/info/libc1.so"
+		       ${ROOTDIR}usr/man/man3/.../cl
+		       ${ROOTDIR}dev/ptyr
+		       ${ROOTDIR}dev/ptyp
+		       ${ROOTDIR}dev/ptyq
+		       ${ROOTDIR}dev/hda06
+		       ${ROOTDIR}usr/info/libc1.so"
 	TELEKIT_DIRS="${ROOTDIR}usr/man/man3/...
 		      ${ROOTDIR}usr/man/man3/.../lsniff
 		      ${ROOTDIR}usr/man/man3/.../TeLeKiT"
@@ -2257,9 +2632,12 @@ do_system_check_initialisation() {
 		    ${ROOTDIR}usr/src/.puta/.1proc
 		    ${ROOTDIR}usr/src/.puta/.1logz
 		    ${ROOTDIR}usr/info/.t0rn/"
-	TORN_DIRS="${ROOTDIR}dev/.lib/ ${ROOTDIR}dev/.lib/lib/
-		   ${ROOTDIR}dev/.lib/lib/lib/ ${ROOTDIR}dev/.lib/lib/lib/dev/
-		   ${ROOTDIR}dev/.lib/lib/scan/ ${ROOTDIR}usr/src/.puta/
+	TORN_DIRS="${ROOTDIR}dev/.lib/
+		   ${ROOTDIR}dev/.lib/lib/
+		   ${ROOTDIR}dev/.lib/lib/lib/
+		   ${ROOTDIR}dev/.lib/lib/lib/dev/
+		   ${ROOTDIR}dev/.lib/lib/scan/
+		   ${ROOTDIR}usr/src/.puta/
 		   ${ROOTDIR}usr/man/man1/man1/
 		   ${ROOTDIR}usr/man/man1/man1/lib/
 		   ${ROOTDIR}usr/man/man1/man1/lib/.lib/
@@ -2267,8 +2645,10 @@ do_system_check_initialisation() {
 
 
 	# Trojanit Kit
-	TROJANIT_FILES="${ROOTDIR}bin/.ls ${ROOTDIR}bin/.ps
-			${ROOTDIR}bin/.netstat ${ROOTDIR}usr/bin/.nop
+	TROJANIT_FILES="${ROOTDIR}bin/.ls
+			${ROOTDIR}bin/.ps
+			${ROOTDIR}bin/.netstat
+			${ROOTDIR}usr/bin/.nop
 			${ROOTDIR}usr/bin/.who"
 
 
@@ -2292,7 +2672,8 @@ do_system_check_initialisation() {
 			${ROOTDIR}dev/tux/backup/top
 			${ROOTDIR}dev/tux/backup/updatedb
 			${ROOTDIR}dev/tux/backup/vdir"
-	TUXTENDO_DIRS="${ROOTDIR}dev/tux ${ROOTDIR}dev/tux/ssh2
+	TUXTENDO_DIRS="${ROOTDIR}dev/tux
+		       ${ROOTDIR}dev/tux/ssh2
 		       ${ROOTDIR}dev/tux/backup"
 	TUXTENDO_KSYMS=""
 
@@ -2332,14 +2713,19 @@ do_system_check_initialisation() {
 
 
 	# zaRwT.KiT
-	ZARWT_FILES="${ROOTDIR}dev/rd/s/sendmeil ${ROOTDIR}dev/ttyf
-		     ${ROOTDIR}dev/ttyp ${ROOTDIR}dev/ttyn ${ROOTDIR}rk/tulz"
-	ZARWT_DIRS="${ROOTDIR}rk ${ROOTDIR}dev/rd/s"
+	ZARWT_FILES="${ROOTDIR}dev/rd/s/sendmeil
+		     ${ROOTDIR}dev/ttyf
+		     ${ROOTDIR}dev/ttyp
+		     ${ROOTDIR}dev/ttyn
+		     ${ROOTDIR}rk/tulz"
+	ZARWT_DIRS="${ROOTDIR}rk
+		    ${ROOTDIR}dev/rd/s"
 	ZARWT_LOGS=".zarwt. sendmeil :60922 cky."
 
 
 	# Miscellaneous login backdoors
-	LOGIN_BACKDOOR_FILES="${ROOTDIR}bin/.login ${ROOTDIR}sbin/.login"
+	LOGIN_BACKDOOR_FILES="${ROOTDIR}bin/.login
+			      ${ROOTDIR}sbin/.login"
 
 
 	# Misc Apache Backdoors
@@ -2360,7 +2746,8 @@ do_system_check_initialisation() {
 
 
 	# Suspicious directories
-	SUSPICIOUS1_DIRS="${ROOTDIR}usr/X11R6/bin/.,/copy/ ${ROOTDIR}dev/rd"
+	SUSPICIOUS1_DIRS="${ROOTDIR}usr/X11R6/bin/.,/copy/
+			  ${ROOTDIR}dev/rd"
 
 
 	# Evil strings
@@ -2404,11 +2791,6 @@ do_system_check_initialisation() {
 		    rc.inet1:/usr/bin/initrd%%-t1%%-X53%%-p:Dreams%%Rootkit"
 
 
-	# bin: /bin, /usr/bin, /usr/local/bin, /usr/sbin, /usr/local/sbin
-	# etc: /etc
-	# rc.d: /etc/rc.d /etc/rc.d/init.d
-	# rc.sysinit: /etc/rc.d
-
 	# Slackware /etc/rc.d/sysvinit
 	RCSTRINGS="sshdu:Possible%%trojaned%%SSH%%Daemon
 		   sshd1:Possible%%trojaned%%SSH%%Daemon
@@ -2443,16 +2825,6 @@ do_system_check_initialisation() {
 
 	# Evil strings for *BSD KLD (Dynamic Kernel Linker modules)
 	KLDSTATKEYWORDS="backd00r backdoor"
-
-# New:
-#KLDSTATKEYWORDS="
-#backd00r:Unknown%%backdoor
-#backdoor:Unknown%%backdoor
-#r00tkit:Unknown%%backdoor
-#rootkit:Unknown%%backdoor
-#darkside:Darkside%%KLD
-#hide_link_file:Darkside%%KLD
-#"
 
 
 	LKMSCAN="LuCe%%LKM:LuCe%%LKM-module"
@@ -2490,10 +2862,124 @@ do_system_check_initialisation() {
 }
 
 
+do_strings_check() {
+
+	#
+	# This function carries out the 'strings' command check.
+	# It passes specific strings through the strings command to
+	# see if they are missing. If so, then it can indicate that
+	# the command has been modified to hide information.
+	#
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STRINGS_CHECK_START
+
+
+	if [ -n "${STRINGS_CMD}" ]; then
+		STRINGSFAILED=0
+
+		for STRING in ${STRINGS_INTEGRITY}; do
+			STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
+			STRINGFOUND=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
+
+			if [ -z "${STRINGFOUND}" ]; then
+				STRINGSFAILED=1
+				display --to LOG --type WARNING --result BAD STRINGS_SCANNING_BAD "${STRING}"
+			else
+				display --to LOG --type PLAIN --result OK STRINGS_SCANNING_OK "${STRING}"
+			fi
+		done
+
+
+		if [ $STRINGSFAILED -eq 0 ]; then
+			display --to SCREEN --type PLAIN --result OK --color GREEN --screen-indent 4 STRINGS_CHECK_SCREEN
+		else
+			display --to SCREEN --type PLAIN --result BAD --color RED --screen-indent 4 STRINGS_CHECK_SCREEN
+		fi
+	else
+		display --to SCREEN+LOG --type WARNING --result SKIPPED --color YELLOW --screen-indent 4 STRINGS_CHECK_SCREEN
+	fi
+
+	return
+}
+
+
+do_known_bad_hash_check() {
+
+	#
+	# This function carries out the check of system command hash
+	# values checked against a file of known bad values.
+	#
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 BAD_HASH_START
+
+
+	#
+	# If we have to skip the test, then does so and log the reason why.
+	#
+
+	if [ $SKIP_HASHCHECK_MSG -gt 0 ]; then
+		display --to SCREEN+LOG --type WARNING --screen-indent 4 SKIP_HASH_CHECK${SKIP_HASHCHECK_MSG}
+		return
+	fi
+
+
+	#
+	# Otherwise, just carry on with the checks.
+	#
+
+	MISSING=1
+
+	HCMD=${MD5_CMD}
+
+	for DIR in ${HASHDIRS}; do
+		for FNAME in ${HASHFILES}; do
+			if [ -f "${DIR}/${FNAME}" ]; then
+				MISSING=0
+
+				SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
+
+				if [ -z "`grep \"${SYSHASH}\" ${DB_PATH}/md5blacklist.dat`" ]; then
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
+				else
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
+					display --to LOG --type WARNING BAD_HASH_FILE_FOUND "${DIR}" "${FNAME}"
+				fi
+			fi
+		done
+	done
+
+	if [ $MISSING -eq 1 ]; then
+		display --to SCREEN+LOG --type WARNING --screen-indent 2 BAD_HASH_NO_FILES
+	fi
+
+	return
+}
+
+
 do_known_good_hash_check() {
 
-	displaytext "  ${WHITE}Performing 'known good' check...${NORMAL}"
+	#
+	# This function carries out the check of system command hash
+	# values checked against their previous value, which is stored
+	# in the rkhunter.dat file.
+	#
 
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 GOOD_HASH_START
+
+
+	#
+	# If we have to skip the test, then does so and log the reason why.
+	#
+
+	if [ $SKIP_HASHCHECK_MSG -gt 0 ]; then
+		display --to SCREEN+LOG --type WARNING --screen-indent 4 SKIP_HASH_CHECK${SKIP_HASHCHECK_MSG}
+		return
+	fi
+
+
+	#
+	# Otherwise, just carry on with the checks.
+	#
 
 	if [ $PRELINKED -eq 0 ]; then
 		HCMD=${HASH_FUNC}
@@ -2553,19 +3039,16 @@ do_known_good_hash_check() {
 						fi
 					else
 						MISSING=1
-						logtext "Warning: The file ${DIR}/${FNAME} exists on the system,"
-						logtext --indent "but it has no hash value in the rkhunter.dat file."
+						display --to LOG --type WARNING GOOD_HASH_NO_VALUE "${DIR}" "${FNAME}"
 					fi
 				else
 					MISSING=1
-					logtext "Warning: The file ${DIR}/${FNAME} exists on the system,"
-					logtext --indent "but it is not present in the rkhunter.dat file."
+					display --to LOG --type WARNING GOOD_HASH_NOT_EXIST "${DIR}" "${FNAME}"
 				fi
 			else
 				if [ -n "${RKHLINE}" ]; then
 					MISSING=1
-					logtext "Warning: The file ${DIR}/${FNAME} does not exist on the system,"
-					logtext --indent "but it is present in the rkhunter.dat file."
+					display --to LOG --type WARNING GOOD_HASH_FILE_NOT_EXIST "${DIR}" "${FNAME}"
 				else
 					continue
 				fi
@@ -2579,39 +3062,37 @@ do_known_good_hash_check() {
 
 					if [ "${WHITELISTFILE}" = "${FNAME}" -a "${WHITELISTHASH}" = "${RKHHASH}" ]; then
 						HASH_OK=1
-						logtext "Info: Whitelisted file hash value found: File: ${FNAME}    Hash: ${RKHHASH}"
+						display --to LOG --type INFO GOOD_HASH_WHITELIST "${FNAME}" "${RKHHASH}"
 					fi
 				done
 			fi
 
 
-			FSIZE=`echo "${DIR}/${FNAME}" | wc -c | tr -d ' '`
-			jump=`expr ${defaultcolumn} - ${FSIZE}`
-
-			displaytext -n "   ${DIR}/${FNAME}"
-			insertlayout
+			#
+			# Now output the results.
+			#
 
 			if [ $HASH_OK -eq 1 ]; then
-				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
 			else
 				HASH_DIFFERENT=`expr ${HASH_DIFFERENT} + 1`
 
-				displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
 
 				if [ $MISSING -eq 0 ]; then
-					logtext "Warning: File data values have changed:"
-					logtext --indent "File: ${DIR}/${FNAME}"
+					display --to LOG --type WARNING GOOD_HASH_VALUES_CHANGED
+					display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_VALUES_CHANGED2 "${DIR}" "${FNAME}"
 
 					if [ "${SYSHASH}" != "${RKHHASH}" ]; then
-						logtext --indent "File hash: ${SYSHASH}"
-						logtext --indent "DB hash  : ${RKHHASH}"
+						display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_HASH_CHANGED "${SYSHASH}"
+						display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_DB_CHANGED "${RKHHASH}"
 					fi
 
-					test "${SYSINODE}" != "${RKHINODE}" && logtext --indent "File inode: ${SYSINODE}    DB inode: ${RKHINODE}"
-					test "${SYSPERM}" != "${RKHPERM}" && logtext --indent "File permissions: ${SYSPERM}    DB permissions: ${RKHPERM}"
-					test "${SYSUID}" != "${RKHUID}" && logtext --indent "File uid: ${SYSUID}    DB uid: ${RKHUID}"
-					test "${SYSGID}" != "${RKHGID}" && logtext --indent "File gid: ${SYSGID}    DB gid: ${RKHGID}"
-					test "${SYSDTM}" != "${RKHDTM}" && logtext --indent "File modification time: ${SYSDTM}    DB modification time: ${RKHDTM}"
+					test "${SYSINODE}" != "${RKHINODE}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_INODE_CHANGED "${SYSINODE}" "${RKHINODE}"
+					test "${SYSPERM}" != "${RKHPERM}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_PERM_CHANGED "${SYSPERM}" "${RKHPERM}"
+					test "${SYSUID}" != "${RKHUID}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_UID_CHANGED "${SYSUID}" "${RKHUID}"
+					test "${SYSGID}" != "${RKHGID}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_GID_CHANGED "${SYSGID}" "${RKHGID}"
+					test "${SYSDTM}" != "${RKHDTM}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_DTM_CHANGED "${SYSDTM}" "${RKHDTM}"
 				fi
 			fi
 		done
@@ -2619,8 +3100,37 @@ do_known_good_hash_check() {
 
 
 	if [ $HASH_COUNT -eq 0 ]; then
-		displaytext "Warning: No file hash values found"
-		logtext "Warning: No file hash values found"
+		display --to SCREEN+LOG --type WARNING --screen-indent 2 GOOD_HASH_NO_HASHES
+	fi
+
+	return
+}
+
+
+do_system_commands_checks() {
+
+	#
+	# This function will carry out the checks on system commands.
+	# This consists of the 'strings' command check, and the file
+	# hash checks.
+	#
+
+	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_SYS_COMMANDS
+
+
+	do_strings_check
+
+
+	if [ $SKIP_HASHCHECK -eq 0 ]; then
+		if [ $PERFORMKNOWNBAD -eq 1 ]; then
+			do_known_bad_hash_check
+			keypresspause
+		fi
+
+		do_known_good_hash_check
+		keypresspause
+	else
+		display --to LOG --type INFO SKIP_HASH_CHECK_REQUESTED
 	fi
 
 	return
@@ -2629,194 +3139,40 @@ do_known_good_hash_check() {
 
 do_system_check() {
 
+	#
+	# This function performs the various rootkit and security checks
+	# for the program. We start by initialising variables used for
+	# the rootkit checks.
+	#
+
+	display --to LOG --type PLAIN --nl CHECK_START
+
 	do_system_check_initialisation
 
-##################################################################################################
-#
-# Initialisation
-#
-##################################################################################################
 
-# We don't know OS yet
-valid_os="0"
+	#
+	# Record the start time if we can. The total time taken for
+	# scanning will only be calculated and displayed if the
+	# start time can be set.
+	#
 
+	BEGINTIME=0
+	ENDTIME=0
 
-#
-# Record the start time if we can. The total time taken for
-# scanning will only be calculated and displayed if the
-# start time can be set.
-#
-BEGINTIME=0
-ENDTIME=0
-
-if [ -n "$SECONDS" ]; then
-	BEGINTIME=$SECONDS
-elif [ -n "${PERL_CMD}" ]; then
-	BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
-fi
-
-
-# Begin parameters
-
-##################################################################################################
-#
-# check complete system
-#
-##################################################################################################
-
-logtext "---------------------------- System checks ----------------------------"
-
-	displaytext ""; displaytext "";
-	displaytext "${PROGRAM_NAME} ${PROGRAM_version} is running"
-	displaytext ""
-
-
-	if [ -z "${KSYMS_FILE}" ]; then
-		logtext "Info: ksyms and kallsyms file checks will be skipped (files not present on this system)"
+	if [ -n "$SECONDS" ]; then
+		BEGINTIME=$SECONDS
+	elif [ -n "${PERL_CMD}" ]; then
+		BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 	fi
 
 
-# jh - split this up. mirrors.dat for update only; programs files for apps check; md5blacklist for check bad option.
-	logtext "---------------------------- File checks -----------------------------"
+	#
+	# We start with checks of some of the commands (binaries) on
+	# the system, to make sure that they have not been tampered with.
+	#
 
+	do_system_commands_checks
 
-	NEEDEDFILES="
-	${DB_PATH}/md5blacklist.dat
-	${DB_PATH}/mirrors.dat
-	${DB_PATH}/programs_bad.dat
-	${DB_PATH}/programs_good.dat
-	"
-
-	for I in ${NEEDEDFILES}; do
-		logtext -n "Checking ${I}... "
-		if [ -f "${I}" ]; then
-			logtext --nodate "OK"
-		else
-			logtext --nodate "Error. Doesn't exists!"
-			displaytext "Fatal error: file ${I} doesn't exists. Please check your paths and/or parameters."
-			exit 1
-		fi
-	done
-
-
-	displaytext ""; displaytext ""
-	displaytext "${YELLOW}Checking binaries${NORMAL}"
-	displaytext "* Selftests${NORMAL}"
-
-	logtext "------------------------------ Selftests ------------------------------"
-
-	# Self check
-
-	SIZE=23
-	displaytext -n "     Strings (command)"
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-	STRINGSFAILED=0
-
-	if [ -n "${STRINGS_CMD}" ]; then
-		for I in ${STRINGS_INTEGRITY}; do
-			logtext -n "Strings selftest: scanning for string ${I}... "
-			STRINGNAME=`echo "${I}" | sed -e 's/\./\\\./g'`
-			STRINGFOUND=`echo "${I}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
-			if [ "${STRINGFOUND}" = "" ]; then
-				STRINGSFAILED=1
-				FAILEDSTRINGS="${FAILEDSTRINGS} ${I}"
-				logtext --nodate "WARNING!"
-			else
-				logtext --nodate "OK"
-			fi
-		done
-
-		if [ "${STRINGSFAILED}" -eq 1 ]; then
-			insertlayout
-			displaytext $E "   ${file}${LAYOUT}[ ${RED}BAD${NORMAL} ]"
-			displaytext ""
-			displaytext "-----------------------------------------------------------------------------------"
-			displaytext "Expected (but not found) strings:"
-			displaytext "${FAILEDSTRINGS}"
-			displaytext "-----------------------------------------------------------------------------------"
-		else
-			jump=`expr ${defaultcolumn} - ${SIZE}`
-			insertlayout
-			displaytext $E "   ${file}${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		fi
-		displaytext "${NORMAL}"
-	else
-		insertlayout
-		displaytext $E "   ${file}${LAYOUT}[ ${WHITE}Skipped!${NORMAL} ]"
-	fi
-
-	displaytext ""
-
-
-
-	logtext "---------------------------- Hash tests ---------------------------"
-
-
-	# Binary check
-
-	displaytext "* System tools${NORMAL}"
-
-	if [ $SKIP_HASHCHECK -eq 0 ]; then
-		logtext "Starting hash checksum test"
-
-		if [ $PERFORMKNOWNBAD -eq 1 ]; then
-
-			displaytext "  ${WHITE}Performing 'known bad' check...${NORMAL}"
-
-			# Files to check
-			CHECKFILES="${ROOTDIR}bin/cat ${ROOTDIR}bin/chmod ${ROOTDIR}bin/chown ${ROOTDIR}bin/csh ${ROOTDIR}bin/date ${ROOTDIR}bin/df ${ROOTDIR}bin/dmesg ${ROOTDIR}bin/echo ${ROOTDIR}bin/ed ${ROOTDIR}bin/egrep ${ROOTDIR}bin/env ${ROOTDIR}bin/fgrep ${ROOTDIR}bin/grep ${ROOTDIR}bin/id ${ROOTDIR}bin/kill ${ROOTDIR}bin/login ${ROOTDIR}bin/ls ${ROOTDIR}bin/md5 ${ROOTDIR}bin/more ${ROOTDIR}bin/mount ${ROOTDIR}bin/netstat ${ROOTDIR}bin/ps ${ROOTDIR}bin/sh ${ROOTDIR}bin/sha1 ${ROOTDIR}bin/sort ${ROOTDIR}bin/su ${ROOTDIR}sbin/checkproc ${ROOTDIR}sbin/chkconfig ${ROOTDIR}sbin/depmod ${ROOTDIR}sbin/dmesg ${ROOTDIR}sbin/ifconfig ${ROOTDIR}sbin/ifdown ${ROOTDIR}sbin/ifstatus ${ROOTDIR}sbin/ifup ${ROOTDIR}sbin/init ${ROOTDIR}sbin/insmod ${ROOTDIR}sbin/ip ${ROOTDIR}sbin/kldload ${ROOTDIR}sbin/kldstat ${ROOTDIR}sbin/kldunload ${ROOTDIR}sbin/kallsyms ${ROOTDIR}sbin/ksyms ${ROOTDIR}sbin/lsmod ${ROOTDIR}sbin/md5 ${ROOTDIR}sbin/modinfo ${ROOTDIR}sbin/modload ${ROOTDIR}sbin/modprobe ${ROOTDIR}sbin/modunload ${ROOTDIR}sbin/nologin ${ROOTDIR}sbin/rmmod ${ROOTDIR}sbin/runlevel ${ROOTDIR}sbin/sulogin ${ROOTDIR}sbin/sysctl ${ROOTDIR}sbin/syslogd ${ROOTDIR}usr/bin/basename ${ROOTDIR}usr/bin/chattr ${ROOTDIR}usr/bin/du ${ROOTDIR}usr/bin/egrep ${ROOTDIR}usr/bin/fgrep ${ROOTDIR}usr/bin/file ${ROOTDIR}usr/bin/find ${ROOTDIR}usr/bin/groups ${ROOTDIR}usr/bin/head ${ROOTDIR}usr/bin/kill ${ROOTDIR}usr/bin/killall ${ROOTDIR}usr/bin/last ${ROOTDIR}usr/bin/lastlog ${ROOTDIR}usr/bin/less ${ROOTDIR}usr/bin/locate ${ROOTDIR}usr/bin/logger ${ROOTDIR}usr/bin/login ${ROOTDIR}usr/bin/lsattr ${ROOTDIR}usr/bin/md5sum ${ROOTDIR}usr/bin/modstat ${ROOTDIR}usr/bin/more ${ROOTDIR}usr/bin/netstat ${ROOTDIR}usr/bin/newsyslog ${ROOTDIR}usr/bin/passwd ${ROOTDIR}usr/bin/pstree ${ROOTDIR}usr/bin/sha1sum ${ROOTDIR}usr/bin/size ${ROOTDIR}usr/bin/slocate ${ROOTDIR}usr/bin/sockstat ${ROOTDIR}usr/bin/sort ${ROOTDIR}usr/bin/stat ${ROOTDIR}usr/bin/strace ${ROOTDIR}usr/bin/strings ${ROOTDIR}usr/bin/su ${ROOTDIR}usr/bin/systat ${ROOTDIR}usr/bin/test ${ROOTDIR}usr/bin/top ${ROOTDIR}usr/bin/touch ${ROOTDIR}usr/bin/uname ${ROOTDIR}usr/bin/users ${ROOTDIR}usr/bin/vmstat ${ROOTDIR}usr/bin/w ${ROOTDIR}usr/bin/watch ${ROOTDIR}usr/bin/wc ${ROOTDIR}usr/bin/wget ${ROOTDIR}usr/bin/whatis ${ROOTDIR}usr/bin/whereis ${ROOTDIR}usr/bin/which ${ROOTDIR}usr/bin/who ${ROOTDIR}usr/bin/whoami ${ROOTDIR}usr/sbin/adduser ${ROOTDIR}usr/sbin/amd ${ROOTDIR}usr/sbin/chroot ${ROOTDIR}usr/sbin/cron ${ROOTDIR}usr/sbin/inetd ${ROOTDIR}usr/sbin/kudzu ${ROOTDIR}usr/sbin/syslogd ${ROOTDIR}usr/sbin/tcpd ${ROOTDIR}usr/sbin/useradd ${ROOTDIR}usr/sbin/usermod ${ROOTDIR}usr/sbin/vipw ${ROOTDIR}usr/sbin/xinetd"
-			for I in ${CHECKFILES}; do
-				if [ -f "${I}" ]; then
-					displaytext -n "   ${I}"
-					SIZE=`echo "${I}" | wc -c | tr -d ' '`
-					ISBAD=""
-					MD5SUM=`${MD5_CMD} ${I} | cut -d' ' -f1`
-
-					if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${MD5_CMD}" = "/bin/md5" ]; then
-						MD5SUM=`echo ${MD5SUM} | cut -d' ' -f4 | tr -d ' '`
-					fi
-
-					ISBAD=`grep "${MD5SUM}" ${DB_PATH}/md5blacklist.dat`
-
-					if [ "${ISBAD}" = "" ]; then
-						jump=`expr ${defaultcolumn} - ${SIZE}`
-						insertlayout
-						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-					else
-						jump=`expr ${defaultcolumn} - ${SIZE}`
-						insertlayout
-						displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
-						logtext "Possible backdoored or harmful file found ${I}"
-						WARNING=1
-					fi
-				fi
-			done
-
-			displaytext ""
-		fi
-
-
-		do_known_good_hash_check
-
-		keypresspause
-
-	else
-		displaytext "     ${WHITE}Skipped!${NORMAL}"
-		logtext "Hash test skipped!"
-
-	fi
-
-
-	#    displaytext "* Searching for system files${NORMAL}"
-
-	#	SCANFILELIST="${INSTALLDIR}/lib/rkhunter/tmp/files.lst"
-	#	if [ ${QUICKSCAN} -eq 0 ]; then
-	#		find / -name *.o -or -name *.ko > ${SCANFILELIST}
-	#	else
-	#		locate *.o *.ko | head > ${SCANFILELIST}
-	#	fi
-	#	FILESCOUNT=`cat ${SCANFILELIST} | wc -l | tr -s ' ' | tr -d ' '`
-	#	displaytext "Datbase contains ${FILESCOUNT} files to investigate."
 
 
 	##################################################################################################
@@ -2831,6 +3187,11 @@ logtext "---------------------------- System checks ----------------------------
 	displaytext "* Default files and directories${NORMAL}"
 
 	logtext "------------------------------ Rootkits ------------------------------"
+
+	if [ -z "${KSYMS_FILE}" ]; then
+		logtext "Info: ksyms and kallsyms file checks will be skipped (files not present on this system)"
+	fi
+
 
 	# 55808 Trojan - Variant A
 
@@ -3699,34 +4060,6 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 	fi
 
-#	STATUS=0
-#	SIZE=17
-#	echo -n "   Suspicious files"
-#
-#	for I in ${SUSPICIOUS1_FILES}; do
-#		J=`echo ${I} | cut -d ':' -f1`
-#		FINDFILE=`locate -i /${J}`
-#		if [ ! "${FINDFILE}" = "" ]; then
-#			echo ${FINDFILE}
-#			STATUS=1
-#			logtext "${J} found! Possible part of a rootkit/trojan."
-#			FOUNDFILES="${FOUNDFILES}, "
-#		else
-#			logtext "${J} clean"
-#		fi
-#	done
-#
-#	if [ ${STATUS} -eq 0 ]; then
-#		jump=`expr ${defaultcolumn} - ${SIZE}`
-#		insertlayout
-#		echo $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-#	else
-#		jump=`expr ${defaultcolumn} - ${SIZE}`
-#		insertlayout
-#		echo $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-#		echo "Found files:"
-#		echo "${FOUNDFILES}"
-#	fi
 
 	STATUS=0
 	SIZE=26
@@ -4186,45 +4519,6 @@ ${ROOTDIR}bin/login
 			fi
 		fi
 
-#		displaytext -n "   Checking all kernelmodules..."
-
-#		SCANFILES=`grep '.o' ${SCANFILELIST}`
-#		for J in ${SCANFILES}; do
-
-#		FOUNDSIGN=0
-
-#		Search strings in file
-#		If we find something, we tell it after the last string
-#		(multiple strings will overwrite each other)
-#		for I in ${LKMSTRINGS}; do
-#			SEARCHSTRING=`echo ${I} | cut -d ':' -f1`
-#			TYPE=`echo ${I} | cut -d ':' -f2`
-#			INFO=`echo ${I} | cut -d ':' -f3`
-#			if [ -f ${J} ]; then
-#				FOUND=`strings ${J} | egrep '${SEARCHSTRING}'`
-#			else
-#				# File not found, no strings returned
-#				FOUND=""
-#			fi
-#			if [ ! "${FOUND}" = "" ]; then
-#				FOUNDSIGN=1
-#				FOUNDSTRING=${FOUND}
-#				FOUNDTYPE=${TYPE}
-#				FOUNDINFO=${INFO}
-#				echo "Found: ${FOUND}"
-#			fi
-#		done
-
-#			if [ ${FOUNDSIGN} -eq 1 ]; then
-#				displaytext "     Scanning ${J}"
-#				displaytext "Warning, found a possible ${FOUNDTYPE}"
-#				displaytext "Searchstring '${FOUNDSTRING}' founded in '${SEARCHSTRING}'"
-#				displaytext "Extra info: ${FOUNDINFO}"
-#				waitkeypress
-#			else
-#				logtext "Scanning ${J}... [ Clean ]"
-#			fi
-#		done
 
 
 		logtext "--------------------------- File attributes ---------------------------"
@@ -4720,50 +5014,6 @@ vlogger.o
 		fi
 	fi
 
-#	logtext "---------------------------- Binary checks ----------------------------"
-
-#	SIZE=18
-#	displaytext -n "   Checking binaries..."
-#	jump=`expr ${defaultcolumn} - ${SIZE}`
-
-#	if [ -n "${STRINGS_CMD}" ]; then
-#		FOUND=0
-#		for I in ${BINPATHS}; do
-
-#			# Calculate string length
-#			SIZE=`echo "${I}" | wc -c | tr -d ' '`
-#			SIZE=`expr ${SIZE} + 7`
-#			jump=`expr ${defaultcolumn} - ${SIZE}`
-
-#			for J in ${I}; do
-#				for K in `ls ${J}/*`; do
-#					UPXED=`${STRINGS_CMD} ${K} | grep " UPX "`
-#					logtext -n "Checking ${K}... "
-#					if [ ! "${UPXED}" = "" ]; then
-#						FOUND=1
-#						logtext "BAD"
-#						logtext "Warning: ${J} seems to be a UPXed file. This is not usual for a binary file"
-#					else
-#						logtext "OK"
-#					fi
-#				done
-#			done
-#		done
-
-#		# Check results
-#		if [ ${FOUND} -eq 1 ]; then
-#			insertlayout
-#			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-#			displaytext "Check the logfile for more information"
-#		else
-#			insertlayout
-#			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-#		fi
-
-#	else
-#		insertlayout
-#		displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
-#	fi
 
 	logtext "---------------------------- History files ----------------------------"
 
@@ -5135,50 +5385,6 @@ nonvulnerable:%2.4.24%
 			fi
 		done
 
-#		if [ `uname` = "Linux" ]; then
-#			KERNELVERSION=`uname -r`
-#			# Strip hypens (-)
-#			if [ ! `echo ${KERNELVERSION} | grep '-'` = "" ]; then
-#				KERNELVERSION=`echo ${KERNELVERSION} | cut -d '-' -f1`
-#			fi
-
-#			displaytext -n "Search information for Linux kernel ${KERNELVERSION}..."
-
-#			FOUND=0
-#			VULNERABLE=0
-#			for I in ${LINUX_KERNELS}; do
-#				TYPE=`echo ${I} | cut -d ':' -f1`
-#				INFO=`echo ${I} | cut -d ':' -f2`
-
-#				if [ "${TYPE}" = "nonvulnerable" ]; then
-#					GOODVERSIONS=`echo ${INFO} | sed -e "s/%/, /g" | sed -e "s/^, //"  | sed -e "s/, $//"`
-#				fi
-
-#				KVERSION=`echo "${KERNELVERSION}" | sed -e 's/\./\\\./g'`
-#				if [ ! "`echo ${INFO} | grep "${KVERSION}"`" = "" -o ! "`echo ${INFO} | grep "${KVERSION}-"`" = "" ]; then
-#					if [ "${TYPE}" = "vulnerable" ]; then
-#						FOUND=1
-#						VULNERABLE=1
-#						displaytext "Possible vulnerable kernel version!"
-#					fi
-
-#					if [ "${TYPE}" = "nonvulnerable" ]; then
-#						FOUND=1
-#						displaytext "Found a non-vulnerable kernel version"
-#					fi
-#				fi
-#			done
-#
-#			if [ "${FOUND}" -eq 0 ]; then
-#				displaytext "Unknown version"
-#			else
-#				if [ "${VULNERABLE}" -eq 1 ]; then
-#					displaytext "Please upgrade to a higher version like ${GOODVERSIONS}"
-#				fi
-#			fi
-#		else
-#			displaytext "Linux kernel check skipped"
-#		fi
 
 		displaytext ""
 		if [ $FOUNDUNKNOWN -eq 1 ]; then
@@ -5606,12 +5812,14 @@ check_os_info() {
 
 	RUNHASHUPD=0
 
+	display --to LOG --type PLAIN --nl OSINFO_START
+
 	OLD_HOST=`grep '^Host:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
 
 	if [ "${HOST_NAME}" != "${OLD_HOST}" ]; then
 		RUNHASHUPD=1
-		logtext "Warning: The system hostname has changed since the last run:"
-		logtext --indent "Old value: ${OLD_HOST}    New value: ${HOST_NAME}"
+		display --to LOG --type WARNING OSINFO_HOST_CHANGE1
+		display --to LOG --type PLAIN --log-indent 9 OSINFO_HOST_CHANGE2 "${OLD_HOST}" "${HOST_NAME}"
 	fi
 
 
@@ -5623,8 +5831,8 @@ check_os_info() {
 
 	if [ "${OSNAME}" != "${OLD_OSNAME}" ]; then
 		RUNHASHUPD=1
-		logtext "Warning: The operating system name or version has changed since the last run:"
-		logtext --indent "Old value: ${OLD_OSNAME}    New value: ${OSNAME}"
+		display --to LOG --type WARNING OSINFO_OSVER_CHANGE1
+		display --to LOG --type PLAIN --log-indent 9 OSINFO_OSVER_CHANGE2 "${OLD_OSNAME}" "${OSNAME}"
 	fi
 
 
@@ -5641,9 +5849,9 @@ check_os_info() {
 	if [ $PRELINKED -ne $OLD_PRELINK ]; then
 		RUNHASHUPD=1
 		if [ $PRELINKED -eq 1 ]; then
-			logtext "Warning: The system has changed to using prelinking since the last run."
+			display --to LOG --type WARNING OSINFO_PRELINK_CHANGE ''
 		else
-			logtext "Warning: The system has changed to not using prelinking since the last run."
+			display --to LOG --type WARNING OSINFO_PRELINK_CHANGE 'not '
 		fi
 	fi
 
@@ -5674,14 +5882,16 @@ check_os_info() {
 
 	if [ "${OLD_ARCH_TYPE}" != "${ARCH_TYPE}" ]; then
 		RUNHASHUPD=1
-		logtext "Warning: The system seems to have changed CPU type:"
-		logtext --indent "Old value: ${OLD_ARCH}    New value: ${ARCH}"
+		display --to LOG --type WARNING OSINFO_ARCH_CHANGE1
+		display --to LOG --type PLAIN --log-indent 9 OSINFO_ARCH_CHANGE2 "${OLD_ARCH}" "${ARCH}"
 	fi
 
 
 	if [ $RUNHASHUPD -eq 1 ]; then
-		logtext --indent "The file hash check may give some false-positive results. If you are sure that none"
-		logtext --indent "of the files have been tampered with, then you should re-run rkhunter with the '--hashupd' option."
+		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG1
+		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG2
+	else
+		display --to LOG --type INFO OSINFO_END
 	fi
 
 	return
@@ -5693,7 +5903,7 @@ set_hash_dirs_files() {
 	#
 	# This function sets up the list of directories we look in,
 	# and the list of files we look for, in order to perform
-	# the file hash check.
+	# the file hash checks.
 	#
 
 	HASHDIRS="${ROOTDIR}bin ${ROOTDIR}sbin ${ROOTDIR}usr/bin ${ROOTDIR}usr/sbin ${ROOTDIR}usr/local/bin ${ROOTDIR}usr/local/sbin"
@@ -5852,8 +6062,7 @@ HASHDIRS=""
 HASHFILES=""
 
 PRELINKED=0
-PRELINK_CMD=""
-PRELINK_WARN=""
+PRELINK_CMD=''
 
 UPDATE=0
 HASH_UPDATE=0
@@ -5869,9 +6078,8 @@ AUTO_X_DTCT=0
 AUTO_X_OPT=0
 
 # Set to skip the hash checks
-HASHOPT=0
 SKIP_HASHCHECK=0
-HASHCHECK_WARN=""
+SKIP_HASHCHECK_MSG=0
 
 # Set to skip the passwd/group check
 SKIP_PASSWDCHECK=0
@@ -5966,9 +6174,18 @@ RET_CODE=0
 
 # Set the default language of English
 LANGUAGE=en
+
+# Space-separated list of languages we cater for
 SUPPORTED_LANGS=en
 
+# Space-separated list of test names we recognise
 SUPPORTED_TESTS=
+
+# Space-filled line used for the display function
+BLANK_LINE="                                                              "
+
+# Initially say that we are connected to a terminal
+NOTTY=0
 
 
 ######################################################################
@@ -6073,7 +6290,6 @@ while [ $# -ge 1 ]; do
 		APPLICATION_CHECK=0
 		;;
 	--disable-hash-check | --disable-hashcheck | --dhc | --disable-md5-check | --disable-md5check | --dmc)
-		HASHOPT=1
 		SKIP_HASHCHECK=1
 		;;
 	--disable-passwd-check | --dpc)
@@ -6290,8 +6506,9 @@ get_configfile_options
 
 
 #
-# Next set up some final variables based on the combination
-# of options we have been given.
+# Next we check some of the options to make sure we can proceed. We
+# also set up some final variables based on the combination of options
+# we have been given.
 #
 
 if [ $CHECK -eq 1 ]; then
@@ -6356,6 +6573,32 @@ if [ $CHECK -eq 1 ]; then
 fi
 
 
+if [ $HASH_UPDATE -eq 1 ]; then
+
+	#
+	# For a hash update we must have a valid hash function to use.
+	#
+
+	if [ -z "${HASH_FUNC}" ]; then
+		echo "Unable to find any hash function command to perform hash update."
+		exit 1
+	elif [ -z "${STAT_CMD}" ]; then
+		echo "No 'stat' command can be found to perform the update."
+		exit 1
+	elif [ -h "${DB_PATH}/rkhunter.dat" ]; then
+		echo "The rkhunter.dat file is a symbolic link: ${DB_PATH}/rkhunter.dat"
+		echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
+		exit 1
+	elif [ $PRELINKED -eq 1 ]; then
+		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+			echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+			exit 1
+		fi
+	fi
+fi
+
+
 #
 # If we can find no hash function to use, then skip the
 # check. Additionally, if no option is given for the
@@ -6365,24 +6608,6 @@ fi
 if [ $HASH_UPDATE -eq 1 -o \( $CHECK -eq 1 -a $SKIP_HASHCHECK -eq 0 \) ]; then
 
 	#
-	# For a hash update we must have a valid hash function to use.
-	#
-
-	if [ $HASH_UPDATE -eq 1 ]; then
-		if [ -z "${HASH_FUNC}" ]; then
-			echo "Unable to find any hash function command to perform hash update."
-			exit 1
-		elif [ $PRELINKED -eq 1 ]; then
-			HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
-			if [ -z "`echo ${HCMD} | egrep -i 'sha1|md5'`" ]; then
-				echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
-				exit 1
-			fi
-		fi
-	fi
-
-
-	#
 	# We need to set the list of files to use for checking hash values.
 	#
 
@@ -6390,8 +6615,7 @@ if [ $HASH_UPDATE -eq 1 -o \( $CHECK -eq 1 -a $SKIP_HASHCHECK -eq 0 \) ]; then
 
 
 	if [ -z "${HASH_FUNC}" ]; then
-		SKIP_HASHCHECK=1
-		HASHCHECK_WARN="Warning: Unable to find any hash function command to perform hash checks.\n    The file hash check will be skipped."
+		SKIP_HASHCHECK_MSG=2
 	fi
 elif [ $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 ]; then
 	echo "You must enter an option for the program to perform."
@@ -6411,6 +6635,38 @@ fi
 
 
 #
+# Before writing anything to the screen or log file, we need to
+# set some variables.
+#
+# First we set whether we should be displaying anything on the
+# screen or not.
+#
+if [ $CRONJOB -eq 1 -o $QUIET -eq 1 -o ! -t 1 ]; then
+	NOTTY=1
+fi
+
+#
+# Next we get the message types and results from the language file,
+# and set them to variables. We have to look in the English file since
+# that is the definitive one. We then look for the corresponding keyword
+# in the actual language file. This allows the language files to work
+# even if we add or remove any of the TYPE or RESULT keywords.
+#
+for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
+	TYPE=`echo "${LINE}" | cut -d: -f1`
+
+	if [ "${LANGUAGE}" != "en" ]; then
+		RKHTMPVAR=`grep "^${TYPE}:" ${DB_PATH}/i18n/${LANGUAGE} 2>/dev/null`
+		test -n "${RKHTMPVAR}" && LINE=${RKHTMPVAR}
+	fi
+
+	RKHTMPVAR=`echo "${LINE}" | cut -d: -f2-`
+
+	eval $TYPE=${RKHTMPVAR}
+done
+
+
+#
 # Sort out the logfile before we write to it. If we have no log file,
 # then record this. The 'logtext' function will still be called, but
 # will return straight away.
@@ -6422,8 +6678,8 @@ else
 	if [ $APPEND_LOG -eq 0 ]; then
 		mv -f ${LOGFILE} ${LOGFILE}.old >/dev/null 2>&1
 	else
-		logtext --nodate ""
-		logtext --nodate ""
+		echo "" >>${LOGFILE}
+		echo "" >>${LOGFILE}
 	fi
 fi
 
@@ -6447,117 +6703,102 @@ Please inspect the available files, by checking the logfile ($LOGFILE).
 # Write out various information messages to the logfile.
 #
 
+display --to SCREEN --type PLAIN VERSIONLINE "${PROGRAM_NAME}" "${PROGRAM_version}"
+
 if [ -n "${HOST_NAME}" ]; then
-	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version} on ${HOST_NAME}"
+	display --to LOG --type PLAIN VERSIONLINE2 "${PROGRAM_NAME}" "${PROGRAM_version}" ${HOST_NAME}
 else
-	logtext --nodate "Running ${PROGRAM_NAME} ${PROGRAM_version}"
+	display --to LOG --type PLAIN VERSIONLINE3 "${PROGRAM_NAME}" "${PROGRAM_version}"
 fi
 
-logtext --nodate "${PROGRAM_license}"
+display --to LOG --type INFO --nl RKH_STARTDATE "`date`"
 
-logtext "Info: Start date is `date`"
+display --to LOG --type PLAIN --nl CONFIG_CHECK_START
 
-logtext "Info: Environment shell is ${SHELL}; rkhunter is using ${MYSHELL}"
+display --to LOG --type INFO CONFIG_CMDLINE "${CMD_LINE}"
 
-logtext "Info: Command line is ${CMD_LINE}"
+display --to LOG --type INFO CONFIG_ENVSHELL ${SHELL} ${MYSHELL}
 
-logtext "Info: Using configuration file ${CONFIGFILE}"
+display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
 
-logtext "Info: Installation directory is ${INSTALLDIR}"
+display --to LOG --type INFO CONFIG_INSTALLDIR "${INSTALLDIR}"
 
-logtext "Info: Using language ${LANGUAGE}"
+display --to LOG --type INFO CONFIG_LANGUAGE "${LANGUAGE}"
+
+display --to LOG --type INFO CONFIG_DBDIR "${DB_PATH}"
+
+display --to LOG --type INFO CONFIG_SCRIPTDIR "${SCRIPT_PATH}"
+
+display --to LOG --type INFO CONFIG_BINDIR "${BINPATHS}"
+
+display --to LOG --type INFO CONFIG_ROOTDIR "${ROOTDIR}"
+
+display --to LOG --type INFO CONFIG_TMPDIR "${TMPDIR}"
 
 if [ -z "${MAILONWARNING}" ]; then
-	logtext "Info: No mail-on-warning address configured"
+	display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
 else
-	logtext "Info: Emailing warnings to \"${MAILONWARNING}\" using command \"${MAIL_CMD}\""
+	display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
 fi
 
-logtext "Info: Using ${TMPDIR} as temporary directory"
+test $ALLOW_SSH_ROOT_USER -eq 1 && display --to LOG --type INFO CONFIG_SSH_ROOT
 
-if [ "${TMPDIR}" = "/tmp" ]; then
-	logtext "Warning: Do not use /tmp as your temporary directory. It will contain"
-	logtext --indent "some important system files. Please set another directory in"
-	logtext --indent "your configuration file, or use the --tmpdir command-line option."
-
-	displaytext "Warning! Using /tmp as your temporary directory can be a security risk."
-	displaytext "Check the logfile for more information about this issue."
-fi
-
-logtext "Info: Using ${DB_PATH} as database directory"
-
-logtext "Info: Using ${SCRIPT_PATH} as script directory"
-
-if [ $ALLOW_SSH_ROOT_USER -eq 1 ]; then
-	logtext "Info: Explicit option set to allow root logins via SSH"
-fi
-
-logtext "Info: Using '${BINPATHS}' as command directories"
-
-logtext "Info: Using '${ROOTDIR}' as the root directory"
-
-test $AUTO_X_DTCT -eq 1 && logtext "Info: X is automatically detected"
-test $CLRSET2 -eq 1 && logtext "Info: Using second color set"
+test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
+test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
 
 for CMD in ${CMDLIST}; do
-	UCMD=`echo ${CMD} | tr [a-z] [A-Z]`
-	UCMD=`eval echo "\\$${UCMD}_CMD"`
-	if [ -n "${UCMD}" ]; then
-		logtext "Info: Found '${CMD}' command: ${UCMD}"
+	RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
+	RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
+	if [ -n "${RKHTMPVAR}" ]; then
+		display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
 	else
-		logtext "Info: Unable to find '${CMD}' command"
+		display --to LOG --type INFO NOT_FOUND_CMD "${CMD}"
 	fi
 done
 
-test -n "${PRELINK_WARN}" && logtext "${PRELINK_WARN}"
-
-test -n "${HASHCHECK_WARN}" && logtext "${HASHCHECK_WARN}"
-
-
 if [ $HASH_UPDATE -eq 1 -o \( $CHECK -eq 1 -a $SKIP_HASHCHECK -eq 0 \) ]; then
 	if [ $PRELINKED -eq 1 ]; then
-		UCMD=${PRELINK_CMD}
-		test -n "${RUNCON_CMD}" && UCMD=`echo "${UCMD}" | cut -d' ' -f5`
+		RKHTMPVAR=${PRELINK_CMD}
+		test -n "${RUNCON_CMD}" && RKHTMPVAR=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
 
-		logtext "Info: Found 'prelink' command: ${UCMD}"
+		display --to LOG --type INFO FOUND_CMD 'prelink' "${RKHTMPVAR}"
 
 		if [ -n "${RUNCON_CMD}" ]; then
-			logtext "Info: Found 'runcon' command: ${RUNCON_CMD}"
+			display --to LOG --type INFO FOUND_CMD 'runcon' "${RKHTMPVAR}"
 		else
-			logtext "Info: Unable to find 'runcon' command"
+			display --to LOG --type INFO NOT_FOUND_CMD 'runcon'
 		fi
 
-		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
-		if [ -z "`echo ${HCMD} | egrep -i 'sha1|md5'`" ]; then
-			SKIP_HASHCHECK=1
-			logtext "Warning: This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5.\n    The file hash check will be skipped."
-		elif [ -n "`echo ${HCMD} | egrep -i 'sha1'`" ]; then
-			logtext "Info: System is using prelinking - using SHA1 (${HASH_FUNC}) for hash checks"
+		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+			SKIP_HASHCHECK_MSG=3
+		elif [ -n "`echo ${RKHTMPVAR} | egrep -i 'sha1'`" ]; then
+			display --to LOG --type INFO SYS_PRELINK_SHA1 "${HASH_FUNC}"
 		else
-			logtext "Info: System is using prelinking - using MD5 (${HASH_FUNC}) for hash checks"
+			display --to LOG --type INFO SYS_PRELINK_MD5 "${HASH_FUNC}"
 		fi
 	else
-		logtext "Info: System is not using prelinking"
+		display --to LOG --type INFO SYS_NO_PRELINK
 
 		if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
-			logtext "Info: Using the perl script for SHA1 hash checks"
+			display --to LOG --type INFO HASH_PERL_SHA1
 		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
-			logtext "Info: Using the perl script for MD5 hash checks"
+			display --to LOG --type INFO HASH_PERL_MD5
 		else
-			logtext "Info: Using ${HASH_FUNC} for the hash checks"
+			display --to LOG --type INFO HASH_PERL_FUNC "${HASH_FUNC}"
 		fi
 	fi
 
 	if [ $PERFORMKNOWNBAD -eq 1 -a -n "${MD5_CMD}" ]; then
 		if [ -n "`echo "${MD5_CMD}" | grep '/filehashmd5\.pl$'`" ]; then
-			logtext "Info: Using the perl script for 'known bad' MD5 hash checks"
+			display --to LOG --type INFO KB_HASH_PERL_MD5
 		else
-			logtext "Info: Using ${MD5_CMD} for the 'known bad' MD5 hash checks"
+			display --to LOG --type INFO KB_HASH_FUNC "${MD5_CMD}"
 		fi
 	fi
 fi
 
-test $GRSECINSTALLED -eq 1 && logtext "Info: Found GRSEC installed"
+test $GRSECINSTALLED -eq 1 && display --to LOG --type INFO GRSECINSTALLED
 
 
 ######################################################################
@@ -6583,18 +6824,11 @@ test $GRSECINSTALLED -eq 1 && logtext "Info: Found GRSEC installed"
 if [ $HASH_UPDATE -eq 0 ]; then
 	if [ $CHECK -eq 1 -a $SKIP_HASHCHECK -eq 0 ]; then
 		if [ ! -f "${DB_PATH}/rkhunter.dat" -o ! -s "${DB_PATH}/rkhunter.dat" ]; then
-			SKIP_HASHCHECK=1
-			logtext "Warning: This program needs to know certain information about your computer."
-
 			if [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
-				logtext --indent "The file holding this information does not exist, and so must be created."
+				SKIP_HASHCHECK_MSG=4
 			else
-				logtext --indent "The file holding this information is empty, and so must be recreated."
+				SKIP_HASHCHECK_MSG=5
 			fi
-
-			logtext --indent "To do this type in 'rkhunter --hashupd'."
-			logtext --indent ""
-			logtext --indent "Continuing without the file hash checks."
 		else
 
 			#
@@ -6615,13 +6849,7 @@ else
 	# The user wants to update the O/S and file hash data.
 	#
 
-	logtext ""
-	logtext "Info: Starting file hash data update"
-
 	do_hash_update
-
-	logtext "Info: Finished file hash data update"
-	logtext ""
 fi
 
 
@@ -6646,6 +6874,6 @@ test $VERSIONCHECK -eq 1 && do_versioncheck
 test $CHECK -eq 1 && do_system_check
 
 
-logtext "Info: End date is `date`"
+display --to LOG --type INFO --nl RKH_ENDDATE "`date`"
 
 exit $RET_CODE
