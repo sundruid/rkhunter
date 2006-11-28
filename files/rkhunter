@@ -1346,12 +1346,12 @@ get_if_prelinked() {
 		# skip the prelink test.
 		#
 		if [ -f "${ROOTDIR}etc/ld.so.preload" ]; then
-			LIBSAFE_TEST1=`grep -q libsafe ${ROOTDIR}etc/ld.so.preload`
+			LIBSAFE_TEST1=`grep libsafe ${ROOTDIR}etc/ld.so.preload 2>&1`
 		fi
 
 		LDD_CMD=`find_cmd ldd`
 		if [ -n "${LDD_CMD}" -a -f "${ROOTDIR}lib/libdl.so.?" ]; then
-			LIBSAFE_TEST2=`${LDD_CMD} ${ROOTDIR}lib/libdl.so.? | grep -q libsafe`
+			LIBSAFE_TEST2=`${LDD_CMD} ${ROOTDIR}lib/libdl.so.? | grep libsafe 2>&1`
 		fi
 
 		if [ -n "${PRELINK_CMD}" -a -z "${LIBSAFE_TEST1}" -a -z "${LIBSAFE_TEST2}" ]; then
