@@ -485,8 +485,8 @@ done
 # Configuration file
 for FILE in ${RKHINST_ETC_FILE}; do
 # We need people to make local changes themselves, so give opportunity and alert.
-# Use Perl to get value, shell may not support "RANDOM".
-RANDVAL=`perl -e 'printf "%d\n", time;'`
+# Don't use Perl to get value.
+RANDVAL=`date +%N%s%N`
 
 	if [ -f "${RKHINST_ETC_DIR}/${FILE}" ]; then
 		NEWFILE="${FILE}.${RANDVAL}"
