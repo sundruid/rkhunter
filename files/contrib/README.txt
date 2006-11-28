@@ -1,11 +1,12 @@
 #####################################################################################################
 #
-# Small script descriptions
+# Contrib
 #
-# NOTE: these scripts are submitted and can have their own license. Please check the source
-#       of each file to see how you can use this software.
+# NOTE: submitted conbtributions may have their own license. 
+#       Please check the source of each file to see how you can use this software.
 #
 #####################################################################################################
 
-[script]		[description]
-run_rkhunter		Start rkhunter
+[name]	                        [description]
+run_rkhunter                    script: start rkhunter
+rkhunter_remote_howto.txt       howto: run Rootkit Hunter from a central server.

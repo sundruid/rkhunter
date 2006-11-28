@@ -85,6 +85,9 @@ The latest version of this FAQ can be found at the RKH web site.
      Send a copy of an undetected rootkit to us so that it can
      be added and help others;
 
+     Translate RKH messages to your native language. For the
+     template see the standard language file i18n/en.
+
      Are you a package maintainer? If so, then please submit
      your changes to us so that everyone can benefit from them;
 
@@ -354,7 +357,7 @@ The latest version of this FAQ can be found at the RKH web site.
      2) Run the daily prelink update script - to do this type in
         '/etc/cron.daily/prelink';
 
-     3) Run the hashupd.sh script to update your local hash values;
+     3) Run 'rkhunter --hashupd' to update your local hash values;
 
      4) Run rkhunter;
 
@@ -366,10 +369,22 @@ The latest version of this FAQ can be found at the RKH web site.
         'setenforce 1'. Hopefully rkhunter will now work without
         any problems with hash values.
 
-     For other Linux distributions you will need to determine if,
-     and how, prelinking takes place, and whether SELinux is present
-     or not. It is possible that the above sequence will work for
-     other distributions, but it is for the user to check this.
+     NOTES
+     =====
+     1) For other Linux distributions you will need to determine if,
+        and how, prelinking takes place, and whether SELinux is
+        present or not. It is possible that the above sequence will
+        work for other distributions, but it is for the user to
+        check this.
+
+     2) If your system uses Libsafe and prelinking then errors can occur.
+        Disable preloading Libsafe in /etc/ld.so.preload. Prelink again
+        and run 'rkhunter --hashupd'.
+
+     3) The output of the RKH hash tests should only be seen as indication,
+        and updating hashes on a regular basis should be done only after
+        proper verification using a file integrity checker or your 
+        distributions package management tools.
 
 
 ===========================================================

@@ -21,21 +21,27 @@ ROOTKIT HUNTER REQUIREMENTS
 
 Please note RKH has some requirements.
 
-Perl. Some test RKH runs require Perl. Also for some default system
-tools like stat, md5sum and sha1sum alternatives are supplied which
-require Perl.
+1) Perl. 
+   Some test RKH runs require Perl. Also for some default system
+   tools like stat, md5sum and sha1sum alternatives are supplied which
+   require Perl.
 
-A tool with which to download updates. Currently wget, curl, (e)links,
-lynx and GET are supported. If your system does not allow the 
-possibility to install one of these applications but does run Perl, you
-can get "bget" from http://www.cpan.org/authors/id/E/EL/ELIJAH/.
-If you use another generic method of updating RKH please inform us.
+2) A tool with which to download updates. 
+   Currently wget, curl, (e)links, lynx and GET are supported. If your
+   system does not allow the possibility to install one of these 
+   applications but does run Perl, you can get "bget" from 
+   http://www.cpan.org/authors/id/E/EL/ELIJAH/. If you use another 
+   generic method of updating RKH please inform us.
 
-Single-purpose applications. RKH does not depend on these but will use 
-them if found because they greatly enhance RKH's detection capabilities.
-- Skdet (http://slider.decebal.org/code/skdet/): tests for SucKIT, Adore,
-Adore-NG, UNFshit, UNFkmem and frontkey.
-- Unhide (http://www.security-projects.com/?Unhide): find hidden processes.
+*) Single-purpose tools.
+   RKH does not depend on these but will use them if found because they
+   enhance RKH's detection capabilities:
+   - Skdet
+     tests for SucKIT, Adore, Adore-NG, UNFshit, UNFkmem and frontkey.
+     http://slider.decebal.org/code/skdet/
+   - Unhide
+     find hidden processes.
+     http://www.security-projects.com/?Unhide
 
 
 ROOTKIT HUNTER INSTALLATION
@@ -50,29 +56,41 @@ script:
 
     tar zxf rkhunter-<version>.tar.gz
     cd rkhunter
-    ./installer.sh
+    ./installer.sh --install --layout
+
+ - If no argument is given to the --layout switch, the default 
+   layout will be used.
+
+ - RKH now supports custom layouts. To show the examples run:
+
+    ./installer.sh --examples
+
+ - To show where files are installed using layout "oldschool" run:
+
+    ./installer.sh --show --layout oldschool
+
+ - To install all files beneath /opt, run:
+
+    ./installer.sh --install --layout custom /opt
+
+ - The layout named "RPM" may not be chosen since it is used solely
+   for installing RKH using rpm.
+
 
 The default installation process will install a configuration file,
-called 'rkhunter.conf', into the '/usr/local/etc' directory. Please
-edit the configuration file according to your own system
-requirements.
+called 'rkhunter.conf', into the '/usr/local/etc' directory or where
+you chose using the --layout switch. Please edit the configuration 
+file according to your own system requirements. If the installer 
+encouters an existing rkhunter.conf the file will not be overwritten.
+Please inspect the new configuration file and copy over the changes.
 
 The main RKH script will be installed into the '/usr/local/bin'
-directory. Man pages will be installed into 'user/local/share/man',
-and other documentation will be installed into the
-'/usr/local/share/doc/rkhunter' directory. RKH data files, and a
-directory for temporary files, will be installed into
-'/usr/local/var/lib/rkhunter'. All directories will be created where
-necessary.
-
-If it is wished to install RKH into a different directory, then
-there are two options which can be used:
-
-    --installdir <dir>     specifies the main installation directory
-                           (default is '/usr/local')
-    --dbdir <dir>          specifies the directory for data and
-                           temporary files
-                           (default is '/var/lib/rkhunter')
+directory or where you chose using the --layout switch. Man pages will 
+be installed into 'user/local/share/man', and other documentation will 
+be installed into the '/usr/local/share/doc/rkhunter' directory. RKH 
+data files, language support and a directory for temporary files will 
+be installed into '/var/lib/rkhunter'. All directories will be created 
+where necessary.
 
 To run RKH simply, as root, enter the following command:
 
@@ -107,6 +125,29 @@ To run RKH, enter the following command:
 
 If you do not want a log file produced, then append the '--nolog'
 option to the above command.
+
+
+REMOVING AN INSTALLATION
+========================
+
+RKH now supports deinstallation. Unpack the installation tarball and
+if you choose the default installation, run the --remove command:
+
+    tar zxf rkhunter-<version>.tar.gz
+    cd rkhunter
+    ./installer.sh --remove
+
+If you choose a layout, say /usr, while installing RKH, run:
+
+    ./installer.sh --remove --layout /usr
+
+Note the installer will not remove files that are installed using RPM
+(use "rpm" to remove the package) or when a custom layout is chosen.
+In the latter case if you choose for a custom layout "/opt" just run:
+
+    ./installer.sh --show --layout custom /opt
+
+to see where the files are installed. Now you can manually remove them.
 
 
 ROOTKIT HUNTER SUPPORT
