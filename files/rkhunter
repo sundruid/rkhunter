@@ -325,12 +325,18 @@ display() {
 	#
 	if [ -n "${RESULT}" ]; then
 		if [ $WRITETOTTY -eq 1 ]; then
-			NUM_SPACES=$(( 62 - ${#LINE1} ))
+			# I think this is more portable.
+			# NUM_SPACES=$(( 62 - ${#LINE1} ))
+			LINE1_NUM=`echo "${LINE1}"|wc -c`
+			NUM_SPACES=`expr 62 - ${LINE1_NUM}`
 			LINE1="${LINE1}\033[${NUM_SPACES}C[ ${COLOR}${RESULT}${NORMAL} ]"
 		fi
 
 		if [ $WRITETOLOG -eq 1 ]; then
-			NUM_SPACES=$(( 62 - ${#LOGLINE1} ))
+			# I think this is more portable.
+			# NUM_SPACES=$(( 62 - ${#LOGLINE1} ))
+			LOGLINE1_NUM=`echo "${LOGLINE1}"|wc -c`
+			NUM_SPACES=`expr 62 - ${LOGLINE1_NUM}`
 			test $NUM_SPACES -lt 1 && NUM_SPACES=1
 			SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
 
@@ -546,6 +552,10 @@ scanrootkit() {
 	fi
 }
 
+# A more portable version of generating a random value
+perl_gen_randval() {
+	${PERL_CMD} -e 'print int(rand(100000)),"\n";'
+}
 
 scanrootkit_suckit_extra_checks() {
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
@@ -563,7 +573,7 @@ scanrootkit_suckit_extra_checks() {
 			esac
 			# Let's check xrk or mem hiding
 			# Easiest way to define random?
-			__RANDOM=$$$(date +%s)
+			__RANDOM=`perl_gen_randval`
 			umask 027
 			for ext in xrk mem; do
 				randf="${TMPDIR}/${__RANDOM}.${ext}"
@@ -1881,7 +1891,7 @@ do_hash_update() {
 
 		display --to LOG --type INFO HASHUPD_CMD2
 	else
-		RANDNUM=$$$(date +%s)
+		RANDNUM=`perl_gen_randval`
 		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDNUM"
 		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
 
@@ -5313,7 +5323,7 @@ nonvulnerable:%2.4.24%
 						VERSION=`${I}/exim -bV | grep 'Exim version' | awk '{ print $3 }'`
 						;;
 					gpg)
-						VERSION=`${I}/gpg --version | grep 'GnuPG' | awk '{ print $3 }'`
+						VERSION=`${I}/gpg --version --homedir / | grep 'GnuPG' | awk '{ print $3 }'`
 						;;
 					httpd)
 						VERSION=`${I}/httpd -v | grep 'Apache' | cut -d' ' -f3 | cut -d'/' -f2`
