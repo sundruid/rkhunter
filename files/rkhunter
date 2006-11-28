@@ -1332,8 +1332,8 @@ get_if_prelinked() {
 	# circumstance, and it may be better to check the system
 	# regardless of the hash checks.
 	#
-	LIBSAFE_TEST1=1
-	LIBSAFE_TEST2=1
+	LIBSAFE_TEST1=""
+	LIBSAFE_TEST2=""
 
 	if [ -f "${ROOTDIR}etc/prelink.cache" ]; then
 		PRELINK_CMD=`find_cmd prelink`
@@ -1345,15 +1345,16 @@ get_if_prelinked() {
 		# If Libsafe is found *and* this is a prelink system, we'll
 		# skip the prelink test.
 		#
-		if [ -e "/etc/ld.so.preload" ]; then
-			LIBSAFE_TEST1=`grep -q libsafe /etc/ld.so.preload`
-		fi
-		LDD_CMD=`find_cmd ldd`
-		if [ -n "${LDD_CMD}" -a -e /lib/libdl.so.? ]; then
-			LIBSAFE_TEST2=`${LDD_CMD} /lib/libdl.so.? | grep -q libsafe`
+		if [ -f "${ROOTDIR}etc/ld.so.preload" ]; then
+			LIBSAFE_TEST1=`grep -q libsafe ${ROOTDIR}etc/ld.so.preload`
 		fi
 
-		if [ -n "${PRELINK_CMD}" -a ${LIBSAFE_TEST1} -eq 1 -a ${LIBSAFE_TEST2} -eq 1 ]; then
+		LDD_CMD=`find_cmd ldd`
+		if [ -n "${LDD_CMD}" -a -f "${ROOTDIR}lib/libdl.so.?" ]; then
+			LIBSAFE_TEST2=`${LDD_CMD} ${ROOTDIR}lib/libdl.so.? | grep -q libsafe`
+		fi
+
+		if [ -n "${PRELINK_CMD}" -a -z "${LIBSAFE_TEST1}" -a -z "${LIBSAFE_TEST2}" ]; then
 			PRELINKED=1
 
 			RUNCON_CMD=`find_cmd runcon`
@@ -1361,7 +1362,7 @@ get_if_prelinked() {
 			if [ -n "${RUNCON_CMD}" ]; then
 				PRELINK_CMD="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD}"
 			fi
-		elif [ -n "${PRELINK_CMD}" -a ${LIBSAFE_TEST1} -eq 0 -a ${LIBSAFE_TEST2} -eq 0 ]; then
+		elif [ -n "${PRELINK_CMD}" -a -n "${LIBSAFE_TEST1}" -a -n "${LIBSAFE_TEST2}" ]; then
 			SKIP_HASHCHECK_MSG=6
 		else
 			SKIP_HASHCHECK_MSG=1
@@ -6211,7 +6212,7 @@ RET_CODE=0
 # Set the default language of English
 LANGUAGE=en
 
-# Space-separated list of languages we cater for
+# Space-separated list of languages we recognise
 SUPPORTED_LANGS=en
 
 # Space-separated list of test names we recognise

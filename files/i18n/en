@@ -85,8 +85,8 @@ SETFILEHASH_FILE_COUNT:Found $1 file hashes
 
 HASHUPD_START:Starting file hash data update...
 HASHUPD_CMD1:Using 'mktemp' command ($1) for rkhunter.dat file
-HASHUPD_CMD2:Using random number for rkhunter.dat file
-HASHUPD_CMD3:Using PID number and date for rkhunter.dat file
+HASHUPD_CMD2:Using RANDOM variable for rkhunter.dat file
+HASHUPD_CMD3:Using date for rkhunter.dat file
 HASHUPD_CREATED_FILE:Created temporary file $1
 HASHUPD_OSINFO_START:Collecting O/S info...
 HASHUPD_ARCH_FOUND:Found system architecture: $1
