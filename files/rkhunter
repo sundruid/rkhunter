@@ -2872,7 +2872,8 @@ do_system_check_initialisation() {
 
 	HTTPDCONFS="${ROOTDIR}usr/local/apache/conf/httpd.conf
 		    ${ROOTDIR}usr/local/etc/apache/httpd.conf
-		    ${ROOTDIR}etc/apache/httpd.conf"
+		    ${ROOTDIR}etc/apache/httpd.conf
+		    ${ROOTDIR}etc/httpd/conf/httpd.conf"
 
 
 	BAD_PROCESSES="31337:Linsniffer"
@@ -3524,10 +3525,10 @@ do_system_check() {
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 		STATUS=0
-		SIZE=24
+		SIZE=28
 
-		logtext "Debug: Phalanx (/bin/hostname)"
-		displaytext -n "   Phalanx (/bin/hostname)"
+		logtext "Debug: Phalanx (strings)"
+		displaytext -n "   Rootkit 'Phalanx' (strings)"
 
 		# Search for Phalanx in /bin/hostname
 		if [ -f "${ROOTDIR}bin/hostname" ]; then
@@ -5229,24 +5230,30 @@ vlogger.o
 	FOUNDSTRING=0
 
 	SIZE=37
-	displaytext -n "   Checking Apache configuration... "
-	jump=`expr ${defaultcolumn} - ${SIZE}`
+	displaytext "   Checking Apache configuration... "
 
 	for I in ${HTTPDCONFS}; do
+		FILELENGTH=`echo ${I} | wc -c | tr -d ' '`
+		SIZE=4
+		jump=`expr ${defaultcolumn} - ${SIZE} - ${FILELENGTH}`
+
+		displaytext -n "     - ${I}"
 		if [ -f "${I}" ]; then
 			SEARCHSTRING=`egrep 'mod_rootme2?\.so' ${I}`
 			test -n "${SEARCHSTRING}" && FOUNDSTRING=1
+
+			if [ ${FOUNDSTRING} -eq 1 ]; then
+				insertlayout
+				displaytext $E "   ${LAYOUT}[ ${RED}BAD${NORMAL} ]"
+			else
+				insertlayout
+				displaytext $E "   ${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			fi
+		else
+			insertlayout
+			displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 		fi
 	done
-
-	if [ ${FOUNDSTRING} -eq 1 ]; then
-		insertlayout
-		displaytext $E "   ${LAYOUT}[ ${RED}BAD${NORMAL} ]"
-	else
-		insertlayout
-		displaytext $E "   ${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-	fi
-
 
 	logtext "---------------------- Application version check ----------------------"
 
