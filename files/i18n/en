@@ -144,3 +144,6 @@ SKIP_HASH_CHECK4:To do this type in 'rkhunter -- hashupd'.
 SKIP_HASH_CHECK5:File hash check skipped.
 SKIP_HASH_CHECK5:The file of stored hash values is empty, and so must be recreated.
 SKIP_HASH_CHECK5:To do this type in 'rkhunter -- hashupd'.
+SKIP_HASH_CHECK6:File hash check skipped.
+SKIP_HASH_CHECK6:This system uses prelinking, but Libsafe was found which can cause errors.
+SKIP_HASH_CHECK6:Disable Libsafe if possible, run prelink and recreate hash values with 'rkhunter -- hashupd'.

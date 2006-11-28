@@ -1322,11 +1322,28 @@ get_if_prelinked() {
 	# circumstance, and it may be better to check the system
 	# regardless of the hash checks.
 	#
+	LIBSAFE_TEST1=1
+	LIBSAFE_TEST2=1
 
 	if [ -f "${ROOTDIR}etc/prelink.cache" ]; then
 		PRELINK_CMD=`find_cmd prelink`
 
-		if [ -n "${PRELINK_CMD}" ]; then
+		# Test (twice) for existance of Libsafe since this seems to
+		# riddle prelink test results with "dependency cycle" errors.
+		# Don't test for existance of /lib/libsafe since it may be
+		# installed elsewhere.
+		# If Libsafe is found *and* this is a prelink system, we'll
+		# skip the prelink test.
+		#
+		if [ -e "/etc/ld.so.preload" ]; then
+			LIBSAFE_TEST1=`grep -q libsafe /etc/ld.so.preload`
+		fi
+		LDD_CMD=`find_cmd ldd`
+		if [ -n "${LDD_CMD}" -a -e /lib/libdl.so.? ]; then
+			LIBSAFE_TEST2=`${LDD_CMD} /lib/libdl.so.? | grep -q libsafe`
+		fi
+
+		if [ -n "${PRELINK_CMD}" -a ${LIBSAFE_TEST1} -eq 1 -a ${LIBSAFE_TEST2} -eq 1 ]; then
 			PRELINKED=1
 
 			RUNCON_CMD=`find_cmd runcon`
@@ -1334,6 +1351,8 @@ get_if_prelinked() {
 			if [ -n "${RUNCON_CMD}" ]; then
 				PRELINK_CMD="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD}"
 			fi
+		elif [ -n "${PRELINK_CMD}" -a ${LIBSAFE_TEST1} -eq 0 -a ${LIBSAFE_TEST2} -eq 0 ]; then
+			SKIP_HASHCHECK_MSG=6
 		else
 			SKIP_HASHCHECK_MSG=1
 		fi
