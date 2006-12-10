@@ -1,6 +1,13 @@
-2001:Scalper%%Rootkit:UDP:
-2006:CB%%Rootkit:TCP:
+version=2006120900
+#
+# Syntax: <port>:<description>:protocol
+#
+# Note: Descriptions cannot contain any colon (:) characters.
+#
+
+2001:Scalper:UDP:
+2006:CB:TCP:
 2128:MRK:TCP:
-14856:Optic%%Kit%%(Tux):TCP:
-47107:T0rn%%Rootkit:TCP:
+14856:Optic Kit (Tux):TCP:
+47107:T0rn:TCP:
 60922:zaRwT.KiT:TCP:

@@ -63,6 +63,15 @@
  - RKH will now check that certain commands are present before starting
    any checks. This avoids spurious 'command not found' type messages
    suddenly appearing.
+ - Added basic internationalization (i18n) functionality. The messages
+   displayed during test processing are obtained from an indexed file.
+   This file can be translated in to other languages, keeping the index
+   the same. To see which languages are provided use the new
+   '--list languages' option.
+ - Added two new command-line and configuration file options, '--enable'
+   and '--disable' to specify which tests are to be carried out and which
+   are to be ignored. Use of either option will automatically assume '--check'.
+   To list the available test names, use the new '--list tests' option.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -109,6 +118,16 @@
  - The TMPDIR configuration option and --tmpdir command-line option cannot
    be set to /tmp or /var/tmp because files will be copied and left here.
    It cannot be set to /etc either because files will be deleted from here.
+ - Removed the '--scan-knownbad-files' option as this is now the
+   'known_bad_hash' tests and can be disabled by the '--disable' option.
+   Also removed the '--disable-md5-check' option. This is now the
+   'hashes' test name.
+ - Removed the '--allow-ssh-root-user' option from the command-line. This
+   can still be set/unset in the configuration file.
+ - The --rootdir/ROOTDIR configuration option has been changed to be more
+   intuitive. Previously the specified ROOTDIR had to end in a slash (e.g.
+   '/abc/'). Now this is not necessary, a normal directory name can be used
+   (e.g. '/abc').
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.
@@ -118,11 +137,18 @@
    correctly. The known good check, however, was.
  - The ignoKit rootkit check was not checking all the required files.
  - Some checks were not respecting the ROOTDIR option in their pathnames. This
-   has now been corrected.
+   has now been corrected (possibly not completely though). Also, some tests
+   were using ROOTDIR pathnames in grep/strings checks when they shouldn't
+   have been. This has also been corrected.
  - The file hash prelink test should now work, even if SELinux objects to the
    prelink command (requires the 'runcon' command).
  - Corrected file attributes check - previously the immutable flag would never
    have been found.
+ - Backdoor UDP port tests were not being done correctly. The TCP port tests
+   have been made a bit more aggressive - TCP tests only look for TCP ports;
+   they also look for established connections rather than just listeners.
+ - Backdoor port data file (backdoorports.dat) is now part of the '--update'
+   process.
 
  --
 

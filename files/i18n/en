@@ -1,4 +1,4 @@
-Version:2006111900
+Version:2006120900
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -97,21 +97,33 @@ HASHUPD_OSNAME_FOUND:Found O/S name: $1
 HASHUPD_ERROR:Error installing new rkhunter.dat file. Code $1
 HASHUPD_NEW_DAT_FILE:New rkhunter.dat file installed
 
+ENABLED_TESTS:Enabled tests are: $1
+DISABLED_TESTS:Disabled tests are: $1
+
+KSYMS_MISSING:ksyms and kallsyms checks will be skipped - neither file is present on the system.
+
+USER_DISABLED_TEST:Test \"$1\" disabled at user request.
+
 CHECK_START:Starting system checks...
 CHECK_SYS_COMMANDS:Checking system commands...
 
-STRINGS_CHECK_START:Performing 'strings' command check...
+STRINGS_CHECK_START:Performing 'strings' command checks
 STRINGS_SCANNING_OK:Scanning for string $1
 STRINGS_SCANNING_BAD:Scanning for string $1
 STRINGS_SCANNING_BAD:String not found in 'strings' command
-STRINGS_CHECK_SCREEN:Checking 'strings' command
-STRINGS_CHECK_SCREEN:Check skipped - no 'strings' command found.
+STRINGS_CHECK:Checking 'strings' command...
+STRINGS_CHECK:Check skipped - no 'strings' command found.
 
-BAD_HASH_START:Performing 'known bad' hash check...
+BAD_HASH_START:Performing 'known bad' hash check
 BAD_HASH_FILE_FOUND:Possible backdoored or harmful file found: ${1}/${2}
-BAD_HASH_NO_FILES: No system commands found to check
+BAD_HASH_NO_FILES:No system commands found to check
 
-GOOD_HASH_START:Performing 'known good' hash check...
+SKIP_BADHASH_CHECK1:All 'known bad' hash checks skipped.
+SKIP_BADHASH_CHECK1:No MD5 command can be found.
+SKIP_BADHASH_CHECK2:All 'known bad' hash checks skipped.
+SKIP_BADHASH_CHECK2:The file of known bad hash values (md5blacklist.dat) is either missing or empty.
+
+GOOD_HASH_START:Performing 'known good' hash check
 GOOD_HASH_NO_VALUE:The file ${1}/${2} exists on the system,
 GOOD_HASH_NO_VALUE:but it has no hash value in the rkhunter.dat file.
 GOOD_HASH_NOT_EXIST:The file ${1}/${2} exists on the system,
@@ -131,19 +143,44 @@ GOOD_HASH_GID_CHANGED:File gid: ${1}    DB gid: ${2}
 GOOD_HASH_DTM_CHANGED:File modification time: ${1}    DB modification time: ${2}
 GOOD_HASH_NO_HASHES:No file hash values found
 
-SKIP_HASH_CHECK_REQUESTED:File hash check skipped at users request.
-SKIP_HASH_CHECK1:File hash check skipped.
-SKIP_HASH_CHECK1:This system uses prelinking, but no prelink command can be found.
-SKIP_HASH_CHECK2:File hash check skipped.
-SKIP_HASH_CHECK2:No hash function command can be found.
-SKIP_HASH_CHECK3:File hash check skipped.
-SKIP_HASH_CHECK3:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
-SKIP_HASH_CHECK4:File hash check skipped.
-SKIP_HASH_CHECK4:The file of stored hash values does not exist, and so must be created.
-SKIP_HASH_CHECK4:To do this type in 'rkhunter -- hashupd'.
-SKIP_HASH_CHECK5:File hash check skipped.
-SKIP_HASH_CHECK5:The file of stored hash values is empty, and so must be recreated.
-SKIP_HASH_CHECK5:To do this type in 'rkhunter -- hashupd'.
-SKIP_HASH_CHECK6:File hash check skipped.
-SKIP_HASH_CHECK6:This system uses prelinking, but Libsafe was found which can cause errors.
-SKIP_HASH_CHECK6:Disable Libsafe if possible, run prelink and recreate hash values with 'rkhunter -- hashupd'.
+SKIP_GOODHASH_CHECK1:All 'known good' hash checks skipped.
+SKIP_GOODHASH_CHECK1:This system uses prelinking, but no 'prelink' command can be found.
+SKIP_GOODHASH_CHECK2:All 'known good' hash checks skipped.
+SKIP_GOODHASH_CHECK2:No hash function command can be found.
+SKIP_GOODHASH_CHECK3:All 'known good' hash checks skipped.
+SKIP_GOODHASH_CHECK3:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
+SKIP_GOODHASH_CHECK4:All 'known good' hash checks skipped.
+SKIP_GOODHASH_CHECK4:The file of stored hash values (rkhunter.dat) does not exist, and so must be created.
+SKIP_GOODHASH_CHECK4:To do this type in 'rkhunter -- hashupd'.
+SKIP_GOODHASH_CHECK5:All 'known good' hash checks skipped.
+SKIP_GOODHASH_CHECK5:The file of stored hash values (rkhunter.dat) is empty, and so must be recreated.
+SKIP_GOODHASH_CHECK5:To do this type in 'rkhunter -- hashupd'.
+SKIP_GOODHASH_CHECK6:All 'known good' hash checks skipped.
+SKIP_GOODHASH_CHECK6:This system uses prelinking, but libsafe was found which can cause errors.
+SKIP_GOODHASH_CHECK6:Disable libsafe if possible, and then run prelink and recreate the hash values with 'rkhunter --hashupd'.
+
+CHECK_ROOTKITS:Checking for rootkits
+ROOTKIT_FILES_DIRS_START:Performing check of default files and directories
+ROOTKIT_MALWARE_START:Performing malware checks
+
+CHECK_LOCALHOST:Checking the local host
+
+CHECK_APPS:Checking applications
+
+CHECK_NETWORK:Checking the network
+NETWORK_PORTS_START:Performing check for backdoor ports
+NETWORK_PORTS_FILE_MISSING:All backdoor port checks skipped.
+NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) is missing or empty.
+NETWORK_PORTS:Checking ${1} port ${2}...
+NETWORK_PORTS_FOUND:Network ${1} port ${2} is being used. This may be caused by the \"${3}\" rootkit.
+NETWORK_PORTS_FOUND:Run the \"netstat -an\" command to check this.
+NETWORK_INTERFACE_START:Performing checks on the network interfaces
+NETWORK_PROMISC_CHECK:Checking for promiscuous interfaces...
+NETWORK_PROMISC_IF:Possible promiscuous interfaces:
+NETWORK_PROMISC_IF_1:\"ifconfig\" test output: $1
+NETWORK_PROMISC_IF_2:\"ip\" test output: $1
+NETWORK_PACKET_CAP_CHECK:Checking for packet capturing applications...
+NETWORK_PACKET_CAP_CHECK:Check skipped - no 'lsof' command found.
+NETWORK_PACKET_CAP_FOUND:Process $1 (PID $2) is listening on the network.
+NETWORK_PACKET_CAP_WHITE:Found process $1 on whitelist.
+
