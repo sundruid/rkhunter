@@ -326,13 +326,13 @@ display() {
 	#
 	if [ -n "${RESULT}" ]; then
 		if [ $WRITETOTTY -eq 1 ]; then
-			LINE1_NUM=`echo "${LINE1}"|wc -c`
+			LINE1_NUM=`echo "${LINE1}"|wc -c | tr -d ' '`
 			NUM_SPACES=`expr 62 - ${LINE1_NUM}`
 			LINE1="${LINE1}\033[${NUM_SPACES}C[ ${COLOR}${RESULT}${NORMAL} ]"
 		fi
 
 		if [ $WRITETOLOG -eq 1 ]; then
-			LOGLINE1_NUM=`echo "${LOGLINE1}"|wc -c`
+			LOGLINE1_NUM=`echo "${LOGLINE1}"|wc -c | tr -d ' '`
 			NUM_SPACES=`expr 62 - ${LOGLINE1_NUM}`
 			test $NUM_SPACES -lt 1 && NUM_SPACES=1
 			SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
