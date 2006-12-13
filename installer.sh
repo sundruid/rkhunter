@@ -71,7 +71,7 @@ showHelp() { # Show help / version
 	echo "--help (-h)      : Show this help."
 	echo "--install        : Install according to chosen layout."
 	echo "--show           : Show chosen layout."
-	echo "--remove         : Deinstall according to chosen layout."
+	echo "--remove         : Uninstall according to chosen layout."
 	echo "--layout <value> : Chose installation template (mandatory switch)."
 	echo "                   The templates are:"
         echo "                    - default: (FHS compliant),"
@@ -91,13 +91,14 @@ showExamples() { # Show examples
 	echo ""
 	echo "Examples: "
 	echo " Show layout, files in /usr:"
-	echo " installer.sh --show --layout /usr"
+	echo "     installer.sh --show --layout /usr"
 	echo " Show custom layout, files in /opt:"
-	echo " installer.sh --show --layout custom /opt"
+	echo "     installer.sh --show --layout custom /opt"
 	echo " Install, layout /usr/local:"
-	echo " installer.sh --install --layout /usr/local"
+	echo "     installer.sh --install --layout /usr/local"
 	echo " Remove files, layout /usr/local:"
-	echo " installer.sh --remove --layout /usr/local"
+	echo "     installer.sh --remove --layout /usr/local"
+	echo ""
 	echo " The installer will not remove files when RPM or custom layout is chosen."
 
 	exit 1
@@ -190,7 +191,7 @@ RKHINST_DB_DIR="${VARDIR}/${APPNAME}/db"
 RKHINST_TMP_DIR="${VARDIR}/${APPNAME}/tmp"
 RKHINST_DOC_DIR="${SHAREDIR}/doc/${APPNAME}-${APPVERSION}"
 RKHINST_MAN_DIR="${SHAREDIR}/man/man8"
-RKHINST_LANG_DIR="${VARDIR}/${APPNAME}/i18n"
+RKHINST_LANG_DIR="${RKHINST_DB_DIR}/i18n"
 
 RKHINST_ETC_FILE="${APPNAME}.conf"
 RKHINST_BIN_FILES="${APPNAME}"
@@ -544,7 +545,7 @@ fi
 RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
 RKHINST_DIRS_POST="$VARDIR $SHAREDIR $PREFIX"
 
-echo "Starting deinstallation"
+echo "Starting uninstallation"
 echo ""
 
 # Check PREFIX

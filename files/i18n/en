@@ -1,4 +1,4 @@
-Version:2006120900
+Version:2006121200
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -37,16 +37,16 @@ RKH_ENDDATE:End date is $1
 CONFIG_CHECK_START:Checking configuration file and command-line options...
 CONFIG_CMDLINE:Command line is $1
 CONFIG_ENVSHELL:Environment shell is $1; rkhunter is using $2
-CONFIG_CONFIGFILE:Using configuration file $1
-CONFIG_INSTALLDIR:Installation directory is $1
-CONFIG_LANGUAGE:Using language $1
-CONFIG_DBDIR:Using $1 as database directory
-CONFIG_SCRIPTDIR:Using $1 as script directory
-CONFIG_BINDIR:Using '$1' as command directories
+CONFIG_CONFIGFILE:Using configuration file '$1'
+CONFIG_INSTALLDIR:Installation directory is '$1'
+CONFIG_LANGUAGE:Using language '$1'
+CONFIG_DBDIR:Using '$1' as the database directory
+CONFIG_SCRIPTDIR:Using '$1' as the support script directory
+CONFIG_BINDIR:Using '$1' as the command directories
 CONFIG_ROOTDIR:Using '$1' as the root directory
-CONFIG_TMPDIR:Using $1 as temporary directory
+CONFIG_TMPDIR:Using '$1' as the temporary directory
 CONFIG_NO_MAIL_ON_WARN:No mail-on-warning address configured
-CONFIG_MAIL_ON_WARN:Emailing warnings to \"$1\" using command \"$2\"
+CONFIG_MAIL_ON_WARN:Emailing warnings to '$1' using command '$2'
 CONFIG_SSH_ROOT:Explicit option set to allow root logins via SSH
 CONFIG_X_AUTO:X will be automatically detected
 CONFIG_CLRSET2:Using second color set
@@ -60,12 +60,29 @@ SYS_PRELINK_SHA1:System is using prelinking - using SHA1 ($1) for hash checks
 
 HASH_PERL_MD5:Using the perl script for MD5 hash checks
 HASH_PERL_SHA1:Using the perl script for SHA1 hash checks
-HASH_PERL_FUNC:Using $1 for the hash checks
+HASH_PERL_FUNC:Using '$1' for the hash checks
 
-KB_HASH_FUNC:Using $1 for the 'known bad' MD5 hash checks
+KB_HASH_FUNC:Using '$1' for the 'known bad' MD5 hash checks
 KB_HASH_PERL_MD5:Using the perl script for the 'known bad' MD5 hash checks
 
 GRSECINSTALLED:Found GRSEC installed
+
+CREATED_TEMP_FILE:Created temporary file '$1'
+
+MIRRORS_NO_FILE:The mirrors file '$1' does not exist.
+MIRRORS_NO_MIRRORS:The mirrors file '$1' has no mirrors in it.
+MIRRORS_NO_VERSION:The mirrors file '$1' has no version number - resetting to zero.
+MIRRORS_ROTATED:Mirrors file '$1' has been rotated.
+
+VERSIONCHECK_START:Starting program version check...
+VERSIONCHECK_URL:Using URL '$1' to obtain the latest program version number.
+VERSIONCHECK_CMD:Executing command '$1'
+VERSIONCHECK_FAIL:Download failed - $1 mirrors left.
+VERSIONCHECK_FAIL_ALL:Download failed - unable to determine the latest program version number.
+VERSIONCHECK_CURRENT:This version: " "" "$1
+VERSIONCHECK_LATEST:Latest version: $1
+VERSIONCHECK_UPDT_AVAIL:Update available
+VERSIONCHECK_CONV_FAIL:Unable to compare version numbers: Program: '$1'    Latest: '$2'
 
 OSINFO_START:Checking if the O/S has changed since last time...
 OSINFO_END:Nothing seems to have changed
@@ -84,10 +101,6 @@ SETFILEHASH_DIR_FILE_COUNT:Found $1 hashes in $2
 SETFILEHASH_FILE_COUNT:Found $1 file hashes
 
 HASHUPD_START:Starting file hash data update...
-HASHUPD_CMD1:Using 'mktemp' command ($1) for rkhunter.dat file
-HASHUPD_CMD2:Using RANDOM variable for rkhunter.dat file
-HASHUPD_CMD3:Using date for rkhunter.dat file
-HASHUPD_CREATED_FILE:Created temporary file $1
 HASHUPD_OSINFO_START:Collecting O/S info...
 HASHUPD_ARCH_FOUND:Found system architecture: $1
 HASHUPD_REL_FILE:Found release file: $1
@@ -96,13 +109,18 @@ HASHUPD_NO_REL_FILE2:$1
 HASHUPD_OSNAME_FOUND:Found O/S name: $1
 HASHUPD_ERROR:Error installing new rkhunter.dat file. Code $1
 HASHUPD_NEW_DAT_FILE:New rkhunter.dat file installed
+HASHUPD_WARN:WARNING! It is the users responsibility to ensure that when the '--hashupd' option
+HASHUPD_WARN:is used, all the files on their system are known to be genuine, and installed from a
+HASHUPD_WARN:reliable source. The rkhunter '--check' option will compare the current hash values
+HASHUPD_WARN:against previously stored values, and report if the values differ. However, rkhunter
+HASHUPD_WARN:cannot determine what has caused the change, that is for the user to do.
 
 ENABLED_TESTS:Enabled tests are: $1
 DISABLED_TESTS:Disabled tests are: $1
 
 KSYMS_MISSING:ksyms and kallsyms checks will be skipped - neither file is present on the system.
 
-USER_DISABLED_TEST:Test \"$1\" disabled at user request.
+USER_DISABLED_TEST:Test '$1' disabled at user request.
 
 CHECK_START:Starting system checks...
 CHECK_SYS_COMMANDS:Checking system commands...
@@ -130,17 +148,17 @@ GOOD_HASH_NOT_EXIST:The file ${1}/${2} exists on the system,
 GOOD_HASH_NOT_EXIST:but it is not present in the rkhunter.dat file.
 GOOD_HASH_FILE_NOT_EXIST:The file ${1}/${2} does not exist on the system,
 GOOD_HASH_FILE_NOT_EXIST:but it is present in the rkhunter.dat file.
-GOOD_HASH_WHITELIST:Whitelisted file hash value found: File: ${1}    Hash: ${2}
+GOOD_HASH_WHITELIST:Whitelisted file hash value found: File: $1    Hash: $2
 GOOD_HASH_FILENAME:${1}/${2}
 GOOD_HASH_VALUES_CHANGED:File data values have changed:
 GOOD_HASH_VALUES_CHANGED2:File: ${1}/${2}
 GOOD_HASH_HASH_CHANGED:File hash: $1
 GOOD_HASH_DB_CHANGED:DB hash: $1
-GOOD_HASH_INODE_CHANGED:File inode: ${1}    DB inode: ${2}
-GOOD_HASH_PERM_CHANGED:File permissions: ${1}    DB permissions: ${2}
-GOOD_HASH_UID_CHANGED:File uid: ${1}    DB uid: ${2}
-GOOD_HASH_GID_CHANGED:File gid: ${1}    DB gid: ${2}
-GOOD_HASH_DTM_CHANGED:File modification time: ${1}    DB modification time: ${2}
+GOOD_HASH_INODE_CHANGED:File inode: $1    DB inode: $2
+GOOD_HASH_PERM_CHANGED:File permissions: $1    DB permissions: $2
+GOOD_HASH_UID_CHANGED:File uid: $1    DB uid: $2
+GOOD_HASH_GID_CHANGED:File gid: $1    DB gid: $2
+GOOD_HASH_DTM_CHANGED:File modification time: $1    DB modification time: $2
 GOOD_HASH_NO_HASHES:No file hash values found
 
 SKIP_GOODHASH_CHECK1:All 'known good' hash checks skipped.
@@ -151,10 +169,10 @@ SKIP_GOODHASH_CHECK3:All 'known good' hash checks skipped.
 SKIP_GOODHASH_CHECK3:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
 SKIP_GOODHASH_CHECK4:All 'known good' hash checks skipped.
 SKIP_GOODHASH_CHECK4:The file of stored hash values (rkhunter.dat) does not exist, and so must be created.
-SKIP_GOODHASH_CHECK4:To do this type in 'rkhunter -- hashupd'.
+SKIP_GOODHASH_CHECK4:To do this type in 'rkhunter --hashupd'.
 SKIP_GOODHASH_CHECK5:All 'known good' hash checks skipped.
 SKIP_GOODHASH_CHECK5:The file of stored hash values (rkhunter.dat) is empty, and so must be recreated.
-SKIP_GOODHASH_CHECK5:To do this type in 'rkhunter -- hashupd'.
+SKIP_GOODHASH_CHECK5:To do this type in 'rkhunter --hashupd'.
 SKIP_GOODHASH_CHECK6:All 'known good' hash checks skipped.
 SKIP_GOODHASH_CHECK6:This system uses prelinking, but libsafe was found which can cause errors.
 SKIP_GOODHASH_CHECK6:Disable libsafe if possible, and then run prelink and recreate the hash values with 'rkhunter --hashupd'.
@@ -171,14 +189,14 @@ CHECK_NETWORK:Checking the network
 NETWORK_PORTS_START:Performing check for backdoor ports
 NETWORK_PORTS_FILE_MISSING:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) is missing or empty.
-NETWORK_PORTS:Checking ${1} port ${2}...
-NETWORK_PORTS_FOUND:Network ${1} port ${2} is being used. This may be caused by the \"${3}\" rootkit.
-NETWORK_PORTS_FOUND:Run the \"netstat -an\" command to check this.
+NETWORK_PORTS:Checking $1 port ${2}...
+NETWORK_PORTS_FOUND:Network $1 port $2 is being used. This may be caused by the '$3' rootkit.
+NETWORK_PORTS_FOUND:Run the 'netstat -an' command to check this.
 NETWORK_INTERFACE_START:Performing checks on the network interfaces
 NETWORK_PROMISC_CHECK:Checking for promiscuous interfaces...
 NETWORK_PROMISC_IF:Possible promiscuous interfaces:
-NETWORK_PROMISC_IF_1:\"ifconfig\" test output: $1
-NETWORK_PROMISC_IF_2:\"ip\" test output: $1
+NETWORK_PROMISC_IF_1:'ifconfig' test output: $1
+NETWORK_PROMISC_IF_2:'ip' test output: $1
 NETWORK_PACKET_CAP_CHECK:Checking for packet capturing applications...
 NETWORK_PACKET_CAP_CHECK:Check skipped - no 'lsof' command found.
 NETWORK_PACKET_CAP_FOUND:Process $1 (PID $2) is listening on the network.

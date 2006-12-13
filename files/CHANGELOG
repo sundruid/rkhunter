@@ -44,7 +44,10 @@
    of software, then the user simply runs RKH with the option again. If the
    user has not run RKH with this option, then the 'known good' hash check is
    skipped. This option obsoletes the 'hashupd.sh' script previously
-   recommended to users.
+   recommended to users. If use of the '--hashupd' option is suggested by
+   the program, then the log file will contain a warning message to the
+   user that they must ensure that the commands checked on their system must
+   have been installed and verified as being genuine.
  - Added '--hash' option. This allows a user to select what hash function they
    want to use for the 'known good' hash file check. By default SHA1 will be
    used. This can be overridden via the command line, or in the configuration
@@ -128,6 +131,14 @@
    intuitive. Previously the specified ROOTDIR had to end in a slash (e.g.
    '/abc/'). Now this is not necessary, a normal directory name can be used
    (e.g. '/abc').
+ - The '--versioncheck' option now rotates the mirror file. It also assumes
+   program defaults if the mirror file is missing or empty, or if no mirrors
+   are found within it. Additionally if the URL is missing from the
+   configuration file, then a program default is used. This allows the option
+   to work even if the files have become a bit corrupt. Any missing files or
+   mirrors are logged to the log file. If a mirror fails, then the next
+   mirror is used, until all the mirrors have been tried. Only then is a
+   failure message displayed, and the return code set.
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.
@@ -149,6 +160,11 @@
    they also look for established connections rather than just listeners.
  - Backdoor port data file (backdoorports.dat) is now part of the '--update'
    process.
+ - The '--versioncheck' option did not set the return code. It now does so.
+   However, note that if an update is available then the code will be set
+   to '2'. This allows use of the '--quiet' option, but still being able to
+   detect if an error occurred (code 1), an update is available (code 2) or
+   if no error occurred and no update available (code 0).
 
  --
 

@@ -547,10 +547,6 @@ scanrootkit() {
 	fi
 }
 
-# A more portable version of generating a random value.
-gen_randval() {
-	date +%N%s%N
-}
 
 scanrootkit_suckit_extra_checks() {
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
@@ -568,7 +564,7 @@ scanrootkit_suckit_extra_checks() {
 			esac
 			# Let's check xrk or mem hiding
 			# Easiest way to define random?
-			__RANDOM=`gen_randval`
+			__RANDOM=`date +%N%s%N`
 			umask 027
 			for ext in xrk mem; do
 				randf="${TMPDIR}/${__RANDOM}.${ext}"
@@ -1813,7 +1809,7 @@ rkh_dat_set_version() {
 
 	TODAY=`date +%Y%m%d`
 
-	OLDVER=`grep '^Version:' ${RKHDAT_FILE} 2>/dev/null | tail -1 | cut -d: -f2`
+	OLDVER=`grep -i '^Version:' ${RKHDAT_FILE} 2>/dev/null | tail -1 | cut -d: -f2`
 
 	if [ -n "${OLDVER}" ]; then
 		OLDVER=`echo "${OLDVER}" | cut -c9-10`
@@ -2029,6 +2025,40 @@ rkh_dat_set_file_hash() {
 }
 
 
+get_temp_file() {
+
+	#
+	# This function will create an empty, unique temporary file.
+	#
+	# It takes one argument which is the pathname for the file,
+	# excluding the suffix. The function will return the pathname
+	# in TEMPFILE.
+	#
+
+	TEMPFILE=""
+
+	TEMPFILE_BASE=$1
+
+
+	if [ -n "${MKTEMP_CMD}" ]; then
+		TEMPFILE=`${MKTEMP_CMD} ${TEMPFILE_BASE}.XXXXXX`
+	elif [ -n "$RANDOM" ]; then
+		TEMPFILE="${TEMPFILE_BASE}.$RANDOM"
+	else
+		TEMPFILE="${TEMPFILE_BASE}.`date +%N%s%N`"
+	fi
+
+
+	#
+	# Remove the file just in case it does already exist!
+	#
+
+	rm -f ${TEMPFILE} >/dev/null 2>&1
+
+	return
+}
+
+
 do_hash_update() {
 
 	#
@@ -2039,31 +2069,13 @@ do_hash_update() {
 	display --to LOG --type INFO --nl HASHUPD_START
 
 	#
-	# We need now to create a unique temporary file to store
-	# the new data. We either use mktemp if it is available,
-	# or simply use the RANDOM environment variable.
+	# First we need to get a temporary file name to use.
 	#
 
-	MKTEMP_CMD=`find_cmd mktemp`
+	get_temp_file "${TMPDIR}/rkhunter.dat"
+	RKHDAT_FILE=$TEMPFILE
 
-	if [ -n "${MKTEMP_CMD}" ]; then
-		RKHDAT_FILE=`${MKTEMP_CMD} ${TMPDIR}/rkhunter.dat.XXXXXX`
-
-		display --to LOG --type INFO HASHUPD_CMD1 "${MKTEMP_CMD}"
-	elif [ -n "$RANDOM" ]; then
-		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDOM"
-		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
-
-		display --to LOG --type INFO HASHUPD_CMD2
-	else
-		RANDNUM=`gen_randval`
-		RKHDAT_FILE="${TMPDIR}/rkhunter.dat.$RANDNUM"
-		rm -f ${RKHDAT_FILE} >/dev/null 2>&1
-
-		display --to LOG --type INFO HASHUPD_CMD3
-	fi
-
-	display --to LOG --type INFO HASHUPD_CREATED_FILE "${RKHDAT_FILE}"
+	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_FILE}"
 
 
 	#
@@ -2133,6 +2145,98 @@ do_hash_update() {
 }
 
 
+get_next_mirror() {
+
+	#
+	# This function will obtain the next mirror in the mirrors file.
+	# It then rotates the mirrors in the mirrors file.
+	#
+
+	MIRROR=""
+
+
+	#
+	# Return if there is no mirrors file.
+	#
+
+	if [ ! -f "${DB_PATH}/mirrors.dat" ]; then
+		display --to LOG --type INFO MIRRORS_NO_FILE "${DB_PATH}/mirrors.dat"
+		return
+	fi
+
+
+	#
+	# Return if there are no defined mirrors.
+	#
+
+	MIRROR=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d= -f2`
+
+	if [ -z "${MIRROR}" ]; then
+		display --to LOG --type INFO MIRRORS_NO_MIRRORS "${DB_PATH}/mirrors.dat"
+		return
+	fi
+
+
+	#
+	# Now get the version number of the mirrors file. If the version
+	# does not exist or is corrupt, then we reset it to zero. This
+	# then allows the file to be updated next time the '--update'
+	# option is used.
+	#
+
+	MIRRORSVERSION=`egrep -i '^version:[0-9]{10}$' ${DB_PATH}/mirrors.dat | tail -1`
+
+	if [ -z "${MIRRORSVERSION}" ]; then
+		display --to LOG --type INFO MIRRORS_NO_VERSION "${DB_PATH}/mirrors.dat"
+		MIRRORSVERSION="version:0000000000"
+	fi
+
+
+	#
+	# Next get the remaining mirrors.
+	#
+
+	OTHERMIRRORS=`grep '^mirror=http://' ${DB_PATH}/mirrors.dat | grep -v ${MIRROR}`
+
+
+	#
+	# We need to get a temporary file name to use.
+	#
+
+	get_temp_file "${TMPDIR}/mirrors.dat"
+	MIRRORS_FILE=$TEMPFILE
+
+	display --to LOG --type INFO CREATED_TEMP_FILE "${MIRRORS_FILE}"
+
+
+	#
+	# Output to the temporary file the mirrors version, the other
+	# mirrors, and finally the mirror we are about to use.
+	#
+
+	echo "${MIRRORSVERSION}" >${MIRRORS_FILE}
+
+	for M in ${OTHERMIRRORS}; do
+		echo "${M}" >>${MIRRORS_FILE}
+	done;
+
+	echo "mirror=${MIRROR}" >>${MIRRORS_FILE}
+
+
+	#
+	# Move the new file into place, and delete the temporary file.
+	#
+
+	cat ${MIRRORS_FILE} >${DB_PATH}/mirrors.dat
+
+	rm -f ${MIRRORS_FILE} >/dev/null 2>&1
+
+	display --to LOG --type INFO MIRRORS_ROTATED "${DB_PATH}/mirrors.dat"
+
+	return
+}
+
+
 do_update() {
 
 	#
@@ -2152,74 +2256,162 @@ do_update() {
 
 do_versioncheck() {
 
-# jh - go through this function. Sort out messages; forcing update; use of quiet option; add logtext msgs, etc.
 	#
 	# This function performs a program version check.
 	#
+	# It will set the return code in some instances:
+	#	1 - a download error occurred
+	#	2 - no error occurred, but an update is available
+	#
 
-	LATESTVERSION="unknown"
+	LATESTVERSION=""
 
-	if [ -f "${TMPDIR}/rkhunter.upd" ]; then
-		rm -f ${TMPDIR}/rkhunter.upd >/dev/null 2>&1
+	display --to LOG --type PLAIN --nl VERSIONCHECK_START
+
+
+	#
+	# First we need to get a temporary file name to use.
+	#
+
+	get_temp_file "${TMPDIR}/rkhunter.vc"
+	RKHVC_FILE=$TEMPFILE
+
+	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHVC_FILE}"
+
+
+	#
+	# To get the URL to use we must process this as a configuration
+	# file option.
+	#
+
+	URL=`grep '^LATESTVERSION=' ${CONFIGFILE} | tail -1 | sed -e 's/LATESTVERSION=//' | tr -d '"' | tr -s ' '`
+
+	if [ -z "`echo \"${URL}\" | grep '^/'`" ]; then
+		URL="/rkhunter_latest.dat"
 	fi
 
-	URLPREFIX=`grep -v 'version=' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d'=' -f2`
 
-	VERSIONUPDATEURL=`grep 'LATESTVERSION=' ${CONFIGFILE} | sed -e 's/LATESTVERSION=//g'`
+	#
+	# Now we loop round through the mirrors until the file is downloaded.
+	# We do this by first seeing how many mirrors are available. Then
+	# we call a function to get the next mirror, which also rotates
+	# the mirror file.
+	#
 
-# jh - put check in here to use wget, lynx, links, elinks, curl, GET. or bget.
+	MIRROR_COUNT=0
 
-# uns - WGET_CMD (cmd, version tested, comments):
-#       wget, *, none.
-#       bget, 1.2, appends output.
-#       curl, 7.15.3: none.
-#       links/elinks, 0.4.2, decompresses output.
-#       lynx, 2.8.5dev.7, decompresses output.
-
-	if [ -n "${WGET_CMD}" ]; then
-		${WGET_CMD} -q -O ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL}
-	elif [ -n "${CURL_CMD}" ]; then
-		${CURL_CMD} --output ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL} 2>/dev/null
-	elif [ -n "${BGET_CMD}" ]; then
-		${BGET_CMD} --out ${TMPDIR}/rkhunter.upd ${URLPREFIX}${VERSIONUPDATEURL} 2>/dev/null
-	elif [ -n "${ELINKS_CMD}" ]; then
-		${ELINKS_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
-	elif [ -n "${LINKS_CMD}" ]; then
-		${LINKS_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
-	elif [ -n "${LYNX_CMD}" ]; then
-		${LYNX_CMD} -source ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
-	elif [ -n "${GET_CMD}" ]; then
-		${GET_CMD} ${URLPREFIX}${VERSIONUPDATEURL} > ${TMPDIR}/rkhunter.upd
+	if [ -f "${DB_PATH}/mirrors.dat" ]; then
+		MIRROR_COUNT=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | wc -l`
 	fi
 
-	if [ "${TMPDIR}/rkhunter.upd" ]; then
-		displaytext "${URLPREFIX}${VERSIONUPDATEURL}"
-		LATESTVERSION=`cat ${TMPDIR}/rkhunter.upd`
-	fi
+	test $MIRROR_COUNT -eq 0 && MIRROR_COUNT=1
 
-	if [ $QUIET -eq 0 ]; then
-		displaytext ""
-		displaytext "${PROGRAM_NAME} ${PROGRAM_version}, copyright ${PROGRAM_copyright_owner}"
-		displaytext ""
-		displaytext "This version:   ${PROGRAM_version}"
-		displaytext "Latest version: ${LATESTVERSION}"
-	fi
 
-	if [ -z "${LATESTVERSION}" ]; then
-		echo "Unable to fetch latest rkhunter version number from mirror."
-		echo "${WHITE}Please check manually for updates${NORMAL}"
-	else
-		PROG_VERS=`echo "${PROGRAM_version}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
-		LATEST_VERS=`echo "${LATESTVERSION}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | sed -e 's/\.//g'`
+	while test $MIRROR_COUNT -gt 0; do
+		MIRROR=""
+		MIRROR_COUNT=`expr $MIRROR_COUNT - 1`
 
-		if [ ${PROG_VERS} -lt ${LATEST_VERS} ]; then
-			echo "${WHITE}Update available${NORMAL}"
+		get_next_mirror
+
+		test -z "${MIRROR}" && MIRROR="http://rkhunter.sourceforge.net"
+
+		display --to LOG --type INFO VERSIONCHECK_URL "${MIRROR}${URL}"
+
+
+		#
+		# Now we can download the data into the temporary file.
+		#
+
+		# uns - WGET_CMD (cmd, version tested, comments):
+		#       wget, *, none.
+		#       bget, 1.2, appends output.
+		#       curl, 7.15.3: none.
+		#       links/elinks, 0.4.2, decompresses output.
+		#       lynx, 2.8.5dev.7, decompresses output.
+
+		CMD=""
+		DNLOADERR=0
+
+		rm -f ${RKHVC_FILE} >/dev/null 2>&1
+
+		if [ -n "${WGET_CMD}" ]; then
+			CMD="${WGET_CMD} -q -O ${RKHVC_FILE} ${MIRROR}${URL}"
+		elif [ -n "${CURL_CMD}" ]; then
+			CMD="${CURL_CMD} --fail --output ${RKHVC_FILE} ${MIRROR}${URL} 2>/dev/null"
+		elif [ -n "${BGET_CMD}" ]; then
+			CMD="${BGET_CMD} --out ${RKHVC_FILE} ${MIRROR}${URL} 2>/dev/null"
+		elif [ -n "${ELINKS_CMD}" ]; then
+			CMD="${ELINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${RKHVC_FILE}"
+		elif [ -n "${LINKS_CMD}" ]; then
+			CMD="${LINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${RKHVC_FILE}"
+		elif [ -n "${LYNX_CMD}" ]; then
+			CMD="${LYNX_CMD} -source ${MIRROR}${URL} >${RKHVC_FILE}"
+		elif [ -n "${GET_CMD}" ]; then
+			CMD="${GET_CMD} ${MIRROR}${URL} >${RKHVC_FILE}"
 		fi
+
+		display --to LOG --type INFO VERSIONCHECK_CMD "${CMD}"
+
+		eval ${CMD}
+		DNLOADERR=$?
+
+
+		#
+		# Some of these commands do not set the return code. As such we
+		# have to look in the output file to see if an error occurred.
+		#
+
+		if [ $DNLOADERR -eq 0 ]; then
+			if [ -z "`grep '^[.0-9]*$' ${RKHVC_FILE}`" ]; then
+				DNLOADERR=1
+			fi
+		fi
+
+		test ! -s "${RKHVC_FILE}" && DNLOADERR=1
+
+		if [ $DNLOADERR -eq 0 ]; then
+			break
+		elif [ $MIRROR_COUNT -gt 0 ]; then
+			display --to LOG --type INFO VERSIONCHECK_FAIL $MIRROR_COUNT
+		fi
+	done
+
+
+	#
+	# Now compare the current and downloaded value,
+	# and display the results.
+	#
+
+	if [ $DNLOADERR -eq 0 ]; then
+		LATESTVERSION=`cat ${RKHVC_FILE} 2>/dev/null`
+
+		#
+		# Convert the version strings to zero-spaced numbers.
+		# This allows us to numerically compare the versions,
+		# even when the numbers go above ten.
+		#
+		# E.g. '1.2.10' => 10210,   '1.3.2' => 10302.
+		#
+
+		PROG_VERS=`echo "${PROGRAM_version}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | tr -d '.'`
+		LATEST_VERS=`echo "${LATESTVERSION}" | cut -d. -f1-3 | sed -e 's/\.\([0-9]\)\./.0\1./' | sed -e 's/\.\([0-9]\)$/.0\1/' | tr -d '.'`
+
+		display --to SCREEN+LOG --type INFO VERSIONCHECK_CURRENT "${PROGRAM_version}"
+		display --to SCREEN+LOG --type INFO VERSIONCHECK_LATEST "${LATESTVERSION}"
+
+		if [ -z "${PROG_VERS}" -o -z "${LATEST_VERS}" ]; then
+			RET_CODE=1
+			display --to SCREEN+LOG --type INFO VERSIONCHECK_CONV_FAIL "${PROG_VERS}" "${LATEST_VERS}"
+		elif [ $PROG_VERS -lt $LATEST_VERS ]; then
+			RET_CODE=2
+			display --to SCREEN --type PLAIN VERSIONCHECK_UPDT_AVAIL
+		fi
+	else
+		RET_CODE=1
+		display --to LOG --type INFO VERSIONCHECK_FAIL_ALL
 	fi
 
-	if [ $QUIET -eq 0 ]; then
-		displaytext ""; displaytext ""; displaytext "";
-	fi
+	rm -f ${RKHVC_FILE} >/dev/null 2>&1
 
 	return
 }
@@ -3195,6 +3387,11 @@ do_known_good_hash_check() {
 
 	if [ $SKIP_GOODHASH_MSG -gt 0 ]; then
 		display --to SCREEN+LOG --type WARNING --screen-indent 4 SKIP_GOODHASH_CHECK${SKIP_GOODHASH_MSG}
+
+		if [ $SKIP_GOODHASH_MSG -eq 4 -o $SKIP_GOODHASH_MSG -eq 5 -o $SKIP_GOODHASH_MSG -eq 6 ]; then
+			display --to LOG --type WARNING --nl HASHUPD_WARN
+		fi
+
 		return
 	fi
 
@@ -5600,95 +5797,102 @@ do_local_host_checks() {
 	# Only reset status once
 	STATUS=0
 
-	for I in ${SEARCHINDIRS}; do
-		# Initialize directory
-		HIDDENDIRS=""
-
-		logtext "Start scanning for hidden files in ${I}..."
-
-		if [ -d "${I}" ]; then
-# jh - do we need showfiles? Could use ls cmd?
-			HIDDENDIRS=`${PERL_CMD} ${SCRIPT_PATH}/showfiles.pl ${I}`
-			logtext "Value of hiddendirs: ${HIDDENDIRS}"
-		fi
-
-		if [ ! "${HIDDENDIRS}" = "" ]; then
-			ALLHIDDENDIRS="${HIDDENDIRS} ${ALLHIDDENDIRS}"
-			STATUS=1
-		fi
-
-		logtext "End of scanning ${I}"
-	done
-
-	if [ ${STATUS} -eq 0 ]; then
+	if [ -z "${LS_CMD}" ]; then
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
-		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+		displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+		logtext "Scanning for hidden files... Skipped"
+		logtext "Test skipped because no \"ls\" command is present."
 	else
-		# Reset state
-		STATUS=0
-		for I in ${ALLHIDDENDIRS}; do
-			if [ ${OPERATING_SYSTEM} = "AIX" -o ${OPERATING_SYSTEM} = "SunOS" ] ; then
-				FILETYPE=`file ${I}|awk '{print $2}'`
-			else
-				FILETYPE=`file -b ${I}`
+		for I in ${SEARCHINDIRS}; do
+			# Initialize directory
+			HIDDENDIRS=""
+
+			logtext "Start scanning for hidden files in ${I}..."
+
+			if [ -d "${I}" ]; then
+				HIDDENDIRS=`${LS_CMD} -A1d ${I}/.* | egrep -v '\/\.\.?$'`
+				logtext "Value of hiddendirs: ${HIDDENDIRS}"
 			fi
 
-			# Ignore some filetypes, because they are harmless
-			case "${FILETYPE}" in
-			"character special (8/0)" | "character special (254/0)" | "empty")
-				logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
-				;;
-			"TDB database"*)
-				logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
-				;;
-			*)
-				# Ignore Gentoo's zero-sized files (extra check for future use)
-				if [ ! ${GENTOO} -eq 1 -a ! "${I}" = ".keep" -a ! -z ${I} ]; then
-					SEARCHDIR=0
-					if [ "${FILETYPE}" = "directory" ]; then
-						for ALLOWHIDDENDIRS in `grep '^ALLOWHIDDENDIR=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENDIR=//g'`; do
-							if [ "${ROOTDIR}${ALLOWHIDDENDIRS}" = "${I}" ]; then
-								SEARCHDIR=1
-								logtext "Found hidden directory ${I} on whitelist"
-							fi
-						done
-					else
-						for ALLOWHIDDENFILES in `grep '^ALLOWHIDDENFILE=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENFILE=//g'`; do
-							if [ "${ROOTDIR}${ALLOWHIDDENFILES}" = "${I}" ]; then
-								SEARCHDIR=1
-								logtext "Found hidden file ${I} on whitelist"
-							fi
-						done
-					fi
+			if [ -n "${HIDDENDIRS}" ]; then
+				ALLHIDDENDIRS="${HIDDENDIRS} ${ALLHIDDENDIRS}"
+				STATUS=1
+			fi
 
-					# Is it a directory and is it on the whitelist?
-					# searchdir: 0 = NOT on list, 1 = on list
-					if [ ${SEARCHDIR} -eq 0 ]; then
-						STATUS=1
-						HIDDENFILES="${HIDDENFILES} ${I} (${FILETYPE}) "
-						logtext "Added ${I} (${FILETYPE}) to list of unknown hidden files/dirs"
-					fi
-				fi
-				;;
-			esac
+			logtext "End of scanning ${I}"
 		done
 
-		if [ ${STATUS} -eq 1 ]; then
-			jump=`expr ${defaultcolumn} - ${SIZE}`
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${YELLOW}Warning!${NORMAL} ]"
-			logtext "WARNING, found: ${HIDDENFILES}"
-
-			displaytext "---------------"
-			displaytext "${ALLHIDDENDIRS}"
-			displaytext "---------------"
-
-			displaytext "Please inspect: ${HIDDENFILES}"
-		else
+		if [ ${STATUS} -eq 0 ]; then
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+		else
+			# Reset state
+			STATUS=0
+			for I in ${ALLHIDDENDIRS}; do
+				if [ ${OPERATING_SYSTEM} = "AIX" -o ${OPERATING_SYSTEM} = "SunOS" ] ; then
+					FILETYPE=`file ${I}|awk '{print $2}'`
+				else
+					FILETYPE=`file -b ${I}`
+				fi
+
+				# Ignore some filetypes, because they are harmless
+				case "${FILETYPE}" in
+				"character special (8/0)" | "character special (254/0)" | "empty")
+					logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
+					;;
+				"TDB database"*)
+					logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
+					;;
+				*)
+					# Ignore Gentoo's zero-sized files (extra check for future use)
+					if [ ! ${GENTOO} -eq 1 -a ! "${I}" = ".keep" -a ! -z ${I} ]; then
+						SEARCHDIR=0
+						if [ "${FILETYPE}" = "directory" ]; then
+							for ALLOWHIDDENDIRS in `grep '^ALLOWHIDDENDIR=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENDIR=//g'`; do
+								if [ "${ROOTDIR}${ALLOWHIDDENDIRS}" = "${I}" ]; then
+									SEARCHDIR=1
+									logtext "Found hidden directory ${I} on whitelist"
+								fi
+							done
+						else
+							for ALLOWHIDDENFILES in `grep '^ALLOWHIDDENFILE=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENFILE=//g'`; do
+								if [ "${ROOTDIR}${ALLOWHIDDENFILES}" = "${I}" ]; then
+									SEARCHDIR=1
+									logtext "Found hidden file ${I} on whitelist"
+								fi
+							done
+						fi
+
+						# Is it a directory and is it on the whitelist?
+						# searchdir: 0 = NOT on list, 1 = on list
+						if [ ${SEARCHDIR} -eq 0 ]; then
+							STATUS=1
+							HIDDENFILES="${HIDDENFILES} ${I} (${FILETYPE}) "
+							logtext "Added ${I} (${FILETYPE}) to list of unknown hidden files/dirs"
+						fi
+					fi
+					;;
+				esac
+			done
+
+			if [ ${STATUS} -eq 1 ]; then
+				jump=`expr ${defaultcolumn} - ${SIZE}`
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${YELLOW}Warning!${NORMAL} ]"
+				logtext "WARNING, found: ${HIDDENFILES}"
+
+				displaytext "---------------"
+				displaytext "${ALLHIDDENDIRS}"
+				displaytext "---------------"
+
+				displaytext "Please inspect: ${HIDDENFILES}"
+			else
+				jump=`expr ${defaultcolumn} - ${SIZE}`
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			fi
 		fi
 	fi
 
@@ -6247,19 +6451,19 @@ check_os_info() {
 	# answers. As such we warn users that a change has occurred.
 	#
 
-
 	#
 	# First check if the host name has changed.
 	#
 
-	RUNHASHUPD=0
+	FOUND=0
 
 	display --to LOG --type PLAIN --nl OSINFO_START
+
 
 	OLD_HOST=`grep '^Host:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
 
 	if [ "${HOST_NAME}" != "${OLD_HOST}" ]; then
-		RUNHASHUPD=1
+		FOUND=1
 		display --to LOG --type WARNING OSINFO_HOST_CHANGE1
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_HOST_CHANGE2 "${OLD_HOST}" "${HOST_NAME}"
 	fi
@@ -6272,7 +6476,7 @@ check_os_info() {
 	OLD_OSNAME=`grep '^OS:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
 
 	if [ "${OSNAME}" != "${OLD_OSNAME}" ]; then
-		RUNHASHUPD=1
+		FOUND=1
 		display --to LOG --type WARNING OSINFO_OSVER_CHANGE1
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_OSVER_CHANGE2 "${OLD_OSNAME}" "${OSNAME}"
 	fi
@@ -6289,7 +6493,7 @@ check_os_info() {
 	fi
 
 	if [ $PRELINKED -ne $OLD_PRELINK ]; then
-		RUNHASHUPD=1
+		FOUND=1
 		if [ $PRELINKED -eq 1 ]; then
 			display --to LOG --type WARNING OSINFO_PRELINK_CHANGE ''
 		else
@@ -6323,15 +6527,16 @@ check_os_info() {
 	fi
 
 	if [ "${OLD_ARCH_TYPE}" != "${ARCH_TYPE}" ]; then
-		RUNHASHUPD=1
+		FOUND=1
 		display --to LOG --type WARNING OSINFO_ARCH_CHANGE1
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_ARCH_CHANGE2 "${OLD_ARCH}" "${ARCH}"
 	fi
 
 
-	if [ $RUNHASHUPD -eq 1 ]; then
+	if [ $FOUND -eq 1 ]; then
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG1
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG2
+		display --to LOG --type WARNING --nl HASHUPD_WARN
 	else
 		display --to LOG --type INFO OSINFO_END
 	fi
@@ -6748,10 +6953,15 @@ SPACEDPATH=`echo ${PATH} | tr : ' ' 2>/dev/null`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="bget curl diff elinks file find ifconfig ip links ls lsattr lsmod lsof lynx perl readlink sort stat strings uniq wget GET"
+CMDLIST="diff file find ifconfig ip ls lsattr lsmod lsof mktemp perl readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cut date egrep grep head sed tail tr uname wc"
+
+# List of commands used to download files from the web. This list is 
+# used by the '--update' and '--versioncheck' options. Preferred commands
+# are listed first.
+WEBCMDLIST="wget curl elinks links lynx bget GET"
 
 HOST_NAME=`hostname 2>/dev/null`
 
@@ -6762,6 +6972,8 @@ else
 fi
 
 # This is the return code for the program actions - update, check, etc.
+# The '--versioncheck' option will set the return code to 2 to indicate
+# that an update is available.
 RET_CODE=0
 
 # Set the default language to English.
@@ -7246,6 +7458,44 @@ fi
 
 
 #
+# For the update and versioncheck options, we need to make sure
+# we have a command capable of downloading files from the web.
+# The first command found is used.
+#
+
+if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
+	FOUND=0
+
+	for CMD in ${WEBCMDLIST}; do
+		#
+		# Ignore perl commands if perl is not present.
+		#
+
+		if [ "${CMD}" = "bget" -o "${CMD}" = "GET" ]; then
+			test -z "${PERL_CMD}" && continue
+		fi
+
+
+		RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
+
+		eval ${RKHTMPVAR}_CMD=`find_cmd ${CMD}`
+
+		if [ -n "`eval echo \"\\$${RKHTMPVAR}_CMD\"`" ]; then
+			FOUND=1
+			break
+		fi
+	done
+
+	if [ $FOUND -eq 0 ]; then
+		echo "The \"--update\" and \"--versioncheck\" options require a command able to"
+		echo "download files from the web. No such command can be found on the system."
+		echo "Examples of commands that could be used are: ${WEBCMDLIST}"
+		exit 1
+	fi
+fi
+
+
+#
 # If no option is given for the program to action, then say so and exit.
 #
 
@@ -7389,6 +7639,14 @@ for CMD in ${CMDLIST}; do
 		display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
 	else
 		display --to LOG --type INFO NOT_FOUND_CMD "${CMD}"
+	fi
+done
+
+for CMD in ${WEBCMDLIST}; do
+	RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
+	RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
+	if [ -n "${RKHTMPVAR}" ]; then
+		display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
 	fi
 done
 
