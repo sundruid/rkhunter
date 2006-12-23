@@ -23,6 +23,11 @@ MSG_RESULT_SKIPPED:Skipped
 MSG_RESULT_FOUND:Found
 MSG_RESULT_NOT_FOUND:Not Found
 
+MSG_RESULT_UPD:Updated
+MSG_RESULT_NO_UPD:No update
+MSG_RESULT_UPD_FAILED:Update failed
+MSG_RESULT_VCHK_FAILED:Version check failed
+
 
 #
 # The messages.
@@ -33,6 +38,8 @@ VERSIONLINE3:Running $1 version $2
 
 RKH_STARTDATE:Start date is $1
 RKH_ENDDATE:End date is $1
+
+OPSYS:Detected operating system is '$1'
 
 CONFIG_CHECK_START:Checking configuration file and command-line options...
 CONFIG_CMDLINE:Command line is $1
@@ -74,15 +81,21 @@ MIRRORS_NO_MIRRORS:The mirrors file '$1' has no mirrors in it.
 MIRRORS_NO_VERSION:The mirrors file '$1' has no version number - resetting to zero.
 MIRRORS_ROTATED:Mirrors file '$1' has been rotated.
 
+DOWNLOAD_CMD:Executing download command '$1'
+DOWNLOAD_FAIL:Download failed - $1 mirrors left.
+
 VERSIONCHECK_START:Starting program version check...
-VERSIONCHECK_URL:Using URL '$1' to obtain the latest program version number.
-VERSIONCHECK_CMD:Executing command '$1'
-VERSIONCHECK_FAIL:Download failed - $1 mirrors left.
 VERSIONCHECK_FAIL_ALL:Download failed - unable to determine the latest program version number.
 VERSIONCHECK_CURRENT:This version: " "" "$1
 VERSIONCHECK_LATEST:Latest version: $1
 VERSIONCHECK_UPDT_AVAIL:Update available
 VERSIONCHECK_CONV_FAIL:Unable to compare version numbers: Program: '$1'    Latest: '$2'
+
+UPDATE_START:Starting check of '.dat' files...
+UPDATE_CHECKING_FILE:Checking file $1
+UPDATE_FILE_NO_VERS:File '$1' has no valid version number. Downloading a new copy.
+UPDATE_FILE_MISSING:File '$1' is missing or empty. Downloading a new copy.
+UPDATE_DECOMP_FAIL:Uncompressing '$1' failed. Original file left in place.
 
 OSINFO_START:Checking if the O/S has changed since last time...
 OSINFO_END:Nothing seems to have changed

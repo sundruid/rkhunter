@@ -40,6 +40,12 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	fi
 fi
 
+if [ "$1" = "--debug" ]; then
+	rm -f /tmp/rkhunter-debug >/dev/null 2>&1
+	exec 1>/tmp/rkhunter-debug 2>&1
+	set -x
+fi
+
 case "${OPERATING_SYSTEM}" in
 AIX|OpenBSD|SunOS)
 	# What is the default shell?
@@ -492,7 +498,7 @@ scanrootkit() {
 	fi
 	SCAN_STATUS=0
 	JUMPCOL=`expr ${defaultcolumn} - 12`
-	SIZE=`echo \'${SCAN_ROOTKIT}\' | wc -c | tr -s ' ' | tr -d ' '`
+	SIZE=`echo \'${SCAN_ROOTKIT}\' | wc -c | tr -d ' '`
 	jump=`expr ${JUMPCOL} - ${SIZE}`
 	displaytext -n "   Rootkit '${SCAN_ROOTKIT}'... "
 	logtext "*** Start scan ${SCAN_ROOTKIT} ***"
@@ -956,7 +962,7 @@ add_extra_dirs() {
 		test -d /usr/pkg/libexec && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/libexec"
 	elif [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
 		#
-		# Cater for Fink (Mac OSX) additional software.
+		# Cater for Fink (Mac OS X) additional software.
 		#
 
 		test -d /sw/bin && EXTRA_DIRS="${EXTRA_DIRS} /sw/bin"
@@ -1008,7 +1014,7 @@ get_bindir_option() {
 		else
 			USE_DFLT=1
 
-			BINPATHS=${DFLT_BINPATHS}
+			BINPATHS=$DFLT_BINPATHS
 
 
 			#
@@ -1219,7 +1225,7 @@ get_mailonwarn_option() {
 			MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f2-`
 
 			if [ -z "${MCMD}" -o "${MCMD}" = "${MAIL_CMD}" ]; then
-				MAIL_CMD=${MC}
+				MAIL_CMD=$MC
 			else
 				MAIL_CMD="${MC} ${MCMD}"
 			fi
@@ -1590,7 +1596,7 @@ get_md5_cmd() {
 			MCMD=`echo "${MD5_CMD}" | cut -d' ' -f2-`
 
 			if [ -z "${MCMD}" -o "${MCMD}" = "${MD5_CMD}" ]; then
-				MD5_CMD=${MC}
+				MD5_CMD=$MC
 			else
 				MD5_CMD="${MC} ${MCMD}"
 			fi
@@ -1660,12 +1666,12 @@ get_hash_function() {
 				HASH_FUNC=""
 			fi
 		else
-			HASH_FUNC=${HF}
+			HASH_FUNC=$HF
 		fi
 	elif [ "${HASH_FUNC}" = "MD5" ]; then
 		test -z "${MD5_CMD}" && get_md5_cmd
 
-		HASH_FUNC=${MD5_CMD}
+		HASH_FUNC=$MD5_CMD
 	fi
 
 
@@ -1687,7 +1693,7 @@ get_hash_function() {
 			HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f2-`
 
 			if [ -z "${HCMD}" -o "${HCMD}" = "${HASH_FUNC}" ]; then
-				HASH_FUNC=${HF}
+				HASH_FUNC=$HF
 			else
 				HASH_FUNC="${HF} ${HCMD}"
 			fi
@@ -1750,10 +1756,12 @@ get_configfile_options() {
 	# Some options are only required when checking the system.
 	#
 
+	if [ $CHECK -eq 1 -o $UPDATE -eq 1 ]; then
+		get_auto_x_option
+	fi
+
 	if [ $CHECK -eq 1 ]; then
 		get_allow_rootssh_option
-
-		get_auto_x_option
 
 
 		#
@@ -1856,17 +1864,11 @@ rkh_dat_get_os_info() {
 
 	for FNAME in ${REL_FILES}; do
 		if [ -f "${FNAME}" -a ! -h "${FNAME}" ]; then
-			RELEASE=${FNAME}
+			RELEASE=$FNAME
 
 			case "${RELEASE}" in
 			${ROOTDIR}/etc/lsb-release)
 				OSNAME=`cat ${RELEASE} | grep '^DISTRIB_DESCRIPTION=' | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
-				;;
-			${ROOTDIR}/etc/SuSE-release)
-				OSNAME=`grep -i 'SuSE Linux' ${RELEASE}`
-				;;
-			${ROOTDIR}/etc/SLOX-release)
-				OSNAME=`grep -i 'SuSE Linux' ${RELEASE}`
 				;;
 			${ROOTDIR}/etc/gentoo-release)
 				GENTOO=1
@@ -1919,8 +1921,9 @@ rkh_dat_get_os_info() {
 		OSNAME="OpenBSD `uname -r 2>/dev/null`"
 		;;
 	Darwin)
-		OSNAME=`sw_vers 2>/dev/null | grep 'ProductName' | sed -e 's/^ProductName: *//'`
-		OSNAME="${OSNAME} `sysctl kern.version 2>/dev/null | sed -e 's/^kern.version = //' | cut -d: -f1`"
+		OSNAME=`sw_vers 2>/dev/null | grep '^ProductName:' | sed -e 's/ProductName: *//'`
+		OSNAME="${OSNAME} `sw_vers 2>/dev/null | grep '^ProductVersion:' | sed -e 's/ProductVersion: *//'`"
+#		OSNAME="${OSNAME} `sysctl kern.version 2>/dev/null | sed -e 's/^kern.version = //' | cut -d: -f1`"
 		;;
 	AIX)
 		ARCH=`uname -p 2>/dev/null`
@@ -1984,7 +1987,7 @@ rkh_dat_set_file_hash() {
 	fi
 
 	if [ $PRELINKED -eq 0 ]; then
-		HCMD=${HASH_FUNC}
+		HCMD=$HASH_FUNC
 	else
 		if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
 			HCMD="${PRELINK_CMD} --verify --md5"
@@ -2148,11 +2151,10 @@ do_hash_update() {
 get_next_mirror() {
 
 	#
-	# This function will obtain the next mirror in the mirrors file.
-	# It then rotates the mirrors in the mirrors file.
+	# This function will obtain the next mirror in the mirrors file
+	# if no mirror is currently being used. It then rotates the
+	# mirrors in the mirrors file.
 	#
-
-	MIRROR=""
 
 
 	#
@@ -2237,18 +2239,286 @@ get_next_mirror() {
 }
 
 
+download_file() {
+
+	# This function downloads a specified file. It takes three parameters:
+	#     1=mirror, 2=url, 3=output file
+	#
+	# The function sets a return code (DNLOADERR).
+	#
+
+	#
+	# We loop round through the mirrors until the file is downloaded.
+	# We do this by first seeing how many mirrors are available. Then
+	# we call a function to get the next mirror, which also rotates
+	# the mirror file. If a mirror has already been set, then that
+	# mirror is used. That way, in effect, once we find a good mirror
+	# then it will be used for all the downloads.
+	#
+
+	MIRROR=$1
+	URL=$2
+	OUTPUT_FILE=$3
+
+	DNLOADERR=0
+	MIRROR_COUNT=0
+
+	if [ -f "${DB_PATH}/mirrors.dat" ]; then
+		MIRROR_COUNT=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | wc -l`
+	fi
+
+	test $MIRROR_COUNT -eq 0 && MIRROR_COUNT=1
+
+
+	while test $MIRROR_COUNT -gt 0; do
+		MIRROR_COUNT=`expr $MIRROR_COUNT - 1`
+
+		if [ -z "${MIRROR}" ]; then
+			get_next_mirror
+			test -z "${MIRROR}" && MIRROR="http://rkhunter.sourceforge.net"
+		fi
+
+
+		#
+		# Now we can download the data into the temporary file.
+		#
+
+		# uns - WGET_CMD (cmd, version tested, comments):
+		#       wget, *, none.
+		#       bget, 1.2, appends output.
+		#       curl, 7.15.3: none.
+		#       links/elinks, 0.4.2, decompresses output.
+		#       lynx, 2.8.5dev.7, decompresses output.
+
+		CMD=""
+		DNLOADERR=0
+
+		rm -f ${OUTPUT_FILE} >/dev/null 2>&1
+
+		if [ -n "${WGET_CMD}" ]; then
+			CMD="${WGET_CMD} -q -O ${OUTPUT_FILE} ${MIRROR}${URL}"
+		elif [ -n "${CURL_CMD}" ]; then
+			CMD="${CURL_CMD} --fail --output ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+		elif [ -n "${BGET_CMD}" ]; then
+			CMD="${BGET_CMD} --out ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+		elif [ -n "${ELINKS_CMD}" ]; then
+			CMD="${ELINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${OUTPUT_FILE}"
+		elif [ -n "${LINKS_CMD}" ]; then
+			CMD="${LINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${OUTPUT_FILE}"
+		elif [ -n "${LYNX_CMD}" ]; then
+			CMD="${LYNX_CMD} -source ${MIRROR}${URL} >${OUTPUT_FILE}"
+		elif [ -n "${GET_CMD}" ]; then
+			CMD="${GET_CMD} ${MIRROR}${URL} >${OUTPUT_FILE}"
+		fi
+
+		display --to LOG --type INFO DOWNLOAD_CMD "${CMD}"
+
+		eval ${CMD}
+		DNLOADERR=$?
+
+		test $DNLOADERR -gt 1 && DNLOADERR=1
+
+
+		#
+		# Some of these commands do not set the return code. As such we
+		# have to look in the output file to see if an error occurred.
+		# We only do this for version files though.
+		#
+
+		if [ $DNLOADERR -eq 0 -a -n "`echo \"${URL}\" | grep '\.ver$'`" ]; then
+			if [ -z "`grep '^[.0-9]*$' ${OUTPUT_FILE}`" ]; then
+				DNLOADERR=1
+			fi
+		fi
+
+		test ! -s "${OUTPUT_FILE}" && DNLOADERR=1
+
+		if [ $DNLOADERR -eq 0 ]; then
+			break
+		elif [ $MIRROR_COUNT -gt 0 ]; then
+			MIRROR=""
+			display --to LOG --type INFO DOWNLOAD_FAIL $MIRROR_COUNT
+		fi
+	done
+
+	return $DNLOADERR
+}
+
+
 do_update() {
 
 	#
 	# This function checks to see if any of the supplied RKH
-	# *.dat files needs updating. If it does, then the new file
-	# is downloaded.
+	# *.dat files needs updating. If it does, then the file is
+	# overwritten with the new version.
 	#
 
-# jh - put this script in-line?
-# jh - ensure backdoorport.dat is part of update check.
-	${SCRIPT_PATH}/check_update.sh ${CONFIGFILE} "${DB_PATH}/mirrors.dat" ${DB_PATH} ${LOGFILE}
-	RET_CODE=$?
+	display --to SCREEN+LOG --type PLAIN --nl UPDATE_START
+
+
+	#
+	# First we need to get a temporary file name to use.
+	#
+
+	get_temp_file "${TMPDIR}/rkhunter.upd"
+	RKHUPD_FILE=$TEMPFILE
+
+	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHUPD_FILE}"
+
+
+	#
+	# Now we loop round through the files we need to check. Each file
+	# will use the first mirror, and if necessary loop through the
+	# remaining mirrors until the file is downloaded. In theory this
+	# could take some time if the mirror sites are all experiencing
+	# problems and this is affecting all the files.
+	#
+	# For each file we look at the current version number. If there
+	# is a problem doing this, then we just try and download a new
+	# copy of the file. If the version number is okay, then we
+	# first download the '.ver' file to find the latest version
+	# number. If that is successful, we then update the file if
+	# necessary.
+	#
+
+	MIRROR=""
+
+	UPDFILE_LIST="mirrors.dat programs_bad.dat programs_good.dat md5blacklist.dat backdoorports.dat"
+
+	for UPDFILE in ${UPDFILE_LIST}; do
+		LATEST_VERS=""
+
+		if [ -f "${DB_PATH}/${UPDFILE}" -a -s "${DB_PATH}/${UPDFILE}" ]; then
+			PROG_VERS=`egrep -i '^version:[0-9]{10}$' ${DB_PATH}/${UPDFILE} | tail -1 | sed -e 's/version://'`
+
+			if [ -z "${PROG_VERS}" ]; then
+				VERSION_FILE=0
+				display --to LOG --type INFO UPDATE_FILE_NO_VERS "${UPDFILE}"
+			else
+				VERSION_FILE=1
+			fi
+		else
+			VERSION_FILE=0
+			display --to LOG --type INFO UPDATE_FILE_MISSING "${UPDFILE}"
+		fi
+
+
+		#
+		# We now loop round once or twice. If we need a version file,
+		# then that is downloaded and the versions compared. If we
+		# determine to get the compressed file immediately, or if the
+		# versions indicate that an update is available. Then we loop
+		# round again to get the file.
+		#
+
+		while true; do
+			if [ $VERSION_FILE -eq 1 ]; then
+				URL="/${UPDFILE}.ver"
+			else
+				#
+				# Note: To avoid a backward incompatability we
+				# have to get the actual gzip file from a
+				# specific directory which previous versions
+				# do not use.
+				#
+
+				URL="/1.3/${UPDFILE}.gz"
+				RKHUPD_FILE="${RKHUPD_FILE}.gz"
+			fi
+
+			download_file "${MIRROR}" "${URL}" "${RKHUPD_FILE}"
+
+
+			#
+			# Now compare the current and downloaded version
+			# numbers, and download the new file if necessary.
+			#
+
+			if [ $? -eq 0 ]; then
+				if [ $VERSION_FILE -eq 1 ]; then
+					LATEST_VERS=`cat ${RKHUPD_FILE} 2>/dev/null`
+
+					display --to LOG --type INFO VERSIONCHECK_CURRENT "${PROG_VERS}"
+					display --to LOG --type INFO VERSIONCHECK_LATEST "${LATEST_VERS}"
+
+					if [ -z "${PROG_VERS}" -o -z "${LATEST_VERS}" ]; then
+						RET_CODE=1
+
+						display --to SCREEN+LOG --type WARNING --screen-indent 2 --color RED --result VCHK_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
+
+						display --to LOG --type WARNING VERSIONCHECK_CONV_FAIL "${PROG_VERS}" "${LATEST_VERS}"
+
+						break
+					elif [ $PROG_VERS -lt $LATEST_VERS ]; then
+						test $RET_CODE -eq 0 && RET_CODE=2
+
+						#
+						# We now need to download the
+						# actual file, and then display
+						# the results of that download.
+						#
+
+						VERSION_FILE=0
+
+						display --to LOG --type INFO VERSIONCHECK_UPDT_AVAIL
+						rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+
+						continue
+					else
+						display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result NO_UPD UPDATE_CHECKING_FILE "${UPDFILE}"
+						break
+					fi
+				fi
+
+
+				#
+				# Updated files need to be uncompressed.
+				#
+
+				if [ $VERSION_FILE -eq 0 ]; then
+					${GUNZIP_CMD} ${RKHUPD_FILE} >/dev/null 2>&1
+
+					if [ $? -eq 0 ]; then
+						RKHUPD_FILE=`echo "${RKHUPD_FILE}" | sed -e 's/\.gz$//'`
+						cat ${RKHUPD_FILE} >${DB_PATH}/${UPDFILE}
+
+						display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result UPD UPDATE_CHECKING_FILE "${UPDFILE}"
+					else
+						#
+						# Make sure that nothing is
+						# left lying around. Get rid
+						# of both the compressed and
+						# uncompressed files.
+						#
+
+						rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+
+						display --to SCREEN+LOG --type WARNING --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
+						display --to LOG --type WARNING UPDATE_DECOMP_FAIL "${RKHUPD_FILE}"
+
+						RKHUPD_FILE=`echo "${RKHUPD_FILE}" | sed -e 's/\.gz$//'`
+					fi
+
+					break
+				fi
+			else
+				RET_CODE=1
+
+				if [ $VERSION_FILE -eq 1 ]; then
+					display --to SCREEN+LOG --type WARNING --screen-indent 2 --color RED --result VCHK_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
+				else
+					rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+					RKHUPD_FILE=`echo "${RKHUPD_FILE}" | sed -e 's/\.gz$//'`
+
+					display --to SCREEN+LOG --type WARNING --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
+				fi
+
+				break
+			fi
+		done
+
+		rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+	done
 
 	return
 }
@@ -2264,9 +2534,10 @@ do_versioncheck() {
 	#	2 - no error occurred, but an update is available
 	#
 
+	MIRROR=""
 	LATESTVERSION=""
 
-	display --to LOG --type PLAIN --nl VERSIONCHECK_START
+	display --to SCREEN+LOG --type PLAIN --nl VERSIONCHECK_START
 
 
 	#
@@ -2292,97 +2563,13 @@ do_versioncheck() {
 
 
 	#
-	# Now we loop round through the mirrors until the file is downloaded.
-	# We do this by first seeing how many mirrors are available. Then
-	# we call a function to get the next mirror, which also rotates
-	# the mirror file.
+	# Download the file, and then compare the current value
+	# with the downloaded one.
 	#
 
-	MIRROR_COUNT=0
+	download_file "${MIRROR}" "${URL}" "${RKHVC_FILE}"
 
-	if [ -f "${DB_PATH}/mirrors.dat" ]; then
-		MIRROR_COUNT=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | wc -l`
-	fi
-
-	test $MIRROR_COUNT -eq 0 && MIRROR_COUNT=1
-
-
-	while test $MIRROR_COUNT -gt 0; do
-		MIRROR=""
-		MIRROR_COUNT=`expr $MIRROR_COUNT - 1`
-
-		get_next_mirror
-
-		test -z "${MIRROR}" && MIRROR="http://rkhunter.sourceforge.net"
-
-		display --to LOG --type INFO VERSIONCHECK_URL "${MIRROR}${URL}"
-
-
-		#
-		# Now we can download the data into the temporary file.
-		#
-
-		# uns - WGET_CMD (cmd, version tested, comments):
-		#       wget, *, none.
-		#       bget, 1.2, appends output.
-		#       curl, 7.15.3: none.
-		#       links/elinks, 0.4.2, decompresses output.
-		#       lynx, 2.8.5dev.7, decompresses output.
-
-		CMD=""
-		DNLOADERR=0
-
-		rm -f ${RKHVC_FILE} >/dev/null 2>&1
-
-		if [ -n "${WGET_CMD}" ]; then
-			CMD="${WGET_CMD} -q -O ${RKHVC_FILE} ${MIRROR}${URL}"
-		elif [ -n "${CURL_CMD}" ]; then
-			CMD="${CURL_CMD} --fail --output ${RKHVC_FILE} ${MIRROR}${URL} 2>/dev/null"
-		elif [ -n "${BGET_CMD}" ]; then
-			CMD="${BGET_CMD} --out ${RKHVC_FILE} ${MIRROR}${URL} 2>/dev/null"
-		elif [ -n "${ELINKS_CMD}" ]; then
-			CMD="${ELINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${RKHVC_FILE}"
-		elif [ -n "${LINKS_CMD}" ]; then
-			CMD="${LINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${RKHVC_FILE}"
-		elif [ -n "${LYNX_CMD}" ]; then
-			CMD="${LYNX_CMD} -source ${MIRROR}${URL} >${RKHVC_FILE}"
-		elif [ -n "${GET_CMD}" ]; then
-			CMD="${GET_CMD} ${MIRROR}${URL} >${RKHVC_FILE}"
-		fi
-
-		display --to LOG --type INFO VERSIONCHECK_CMD "${CMD}"
-
-		eval ${CMD}
-		DNLOADERR=$?
-
-
-		#
-		# Some of these commands do not set the return code. As such we
-		# have to look in the output file to see if an error occurred.
-		#
-
-		if [ $DNLOADERR -eq 0 ]; then
-			if [ -z "`grep '^[.0-9]*$' ${RKHVC_FILE}`" ]; then
-				DNLOADERR=1
-			fi
-		fi
-
-		test ! -s "${RKHVC_FILE}" && DNLOADERR=1
-
-		if [ $DNLOADERR -eq 0 ]; then
-			break
-		elif [ $MIRROR_COUNT -gt 0 ]; then
-			display --to LOG --type INFO VERSIONCHECK_FAIL $MIRROR_COUNT
-		fi
-	done
-
-
-	#
-	# Now compare the current and downloaded value,
-	# and display the results.
-	#
-
-	if [ $DNLOADERR -eq 0 ]; then
+	if [ $? -eq 0 ]; then
 		LATESTVERSION=`cat ${RKHVC_FILE} 2>/dev/null`
 
 		#
@@ -2403,7 +2590,7 @@ do_versioncheck() {
 			RET_CODE=1
 			display --to SCREEN+LOG --type INFO VERSIONCHECK_CONV_FAIL "${PROG_VERS}" "${LATEST_VERS}"
 		elif [ $PROG_VERS -lt $LATEST_VERS ]; then
-			RET_CODE=2
+			test $RET_CODE -eq 0 && RET_CODE=2
 			display --to SCREEN --type PLAIN VERSIONCHECK_UPDT_AVAIL
 		fi
 	else
@@ -3335,7 +3522,7 @@ do_known_bad_hash_check() {
 
 	MISSING=1
 
-	HCMD=${MD5_CMD}
+	HCMD=$MD5_CMD
 
 	for DIR in ${HASHDIRS}; do
 		for FNAME in ${HASHFILES}; do
@@ -3401,7 +3588,7 @@ do_known_good_hash_check() {
 	#
 
 	if [ $PRELINKED -eq 0 ]; then
-		HCMD=${HASH_FUNC}
+		HCMD=$HASH_FUNC
 	else
 		if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
 			HCMD="${PRELINK_CMD} --verify --md5"
@@ -4355,7 +4542,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 						# If $lfile is not a pathname then look at $l8
 						if [ -z "`echo ${lfile} | grep '^/'`" ]; then
 							if [ -n "`echo ${l8} | grep '^/'`" ]; then
-								lfile=${l8}
+								lfile=$l8
 							fi
 						fi
 						# Remove anything after the pathname
@@ -5041,9 +5228,8 @@ do_network_port_checks() {
 	# We must check to see who can perform this test.
 	#
 
-# jh - other O/S's? Test on MAC OSX?
 	case "${OPERATING_SYSTEM}" in
-	*BSD|Linux|AIX|SunOS)
+	*BSD|Linux|AIX|SunOS|Darwin)
 		;;
 	*)
 		return
@@ -5096,7 +5282,7 @@ do_network_port_checks() {
 		Linux)
 			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} "`
 			;;
-		*BSD)
+		*BSD|Darwin)
 			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} "`
 			;;
 		AIX|SunOS)
@@ -6089,7 +6275,7 @@ nonvulnerable:%2.4.24%
 						displaytext -n "   - ${APPLICATIONNAME} [unknown] "
 
 						JUMPCOL=`expr ${defaultcolumn} - 12`
-						SIZE=`echo \'${APPLICATIONNAME} [unknown]\' | wc -c | tr -s ' ' | tr -d ' '`
+						SIZE=`echo \'${APPLICATIONNAME} [unknown]\' | wc -c | tr -d ' '`
 						jump=`expr ${JUMPCOL} - ${SIZE} + 11`
 						insertlayout
 						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
@@ -6098,7 +6284,7 @@ nonvulnerable:%2.4.24%
 						displaytext -n "   - ${APPLICATIONNAME} ${VERSION} "
 
 						JUMPCOL=`expr ${defaultcolumn} - 12`
-						SIZE=`echo \'${APPLICATIONNAME} ${VERSION}\' | wc -c | tr -s ' ' | tr -d ' '`
+						SIZE=`echo \'${APPLICATIONNAME} ${VERSION}\' | wc -c | tr -d ' '`
 						jump=`expr ${JUMPCOL} - ${SIZE} + 11`
 						insertlayout
 
@@ -6515,7 +6701,7 @@ check_os_info() {
 	elif [ -n "`echo ${OLD_ARCH} | grep 'sun[0-9][a-z]'`" -o -n "`echo ${OLD_ARCH} | grep 'sparc'`" ]; then
 		OLD_ARCH_TYPE="sparc"
 	else
-		OLD_ARCH_TYPE=${OLD_ARCH}
+		OLD_ARCH_TYPE=$OLD_ARCH
 	fi
 
 	if [ -n "`echo ${ARCH} | grep 'i[0-9]86'`" ]; then
@@ -6523,7 +6709,7 @@ check_os_info() {
 	elif [ -n "`echo ${ARCH} | grep 'sun[0-9][a-z]'`" -o -n "`echo ${ARCH} | grep 'sparc'`" ]; then
 		ARCH_TYPE="sparc"
 	else
-		ARCH_TYPE=${ARCH}
+		ARCH_TYPE=$ARCH
 	fi
 
 	if [ "${OLD_ARCH_TYPE}" != "${ARCH_TYPE}" ]; then
@@ -6593,7 +6779,7 @@ set_hash_dirs_files() {
 
 
 	add_extra_dirs
-	HASHDIRS="${HASHDIRS}{EXTRA_DIRS}"
+	HASHDIRS="${HASHDIRS}${EXTRA_DIRS}"
 
 	return
 }
@@ -6662,7 +6848,7 @@ display_tests() {
 	MAX=0
 
 	for STR in ${GROUPED_TESTS}; do
-		LEN=`echo "${STR}" | cut -d: -f1 | wc -c`
+		LEN=`echo "${STR}" | cut -d: -f1 | wc -c | tr -d ' '`
 		test $LEN -gt $MAX && MAX=$LEN
 	done
 
@@ -6679,7 +6865,7 @@ display_tests() {
 		# Add on spaces to expand the group name to the maximum.
 		#
 
-		LEN=`echo "${GROUP_NAME}" | wc -c`
+		LEN=`echo "${GROUP_NAME}" | wc -c | tr -d ' '`
 		LEN=`expr $MAX - $LEN`
 
 		if [ $LEN -gt 0 ]; then
@@ -6782,6 +6968,8 @@ help() {
 	echo "       --cronjob                       Run as a cronjob"
 	echo "                                       (implies -c, -sk and --nocolors options)"
 	echo "       --dbdir <dir>                   Use specified database directory"
+	echo "       --debug                         Debug mode"
+	echo "                                       (Do not use unless asked to do so)"
 	echo "       --disable <test>[,<test>...]    Disable specific tests"
 	echo "                                       (Default is to disable no tests)"
 	echo "       --display-logfile               Display the logfile at the end"
@@ -6972,7 +7160,8 @@ else
 fi
 
 # This is the return code for the program actions - update, check, etc.
-# The '--versioncheck' option will set the return code to 2 to indicate
+# Its value will either be 0 (no error) or 1 (an error occurred).
+# The '--versioncheck' option may set the return code to 2 to indicate
 # that an update is available.
 RET_CODE=0
 
@@ -7099,6 +7288,8 @@ while [ $# -ge 1 ]; do
 			DB_PATH="$1"
 			;;
 		esac
+		;;
+	--debug)
 		;;
 	--display-logfile | --displaylogfile | --display-log | --displaylog)
 		CATLOGFILE=1
@@ -7388,6 +7579,22 @@ if [ $CHECK -eq 1 ]; then
 
 
 	#
+	# Check if we have a ksyms or kallsyms file.
+	#
+
+	if [ -f "${ROOTDIR}/proc/ksyms" ]; then
+		KSYMS_FILE="${ROOTDIR}/proc/ksyms"
+	elif [ -f "${ROOTDIR}/proc/kallsyms" ]; then
+		KSYMS_FILE="${ROOTDIR}/proc/kallsyms"
+	fi
+
+
+	check_test apps && APPS_CHECK_ENABLED=1
+fi
+
+
+if [ $CHECK -eq 1 -o $UPDATE -eq 1 ]; then
+	#
 	# Set up the colors to be used.
 	#
 
@@ -7406,20 +7613,6 @@ if [ $CHECK -eq 1 ]; then
 			WHITE="[0;30m"	# Black
 		fi
 	fi
-
-
-	#
-	# Check if we have a ksyms or kallsyms file.
-	#
-
-	if [ -f "${ROOTDIR}/proc/ksyms" ]; then
-		KSYMS_FILE="${ROOTDIR}/proc/ksyms"
-	elif [ -f "${ROOTDIR}/proc/kallsyms" ]; then
-		KSYMS_FILE="${ROOTDIR}/proc/kallsyms"
-	fi
-
-
-	check_test apps && APPS_CHECK_ENABLED=1
 fi
 
 
@@ -7492,6 +7685,21 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 		echo "Examples of commands that could be used are: ${WEBCMDLIST}"
 		exit 1
 	fi
+
+
+	#
+	# For the update option we must have the gunzip command available.
+	#
+
+	if [ $UPDATE -eq 1 ]; then
+		GUNZIP_CMD=`find_cmd gunzip`
+
+		if [ -z "${GUNZIP_CMD}" ]; then
+			echo "The \"--update\" option requires the \"gunzip\" command."
+			echo "This command cannot be found on the system."
+			exit 1
+		fi
+	fi
 fi
 
 
@@ -7534,18 +7742,24 @@ fi
 # in the actual language file. This allows the language files to work
 # even if we add or remove any of the TYPE or RESULT keywords.
 #
+OLDIFS=$IFS
+IFS="
+"
+
 for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
 	TYPE=`echo "${LINE}" | cut -d: -f1`
 
 	if [ "${LANGUAGE}" != "en" ]; then
 		RKHTMPVAR=`grep "^${TYPE}:" ${DB_PATH}/i18n/${LANGUAGE} 2>/dev/null`
-		test -n "${RKHTMPVAR}" && LINE=${RKHTMPVAR}
+		test -n "${RKHTMPVAR}" && LINE=$RKHTMPVAR
 	fi
 
 	RKHTMPVAR=`echo "${LINE}" | cut -d: -f2-`
 
-	eval $TYPE=${RKHTMPVAR}
+	eval $TYPE=\"${RKHTMPVAR}\"
 done
+
+IFS=$OLDIFS
 
 
 #
@@ -7596,6 +7810,8 @@ fi
 display --to LOG --type INFO --nl RKH_STARTDATE "`date`"
 
 display --to LOG --type PLAIN --nl CONFIG_CHECK_START
+
+display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
 
 display --to LOG --type INFO CONFIG_CMDLINE "${CMD_LINE}"
 
@@ -7652,7 +7868,7 @@ done
 
 if [ $HASH_UPDATE -eq 1 -o $GOOD_HASH_ENABLED -eq 1 ]; then
 	if [ $PRELINKED -eq 1 ]; then
-		RKHTMPVAR=${PRELINK_CMD}
+		RKHTMPVAR=$PRELINK_CMD
 		test -n "${RUNCON_CMD}" && RKHTMPVAR=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
 
 		display --to LOG --type INFO FOUND_CMD 'prelink' "${RKHTMPVAR}"
