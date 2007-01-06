@@ -658,8 +658,11 @@ check_commands() {
 	#
 
 	if [ -z "${STAT_CMD}" -a -n "${PERL_CMD}" ]; then
-		STAT_CMD=`find_cmd ${SCRIPT_PATH}/stat.pl`
-		test -n "${STAT_CMD}" && STAT_CMD="${PERL_CMD} ${STAT_CMD}"
+		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl File::stat Getopt::Long 2>&1 | grep 'NOT'`
+
+		if [ -z "${MOD_INSTALLED}" ]; then
+			STAT_CMD="${PERL_CMD} ${SCRIPT_PATH}/stat.pl"
+		fi
 	fi
 
 	return
@@ -1570,7 +1573,7 @@ get_md5_cmd() {
 			fi
 
 			if [ -z "${MD5_CMD}" -a -n "${PERL_CMD}" ]; then
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl 2>&1 | grep 'Digest::MD5 installed'`
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
 
 				if [ -n "${MOD_INSTALLED}" ]; then
 					MD5_CMD="${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
@@ -1658,7 +1661,7 @@ get_hash_function() {
 		fi
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl | grep 'Digest::SHA1 installed'`
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA1 2>&1 | grep 'Digest::SHA1 installed'`
 
 			if [ -n "${MOD_INSTALLED}" ]; then
 				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha1.pl"
@@ -7661,11 +7664,22 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 
 	for CMD in ${WEBCMDLIST}; do
 		#
-		# Ignore perl commands if perl is not present.
+		# Ignore perl commands if perl is not present, or if
+		# certain modules are not present.
 		#
 
-		if [ "${CMD}" = "bget" -o "${CMD}" = "GET" ]; then
+		if [ "${CMD}" = "GET" ]; then
 			test -z "${PERL_CMD}" && continue
+
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl LWP URI HTTP::Status HTTP::Date Getopt::Long 2>&1 | grep 'NOT'`
+
+			test -n "${MOD_INSTALLED}" && continue
+		elif [ "${CMD}" = "bget" ]; then
+			test -z "${PERL_CMD}" && continue
+
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Socket Carp 2>&1 | grep 'NOT'`
+
+			test -n "${MOD_INSTALLED}" && continue
 		fi
 
 

@@ -2,12 +2,12 @@
 
 #################################################################################
 #
-# Perl module checker 0.0.2
+# Perl module checker 0.0.3
 #
 #################################################################################
 #
-# This Perl script checks for installed modules, by try
-# to use the module. If the check fails, the module is not installed.
+# This Perl script checks for installed modules by trying to 'use' the
+# module. If the check fails, then the module is not present.
 #
 # If you want to install additional modules, use:
 # > perl -MCPAN -e shell
@@ -35,6 +35,9 @@ my @modCheck = qw(
 Digest::MD5
 Digest::SHA1
 );
+
+# Use command-line module names if present.
+@modCheck = @ARGV if (@ARGV);
 
 for (@modCheck)
   {
@@ -77,7 +80,7 @@ sub installed
 	# Try to retrieve version number (by using eval again)
         eval "\$version = \$$module\::VERSION";
 	
-	# Set version number if no problem occured
+	# Set version number if no problem occurred
         $check = $version if (!$@);
       }
       
