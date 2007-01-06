@@ -959,6 +959,14 @@ add_extra_dirs() {
 		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
 
 		test -d /usr/ccs/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/ccs/bin"
+
+
+		#
+		# OpenSolaris distributions (e.g. BeleniX) may use
+		# other directories.
+		#
+
+		test -d /usr/foss && EXTRA_DIRS="${EXTRA_DIRS} /usr/foss/bin /usr/foss/sbin /usr/foss/libexec"
 	elif [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
 		test -d /usr/pkg/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/bin"
 		test -d /usr/pkg/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/sbin"
