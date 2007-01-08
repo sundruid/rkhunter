@@ -1431,8 +1431,8 @@ get_disable_option() {
 	#
 	# Note: disabled tests are always compared against the list
 	# of enabled tests. Hence, if we used
-	#      'rkhunter -c --enable hashes --disable apps'
-	# then only the file hash tests are run. Any other test is
+	#      'rkhunter -c --enable system_commands --disable apps'
+	# then only the system command tests are run. Any other test is
 	# not run because it is not in the '--enable' list. As such
 	# the '--disable' option in the example above is not necessary.
 	#
@@ -1494,9 +1494,9 @@ get_if_prelinked() {
 	#
 	# If the system appears to be using prelinking, but no
 	# prelink command can be found, then we simply skip the
-	# hash checks. We do not exit because this is a suspicious
+	# hash check. We do not exit because this is a suspicious
 	# circumstance, and it may be better to check the system
-	# regardless of the hash checks.
+	# regardless of the hash check.
 	#
 	LIBSAFE_TEST1=""
 	LIBSAFE_TEST2=""
@@ -1532,88 +1532,6 @@ get_if_prelinked() {
 			SKIP_GOODHASH_MSG=6
 		else
 			SKIP_GOODHASH_MSG=1
-		fi
-	fi
-
-	return
-}
-
-
-get_md5_cmd() {
-
-	#
-	# This function is different from the others in that it is
-	# called in more than one place. As such we do not generate
-	# an error message if no MD5 command can be found - we leave
-	# that to the calling code.
-	#
-	# As usual we first test any given command-line option, and
-	# then check the configuration file. We do generate an error
-	# message if either of these is invalid.
-	#
-
-	if [ -n "${MD5_CMD}" ]; then
-		MD5_CMD=`echo "${MD5_CMD}" | tr -s ' '`
-
-		if [ "${MD5_CMD}" = " " ]; then
-			echo "Invalid --md5 option - no command given."
-			exit 1
-		fi
-	else
-		MD5_CMD=`grep '^MD5_CMD=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${MD5_CMD}" ]; then
-			MD5_CMD=`echo "${MD5_CMD}" | sed -e 's/MD5_CMD=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
-
-			if [ -z "${MD5_CMD}" -o "${MD5_CMD}" = " " ]; then
-				echo "Invalid MD5_CMD configuration option - no command specified."
-				exit 1
-			fi
-		else
-			MD5_CMD=`find_cmd md5sum`
-
-			if [ -z "${MD5_CMD}" ]; then
-				MD5_CMD=`find_cmd md5`
-
-				if [ "${OPERATING_SYSTEM}" = "NetBSD" -a "${MD5_CMD}" = "/usr/bin/md5" ]; then
-					MD5_CMD="${MD5_CMD} -n"
-				fi
-			fi
-
-			if [ -z "${MD5_CMD}" -a -n "${PERL_CMD}" ]; then
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
-
-				if [ -n "${MOD_INSTALLED}" ]; then
-					MD5_CMD="${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
-				fi
-			fi
-		fi
-	fi
-
-
-	#
-	# We now do a final check that the command is executable.
-	#
-
-	if [ -n "${MD5_CMD}" ]; then
-		MCMD=`echo "${MD5_CMD}" | cut -d' ' -f1`
-		MC=`find_cmd ${MCMD}`
-
-		if [ -n "${MC}" ]; then
-			#
-			# We rebuild the command to use the full pathname.
-			#
-
-			MCMD=`echo "${MD5_CMD}" | cut -d' ' -f2-`
-
-			if [ -z "${MCMD}" -o "${MCMD}" = "${MD5_CMD}" ]; then
-				MD5_CMD=$MC
-			else
-				MD5_CMD="${MC} ${MCMD}"
-			fi
-		else
-			echo "Invalid MD5 hash option - command '${MCMD}' is non-existent or not executable."
-			exit 1
 		fi
 	fi
 
@@ -1679,10 +1597,35 @@ get_hash_function() {
 		else
 			HASH_FUNC=$HF
 		fi
-	elif [ "${HASH_FUNC}" = "MD5" ]; then
-		test -z "${MD5_CMD}" && get_md5_cmd
+	fi
 
-		HASH_FUNC=$MD5_CMD
+
+	#
+	# If we still have no hash function, then look for an MD5 command.
+	#
+
+	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "MD5" ]; then
+		HF=`find_cmd md5sum`
+
+		if [ -z "${HF}" ]; then
+			HF=`find_cmd md5`
+
+			if [ "${OPERATING_SYSTEM}" = "NetBSD" -a "${HF}" = "/usr/bin/md5" ]; then
+				HF="${HF} -n"
+			fi
+		fi
+
+		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
+
+			if [ -n "${MOD_INSTALLED}" ]; then
+				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
+			else
+				HASH_FUNC=""
+			fi
+		else
+			HASH_FUNC=$HF
+		fi
 	fi
 
 
@@ -1782,21 +1725,12 @@ get_configfile_options() {
 		get_enable_option
 		get_disable_option
 
-		check_test known_good_hash && GOOD_HASH_ENABLED=1
-
-		#
-		# For the 'known bad' MD5 hash file check we must have
-		# an MD5 command available for use.
-		#
-
-		check_test known_bad_hash && BAD_HASH_ENABLED=1
-
-		test $BAD_HASH_ENABLED -eq 1 && get_md5_cmd
+		check_test hashes && GOOD_HASH_ENABLED=1
 	fi
 
 
 	#
-	# We only need the hash function options if we are going to
+	# We only need the hash function option if we are going to
 	# be checking the system or updating the hash database.
 	#
 
@@ -2394,7 +2328,7 @@ do_update() {
 
 	MIRROR=""
 
-	UPDFILE_LIST="mirrors.dat programs_bad.dat programs_good.dat md5blacklist.dat backdoorports.dat"
+	UPDFILE_LIST="mirrors.dat programs_bad.dat programs_good.dat backdoorports.dat"
 
 	for UPDFILE in ${UPDFILE_LIST}; do
 		LATEST_VERS=""
@@ -3501,67 +3435,6 @@ do_strings_check() {
 }
 
 
-do_known_bad_hash_check() {
-
-	#
-	# This function carries out the check of system command hash
-	# values checked against a file of known bad values.
-	#
-
-	if ! `check_test known_bad_hash`; then
-		display --to LOG --type INFO --nl USER_DISABLED_TEST known_bad_hash
-		return
-	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 BAD_HASH_START
-
-
-	#
-	# If we have to skip the test, then do so and log the reason why.
-	#
-
-	if [ $SKIP_BADHASH_MSG -gt 0 ]; then
-		display --to SCREEN+LOG --type WARNING --screen-indent 4 SKIP_BADHASH_CHECK${SKIP_BADHASH_MSG}
-		return
-	fi
-
-
-	#
-	# Otherwise, just carry on with the checks.
-	#
-
-	MISSING=1
-
-	HCMD=$MD5_CMD
-
-	for DIR in ${HASHDIRS}; do
-		for FNAME in ${HASHFILES}; do
-			if [ -f "${DIR}/${FNAME}" -a ! -h "${DIR}/${FNAME}" ]; then
-				MISSING=0
-
-				SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
-
-				if [ -z "`grep \"${SYSHASH}\" ${DB_PATH}/md5blacklist.dat`" ]; then
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
-				else
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
-					display --to LOG --type WARNING BAD_HASH_FILE_FOUND "${DIR}" "${FNAME}"
-				fi
-			fi
-		done
-	done
-
-	if [ $MISSING -eq 1 ]; then
-		display --to SCREEN+LOG --type WARNING --screen-indent 2 BAD_HASH_NO_FILES
-	fi
-
-	keypresspause
-
-	return
-}
-
-
 do_known_good_hash_check() {
 
 	#
@@ -3570,8 +3443,8 @@ do_known_good_hash_check() {
 	# in the rkhunter.dat file.
 	#
 
-	if ! `check_test known_good_hash`; then
-		display --to LOG --type INFO --nl USER_DISABLED_TEST known_good_hash
+	if ! `check_test hashes`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST hashes
 		return
 	fi
 
@@ -3726,27 +3599,12 @@ do_known_good_hash_check() {
 }
 
 
-do_hash_check() {
-
-	if ! `check_test hashes`; then
-		display --to LOG --type INFO --nl USER_DISABLED_TEST hashes
-		return
-	fi
-
-	do_known_bad_hash_check
-
-	do_known_good_hash_check
-
-	return
-}
-
-
 do_system_commands_checks() {
 
 	#
 	# This function carries out a sequence of tests on
 	# system commands. These consist of the 'strings' command
-	# check, and the file hash checks.
+	# check, and the file hash check.
 	#
 
 	if ! `check_test system_commands`; then
@@ -3760,7 +3618,7 @@ do_system_commands_checks() {
 
 	do_strings_check
 
-	do_hash_check
+	do_known_good_hash_check
 
 	return
 }
@@ -6995,8 +6853,6 @@ help() {
 	echo "                                       languages"
 	echo "   -l, --logfile [logfile]             Write to a logfile"
 	echo "                                       (default is $DFLT_LOGFILE)"
-	echo "       --md5                           Specify the MD5 command to use for the"
-	echo "                                       'known bad' hash file check"
 	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
 	echo "       --nocolors                      Use black and white output"
 	echo "       --nolog                         Do not write to a logfile"
@@ -7061,7 +6917,6 @@ APPEND_OPT=0
 
 DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
 
-MD5_CMD=""
 HASH_FUNC=""
 HASHDIRS=""
 HASHFILES=""
@@ -7093,10 +6948,6 @@ QUIET=0
 
 # Set to only show warnings.
 SHOWWARNINGSONLY=0
-
-# This will be set if the known bad hash check is to be performed.
-BAD_HASH_ENABLED=0
-SKIP_BADHASH_MSG=0
 
 # This will be set if the known good hash check is to be performed.
 GOOD_HASH_ENABLED=0
@@ -7184,17 +7035,16 @@ KNOWN_LANGS=en
 
 # A space-separated list of test names we recognise.
 #
-KNOWN_TESTS="strings hashes known_bad_hash known_good_hash deleted_files packet_cap_apps apps rootkits local_host network passwd system_commands"
+KNOWN_TESTS="strings hashes deleted_files packet_cap_apps apps rootkits local_host network passwd system_commands"
 
 # A space-separated list of test 'group names'. This list allows test
-# names to be grouped together. For example, 'hashes' can include the
-# specific tests of 'known_bad_hash' and 'known_good_hash'. Both test
+# names to be grouped together. For example, 'system_commands' can include
+# the specific tests of 'strings' and 'hashes'. Both test
 # group names, and specific test names, can be used with the test
 # enable/disable options. In this list group names are colon-separated
 # from the specific test names.
 #
-GROUPED_TESTS="system_commands:strings:hashes:known_bad_hash:known_good_hash
-               hashes:known_bad_hash:known_good_hash
+GROUPED_TESTS="system_commands:strings:hashes
                network:packet_cap_apps
                local_host:passwd"
 
@@ -7383,18 +7233,6 @@ while [ $# -ge 1 ]; do
 		esac
 		exit 0
 		;;
-	--md5)
-		case "$2" in
-		'')
-			;;
-		-*)
-			;;
-		*)
-			shift
-			MD5_CMD="$1"
-			;;
-		esac
-		;;
 	--noappend-log | --no-append-log | --noappendlog)
 		APPEND_LOG=0
 		APPEND_OPT=1
@@ -7562,30 +7400,18 @@ if [ $CHECK -eq 1 ]; then
 
 
 	#
-	# To perform the hash checks requires a valid hash function command.
-	# We exit for the 'known bad' check because only MD5 can be used,
-	# but for the 'known good' check we simply tell the user that no
-	# hash function can be found.
+	# To perform the hash check requires a valid hash function command.
+	# If required we simply tell the user that no hash function can be
+	# found. If one is found, then set up the necessary hash directories
+	# and file names.
 	#
 
-	if [ $BAD_HASH_ENABLED -eq 1 ]; then
-		if [ -z "${MD5_CMD}" ]; then
-			SKIP_BADHASH_MSG=1
-		elif [ ! -f "${DB_PATH}/md5blacklist.dat" -o ! -s "${DB_PATH}/md5blacklist.dat" ]; then
-			SKIP_BADHASH_MSG=2
+	if [ $GOOD_HASH_ENABLED -eq 1 ]; then
+		if [ -z "${HASH_FUNC}" ]; then
+			SKIP_GOODHASH_MSG=2
+		else
+			set_hash_dirs_files
 		fi
-	elif [ $GOOD_HASH_ENABLED -eq 1 -a -z "${HASH_FUNC}" ]; then
-		SKIP_GOODHASH_MSG=2
-	fi
-
-
-	#
-	# Set up the hash files and directories
-	# to be used for the hash checks.
-	#
-
-	if [ $BAD_HASH_ENABLED -eq 1 -o $GOOD_HASH_ENABLED -eq 1 ]; then
-		set_hash_dirs_files
 	fi
 
 
@@ -7918,14 +7744,6 @@ if [ $HASH_UPDATE -eq 1 -o $GOOD_HASH_ENABLED -eq 1 ]; then
 			display --to LOG --type INFO HASH_PERL_MD5
 		else
 			display --to LOG --type INFO HASH_PERL_FUNC "${HASH_FUNC}"
-		fi
-	fi
-
-	if [ $BAD_HASH_ENABLED -eq 1 -a -n "${MD5_CMD}" ]; then
-		if [ -n "`echo "${MD5_CMD}" | grep '/filehashmd5\.pl$'`" ]; then
-			display --to LOG --type INFO KB_HASH_PERL_MD5
-		else
-			display --to LOG --type INFO KB_HASH_FUNC "${MD5_CMD}"
 		fi
 	fi
 fi

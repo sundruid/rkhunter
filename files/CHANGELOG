@@ -23,7 +23,7 @@
 
  -- 
 
- * 1.3.0 (xx/xx/2006)
+ * 1.3.0 (xx/xx/2007)
 
  New:
  - Created an ACKNOWLEDGMENTS file.
@@ -35,9 +35,6 @@
    characters on a white screen. The command-line option --cs2 will enable it.
  - Added special config file and command-line option, -x/-X, to detect if X
    is in use. If detected then second colour set will be used.
- - Added '--md5' cli option and MD5_CMD configuration file option. This
-   allows the user to specify the command to use for the MD5 'known bad'
-   file hash check.
  - Added '--hashupd' option. This allows a user to create the rkhunter.dat
    file. This file contains the O/S name, file hash values and other bits of
    information. If the file hash values change, perhaps due to new versions
@@ -52,8 +49,7 @@
    want to use for the 'known good' hash file check. By default SHA1 will be
    used. This can be overridden via the command line, or in the configuration
    file using the HASH_FUNC option. For prelinked systems, the function must
-   be either MD5 or SHA1. For the 'known bad' check, the MD5 hash function
-   must be used (see above), but is separate from the 'known good' function.
+   be either MD5 or SHA1.
  - The files for the file hash checks are now 'looked for'. The code will
    search the command directories, and check the relevant files in all the
    directories. Additional commands and directories are used for Solaris,
@@ -74,7 +70,12 @@
  - Added two new command-line and configuration file options, '--enable'
    and '--disable' to specify which tests are to be carried out and which
    are to be ignored. Use of either option will automatically assume '--check'.
-   To list the available test names, use the new '--list tests' option.
+ - To list the available test names, use the new '--list tests' option.
+ - The '--update' and --versioncheck' options can now use commands other than
+   wget to download files. Supported commands are now wget, curl, elinks,
+   links, lynx, bget and GET. Once a command has been found, it will be used
+   for all downloads. Since bget and GET are perl commands, checks will be
+   made that any required perl modules are also present on the system.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -89,17 +90,13 @@
    directories for Solaris users.
  - Expanded the command PATH used to include the /usr/pkg directory for
    NetBSD users.
- - Added command-line option --dac as alias for --disable-application-check.
  - Versioncheck now checks the versions numerically.
  - The MD5WHITELIST configuration file option has changed name to HASHWHITELIST.
- - The '--disable-md5-check/--dmc' option has been changed to
-   '--disable-hash-check/--dhc'.
  - The '--checkall' option has been changed to '--check'. The old option is
    still recognised, but will be deprecated at some time.
  - If a logfile is to be written, but not appended to, then the old log file
    is moved to '<logfile name>.old' now. The same happens to the rkhunter.dat
    file if the --hashupd option is used.
- - The 'known bad' file hash check is now enabled by default.
  - The 'known good' hash check now also checks the files inode, uid, gid,
    permissions and modification date/time, for any changes. This is only
    for non-prelinked systems. As before, in all cases, the hash is checked.
@@ -114,6 +111,9 @@
  - Improved NetBSD support.
  - The supplied perl scripts, providing the stat command, md5 and sha1,
    can now be executed without perl being in the default directory (/usr/bin).
+ - If a perl script is to be used, then a check is made that required modules
+   are installed on the system. If they are not, then it is treated the same
+   as if perl was not present.
  - Included the /usr/share/man directories when looking for hidden files.
  - Check for symbol entries in kallsyms file if ksyms does not exist.
  - Enabled sockstat/netstat test for all BSD variants (not just FreeBSD).
@@ -122,10 +122,10 @@
  - The TMPDIR configuration option and --tmpdir command-line option cannot
    be set to /tmp or /var/tmp because files will be copied and left here.
    It cannot be set to /etc either because files will be deleted from here.
- - Removed the '--scan-knownbad-files' option as this is now the
-   'known_bad_hash' tests and can be disabled by the '--disable' option.
-   Also removed the '--disable-md5-check' option. This is now the
-   'hashes' test name.
+ - Removed the '--scan-knownbad-files' option. This test was considered to
+   be obsolete.
+ - Removed the '--disable-md5-check' option. This is now the 'known_good_hash'
+   test name, and can be disabled by the '--disable' option.
  - Removed the '--allow-ssh-root-user' option from the command-line. This
    can still be set/unset in the configuration file.
  - The --rootdir/ROOTDIR configuration option has been changed to be more
@@ -139,14 +139,26 @@
    to work even if the files have become a bit corrupt. Any missing files or
    mirrors are logged to the log file. If a mirror fails, then the next
    mirror is used, until all the mirrors have been tried. Only then is a
-   failure message displayed, and the return code set.
+   failure message displayed, and the return code set. The return code will be
+   set to 0 if no error occurred, 1 if an error did occur, and 2 if no error
+   occurred but a new version is available.
+ - The '--update' option will use a default mirror if the mirror file is
+   missing or empty. If a mirror fails then the next mirror is used. If a file
+   has become corrupted such that the version number cannot be read, then a
+   new copy will be downloaded. The return code will be set for this function.
+   It will take the value of 0 for no error, 1 for an error, and 2 for no
+   error but an update has occurred. This allows a user to use the --quiet
+   option, but still check for the return code.
+ - The version numbering of the '.dat' database files has changed. This makes
+   them incompatable with previous versions of rkhunter, and as such files
+   from previous versions will be overwritten if used with this version.
+ - For the '--update' option the gunzip command must be present. This is now
+   checked for.
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.
  - Command-line options requiring an argument now work correctly under Solaris.
  - The -h/--help option now works as expected.
- - The OpenBSD check for 'known bad' hashes was not matching the checksum
-   correctly. The known good check, however, was.
  - The ignoKit rootkit check was not checking all the required files.
  - Some checks were not respecting the ROOTDIR option in their pathnames. This
    has now been corrected (possibly not completely though). Also, some tests

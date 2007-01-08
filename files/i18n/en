@@ -69,9 +69,6 @@ HASH_PERL_MD5:Using the perl script for MD5 hash checks
 HASH_PERL_SHA1:Using the perl script for SHA1 hash checks
 HASH_PERL_FUNC:Using '$1' for the hash checks
 
-KB_HASH_FUNC:Using '$1' for the 'known bad' MD5 hash checks
-KB_HASH_PERL_MD5:Using the perl script for the 'known bad' MD5 hash checks
-
 GRSECINSTALLED:Found GRSEC installed
 
 CREATED_TEMP_FILE:Created temporary file '$1'
@@ -144,15 +141,6 @@ STRINGS_SCANNING_BAD:Scanning for string $1
 STRINGS_SCANNING_BAD:String not found in 'strings' command
 STRINGS_CHECK:Checking 'strings' command...
 STRINGS_CHECK:Check skipped - no 'strings' command found.
-
-BAD_HASH_START:Performing 'known bad' hash check
-BAD_HASH_FILE_FOUND:Possible backdoored or harmful file found: ${1}/${2}
-BAD_HASH_NO_FILES:No system commands found to check
-
-SKIP_BADHASH_CHECK1:All 'known bad' hash checks skipped.
-SKIP_BADHASH_CHECK1:No MD5 command can be found.
-SKIP_BADHASH_CHECK2:All 'known bad' hash checks skipped.
-SKIP_BADHASH_CHECK2:The file of known bad hash values (md5blacklist.dat) is either missing or empty.
 
 GOOD_HASH_START:Performing 'known good' hash check
 GOOD_HASH_NO_VALUE:The file ${1}/${2} exists on the system,
