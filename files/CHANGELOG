@@ -80,7 +80,8 @@
  Changes:
  - Improved command-line and config file option checking.
  - The log file is now created by default, it can be disabled in the config
-   file or by using the --nolog command line option.
+   file or by using the --nolog command line option. The log file is created
+   with permissions 600.
  - The log file cannot be a symlink.
  - Multiple recipients may be specified with the MAIL-ON-WARNING config option.
  - Added BINDIR and ROOTDIR options to the config file.
@@ -154,6 +155,10 @@
    from previous versions will be overwritten if used with this version.
  - For the '--update' option the gunzip command must be present. This is now
    checked for.
+ - The displayed output and logged output are now pretty much the same. This
+   allows checking the log file to be easier when looking for specific tests
+   or BAD results.
+   NOTE: This change has not been applied to all tests yet.
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.

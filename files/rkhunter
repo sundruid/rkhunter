@@ -7621,6 +7621,8 @@ if [ "${LOGFILE}" = "/dev/null" ]; then
 else
 	if [ $APPEND_LOG -eq 0 ]; then
 		mv -f ${LOGFILE} ${LOGFILE}.old >/dev/null 2>&1
+		touch ${LOGFILE} >/dev/null 2>&1
+		chmod 600 ${LOGFILE} >/dev/null 2>&1
 	else
 		echo "" >>${LOGFILE}
 		echo "" >>${LOGFILE}
