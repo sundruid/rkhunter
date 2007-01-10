@@ -3434,6 +3434,97 @@ do_strings_check() {
 	return
 }
 
+do_shared_libs_check() { 
+
+	#
+	# This function checks shared library loading problems.
+	# It is part of do_system_commands_checks and should precede or run
+	# just after do_strings_check if enabled.
+	#
+
+	#
+	# Remarks:
+	# Oracle-10.1.0.3 on RHEL3 needs /etc/libcwait.so,
+	# F-PROT Antivirus for GNU/Linux needs f-prot.so,
+	# AVAYA Labs "stack overflow protection" uses libsafe.
+	#
+
+	if ! `check_test shared_libs`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs
+		return
+	fi
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SHARED_LIBS_START
+
+
+	# Library preloading exported variables.
+
+	for RKHTMPVAR in LD_PRELOAD LD_AOUT_PRELOAD LD_ELF_PRELOAD; do
+		RKHTMPVAR_RES=`eval echo "\\$${RKHTMPVAR}"`
+		if [ -n "${RKHTMPVAR_RES}" ]; then
+			display --to LOG --type WARNING --result BAD SHARED_LIBS_VAR_BAD "${RKHTMPVAR}"
+		else
+			display --to LOG --type PLAIN --result OK SHARED_LIBS_VAR_OK "${RKHTMPVAR}"
+		fi
+	done
+
+
+	# Library preload file.
+
+	RKHTMPVAR=${ROOTDIR}/etc/ld.so.preload
+	if [ -f ${RKHTMPVAR} ]; then
+		display --to LOG --type WARNING --result BAD SHARED_LIBS_PRE_BAD "${RKHTMPVAR}"
+	else
+		display --to LOG --type PLAIN --result OK SHARED_LIBS_PRE_OK "${RKHTMPVAR}"
+	fi
+
+
+	# LD_LIBRARY_PATH check
+
+	if [ -n "${LDD_CMD}" ]; then
+		RKHTMPVAR=`eval echo "\\$${LD_LIBRARY_PATH}"`
+		if [ -n "${RKHTMPVAR}" ]; then
+			LD_LIBR_FAILED=0
+			LD_LIBRARY_PATH_SAVED=${LD_LIBRARY_PATH}
+			RKHTMPVAR_BIN="
+				${FIND_CMD}
+				${PS_CMD}
+				${STRINGS_CMD}
+				${MD5_CMD}
+				${LS_CMD}
+				${STAT_CMD}
+				"
+			for RKHTMPVAR in $RKHTMPVAR_BIN; do
+				export LD_LIBRARY_PATH
+				RKHTMPVAR_WITH=`${LDD_CMD} $RKHTMPVAR`
+				unset LD_LIBRARY_PATH
+				RKHTMPVAR_WITHOUT=`${LDD_CMD} $RKHTMPVAR`
+				if [ "${RKHTMPVAR_WITH}" != "${RKHTMPVAR_WITHOUT}" ]; then
+					# display --to LOG --type WARNING --result BAD SHARED_LIBS_PATH_BAD "${RKHTMPVAR}"
+					LD_LIBR_FAILED=1
+					# Testing one command should be "evidence" enough.
+					break
+				fi
+			done
+			LD_LIBRARY_PATH=${LD_LIBRARY_PATH_SAVED}
+
+			if [ $LD_LIBR_FAILED -eq 0 ]; then
+				display --to SCREEN --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PATH_OK
+			else
+				display --to SCREEN --type PLAIN --result BAD --color RED --screen-indent 4 SHARED_LIBS_PATH_BAD
+			fi
+		# else
+		# 	Don't mention.
+		# 	no LD_LIBRARY_PATH set
+		fi
+	else
+		display --to SCREEN+LOG --type WARNING --result SKIPPED --color YELLOW --screen-indent 4 SHARED_LIBS_PATH_CMD
+	fi
+
+	return
+
+}
+
 
 do_known_good_hash_check() {
 
@@ -3604,7 +3695,7 @@ do_system_commands_checks() {
 	#
 	# This function carries out a sequence of tests on
 	# system commands. These consist of the 'strings' command
-	# check, and the file hash check.
+	# check, library checks and the file hash check.
 	#
 
 	if ! `check_test system_commands`; then
@@ -3617,6 +3708,8 @@ do_system_commands_checks() {
 
 
 	do_strings_check
+
+	do_shared_libs_check
 
 	do_known_good_hash_check
 
@@ -6383,8 +6476,9 @@ do_system_check() {
 
 
 	#
-	# We start with checks of some of the commands (binaries) on
-	# the system, to make sure that they have not been tampered with.
+	# We start with checks of some of the commands (binaries) and 
+	# libraries on the system, to make sure that they have not
+	# been tampered with.
 	#
 
 	do_system_commands_checks
@@ -7003,7 +7097,7 @@ SPACEDPATH=`echo ${PATH} | tr : ' ' 2>/dev/null`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="diff file find ifconfig ip ls lsattr lsmod lsof mktemp perl readlink sort stat strings uniq"
+CMDLIST="diff file find ifconfig ip ldd ls lsattr lsmod lsof mktemp perl ps readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cut date egrep grep head sed tail tr uname wc"

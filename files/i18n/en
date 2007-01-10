@@ -203,3 +203,13 @@ NETWORK_PACKET_CAP_CHECK:Check skipped - no 'lsof' command found.
 NETWORK_PACKET_CAP_FOUND:Process $1 (PID $2) is listening on the network.
 NETWORK_PACKET_CAP_WHITE:Found process $1 on whitelist.
 
+
+SHARED_LIBS_START:Performing 'shared libraries' checks
+SHARED_LIBS_VAR_OK:No preload variable $1
+SHARED_LIBS_VAR_BAD:Found preload variable $1
+SHARED_LIBS_PRE_OK:Library preload file not found.
+SHARED_LIBS_PRE_BAD:Found library preload file $1
+SHARED_LIBS_PATH_OK:Current LD_LIBRARY_PATH envvar does not influence binaries.
+SHARED_LIBS_PATH_BAD:Current LD_LIBRARY_PATH envvar influences binaries.
+SHARED_LIBS_PATH_CMD:Test 'shared libraries' skipped due to missing 'ldd' command.
+
