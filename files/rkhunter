@@ -5808,9 +5808,14 @@ do_local_host_checks() {
 					SIZE=35
 					jump=`expr ${defaultcolumn} - ${SIZE}`
 					insertlayout
-					displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} ]"
-					displaytext "    info: Users can use SSH1-protocol (Check the logfile for more information)."
-					logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
+					if [ "${ALLOW_SSH_PROT_V1}" = "0" ]; then
+						displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} ]"
+						displaytext "    info: Users can use SSH1-protocol (Check the logfile for more information)."
+						logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
+					else
+						displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (SSH1-protocol permitted by explicit option) ]"
+						logtext "Info: found SSH1-protocol permitted by explicit option."
+					fi	
 				else
 					SIZE=35
 					jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -5829,9 +5834,14 @@ do_local_host_checks() {
 						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Only SSH2 allowed) ]"
 						displaytext "    info: found no option, most times default value is used."
 					else
-						displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} (SSH v1 allowed) ]"
-						logtext "Warning: SSH version 1 possible allowed!"
-						logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
+						if [ "${ALLOW_SSH_PROT_V1}" = "0" ]; then
+							displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} (SSH1-protocol allowed) ]"
+							logtext "Warning: SSH version 1 possible allowed!"
+							logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
+						else
+							displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (SSH1-protocol permitted by explicit option) ]"
+							logtext "Info: found SSH1-protocol permitted by explicit option."
+						fi
 					fi
 				fi
 			fi
