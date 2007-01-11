@@ -646,7 +646,7 @@ check_commands() {
 	#
 
 	for CMD in ${CMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
+		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
 
 		eval ${RKHTMPVAR}_CMD=`find_cmd ${CMD}`
 	done
@@ -5230,7 +5230,7 @@ do_network_port_checks() {
 
 		PORT=`echo "${LINE}" | cut -d: -f1`
 		DESCRIPTION=`echo ${LINE} | cut -d: -f2`
-		PROTO=`echo ${LINE} | cut -d: -f3 | tr [a-z] [A-Z]`
+		PROTO=`echo ${LINE} | cut -d: -f3 | tr '[a-z]' '[A-Z]'`
 
 		if [ -n "`echo \"${PORT}\" | grep -v '^[0-9]'`" ]; then
 			echo "Error: Invalid port in backdoorports.dat: $LINE"
@@ -7621,7 +7621,7 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 		fi
 
 
-		RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
+		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
 
 		eval ${RKHTMPVAR}_CMD=`find_cmd ${CMD}`
 
@@ -7803,7 +7803,7 @@ test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
 test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
 
 for CMD in ${CMDLIST}; do
-	RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
+	RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
 	RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
 	if [ -n "${RKHTMPVAR}" ]; then
 		display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
@@ -7813,7 +7813,7 @@ for CMD in ${CMDLIST}; do
 done
 
 for CMD in ${WEBCMDLIST}; do
-	RKHTMPVAR=`echo ${CMD} | tr [a-z] [A-Z]`
+	RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
 	RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
 	if [ -n "${RKHTMPVAR}" ]; then
 		display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
