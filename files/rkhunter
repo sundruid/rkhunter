@@ -1321,7 +1321,7 @@ get_syslog_option() {
 	#
 
 	if [ -n "${USE_SYSLOG}" ]; then
-		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr [A-Z] [a-z]`
+		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr '[A-Z]' '[a-z]'`
 
 		if [ "${USE_SYSLOG}" = "none" ]; then
 			return
