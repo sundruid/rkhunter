@@ -76,6 +76,12 @@
    links, lynx, bget and GET. Once a command has been found, it will be used
    for all downloads. Since bget and GET are perl commands, checks will be
    made that any required perl modules are also present on the system.
+ - (SF Tracker 1616395) Added '--syslog' cli option, configuration file option
+   USE_SYSLOG. This will allow the --check option start and finish time to
+   be logged via syslog. The facility/priority are user configurable.
+ - Added --debug cli option, and allow commands to be configured in the
+   configuration file. Both of these additions are for the developers, but
+   may be used when debugging user problems.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -108,7 +114,7 @@
    check option --check, then the update checks are performed before the
    system is checked. Previously the update occurred after the system was
    checked.
- - Hidden file shearch now checks /usr/share/man directories.
+ - Hidden file search now checks /usr/share/man directories.
  - Improved NetBSD support.
  - The supplied perl scripts, providing the stat command, md5 and sha1,
    can now be executed without perl being in the default directory (/usr/bin).
@@ -159,6 +165,12 @@
    allows checking the log file to be easier when looking for specific tests
    or BAD results.
    NOTE: This change has not been applied to all tests yet.
+ - Script replacement check now checks for any type of script (perl, awk, etc).
+   Previous versions only checked for shell scripts. Commands which are
+   supposed to be scripts can be whitelisted in the configuration file.
+ - File permissions check improved to check if 'other' has the 'w' bit set.
+   Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
+   check into the file hash check.
 
  Bugfixes:
  - Corrected SHV4/Tripwire check.
@@ -183,6 +195,8 @@
    to '2'. This allows use of the '--quiet' option, but still being able to
    detect if an error occurred (code 1), an update is available (code 2) or
    if no error occurred and no update available (code 0).
+ - Corrected bug in Solaris script replacement check. The tested output is
+   never used on Solaris, so previously the test would never have worked.
 
  --
 

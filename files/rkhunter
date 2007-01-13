@@ -647,8 +647,45 @@ check_commands() {
 
 	for CMD in ${CMDLIST}; do
 		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR="${RKHTMPVAR}_CMD"
 
-		eval ${RKHTMPVAR}_CMD=`find_cmd ${CMD}`
+
+		#
+		# See if the user has defined the command in
+		# the configuration file.
+		#
+
+		CFG_CMD=`grep "^${RKHTMPVAR}=" ${CONFIGFILE} | tail -1`
+
+		if [ -n "${CFG_CMD}" ]; then
+			CFG_CMD=`echo "${CFG_CMD}" | sed -e "s/${RKHTMPVAR}=//" | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
+
+			if [ -z "${CFG_CMD}" -o "${CFG_CMD}" = " " ]; then
+				CFG_CMD=""
+			else
+				#
+				# check that the command is executable.
+				#
+
+				MCMD=`echo "${CFG_CMD}" | cut -d' ' -f1`
+
+				if [ -n "`find_cmd ${MCMD}`" ]; then
+					eval ${RKHTMPVAR}=\"${CFG_CMD}\"
+				else
+					CFG_CMD=""
+				fi
+			fi
+		fi
+
+
+		#
+		# If the command has not been predefined, or is not
+		# executable, then go find the command to use.
+		#
+
+		if [ -z "${CFG_CMD}" ]; then
+			eval ${RKHTMPVAR}=`find_cmd ${CMD}`
+		fi
 	done
 
 
@@ -1250,6 +1287,86 @@ get_mailonwarn_option() {
 }
 
 
+get_syslog_option() {
+
+	#
+	# First see if we want to use syslog or not from the command-line
+	# or configuration file.
+	#
+
+	if [ -n "${USE_SYSLOG}" ]; then
+		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr -s ' '`
+
+		if [ "${USE_SYSLOG}" = " " ]; then
+			echo "Invalid --syslog option - no facility/priority names given."
+			exit 1
+		fi
+	else
+		USE_SYSLOG=`grep '^USE_SYSLOG=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${USE_SYSLOG}" ]; then
+			USE_SYSLOG=`echo "${USE_SYSLOG}" | sed -e 's/USE_SYSLOG=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${USE_SYSLOG}" -o "${USE_SYSLOG}" = " " ]; then
+				echo "Invalid USE_SYSLOG configuration option - no value specified."
+				exit 1
+			fi
+		fi
+	fi
+
+
+	#
+	# If we are to use syslog, then get the facility and priority levels.
+	# Additionally, test that they are valid.
+	#
+
+	if [ -n "${USE_SYSLOG}" ]; then
+		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr [A-Z] [a-z]`
+
+		if [ "${USE_SYSLOG}" = "none" ]; then
+			return
+		elif [ -z "`echo \"${USE_SYSLOG}\" | grep '^[a-z][a-z0-7]*\.[a-z][a-z]*$'`" ]; then
+			echo "Invalid syslog facility/priority value: ${USE_SYSLOG}"
+			exit 1
+		fi
+
+		FOUND=0
+
+		SYSLOG_F=`echo "${USE_SYSLOG}" | cut -d. -f1`
+		SYSLOG_P=`echo "${USE_SYSLOG}" | cut -d. -f2`
+
+		for RKHTMPVAR in auth authpriv cron daemon kern user local0 local1 local2 local3 local4 local5 local6 local7; do
+			if [ "${SYSLOG_F}" = "${RKHTMPVAR}" ]; then
+				FOUND=1
+				break
+			fi
+		done
+
+		if [ $FOUND -eq 0 ]; then
+			echo "Invalid syslog facility name: ${SYSLOG_F}"
+			exit 1
+		fi
+
+
+		FOUND=0
+
+		for RKHTMPVAR in debug info notice warning err crit alert emerg; do
+			if [ "${SYSLOG_P}" = "${RKHTMPVAR}" ]; then
+				FOUND=1
+				break
+			fi
+		done
+
+		if [ $FOUND -eq 0 ]; then
+			echo "Invalid syslog priority name: ${SYSLOG_P}"
+			exit 1
+		fi
+	fi
+
+	return
+}
+
+
 get_allow_rootssh_option() {
 
 	#
@@ -1336,6 +1453,7 @@ get_auto_x_option() {
 
 get_enable_option() {
 
+# jh - add enable count, if one cmd given then don't keypresspause
 	#
 	# If the option is not specified on the command-line, then
 	# get it from the configuration file. We validate the test
@@ -1515,7 +1633,6 @@ get_if_prelinked() {
 			LIBSAFE_TEST1=`grep libsafe ${ROOTDIR}/etc/ld.so.preload 2>&1`
 		fi
 
-		LDD_CMD=`find_cmd ldd`
 		if [ -n "${LDD_CMD}" -a -f "${ROOTDIR}/lib/libdl.so.?" ]; then
 			LIBSAFE_TEST2=`${LDD_CMD} ${ROOTDIR}/lib/libdl.so.? | grep libsafe 2>&1`
 		fi
@@ -1717,6 +1834,8 @@ get_configfile_options() {
 	if [ $CHECK -eq 1 ]; then
 		get_allow_rootssh_option
 
+		get_syslog_option
+
 
 		#
 		# See if we are to only perform specific tests.
@@ -1880,26 +1999,6 @@ rkh_dat_get_os_info() {
 }
 
 
-get_hash_value() {
-
-	#
-	# This function simply runs the hash function command for the
-	# given file. The environment variable HCMD must have been
-	# previously set to the command to use.
-	#
-
-	HSHVAL=`${HCMD} $1 2>/dev/null`
-
-	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
-		echo ${HSHVAL} | cut -d' ' -f4 | tr -d ' '
-	else
-		echo ${HSHVAL} | cut -d' ' -f1
-	fi
-
-	return
-}
-
-
 rkh_dat_set_file_hash() {
 
 	#
@@ -1941,6 +2040,12 @@ rkh_dat_set_file_hash() {
 		fi
 	fi
 
+	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
+		HSH_FLD_IDX=4
+	else
+		HSH_FLD_IDX=1
+	fi
+
 
 	#
 	# Now loop through the directories looking for the files.
@@ -1957,7 +2062,7 @@ rkh_dat_set_file_hash() {
 			FILE_COUNT=`expr ${FILE_COUNT} + 1`
 			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
 
-			SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
+			SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
 
 			FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
 
@@ -3395,44 +3500,55 @@ do_strings_check() {
 	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STRINGS_CHECK_START
 
 
-	if [ -n "${STRINGS_CMD}" ]; then
-		STRINGSFAILED=0
+	#
+	# We only perform the test if we have a 'strings' command.
+	#
 
-		#
-		# The pathnames to check will have the ROOTDIR at
-		# the front. We need to strip this off before passing
-		# it through the 'strings' command. If we didn't then
-		# we would be looking for the wrong pathname.
-		#
-
-		RDIR=`echo "${ROOTDIR}" | sed -e 's/\//\\\\\//g'`
-
-		for STRING in ${STRINGS_INTEGRITY}; do
-			STRING=`echo "${STRING}" | sed -e "s/^${RDIR}//"`
-
-			STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
-			STRINGFOUND=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
-
-			if [ -z "${STRINGFOUND}" ]; then
-				STRINGSFAILED=1
-				display --to LOG --type WARNING --result BAD STRINGS_SCANNING_BAD "${STRING}"
-			else
-				display --to LOG --type PLAIN --result OK STRINGS_SCANNING_OK "${STRING}"
-			fi
-		done
-
-
-		if [ $STRINGSFAILED -eq 0 ]; then
-			display --to SCREEN --type PLAIN --result OK --color GREEN --screen-indent 4 STRINGS_CHECK
-		else
-			display --to SCREEN --type PLAIN --result BAD --color RED --screen-indent 4 STRINGS_CHECK
-		fi
-	else
+	if [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type WARNING --result SKIPPED --color YELLOW --screen-indent 4 STRINGS_CHECK
+		return
+	fi
+
+
+	#
+	# Otherwise - do the test.
+	#
+
+	STRINGSFAILED=0
+
+	#
+	# The pathnames to check will have the ROOTDIR at
+	# the front. We need to strip this off before passing
+	# it through the 'strings' command. If we didn't then
+	# we would be looking for the wrong pathname.
+	#
+
+	RDIR=`echo "${ROOTDIR}" | sed -e 's/\//\\\\\//g'`
+
+	for STRING in ${STRINGS_INTEGRITY}; do
+		STRING=`echo "${STRING}" | sed -e "s/^${RDIR}//"`
+
+		STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
+		STRINGFOUND=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
+
+		if [ -z "${STRINGFOUND}" ]; then
+			STRINGSFAILED=1
+			display --to LOG --type WARNING --result BAD STRINGS_SCANNING_BAD "${STRING}"
+		else
+			display --to LOG --type PLAIN --result OK STRINGS_SCANNING_OK "${STRING}"
+		fi
+	done
+
+
+	if [ $STRINGSFAILED -eq 0 ]; then
+		display --to SCREEN --type PLAIN --result OK --color GREEN --screen-indent 4 STRINGS_CHECK
+	else
+		display --to SCREEN --type PLAIN --result BAD --color RED --screen-indent 4 STRINGS_CHECK
 	fi
 
 	return
 }
+
 
 do_shared_libs_check() { 
 
@@ -3472,6 +3588,7 @@ do_shared_libs_check() {
 	# Library preload file.
 
 	RKHTMPVAR=${ROOTDIR}/etc/ld.so.preload
+
 	if [ -f ${RKHTMPVAR} ]; then
 		display --to LOG --type WARNING --result BAD SHARED_LIBS_PRE_BAD "${RKHTMPVAR}"
 	else
@@ -3483,6 +3600,7 @@ do_shared_libs_check() {
 
 	if [ -n "${LDD_CMD}" ]; then
 		RKHTMPVAR=`eval echo "\\$${LD_LIBRARY_PATH}"`
+
 		if [ -n "${RKHTMPVAR}" ]; then
 			LD_LIBR_FAILED=0
 			LD_LIBRARY_PATH_SAVED=${LD_LIBRARY_PATH}
@@ -3494,11 +3612,13 @@ do_shared_libs_check() {
 				${LS_CMD}
 				${STAT_CMD}
 				"
+
 			for RKHTMPVAR in $RKHTMPVAR_BIN; do
 				export LD_LIBRARY_PATH
 				RKHTMPVAR_WITH=`${LDD_CMD} $RKHTMPVAR`
 				unset LD_LIBRARY_PATH
 				RKHTMPVAR_WITHOUT=`${LDD_CMD} $RKHTMPVAR`
+
 				if [ "${RKHTMPVAR_WITH}" != "${RKHTMPVAR_WITHOUT}" ]; then
 					# display --to LOG --type WARNING --result BAD SHARED_LIBS_PATH_BAD "${RKHTMPVAR}"
 					LD_LIBR_FAILED=1
@@ -3506,6 +3626,7 @@ do_shared_libs_check() {
 					break
 				fi
 			done
+
 			LD_LIBRARY_PATH=${LD_LIBRARY_PATH_SAVED}
 
 			if [ $LD_LIBR_FAILED -eq 0 ]; then
@@ -3522,14 +3643,13 @@ do_shared_libs_check() {
 	fi
 
 	return
-
 }
 
 
 do_known_good_hash_check() {
 
 	#
-	# This function carries out the check of system command hash
+	# This function carries out a check of system command property
 	# values checked against their previous value, which is stored
 	# in the rkhunter.dat file.
 	#
@@ -3562,6 +3682,16 @@ do_known_good_hash_check() {
 	# Otherwise, just carry on with the checks.
 	#
 
+	if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
+		SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+	else
+		if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+		else
+			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+		fi
+	fi
+
 	if [ $PRELINKED -eq 0 ]; then
 		HCMD=$HASH_FUNC
 	else
@@ -3572,14 +3702,10 @@ do_known_good_hash_check() {
 		fi
 	fi
 
-	if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
-		SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
+		HSH_FLD_IDX=4
 	else
-		if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
-			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
-		else
-			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
-		fi
+		HSH_FLD_IDX=1
 	fi
 
 
@@ -3596,26 +3722,43 @@ do_known_good_hash_check() {
 					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
 
 					if [ -n "${RKHHASH}" ]; then
-						SYSHASH=`get_hash_value "${DIR}/${FNAME}"`
+						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
+						FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
 
-						if [ $PRELINKED -eq 0 ]; then
+						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
+						RKHUID=`echo ${RKHLINE} | cut -d: -f6`
+						RKHGID=`echo ${RKHLINE} | cut -d: -f7`
+
+						SYSPERM=`echo ${FDATA} | cut -d: -f2`
+						SYSUID=`echo ${FDATA} | cut -d: -f3`
+						SYSGID=`echo ${FDATA} | cut -d: -f4`
+
+						#
+						# Prelinking will change the inode and DTM of a
+						# file. As such, we only check those properties
+						# for non-prelinked systems, or if there has been
+						# a problem getting the hash value.
+						#
+
+						if [ $PRELINKED -eq 0 -o -z "${SYSHASH}" ]; then
 							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
-							RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
-							RKHUID=`echo ${RKHLINE} | cut -d: -f6`
-							RKHGID=`echo ${RKHLINE} | cut -d: -f7`
 							RKHDTM=`echo ${RKHLINE} | cut -d: -f8`
 
-							FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
 							SYSINODE=`echo ${FDATA} | cut -d: -f1`
-							SYSPERM=`echo ${FDATA} | cut -d: -f2`
-							SYSUID=`echo ${FDATA} | cut -d: -f3`
-							SYSGID=`echo ${FDATA} | cut -d: -f4`
 							SYSDTM=`echo ${FDATA} | cut -d: -f5`
+						fi
 
-							if [ "${RKHHASH}" = "${SYSHASH}" -a "${RKHINODE}" = "${SYSINODE}" -a "${RKHPERM}" = "${SYSPERM}" -a "${RKHUID}" = "${SYSUID}" -a "${RKHGID}" = "${SYSGID}" -a "${RKHDTM}" = "${SYSDTM}" ]; then
-								HASH_OK=1
-							fi
-						elif [ "${RKHHASH}" = "${SYSHASH}" ]; then
+
+						#
+						# We check the file permissions here to see if
+						# the 'other' permission contains a 'w'. The check
+						# is against the octal value.
+						#
+
+						WRITE_PERM=`echo ${SYSPERM} | grep '[2367]$'`
+
+
+						if [ "${RKHHASH}" = "${SYSHASH}" -a "${RKHINODE}" = "${SYSINODE}" -a "${RKHPERM}" = "${SYSPERM}" -a "${RKHUID}" = "${SYSUID}" -a "${RKHGID}" = "${SYSGID}" -a "${RKHDTM}" = "${SYSDTM}" -a -z "${WRITE_PERM}" ]; then
 							HASH_OK=1
 						fi
 					else
@@ -3665,12 +3808,21 @@ do_known_good_hash_check() {
 					display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_VALUES_CHANGED2 "${DIR}" "${FNAME}"
 
 					if [ "${SYSHASH}" != "${RKHHASH}" ]; then
-						display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_HASH_CHANGED "${SYSHASH}"
+						if [ -z "${SYSHASH}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_HASH_UNAVAIL
+						else
+							display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_HASH_CHANGED "${SYSHASH}"
+						fi
+
 						display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_DB_CHANGED "${RKHHASH}"
 					fi
 
+					if [ "${SYSPERM}" != "${RKHPERM}" -o -n "${WRITE_PERM}" ]; then
+						display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_PERM_CHANGED "${SYSPERM}" "${RKHPERM}"
+						test -n "${WRITE_PERM}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_WRITE_PERM_SET
+					fi
+
 					test "${SYSINODE}" != "${RKHINODE}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_INODE_CHANGED "${SYSINODE}" "${RKHINODE}"
-					test "${SYSPERM}" != "${RKHPERM}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_PERM_CHANGED "${SYSPERM}" "${RKHPERM}"
 					test "${SYSUID}" != "${RKHUID}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_UID_CHANGED "${SYSUID}" "${RKHUID}"
 					test "${SYSGID}" != "${RKHGID}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_GID_CHANGED "${SYSGID}" "${RKHGID}"
 					test "${SYSDTM}" != "${RKHDTM}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_DTM_CHANGED "${SYSDTM}" "${RKHDTM}"
@@ -3683,6 +3835,80 @@ do_known_good_hash_check() {
 	if [ $HASH_COUNT -eq 0 ]; then
 		display --to SCREEN+LOG --type WARNING --screen-indent 2 GOOD_HASH_NO_HASHES
 	fi
+
+	keypresspause
+
+	return
+}
+
+
+do_script_replacement_check() {
+
+# jh - move this up in to the hash check. Rename hash to property.
+	#
+	# This function carries out a check of the system commands to
+	# see if any have been replaced by a script.
+	#
+
+	if ! `check_test scripts`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST scripts
+		return
+	fi
+
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SCRIPTS_START
+
+
+	#
+	# We only perform the test if we have the 'file' command.
+	#
+
+	if [ -z "${FILE_CMD}" ]; then
+		display --to SCREEN+LOG --type WARNING --result SKIPPED --color YELLOW --screen-indent 4 SCRIPTS_CHECK_SKIP
+		return
+	fi
+
+
+	#
+	# Otherwise, just carry on with the checks.
+	#
+
+	for DIR in ${HASHDIRS}; do
+		for FNAME in ${HASHFILES}; do
+			if [ -f "${DIR}/${FNAME}" -a ! -h "${DIR}/${FNAME}" ]; then
+				SCRIPT_REPL=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | egrep -i ' script( |$)'`
+
+				#
+				# See if the command is whitelisted.
+				#
+
+				if [ -n "${SCRIPT_REPL}" ]; then
+					for WHITELISTFILE in `grep '^ALLOWSCRIPTCMD=' ${CONFIGFILE} | sed -e 's/ALLOWSCRIPTCMD=//g'`; do
+						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+							SCRIPT_REPL="whitelisted"
+							break
+						fi
+					done
+				fi
+
+
+				#
+				# Now output the result.
+				#
+
+				if [ -z "${SCRIPT_REPL}" ]; then
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
+				elif [ "${SCRIPT_REPL}" = "whitelisted" ]; then
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
+					display --to LOG --type INFO SCRIPTS_WHITELIST "${DIR}/${FNAME}"
+				else
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
+					display --to LOG --type WARNING SCRIPTS_FILE_REPLACED "${DIR}/${FNAME}" "${SCRIPT_REPL}"
+				fi
+			fi
+		done
+	done
+
 
 	keypresspause
 
@@ -3712,6 +3938,8 @@ do_system_commands_checks() {
 	do_shared_libs_check
 
 	do_known_good_hash_check
+
+	do_script_replacement_check
 
 	return
 }
@@ -4818,79 +5046,6 @@ hydra.restore:THC-Hydra%%(password%%capture)
 		logtext "Skipped xinetd tests (not Linux or file doesn't exists)"
 	fi
 
-	displaytext ""
-	displaytext "* Suspicious file properties${NORMAL}"
-
-	displaytext "   ${WHITE}chmod properties${NORMAL}"
-
-	FILES="
-${ROOTDIR}/bin/ps
-${ROOTDIR}/bin/ls
-${ROOTDIR}/usr/bin/w
-${ROOTDIR}/usr/bin/who
-${ROOTDIR}/bin/netstat
-${ROOTDIR}/usr/bin/netstat
-${ROOTDIR}/bin/login
-"
-
-	for I in ${FILES}; do
-		# Calculate string length
-		SIZE=`echo "${I}" | wc -c | tr -d ' '`
-		SIZE=`expr ${SIZE} + 11`
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-		displaytext -n "     Checking ${I}"
-		insertlayout
-		if [ -f "${I}" ]; then
-			RIGHTS=`ls -l ${I} | cut -c1-10`
-			if [ "${RIGHTS}" = "-rwxrwxrwx" ]; then
-				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (chmod 777 found, possible trojaned) ]"
-			else
-				displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
-			fi
-		else
-			displaytext $E "${LAYOUT}[ ${YELLOW}Not found${NORMAL} ]"
-			logtext "Checking ${I}... Not found"
-		fi
-	done
-
-	displaytext "   ${WHITE}Script replacements${NORMAL}"
-
-	for I in ${FILES}; do
-		# Calculate string length
-		SIZE=`echo "${I}" | wc -c | tr -d ' '`
-		SIZE=`expr ${SIZE} + 11`
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-		displaytext -n "     Checking ${I}"
-		insertlayout
-		if [ -f "${I}" ]; then
-			FILEOK=true
-			case "${OPERATING_SYSTEM}" in
-			AIX)
-				file ${I} | grep -q 'shell script' && FILEOK=false
-				;;
-			SunOS)
-				file ${I} | grep 'shell script' >/dev/null 2>&1 && FILEOK=false
-				;;
-			*)
-				file -b ${I} | grep -q 'shell script' && FILEOK=false
-				;;
-			esac
-
-			if ! $FILEOK; then
-				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-				displaytext "(script replacement found, possible trojaned)"
-				logtext "Checking ${I}... [ WARNING ]"
-				logtext "Possible script replacement found. Please inspect this file (check the file type, contents and size)"
-			else
-				displaytext $E "${LAYOUT}[ ${GREEN}Clean${NORMAL} ]"
-				logtext "Checking ${I}... [ OK ]"
-			fi
-		else
-			displaytext $E "${LAYOUT}[ ${YELLOW}Not found${NORMAL} ]"
-			logtext "Checking ${I}... Not found"
-		fi
-	done
-
 
 	displaytext ""
 	displaytext "* OS dependent tests${NORMAL}"
@@ -5062,6 +5217,7 @@ ${ROOTDIR}/bin/login
 
 		SIZE=27
 		displaytext -n "     Checking file attributes"
+# jh - this test needs to go into the hash/property test - for Linux OS only
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 
 		FOUND=0
@@ -6469,20 +6625,21 @@ do_system_check() {
 
 
 	#
+	# Send a start message to syslog if the user requested that.
+	#
+
+	if [ -n "${USE_SYSLOG}" ]; then
+		${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Rootkit hunter check started (version ${PROGRAM_version})"
+	fi
+
+
+	#
 	# We must reset the warning counter here. It is incremented in
 	# the display function, and so could easily be non-zero by the
 	# time we get here.
 	#
 
 	WARNING_COUNT=0
-
-
-	#
-	# The netstat command will be used in a couple of tests, so
-	# get the command just once.
-	#
-
-	NETSTAT_CMD=`find_cmd netstat`
 
 
 	#
@@ -6563,6 +6720,15 @@ do_system_check() {
 
 
 	#
+	# Send a finish message to syslog if the user requested that.
+	#
+
+	if [ -n "${USE_SYSLOG}" ]; then
+		${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Scanning took ${TOTALTIME}"
+	fi
+
+
+	#
 	# If the user asked to see the logfile, then show it.
 	#
 
@@ -6579,18 +6745,23 @@ do_system_check() {
 		test $SHOWWARNINGSONLY -eq 1 && display_warnings
 
 
+		if [ -n "${USE_SYSLOG}" ]; then
+			${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Please inspect this machine, because it may be infected"
+		fi
+
+
 		if [ -n "${MAILONWARNING}" ]; then
 			eval "echo 'Please inspect this machine, because it may be infected' | ${MAIL_CMD} ${MAILONWARNING}"
 		fi
 
 
 		if [ $QUIET -eq 1 ]; then
-			echo "One or more errors have been found while checking this system."
+			display --to SCREEN --type PLAIN CHECK_ERRS_FOUND
 
 			if [ $NOLOG -eq 1 ]; then
-				echo "Please re-run the check, ensuring that a logfile is created."
+				display --to SCREEN --type PLAIN CHECK_ERRS_FOUND_RERUN
 			else
-				echo "Please check the log file (${LOGFILE})"
+				display --to SCREEN --type PLAIN CHECKS_ERRS_FOUND_CHK_LOG "${LOGFILE}"
 			fi
 		fi
 
@@ -6966,6 +7137,8 @@ help() {
 	echo "                                       --report-mode more than --quiet)"
 	echo "   -r, --rootdir <rootdir>             Use <rootdir> instead of '/'"
 	echo "  -sk, --skip-keypress                 Don't wait for a keypress after each test"
+	echo "       --syslog [facility.priority]    Log check start and finish times to syslog"
+	echo "                                       (Default level is $SYSLOG_DFLT_PRIO)"
 	echo "       --tmpdir <tempdir>              Use specified temporary directory"
 	echo "       --update                        Check for updates to database files"
 	echo "   -V, --version                       Display the version number, then exit"
@@ -7018,6 +7191,12 @@ DFLT_LOGFILE="/var/log/rkhunter.log"
 # Set to have the logfile appended to rather than overwritten.
 APPEND_LOG=0
 APPEND_OPT=0
+
+# Set to have rkhunter start/finish messages, and warnings,
+# logged to syslog. The priority/severity can be set on the
+# command-line or in the configuration file.
+USE_SYSLOG=""
+SYSLOG_DFLT_PRIO="authpriv.notice"
 
 DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
 
@@ -7103,11 +7282,11 @@ KSYMS_FILE=""
 CMD_LINE="$0 $*"
 
 # Create a spaced-separated PATH variable.
-SPACEDPATH=`echo ${PATH} | tr : ' ' 2>/dev/null`
+SPACEDPATH=`echo ${PATH} | tr ':' ' ' 2>/dev/null`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="diff file find ifconfig ip ldd ls lsattr lsmod lsof mktemp perl ps readlink sort stat strings uniq"
+CMDLIST="diff file find ifconfig ip ldd ls lsattr lsmod lsof mktemp netstat perl ps readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cut date egrep grep head sed tail tr uname wc"
@@ -7139,7 +7318,7 @@ KNOWN_LANGS=en
 
 # A space-separated list of test names we recognise.
 #
-KNOWN_TESTS="strings hashes deleted_files packet_cap_apps apps rootkits local_host network passwd system_commands"
+KNOWN_TESTS="strings hashes scripts deleted_files packet_cap_apps apps rootkits local_host network passwd system_commands shared_libs"
 
 # A space-separated list of test 'group names'. This list allows test
 # names to be grouped together. For example, 'system_commands' can include
@@ -7148,7 +7327,7 @@ KNOWN_TESTS="strings hashes deleted_files packet_cap_apps apps rootkits local_ho
 # enable/disable options. In this list group names are colon-separated
 # from the specific test names.
 #
-GROUPED_TESTS="system_commands:strings:hashes
+GROUPED_TESTS="system_commands:strings:hashes:scripts:shared_libs
                network:packet_cap_apps
                local_host:passwd"
 
@@ -7230,18 +7409,6 @@ while [ $# -ge 1 ]; do
 	--cs2 | --colorset2 | --color-set2)
 		CLRSET2=1
 		;;
-	-l | --log | --logfile | --createlogfile | --createlog | --create-log | --create-logfile)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			LOGFILE="$1"
-			;;
-		esac
-		;;
 	--dbdir)
 		case "$2" in
 		"")
@@ -7255,6 +7422,7 @@ while [ $# -ge 1 ]; do
 		esac
 		;;
 	--debug)
+		SKIP_KEY_PRESS=1
 		;;
 	--display-logfile | --displaylogfile | --display-log | --displaylog)
 		CATLOGFILE=1
@@ -7305,6 +7473,20 @@ while [ $# -ge 1 ]; do
 	-h | --help)
 		help
 		exit 0
+		;;
+	-l | --log | --logfile | --createlogfile | --createlog | --create-log | --create-logfile)
+		LOGFILE="${DFLT_LOGFILE}"
+
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			LOGFILE="$1"
+			;;
+		esac
 		;;
 	--lang | --language)
 		case "$2" in
@@ -7372,6 +7554,20 @@ while [ $# -ge 1 ]; do
 		;;
 	--skip-keypress | --skipkeypress | -sk | --sk)
 		SKIP_KEY_PRESS=1
+		;;
+	--syslog)
+		USE_SYSLOG="${SYSLOG_DFLT_PRIO}"
+
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			USE_SYSLOG="$1"
+			;;
+		esac
 		;;
 	--tmpdir)
 		case "$2" in
@@ -7517,6 +7713,14 @@ if [ $CHECK -eq 1 ]; then
 			set_hash_dirs_files
 		fi
 	fi
+
+
+	#
+	# To perform the script replacement check requires the list
+	# of hash directories and file names.
+	#
+
+	check_test scripts && set_hash_dirs_files
 
 
 	#
@@ -7861,6 +8065,27 @@ if [ $CHECK -eq 1 ]; then
 	display --to LOG --type INFO DISABLED_TESTS "${DISABLE_TESTS}"
 
 	test -z "${KSYMS_FILE}" && display --to LOG --type INFO KSYMS_MISSING
+
+
+	#
+	# To use syslog we must have the logger command present.
+	#
+
+	if [ -n "${USE_SYSLOG}" ]; then
+		if [ "${USE_SYSLOG}" = "none" ]; then
+			USE_SYSLOG=""
+			display --to LOG --type INFO SYSLOG_DISABLED
+		else
+			LOGGER_CMD=`find_cmd logger`
+
+			if [ -n "${LOGGER_CMD}" ]; then
+				display --to LOG --type INFO SYSLOG_ENABLED "${USE_SYSLOG}"
+			else
+				USE_SYSLOG=""
+				display --to LOG --type INFO SYSLOG_NO_LOGGER
+			fi
+		fi
+	fi
 fi
 
 

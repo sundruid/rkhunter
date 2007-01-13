@@ -71,6 +71,10 @@ HASH_PERL_FUNC:Using '$1' for the hash checks
 
 GRSECINSTALLED:Found GRSEC installed
 
+SYSLOG_ENABLED:Using syslog for some logging - facility/priority level is '$1'.
+SYSLOG_DISABLED:Disabling use of syslog at users request.
+SYSLOG_NO_LOGGER:Disabling use of syslog - unable to find 'logger' command.
+
 CREATED_TEMP_FILE:Created temporary file '$1'
 
 MIRRORS_NO_FILE:The mirrors file '$1' does not exist.
@@ -130,9 +134,13 @@ DISABLED_TESTS:Disabled tests are: $1
 
 KSYMS_MISSING:ksyms and kallsyms checks will be skipped - neither file is present on the system.
 
-USER_DISABLED_TEST:Test '$1' disabled at user request.
+USER_DISABLED_TEST:Test '$1' disabled at users request.
 
 CHECK_START:Starting system checks...
+CHECK_ERRS_FOUND:One or more errors have been found while checking this system.
+CHECK_ERRS_FOUND_RERUN:Please re-run the check, ensuring that a logfile is created.
+CHECKS_ERRS_FOUND_CHK_LOG:Please check the log file ($1)
+
 CHECK_SYS_COMMANDS:Checking system commands...
 
 STRINGS_CHECK_START:Performing 'strings' command checks
@@ -151,15 +159,17 @@ GOOD_HASH_FILE_NOT_EXIST:The file ${1}/${2} does not exist on the system,
 GOOD_HASH_FILE_NOT_EXIST:but it is present in the rkhunter.dat file.
 GOOD_HASH_WHITELIST:Whitelisted file hash value found: File: $1    Hash: $2
 GOOD_HASH_FILENAME:${1}/${2}
-GOOD_HASH_VALUES_CHANGED:File data values have changed:
+GOOD_HASH_VALUES_CHANGED:File property values have changed:
 GOOD_HASH_VALUES_CHANGED2:File: ${1}/${2}
+GOOD_HASH_HASH_UNAVAIL:File hash: Unable to get current hash value.
 GOOD_HASH_HASH_CHANGED:File hash: $1
-GOOD_HASH_DB_CHANGED:DB hash: $1
+GOOD_HASH_DB_CHANGED:DB hash  : $1
 GOOD_HASH_INODE_CHANGED:File inode: $1    DB inode: $2
 GOOD_HASH_PERM_CHANGED:File permissions: $1    DB permissions: $2
 GOOD_HASH_UID_CHANGED:File uid: $1    DB uid: $2
 GOOD_HASH_GID_CHANGED:File gid: $1    DB gid: $2
 GOOD_HASH_DTM_CHANGED:File modification time: $1    DB modification time: $2
+GOOD_HASH_WRITE_PERM_SET:Write permission is set for all users.
 GOOD_HASH_NO_HASHES:No file hash values found
 
 SKIP_GOODHASH_CHECK1:All 'known good' hash checks skipped.
@@ -177,6 +187,12 @@ SKIP_GOODHASH_CHECK5:To do this type in 'rkhunter --hashupd'.
 SKIP_GOODHASH_CHECK6:All 'known good' hash checks skipped.
 SKIP_GOODHASH_CHECK6:This system uses prelinking, but libsafe was found which can cause errors.
 SKIP_GOODHASH_CHECK6:Disable libsafe if possible, and then run prelink and recreate the hash values with 'rkhunter --hashupd'.
+
+SCRIPTS_START:Performing script replacement checks
+SCRIPTS_CHECK_SKIP:All script replacement checks skipped
+SCRIPTS_CHECK_SKIP:No 'file' command can be found.
+SCRIPTS_FILE_REPLACED:The command '$1' has been replaced by a script: $2
+SCRIPTS_WHITELIST:Command '$1' is whitelisted.
 
 CHECK_ROOTKITS:Checking for rootkits
 ROOTKIT_FILES_DIRS_START:Performing check of default files and directories
@@ -202,7 +218,6 @@ NETWORK_PACKET_CAP_CHECK:Checking for packet capturing applications...
 NETWORK_PACKET_CAP_CHECK:Check skipped - no 'lsof' command found.
 NETWORK_PACKET_CAP_FOUND:Process $1 (PID $2) is listening on the network.
 NETWORK_PACKET_CAP_WHITE:Found process $1 on whitelist.
-
 
 SHARED_LIBS_START:Performing 'shared libraries' checks
 SHARED_LIBS_VAR_OK:No preload variable $1
