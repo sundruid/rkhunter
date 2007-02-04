@@ -4389,6 +4389,39 @@ do_rootkit_file_dir_checks() {
 	SCAN_KSYMS=""
 	scanrootkit
 
+	# SInAR
+
+	logtext "Debug: SInAR"
+	displaytext -n "   SInAR"
+
+	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+		STATUS=0
+		SIZE=28
+
+		logtext "Debug: SInAR"
+		displaytext -n "   Rootkit SInAR"
+
+		# Search for name in path. Trade off for speed.
+		for DIR in ${BINPATH}; do
+			find "${DIR}" -maxdepth 2 -type f -iname sinar\* | while read RESULT; do
+				if `grep -qi 'sinar' ${RESULT} >/dev/null 2>&1`; then
+					STATUS=1
+				fi
+			done
+		done
+
+		if [ ${STATUS} -eq 0 ]; then
+			jump=`expr ${defaultcolumn} - ${SIZE}`
+			insertlayout
+			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+		else
+			jump=`expr ${defaultcolumn} - ${SIZE}`
+			insertlayout
+			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+			displaytext "${FOUNDTRACES}"
+		fi
+	fi
+
 	# Slapper
 
 	SCAN_ROOTKIT="Slapper"
