@@ -30,8 +30,26 @@ RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
 USE_CVS=0
 
+umask 027
+
+OPERATING_SYSTEM=`uname 2>/dev/null`
+
+case "${OPERATING_SYSTEM}" in
+AIX|OpenBSD|SunOS)
+	if [ -z "$RANDOM" ]; then
+		if [ -n "`which bash 2>/dev/null | grep '^/'`" ]; then
+			exec bash $0 $*
+		else
+			exec ksh $0 $*
+		fi
+
+		exit 0
+	fi
+	;;
+esac
+
 # rootmgu: modified for solaris
-case `uname` in
+case "${OPERATING_SYSTEM}" in
 AIX|OpenBSD|SunOS)
 	# rootmgu:
 	# What is the default shell
@@ -132,7 +150,12 @@ case "$1" in
 				echo "MAKE SURE YOU WANT PREFIX to be ${PREFIX}"
 				#fi
 				;;
-			RPM)	PREFIX="${RPM_BUILD_ROOT}/usr/local"
+			RPM)	if [ -n "${RPM_BUILD_ROOT}" ]; then
+					PREFIX="${RPM_BUILD_ROOT}/usr/local"
+				else
+					echo "RPM prefix chosen but \$RPM_BUILD_ROOT variable not found, exiting."
+					exit 1
+				fi
 				;;
 			*)	PREFIX="$1"
 				;;
@@ -161,7 +184,7 @@ case "$1" in
 				LIBDIR="${PREFIX}/lib"; VARDIR="${PREFIX}/var"
 				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
 				;;
-			RPM)	if [ `uname -m` = x86_64 ]; then
+			RPM)	if [ `uname -m` = x86_64 -a -d "${PREFIX}/lib64" ]; then
 					LIBDIR="${PREFIX}/lib64"
 				else
 					LIBDIR="${PREFIX}/lib"
@@ -668,9 +691,6 @@ while [ $# -ge 1 ]; do
 		esac
 		;;
 	--examples) showExamples
-		;;
-	--mentalfloss) # Since you read the source here's something for you:
-		USE_CVS=1
 		;;
 	*)
 		echo "Wrong option given, exiting."

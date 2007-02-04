@@ -82,17 +82,17 @@ fi
 %defattr(-,root,root)
 %attr(640,root,root) %config(noreplace) %verify(not mtime) %{_sysconfdir}/%{name}.conf
 %attr(750,root,root) %{_prefix}/bin/%{name}
-%attr(750,root,root) %dir %{_var}/%{name}
-%attr(750,root,root) %dir %{_var}/%{name}/db
-%attr(640,root,root) %verify(not mtime) %{_var}/%{name}/db/*.dat
-%attr(750,root,root) %dir %{_var}/%{name}/tmp
 %attr(750,root,root) %dir %{_libdir}/%{name}/scripts
 %attr(750,root,root) %{_libdir}/%{name}/scripts/*.pl
 %attr(750,root,root) %{_libdir}/%{name}/scripts/*.sh
 %attr(644,root,root) %{_prefix}/share/man/man8/%{name}.8
 %attr(750,root,root) %{docdir}
-%attr(750,root,root) %dir %{_var}/%{name}/i18n
-%attr(640,root,root) %{_var}/%{name}/i18n/*
+%attr(750,root,root) %dir %{_var}/%{name}
+%attr(750,root,root) %dir %{_var}/%{name}/db
+%attr(640,root,root) %verify(not mtime) %{_var}/%{name}/db/*.dat
+%attr(750,root,root) %dir %{_var}/%{name}/db/i18n
+%attr(640,root,root) %{_var}/%{name}/db/i18n/*
+%attr(750,root,root) %dir %{_var}/%{name}/tmp
 %{_sysconfdir}/cron.daily/01-rkhunter
 
 
