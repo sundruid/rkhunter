@@ -4401,24 +4401,33 @@ do_rootkit_file_dir_checks() {
 		logtext "Debug: SInAR"
 		displaytext -n "   Rootkit SInAR"
 
-		# Search for name in path. Trade off for speed.
-		for DIR in ${BINPATH}; do
-			find "${DIR}" -maxdepth 2 -type f -iname sinar\* | while read RESULT; do
-				if `grep -qi 'sinar' ${RESULT} >/dev/null 2>&1`; then
-					STATUS=1
-				fi
-			done
-		done
+		GFIND_CMD=`find_cmd gfind`
+		if [ -x "${GFIND_CMD}" ]; then
 
-		if [ ${STATUS} -eq 0 ]; then
-			jump=`expr ${defaultcolumn} - ${SIZE}`
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			# Search for name in path. No trade off for speed.
+			for DIR in ${BINPATH}; do
+				${GFIND_CMD} "${DIR}" -type f -name sinar\* | while read RESULT; do
+					if `grep -qi 'sinar' ${RESULT} >/dev/null 2>&1`; then
+						STATUS=1
+					fi
+				done
+			done
+
+			if [ ${STATUS} -eq 0 ]; then
+				jump=`expr ${defaultcolumn} - ${SIZE}`
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			else
+				jump=`expr ${defaultcolumn} - ${SIZE}`
+				insertlayout
+				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
+				displaytext "${FOUNDTRACES}"
+			fi
 		else
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-			displaytext "${FOUNDTRACES}"
+			displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
+			logtext "Skipped test (Rootkit SInAR), due to missing 'gfind' command"
 		fi
 	fi
 
