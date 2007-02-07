@@ -1777,6 +1777,37 @@ get_hash_function() {
 	return
 }
 
+get_scan_mode_dev_option() {
+
+	# SCAN_MODE_DEV governs how we scan /dev for suspicious files.
+	# The two allowed options are "commented out" or LAZY.
+	# If commented out we do a thorough scan which adds 1 minute runtime.
+	#
+	# See if the option is specified in the configuration file.
+	# If it is then we do a simple check on whether it is empty,
+	# a space, or not 0 or 1.
+	#
+
+	SCAN_MODE_DEV=`grep '^SCAN_MODE_DEV=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${SCAN_MODE_DEV}" ]; then
+		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | sed -e 's/SCAN_MODE_DEV=//' | tr -d '"' | tr -s ' '`
+
+		case "$SCAN_MODE_DEV" in
+		THOROUGH|LAZY) SCAN_MODE_DEV="$SCAN_MODE_DEV"
+			;;
+		*)	# Don't make this fatal.
+			echo "Invalid SCAN_MODE_DEV configuration option: using THOROUGH."
+			SCAN_MODE_DEV="THOROUGH"
+			;;
+		esac
+	else
+		# Default to thorough
+		SCAN_MODE_DEV="THOROUGH"
+	fi
+
+	return
+}
 
 get_configfile_options() {
 
@@ -1807,6 +1838,7 @@ get_configfile_options() {
 
 	get_mailonwarn_option
 
+	get_scan_mode_dev_option
 
 	#
 	# Now that we have processed BINDIR, we will recheck the
@@ -6119,12 +6151,21 @@ do_local_host_checks() {
 
 	displaytext ""
 	displaytext "* Filesystem checks${NORMAL}"
-	displaytext -n "   Checking /dev for suspicious files... "
 
 	if [ -d "${ROOTDIR}/dev" ]; then
 		# FreeBSD (5): character special, symbolic link to,directory
 		# Linux (Debian): block special, socket, fifo (named pipe)
-		SPECIALFILES=`file "${ROOTDIR}/dev/"* | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
+
+		case "$SCAN_MODE_DEV" in
+		LAZY)	
+			displaytext -n "   Checking /dev for suspicious files... (in explicit LAZY mode)"
+			SPECIALFILES=`file "${ROOTDIR}/dev/"* | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
+			;;
+		THOROUGH|*) 
+			displaytext -n "   Checking /dev for suspicious files... "
+			SPECIALFILES=`find "${ROOTDIR}/dev/" | while read f; do file "${f}" | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'; done`
+			;;
+		esac
 
 		SIZE=39
 		jump=`expr ${defaultcolumn} - ${SIZE}`
