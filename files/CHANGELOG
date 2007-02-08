@@ -82,6 +82,11 @@
  - Added --debug cli option, and allow commands to be configured in the
    configuration file. Both of these additions are for the developers, but
    may be used when debugging user problems.
+ - Added command-line options '--summary/--nosummary' (--ns). These control
+   whether the system checks summary is shown. By default it is shown.
+   The '--summary' option, as well as the '--report-warnings-only' option,
+   will override the '--quiet' option if they are specified. However, no
+   other information will be displayed if '--quiet' is used.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -197,6 +202,11 @@
    if no error occurred and no update available (code 0).
  - Corrected bug in Solaris script replacement check. The tested output is
    never used on Solaris, so previously the test would never have worked.
+ - The '--quiet' option now does what it says. No output is shown unless other
+   options are specified by the user. E.g. using '--quiet' on its own produces
+   no output, but sets the return code. If the '--report-warnings-only'
+   option is usedas well, then warnings will be shown despite '--quiet'
+   being used.
 
  --
 

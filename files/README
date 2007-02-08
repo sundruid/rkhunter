@@ -150,6 +150,11 @@ In the latter case if you choose for a custom layout "/opt" just run:
 to see where the files are installed. Now you can manually remove them.
 
 
+TEST NAMES
+==========
+jh - fill this bit in!
+
+
 ROOTKIT HUNTER SUPPORT
 ======================
 

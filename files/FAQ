@@ -32,6 +32,7 @@ The latest version of this FAQ can be found at the RKH web site.
         installed. But I have fully patched my server! How is this
         possible?
    3.4) How can I run Rootkit Hunter every day?
+   3.5) What is the meaning of the test names?
 
 
  4. ERROR AND WARNING MESSAGES
@@ -277,6 +278,10 @@ The latest version of this FAQ can be found at the RKH web site.
         30 5 * * * </path>/rkhunter -c --cronjob <more options>
 
      Rootkit Hunter will now run at 5:30 (AM).
+
+
+3.5) What is the meaning of the test names?
+jh - fill this in.
 
 
 ===========================================================

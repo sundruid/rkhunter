@@ -1,4 +1,4 @@
-Version:2006121200
+Version:2007020800
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -20,6 +20,7 @@ MSG_TYPE_WARNING:Warning
 MSG_RESULT_OK:OK
 MSG_RESULT_BAD:BAD
 MSG_RESULT_SKIPPED:Skipped
+MSG_RESULT_WARNING:Warning
 MSG_RESULT_FOUND:Found
 MSG_RESULT_NOT_FOUND:Not Found
 
@@ -53,27 +54,48 @@ CONFIG_BINDIR:Using '$1' as the command directories
 CONFIG_ROOTDIR:Using '$1' as the root directory
 CONFIG_TMPDIR:Using '$1' as the temporary directory
 CONFIG_NO_MAIL_ON_WARN:No mail-on-warning address configured
+CONFIG_MOW_DISABLED:Disabling use of mail-on-warning at users request
 CONFIG_MAIL_ON_WARN:Emailing warnings to '$1' using command '$2'
 CONFIG_SSH_ROOT:Explicit option set to allow root logins via SSH
+CONFIG_SSH_PROTV1:Explicit option set to allow SSH protocol version 1
 CONFIG_X_AUTO:X will be automatically detected
 CONFIG_CLRSET2:Using second color set
+CONFIG_NO_SHOW_SUMMARY:Disabling system check summary at users request
 
 FOUND_CMD:Found '$1' command: $2
 NOT_FOUND_CMD:Unable to find '$1' command
 
 SYS_NO_PRELINK:System is not using prelinking
-SYS_PRELINK_MD5:System is using prelinking - using MD5 ($1) for hash checks
-SYS_PRELINK_SHA1:System is using prelinking - using SHA1 ($1) for hash checks
+SYS_PRELINK_FUNC:System is using prelinking - using $1 ($2) for hash checks
 
-HASH_PERL_MD5:Using the perl script for MD5 hash checks
-HASH_PERL_SHA1:Using the perl script for SHA1 hash checks
-HASH_PERL_FUNC:Using '$1' for the hash checks
+HASH_FUNC_PERL:Using the perl $1 module for the file properties hash checks
+HASH_FUNC:Using the '$1' command for the file properties hash checks
+HASH_NO_FUNC:No hash function command found
 
 GRSECINSTALLED:Found GRSEC installed
 
 SYSLOG_ENABLED:Using syslog for some logging - facility/priority level is '$1'.
 SYSLOG_DISABLED:Disabling use of syslog at users request.
 SYSLOG_NO_LOGGER:Disabling use of syslog - unable to find 'logger' command.
+
+SUMMARY_TITLE1:System checks summary
+SUMMARY_TITLE2:=====================
+SUMMARY_PROP_SCAN:File properties checks...
+SUMMARY_PROP_REQCMDS:Required commands check failed
+SUMMARY_PROP_COUNT:Files checked: $1
+SUMMARY_PROP_FAILED:Suspect files: $1
+SUMMARY_CHKS_SKIPPED:All checks skipped
+SUMMARY_RKT_SCAN:Rootkit checks...
+SUMMARY_RKT_COUNT:Files checked: $1
+SUMMARY_RKT_FAILED:Suspect files: $1
+SUMMARY_RKT_NAMES:Possible rootkits: $1
+SUMMARY_APPS_SCAN:Applications checks...
+SUMMARY_APPS_COUNT:Applications checked: $1
+SUMMARY_APPS_FAILED:Suspect applications: $1
+SUMMARY_SCAN_TIME:The system checks took: $1
+SUMMARY_NO_SCAN_TIME:The system check took: Unable to determine clock time
+SUMMARY_LOGFILE:All results have been written to the logfile ($1)
+SUMMARY_NO_LOGFILE:No log file created
 
 CREATED_TEMP_FILE:Created temporary file '$1'
 
@@ -87,7 +109,7 @@ DOWNLOAD_FAIL:Download failed - $1 mirrors left.
 
 VERSIONCHECK_START:Starting program version check...
 VERSIONCHECK_FAIL_ALL:Download failed - unable to determine the latest program version number.
-VERSIONCHECK_CURRENT:This version: " "" "$1
+VERSIONCHECK_CURRENT:This version  : $1
 VERSIONCHECK_LATEST:Latest version: $1
 VERSIONCHECK_UPDT_AVAIL:Update available
 VERSIONCHECK_CONV_FAIL:Unable to compare version numbers: Program: '$1'    Latest: '$2'
@@ -96,7 +118,8 @@ UPDATE_START:Starting check of '.dat' files...
 UPDATE_CHECKING_FILE:Checking file $1
 UPDATE_FILE_NO_VERS:File '$1' has no valid version number. Downloading a new copy.
 UPDATE_FILE_MISSING:File '$1' is missing or empty. Downloading a new copy.
-UPDATE_DECOMP_FAIL:Uncompressing '$1' failed. Original file left in place.
+UPDATE_DECOMP_FAIL:Uncompressing new '$1' file failed. Original file left in place.
+UPDATE_FILE_NO_VERS_UNCOMP:New '$1' file has no valid version number. Original file left in place.
 
 OSINFO_START:Checking if the O/S has changed since last time...
 OSINFO_END:Nothing seems to have changed
@@ -107,27 +130,27 @@ OSINFO_OSVER_CHANGE2:Old O/S value: $1    New value: $2
 OSINFO_PRELINK_CHANGE:The system has changed to ${1}using prelinking since the last run
 OSINFO_ARCH_CHANGE1:The system seems to have changed CPU type
 OSINFO_ARCH_CHANGE2:Old CPU value: $1    New value: $2
-OSINFO_MSG1:Because of the change(s) the file hash check may give some false-positive results.
-OSINFO_MSG2:You may need to re-run rkhunter with the '--hashupd' option.
+OSINFO_MSG1:Because of the change(s) the file properties checks may give some false-positive results.
+OSINFO_MSG2:You may need to re-run rkhunter with the '--propupd' option.
 
-SETFILEHASH_FILE_START:Getting file hashes...
-SETFILEHASH_DIR_FILE_COUNT:Found $1 hashes in $2
-SETFILEHASH_FILE_COUNT:Found $1 file hashes
+SET_FILE_PROP_START:Getting file properties...
+SET_FILE_PROP_DIR_FILE_COUNT:Found $1 files in $2
+SET_FILE_PROP_FILE_COUNT:File $1: searched for $2 files, found $3
 
-HASHUPD_START:Starting file hash data update...
-HASHUPD_OSINFO_START:Collecting O/S info...
-HASHUPD_ARCH_FOUND:Found system architecture: $1
-HASHUPD_REL_FILE:Found release file: $1
-HASHUPD_NO_REL_FILE:Unable to find a release file: LS output shows:
-HASHUPD_NO_REL_FILE2:$1
-HASHUPD_OSNAME_FOUND:Found O/S name: $1
-HASHUPD_ERROR:Error installing new rkhunter.dat file. Code $1
-HASHUPD_NEW_DAT_FILE:New rkhunter.dat file installed
-HASHUPD_WARN:WARNING! It is the users responsibility to ensure that when the '--hashupd' option
-HASHUPD_WARN:is used, all the files on their system are known to be genuine, and installed from a
-HASHUPD_WARN:reliable source. The rkhunter '--check' option will compare the current hash values
-HASHUPD_WARN:against previously stored values, and report if the values differ. However, rkhunter
-HASHUPD_WARN:cannot determine what has caused the change, that is for the user to do.
+PROPUPD_START:Starting file properties data update...
+PROPUPD_OSINFO_START:Collecting O/S info...
+PROPUPD_ARCH_FOUND:Found system architecture: $1
+PROPUPD_REL_FILE:Found release file: $1
+PROPUPD_NO_REL_FILE:Unable to find a release file: LS output shows:
+PROPUPD_NO_REL_FILE2:$1
+PROPUPD_OSNAME_FOUND:Found O/S name: $1
+PROPUPD_ERROR:Error installing new rkhunter.dat file. Code $1
+PROPUPD_NEW_DAT_FILE:New rkhunter.dat file installed
+PROPUPD_WARN:WARNING! It is the users responsibility to ensure that when the '--propupd' option
+PROPUPD_WARN:is used, all the files on their system are known to be genuine, and installed from a
+PROPUPD_WARN:reliable source. The rkhunter '--check' option will compare the current file properties
+PROPUPD_WARN:against previously stored values, and report if any values differ. However, rkhunter
+PROPUPD_WARN:cannot determine what has caused the change, that is for the user to do.
 
 ENABLED_TESTS:Enabled tests are: $1
 DISABLED_TESTS:Disabled tests are: $1
@@ -137,9 +160,10 @@ KSYMS_MISSING:ksyms and kallsyms checks will be skipped - neither file is presen
 USER_DISABLED_TEST:Test '$1' disabled at users request.
 
 CHECK_START:Starting system checks...
-CHECK_ERRS_FOUND:One or more errors have been found while checking this system.
-CHECK_ERRS_FOUND_RERUN:Please re-run the check, ensuring that a logfile is created.
-CHECKS_ERRS_FOUND_CHK_LOG:Please check the log file ($1)
+CHECK_WARNINGS_NOT_FOUND:No warnings were found while checking the system.
+CHECK_WARNINGS_FOUND:One or more warnings have been found while checking the system.
+CHECK_WARNINGS_FOUND_RERUN:Please re-run the check, ensuring that a log file is created.
+CHECK_WARNINGS_FOUND_CHK_LOG:Please check the log file ($1)
 
 CHECK_SYS_COMMANDS:Checking system commands...
 
@@ -150,49 +174,53 @@ STRINGS_SCANNING_BAD:String not found in 'strings' command
 STRINGS_CHECK:Checking 'strings' command...
 STRINGS_CHECK:Check skipped - no 'strings' command found.
 
-GOOD_HASH_START:Performing 'known good' hash check
-GOOD_HASH_NO_VALUE:The file ${1}/${2} exists on the system,
-GOOD_HASH_NO_VALUE:but it has no hash value in the rkhunter.dat file.
-GOOD_HASH_NOT_EXIST:The file ${1}/${2} exists on the system,
-GOOD_HASH_NOT_EXIST:but it is not present in the rkhunter.dat file.
-GOOD_HASH_FILE_NOT_EXIST:The file ${1}/${2} does not exist on the system,
-GOOD_HASH_FILE_NOT_EXIST:but it is present in the rkhunter.dat file.
-GOOD_HASH_WHITELIST:Whitelisted file hash value found: File: $1    Hash: $2
-GOOD_HASH_FILENAME:${1}/${2}
-GOOD_HASH_VALUES_CHANGED:File property values have changed:
-GOOD_HASH_VALUES_CHANGED2:File: ${1}/${2}
-GOOD_HASH_HASH_UNAVAIL:File hash: Unable to get current hash value.
-GOOD_HASH_HASH_CHANGED:File hash: $1
-GOOD_HASH_DB_CHANGED:DB hash  : $1
-GOOD_HASH_INODE_CHANGED:File inode: $1    DB inode: $2
-GOOD_HASH_PERM_CHANGED:File permissions: $1    DB permissions: $2
-GOOD_HASH_UID_CHANGED:File uid: $1    DB uid: $2
-GOOD_HASH_GID_CHANGED:File gid: $1    DB gid: $2
-GOOD_HASH_DTM_CHANGED:File modification time: $1    DB modification time: $2
-GOOD_HASH_WRITE_PERM_SET:Write permission is set for all users.
-GOOD_HASH_NO_HASHES:No file hash values found
+FILE_PROP_START:Performing file properties checks
+FILE_PROP_CMDS:Checking for required commands
+FILE_PROP_IMMUT_OS:Skipping all immutable-bit checks. This check is only available for Linux systems.
+FILE_PROP_SKIP_ATTR:Unable to find 'stat' command - all file attribute checks will be skipped.
+FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:
+FILE_PROP_SKIP_HASH_FUNC:Unable to find a hash function command.
+FILE_PROP_SKIP_HASH_PRELINK:Unable to find 'prelink' command.
+FILE_PROP_SKIP_HASH_SHA1:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
+FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe was found, which can cause errors. If possible, disable libsafe and then run the prelink command. Finally, recreate the hash values using 'rkhunter --propupd'.
+FILE_PROP_SKIP_IMMUT:Unable to find 'lsattr' command - all file immutable-bit checks will be skipped.
+FILE_PROP_SKIP_SCRIPT:Unable to find 'file' command - all script replacement checks will be skipped.
+FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not exist, and so must be created. To do this type in 'rkhunter --propupd'.
+FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, and so must be created. To do this type in 'rkhunter --propupd'.
+FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
 
-SKIP_GOODHASH_CHECK1:All 'known good' hash checks skipped.
-SKIP_GOODHASH_CHECK1:This system uses prelinking, but no 'prelink' command can be found.
-SKIP_GOODHASH_CHECK2:All 'known good' hash checks skipped.
-SKIP_GOODHASH_CHECK2:No hash function command can be found.
-SKIP_GOODHASH_CHECK3:All 'known good' hash checks skipped.
-SKIP_GOODHASH_CHECK3:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
-SKIP_GOODHASH_CHECK4:All 'known good' hash checks skipped.
-SKIP_GOODHASH_CHECK4:The file of stored hash values (rkhunter.dat) does not exist, and so must be created.
-SKIP_GOODHASH_CHECK4:To do this type in 'rkhunter --hashupd'.
-SKIP_GOODHASH_CHECK5:All 'known good' hash checks skipped.
-SKIP_GOODHASH_CHECK5:The file of stored hash values (rkhunter.dat) is empty, and so must be recreated.
-SKIP_GOODHASH_CHECK5:To do this type in 'rkhunter --hashupd'.
-SKIP_GOODHASH_CHECK6:All 'known good' hash checks skipped.
-SKIP_GOODHASH_CHECK6:This system uses prelinking, but libsafe was found which can cause errors.
-SKIP_GOODHASH_CHECK6:Disable libsafe if possible, and then run prelink and recreate the hash values with 'rkhunter --hashupd'.
-
-SCRIPTS_START:Performing script replacement checks
-SCRIPTS_CHECK_SKIP:All script replacement checks skipped
-SCRIPTS_CHECK_SKIP:No 'file' command can be found.
-SCRIPTS_FILE_REPLACED:The command '$1' has been replaced by a script: $2
-SCRIPTS_WHITELIST:Command '$1' is whitelisted.
+FILE_PROP_FILENAME:$1
+FILE_PROP_FILE_NOT_EXIST:The file $1 does not exist on the system, but it is present in the rkhunter.dat file.
+FILE_PROP_WL:File $1 is whitelisted for the $2 check
+FILE_PROP_NO_RKH_REC:The file $1 exists on the system, but it is not present in the rkhunter.dat file.
+FILE_PROP_HASH_WL_INVALID:The file $1 whitelist hash value ($2) does not match the current hash value.
+FILE_PROP_CHANGED:The file properties have changed:
+FILE_PROP_CHANGED2:File: $1
+FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
+FILE_PROP_SYSHASH:Current hash: $1
+FILE_PROP_RKHHASH:Stored hash : $1
+FILE_PROP_NO_RKHHASH: No hash value found for file $1 in the rkhunter.dat file.
+FILE_PROP_NO_RKHPERM: No file permissions value found for file $1 in the rkhunter.dat file.
+FILE_PROP_PERM_UNAVAIL:Current permissions: Unavailable    Stored permissions: $1
+FILE_PROP_PERM:Current permissions: $1    Stored permissions: $2
+FILE_PROP_UID_UNAVAIL:Current uid: Unavailable    Stored uid: $1
+FILE_PROP_UID:Current uid: $1    Stored uid: $2
+FILE_PROP_NO_RKHUID: No user-id value found for file $1 in the rkhunter.dat file.
+FILE_PROP_GID_UNAVAIL:Current gid: Unavailable    Stored gid: $1
+FILE_PROP_GID:Current gid: $1    Stored gid: $2
+FILE_PROP_NO_RKHGID: No group-id value found for file $1 in the rkhunter.dat file.
+FILE_PROP_INODE_UNAVAIL:Current inode: Unavailable    Stored inode: $1
+FILE_PROP_INODE:Current inode: $1    Stored inode: $2
+FILE_PROP_NO_RKHINODE: No inode value found for file $1 in the rkhunter.dat file.
+FILE_PROP_SYSDTM_UNAVAIL:Current file modification time: Unavailable
+FILE_PROP_SYSDTM:Current file modification time: $1
+FILE_PROP_RKHDTM:Stored file modification time : $1
+FILE_PROP_NO_RKHDTM: No file modification time value found for file $1 in the rkhunter.dat file.
+FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file $1
+FILE_PROP_WRITE:Write permission is set on file $1 for all users.
+FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file $1
+FILE_PROP_IMMUT:File $1 has the immutable-bit set.
+FILE_PROP_SCRIPT:The command $1 has been replaced by a script: $2
 
 CHECK_ROOTKITS:Checking for rootkits
 ROOTKIT_FILES_DIRS_START:Performing check of default files and directories
@@ -201,6 +229,7 @@ ROOTKIT_MALWARE_START:Performing malware checks
 CHECK_LOCALHOST:Checking the local host
 
 CHECK_APPS:Checking applications
+APPS_TOTAL_COUNT:Applications checked: $1 out of $2
 
 CHECK_NETWORK:Checking the network
 NETWORK_PORTS_START:Performing check for backdoor ports
@@ -220,11 +249,14 @@ NETWORK_PACKET_CAP_FOUND:Process $1 (PID $2) is listening on the network.
 NETWORK_PACKET_CAP_WHITE:Found process $1 on whitelist.
 
 SHARED_LIBS_START:Performing 'shared libraries' checks
-SHARED_LIBS_VAR_OK:No preload variable $1
-SHARED_LIBS_VAR_BAD:Found preload variable $1
-SHARED_LIBS_PRE_OK:Library preload file not found.
-SHARED_LIBS_PRE_BAD:Found library preload file $1
-SHARED_LIBS_PATH_OK:Current LD_LIBRARY_PATH envvar does not influence binaries.
-SHARED_LIBS_PATH_BAD:Current LD_LIBRARY_PATH envvar influences binaries.
-SHARED_LIBS_PATH_CMD:Test 'shared libraries' skipped due to missing 'ldd' command.
+SHARED_LIBS_PRELOAD_VAR:Checking for preloading variables...
+SHARED_LIBS_PRELOAD_NO_VAR:No preloading variables found.
+SHARED_LIBS_PRELOAD_VAR_FOUND:Found library preload variable(s): $1
+SHARED_LIBS_PRELOAD_FILE:Checking for preload file...
+SHARED_LIBS_PRELOAD_NO_FILE:The preload file $1 does not exist.
+SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1
+SHARED_LIBS_PATH:Checking LD_LIBRARY_PATH variable...
+SHARED_LIBS_NO_PATH:The LD_LIBRARY_PATH environment variable is not set.
+SHARED_LIBS_PATH_BAD:The LD_LIBRARY_PATH environment variable influences binaries: $1
+SHARED_LIBS_PATH_CMD:Check skipped - no 'ldd' command found.
 

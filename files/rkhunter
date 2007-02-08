@@ -291,6 +291,11 @@ display() {
 		if [ -z "${LINE1}" ]; then
 			LANG_FILE="${DB_PATH}/i18n/en"
 			LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
+
+			if [ -z "${LINE1}" ]; then
+				echo "Error: Invalid display - keyword cannot be found: Display line: ${DISPLAY_LINE}"
+				return
+			fi
 		fi
 
 		test -n "${LINE1}" && LINE1=`eval "echo \"${LINE1}\" | sed -e 's/;/\\;/g'"`
@@ -491,11 +496,6 @@ insertlayout() {
 
 
 scanrootkit() {
-	if [ "${ROOTKIT_TESTS}" = "" ]; then
-		ROOTKIT_TESTS="${SCAN_ROOTKIT}"
-	else
-		ROOTKIT_TESTS="${ROOTKIT_TESTS}, ${SCAN_ROOTKIT}"
-	fi
 	SCAN_STATUS=0
 	JUMPCOL=`expr ${defaultcolumn} - 12`
 	SIZE=`echo \'${SCAN_ROOTKIT}\' | wc -c | tr -d ' '`
@@ -504,7 +504,7 @@ scanrootkit() {
 	logtext "*** Start scan ${SCAN_ROOTKIT} ***"
 
 	for I in $SCAN_FILES; do
-		SCANNED_COUNT=`expr ${SCANNED_COUNT} + 1`
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 		I=`echo ${I} | tr -s '%' ' '`
 		logtext -n "  - File ${I}... "
 		if [ -f "${I}" ]; then
@@ -540,8 +540,8 @@ scanrootkit() {
 	if [ "${SCAN_STATUS}" -eq 1 ]; then
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-		INFECTED_COUNT=`expr ${INFECTED_COUNT} + 1`
-		INFECTED_NAMES="${INFECTED_NAMES}${SCAN_ROOTKIT} "
+		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 		displaytext "${FOUNDTRACES}"
 		WARNING_COUNT=`expr ${WARNING_COUNT} + 1`
 
@@ -618,8 +618,6 @@ check_required_commands() {
 		SEEN=0
 
 		for DIR in $1; do
-			test ! -d "${DIR}" && continue
-
 			if [ -f "${DIR}/${CMD}" -a -x "${DIR}/${CMD}" ]; then
 				SEEN=1
 				break
@@ -1062,7 +1060,7 @@ get_bindir_option() {
 		else
 			USE_DFLT=1
 
-			BINPATHS=$DFLT_BINPATHS
+			BINPATHS="${DFLT_BINPATHS}"
 
 
 			#
@@ -1091,15 +1089,15 @@ get_bindir_option() {
 
 	#
 	# This is a simple check that each directory begins with
-	# a '.' or '/', and that the directory exists.
+	# a '.' or '/'. We allow non-existent directories because
+	# this list may be used with ROOTDIR. As such the directory
+	# may not exist on the local host, but may exist on a
+	# remotely diagnosed system.
 	#
 
 	for DIR in ${BINPATHS}; do
 		if [ -z "`echo ${DIR} | grep '^[./]'`" ]; then
 			echo "Invalid BINDIR directory: ${DIR}"
-			exit 1
-		elif [ ! -d "${DIR}" -a $USE_DFLT -eq 0 ]; then
-			echo "Non-existent BINDIR directory: ${DIR}"
 			exit 1
 		fi
 	done
@@ -1367,12 +1365,17 @@ get_syslog_option() {
 }
 
 
-get_allow_rootssh_option() {
+get_ssh_options() {
 
 	#
-	# See if the option is specified in the configuration file.
-	# If it is then we do a simple check on whether it is empty,
-	# a space, or not 0 or 1.
+	# We check for two SSH options in this function. Both can only
+	# be set in the configuration file.
+	#
+
+	#
+	# See if the ALLOW_SSH_ROOT_USER option is specified in the
+	# configuration file. If it is then we do a simple check on
+	# whether it is empty, a space, or not 0 or 1.
 	#
 
 	ALLOW_SSH_ROOT_USER=`grep '^ALLOW_SSH_ROOT_USER=' ${CONFIGFILE} | tail -1`
@@ -1389,6 +1392,29 @@ get_allow_rootssh_option() {
 		fi
 	else
 		ALLOW_SSH_ROOT_USER=0
+	fi
+
+
+	#
+	# See if the ALLOW_SSH_PROT_V1 option is specified in the
+	# configuration file. If it is then we do a simple check on
+	# whether it is empty, a space, or not 0 or 1.
+	#
+
+	ALLOW_SSH_PROT_V1=`grep '^ALLOW_SSH_PROT_V1=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${ALLOW_SSH_PROT_V1}" ]; then
+		ALLOW_SSH_PROT_V1=`echo "${ALLOW_SSH_PROT_V1}" | sed -e 's/ALLOW_SSH_PROT_V1=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${ALLOW_SSH_PROT_V1}" -o "${ALLOW_SSH_PROT_V1}" = " " ]; then
+			echo "Invalid ALLOW_SSH_PROT_V1 configuration option - no value specified."
+			exit 1
+		elif [ "${ALLOW_SSH_PROT_V1}" != "0" -a "${ALLOW_SSH_PROT_V1}" != "1" ]; then
+			echo "Invalid ALLOW_SSH_PROT_V1 configuration option: ${ALLOW_SSH_PROT_V1}"
+			exit 1
+		fi
+	else
+		ALLOW_SSH_PROT_V1=0
 	fi
 
 	return
@@ -1453,7 +1479,6 @@ get_auto_x_option() {
 
 get_enable_option() {
 
-# jh - add enable count, if one cmd given then don't keypresspause
 	#
 	# If the option is not specified on the command-line, then
 	# get it from the configuration file. We validate the test
@@ -1463,18 +1488,32 @@ get_enable_option() {
 
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${ENABLE_TESTS}" ]; then
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr ',' ' ' | tr -s ' '`
+			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
 
 			if [ "${ENABLE_TESTS}" = " " ]; then
 				echo "Invalid --enable option - no test names given."
 				exit 1
+			fi
+
+
+			#
+			# We do a simple test here to see if just one test
+			# name was given. If it was then we skip the key
+			# press feature since it is most likely that the user
+			# doesn't want that. We also check that only the
+			# --enable option has been given, and that the test
+			# name is not 'all'.
+			#
+
+			if [ -z "${DISABLE_TESTS}" -a "${ENABLE_TESTS}" != "all" -a -z "`echo \"${ENABLE_TESTS}\" | grep ' '`" ]; then
+				SKIP_KEY_PRESS=1
 			fi
 		fi
 	else
 		ENABLE_TESTS=`grep '^ENABLE_TESTS=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${ENABLE_TESTS}" ]; then
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | sed -e 's/ENABLE_TESTS=//' | tr -d '"' | tr ',' ' ' | tr -s ' '`
+			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | sed -e 's/ENABLE_TESTS=//' | tr -d '"' | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
 
 			if [ -z "${ENABLE_TESTS}" -o "${ENABLE_TESTS}" = " " ]; then
 				echo "Invalid ENABLE_TESTS configuration option - no test names specified."
@@ -1557,7 +1596,7 @@ get_disable_option() {
 
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${DISABLE_TESTS}" ]; then
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr ',' ' ' | tr -s ' '`
+			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
 
 			if [ "${DISABLE_TESTS}" = " " ]; then
 				echo "Invalid --disable option - no test names given."
@@ -1568,7 +1607,7 @@ get_disable_option() {
 		DISABLE_TESTS=`grep '^DISABLE_TESTS=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${DISABLE_TESTS}" ]; then
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e 's/DISABLE_TESTS=//' | tr -d '"' | tr ',' ' ' | tr -s ' '`
+			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e 's/DISABLE_TESTS=//' | tr -d '"' | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
 
 			if [ -z "${DISABLE_TESTS}" -o "${DISABLE_TESTS}" = " " ]; then
 				echo "Invalid DISABLE_TESTS configuration option - no test names specified."
@@ -1612,9 +1651,7 @@ get_if_prelinked() {
 	#
 	# If the system appears to be using prelinking, but no
 	# prelink command can be found, then we simply skip the
-	# hash check. We do not exit because this is a suspicious
-	# circumstance, and it may be better to check the system
-	# regardless of the hash check.
+	# file properties hash check.
 	#
 	LIBSAFE_TEST1=""
 	LIBSAFE_TEST2=""
@@ -1637,7 +1674,9 @@ get_if_prelinked() {
 			LIBSAFE_TEST2=`${LDD_CMD} ${ROOTDIR}/lib/libdl.so.? | grep libsafe 2>&1`
 		fi
 
-		if [ -n "${PRELINK_CMD}" -a -z "${LIBSAFE_TEST1}" -a -z "${LIBSAFE_TEST2}" ]; then
+		if [ -z "${PRELINK_CMD}" ]; then
+			SKIP_HASH_MSG=1
+		elif [ -z "${LIBSAFE_TEST1}" -a -z "${LIBSAFE_TEST2}" ]; then
 			PRELINKED=1
 
 			RUNCON_CMD=`find_cmd runcon`
@@ -1645,10 +1684,8 @@ get_if_prelinked() {
 			if [ -n "${RUNCON_CMD}" ]; then
 				PRELINK_CMD="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD}"
 			fi
-		elif [ -n "${PRELINK_CMD}" -a -n "${LIBSAFE_TEST1}" -a -n "${LIBSAFE_TEST2}" ]; then
-			SKIP_GOODHASH_MSG=6
-		else
-			SKIP_GOODHASH_MSG=1
+		elif [ -n "${LIBSAFE_TEST1}" -a -n "${LIBSAFE_TEST2}" ]; then
+			SKIP_HASH_MSG=3
 		fi
 	fi
 
@@ -1836,10 +1873,6 @@ get_configfile_options() {
 
 	get_scriptdir_option
 
-	get_mailonwarn_option
-
-	get_scan_mode_dev_option
-
 	#
 	# Now that we have processed BINDIR, we will recheck the
 	# required commands.
@@ -1864,39 +1897,44 @@ get_configfile_options() {
 	fi
 
 	if [ $CHECK -eq 1 ]; then
-		get_allow_rootssh_option
+		test $NOMOW -eq 0 && get_mailonwarn_option
+
+		get_ssh_options
 
 		get_syslog_option
 
+		get_scan_mode_dev_option
+
 
 		#
-		# See if we are to only perform specific tests.
+		# See if we are only to perform specific tests.
 		#
 
 		get_enable_option
 		get_disable_option
 
-		check_test hashes && GOOD_HASH_ENABLED=1
+		check_test hashes && HASH_CHECK_ENABLED=1
 	fi
 
 
 	#
-	# We only need the hash function option if we are going to
-	# be checking the system or updating the hash database.
+	# We only need the hash function option if we are going
+	# to be checking the system or updating the file
+	# properties database.
 	#
 
-	if [ $GOOD_HASH_ENABLED -eq 1 -o $HASH_UPDATE -eq 1 ]; then
+	if [ $HASH_CHECK_ENABLED -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 		#
-		# For the file hash check we need to find out if we are
-		# a prelinked system, and if so, then find out which
-		# hash function to use. We also need to find the 'stat'
-		# command.
+		# For the file properties hash check we need to find out
+		# if we are a prelinked system, and if so, then find out
+		# which hash function to use. We also need to find the
+		# 'stat' command.
 		#
 
 		get_if_prelinked
 
-		test $SKIP_GOODHASH_MSG -eq 0 && get_hash_function
+		test $SKIP_HASH_MSG -eq 0 && get_hash_function
 	fi
 
 	return
@@ -2031,51 +2069,59 @@ rkh_dat_get_os_info() {
 }
 
 
-rkh_dat_set_file_hash() {
+rkh_dat_set_file_properties() {
 
 	#
-	# This function determines various bits of information about
-	# the files to be checked. The format in the rkhunter.dat file is:
+	# This function obtains various bits of information about the
+	# files to be checked. The format in the rkhunter.dat file is:
 	#
 	#     File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
 	#          <date/time modified>
-	#
-
 	#
 	# To save time in the loops below, we determine the exact commands
 	# required before entering them.
 	#
 
-	FILE_COUNT=0
 	DIR_FILE_COUNT=0
+	PROP_FILE_LIST_COUNT=0
 
-	display --to LOG --type PLAIN SETFILEHASH_FILE_START
+	display --to LOG --type PLAIN SET_FILE_PROP_START
 
 
-	if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
-		SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+	if [ -z "${STAT_CMD}" ]; then
+		SCMD=""
+		FDATA=":::::"
 	else
-		if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
-			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
+			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
 		else
-			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+			if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+				SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+			else
+				SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+			fi
 		fi
 	fi
 
-	if [ $PRELINKED -eq 0 ]; then
-		HCMD=$HASH_FUNC
+	if [ -z "${HASH_FUNC}" ]; then
+		HCMD=""
+		SYSHASH=""
 	else
-		if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
-			HCMD="${PRELINK_CMD} --verify --md5"
+		if [ $PRELINKED -eq 0 ]; then
+			HCMD=$HASH_FUNC
 		else
-			HCMD="${PRELINK_CMD} --verify --sha"
+			if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
+				HCMD="${PRELINK_CMD} --verify --md5"
+			else
+				HCMD="${PRELINK_CMD} --verify --sha"
+			fi
 		fi
-	fi
 
-	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
-		HSH_FLD_IDX=4
-	else
-		HSH_FLD_IDX=1
+		if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
+			HSH_FLD_IDX=4
+		else
+			HSH_FLD_IDX=1
+		fi
 	fi
 
 
@@ -2083,28 +2129,39 @@ rkh_dat_set_file_hash() {
 	# Now loop through the directories looking for the files.
 	#
 
-	for DIR in ${HASHDIRS}; do
+	for DIR in ${PROP_DIR_LIST}; do
 		test ! -d "${DIR}" && continue
 
 		DIR_FILE_COUNT=0
 
-		for FNAME in ${HASHFILES}; do
+		for FNAME in ${PROP_FILE_LIST}; do
 			test ! -f "${DIR}/${FNAME}" -o -h "${DIR}/${FNAME}" && continue
 
-			FILE_COUNT=`expr ${FILE_COUNT} + 1`
 			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
+			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
-			SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
+			if [ -n "${HCMD}" ]; then
+				SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
+			fi
 
-			FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+			if [ -n "${SCMD}" ]; then
+				FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+			fi
 
 			echo "File:${DIR}/${FNAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
 		done
 
-		display --to LOG --type INFO SETFILEHASH_DIR_FILE_COUNT $DIR_FILE_COUNT "${DIR}"
+		display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $DIR_FILE_COUNT "${DIR}"
 	done
 
-	display --to SCREEN+LOG --type INFO SETFILEHASH_FILE_COUNT $FILE_COUNT
+
+	if [ -f ${DB_PATH}/rkhunter.dat ]; then
+		RKHTMPVAR="updated"
+	else
+		RKHTMPVAR="created"
+	fi
+
+	display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
 
 	return
 }
@@ -2144,14 +2201,14 @@ get_temp_file() {
 }
 
 
-do_hash_update() {
+do_prop_update() {
 
 	#
 	# This function updates the local hosts rkhunter.dat file
-	# with O/S information and file hash values.
+	# with O/S information and file properties.
 	#
 
-	display --to LOG --type INFO --nl HASHUPD_START
+	display --to LOG --type INFO --nl PROPUPD_START
 
 	#
 	# First we need to get a temporary file name to use.
@@ -2176,7 +2233,7 @@ do_hash_update() {
 	rkh_dat_set_version
 
 
-	display --to LOG --type PLAIN HASHUPD_OSINFO_START
+	display --to LOG --type PLAIN PROPUPD_OSINFO_START
 
 	rkh_dat_get_os_info
 
@@ -2184,19 +2241,19 @@ do_hash_update() {
 
 	if [ -n "${ARCH}" ]; then
 		echo "Arch:${ARCH}" >>${RKHDAT_FILE}
-		display --to LOG --type INFO HASHUPD_ARCH_FOUND "${ARCH}"
+		display --to LOG --type INFO PROPUPD_ARCH_FOUND "${ARCH}"
 	fi
 
 	if [ -n "${RELEASE}" ]; then
-		display --to LOG --type INFO HASHUPD_REL_FILE "${RELEASE}"
+		display --to LOG --type INFO PROPUPD_REL_FILE "${RELEASE}"
 	else
-		display --to LOG --type INFO HASHUPD_NO_REL_FILE
-		display --to LOG --type PLAIN HASHUPD_NO_REL_FILE2 "      `ls -d ${ROOTDIR}/etc/*release* ${ROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
+		display --to LOG --type INFO PROPUPD_NO_REL_FILE
+		display --to LOG --type PLAIN PROPUPD_NO_REL_FILE2 "      `ls -d ${ROOTDIR}/etc/*release* ${ROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
 	fi
 
 	if [ -n "${OSNAME}" ]; then
 		echo "OS:${OSNAME}" >>${RKHDAT_FILE}
-		display --to LOG --type INFO HASHUPD_OSNAME_FOUND "${OSNAME}"
+		display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${OSNAME}"
 	fi
 
 	if [ $PRELINKED -eq 0 ]; then
@@ -2206,7 +2263,7 @@ do_hash_update() {
 	fi
 
 
-	rkh_dat_set_file_hash
+	rkh_dat_set_file_properties
 
 
 	#
@@ -2219,9 +2276,9 @@ do_hash_update() {
 
 	if [ $RKHTMPVAR -ne 0 ]; then
 		RET_CODE=1
-		display --to SCREEN+LOG --type WARNING HASHUPD_ERROR $RKHTMPVAR
+		display --to SCREEN+LOG --type WARNING PROPUPD_ERROR $RKHTMPVAR
 	else
-		display --to LOG --type INFO HASHUPD_NEW_DAT_FILE
+		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE
 	fi
 
 	rm -f ${RKHDAT_FILE} >/dev/null 2>&1
@@ -2346,7 +2403,7 @@ download_file() {
 	MIRROR_COUNT=0
 
 	if [ -f "${DB_PATH}/mirrors.dat" ]; then
-		MIRROR_COUNT=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | wc -l`
+		MIRROR_COUNT=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
 	fi
 
 	test $MIRROR_COUNT -eq 0 && MIRROR_COUNT=1
@@ -2465,13 +2522,13 @@ do_update() {
 
 	MIRROR=""
 
-	UPDFILE_LIST="mirrors.dat programs_bad.dat programs_good.dat backdoorports.dat"
+	UPDFILE_LIST="mirrors.dat programs_bad.dat backdoorports.dat"
 
 	for UPDFILE in ${UPDFILE_LIST}; do
 		LATEST_VERS=""
 
 		if [ -f "${DB_PATH}/${UPDFILE}" -a -s "${DB_PATH}/${UPDFILE}" ]; then
-			PROG_VERS=`egrep -i '^version:[0-9]{10}$' ${DB_PATH}/${UPDFILE} | tail -1 | sed -e 's/version://'`
+			PROG_VERS=`head -n 1 ${DB_PATH}/${UPDFILE} | egrep -i '^version:[0-9]{10}$' | sed -e 's/version://'`
 
 			if [ -z "${PROG_VERS}" ]; then
 				VERSION_FILE=0
@@ -2559,12 +2616,23 @@ do_update() {
 
 				if [ $VERSION_FILE -eq 0 ]; then
 					${GUNZIP_CMD} ${RKHUPD_FILE} >/dev/null 2>&1
+					DNLD_ERR=$?
 
-					if [ $? -eq 0 ]; then
+					if [ $DNLD_ERR -eq 0 ]; then
 						RKHUPD_FILE=`echo "${RKHUPD_FILE}" | sed -e 's/\.gz$//'`
-						cat ${RKHUPD_FILE} >${DB_PATH}/${UPDFILE}
 
-						display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result UPD UPDATE_CHECKING_FILE "${UPDFILE}"
+						DNLD_ERR=`head -n 1 ${RKHUPD_FILE} 2>/dev/null | egrep -i '^version:[0-9]{10}$'`
+
+						if [ -n "${DNLD_ERR}" ]; then
+							cat ${RKHUPD_FILE} >${DB_PATH}/${UPDFILE}
+
+							display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result UPD UPDATE_CHECKING_FILE "${UPDFILE}"
+						else
+							RET_CODE=1
+
+							display --to SCREEN+LOG --type WARNING --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
+							display --to LOG --type WARNING UPDATE_FILE_NO_VERS_UNCOMP "${UPDFILE}"
+						fi
 					else
 						#
 						# Make sure that nothing is
@@ -2573,10 +2641,12 @@ do_update() {
 						# uncompressed files.
 						#
 
+						RET_CODE=1
+
 						rm -f ${RKHUPD_FILE} >/dev/null 2>&1
 
 						display --to SCREEN+LOG --type WARNING --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
-						display --to LOG --type WARNING UPDATE_DECOMP_FAIL "${RKHUPD_FILE}"
+						display --to LOG --type WARNING UPDATE_DECOMP_FAIL "${UPDFILE}"
 
 						RKHUPD_FILE=`echo "${RKHUPD_FILE}" | sed -e 's/\.gz$//'`
 					fi
@@ -2612,6 +2682,7 @@ do_versioncheck() {
 	# This function performs a program version check.
 	#
 	# It will set the return code in some instances:
+	#       0 - (implied) no error, no update available
 	#	1 - a download error occurred
 	#	2 - no error occurred, but an update is available
 	#
@@ -3561,9 +3632,9 @@ do_strings_check() {
 		STRING=`echo "${STRING}" | sed -e "s/^${RDIR}//"`
 
 		STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
-		STRINGFOUND=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
+		STRING_SEEN=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
 
-		if [ -z "${STRINGFOUND}" ]; then
+		if [ -z "${STRING_SEEN}" ]; then
 			STRINGSFAILED=1
 			display --to LOG --type WARNING --result BAD STRINGS_SCANNING_BAD "${STRING}"
 		else
@@ -3582,7 +3653,7 @@ do_strings_check() {
 }
 
 
-do_shared_libs_check() { 
+do_shared_libs_check() {
 
 	#
 	# This function checks shared library loading problems.
@@ -3605,222 +3676,716 @@ do_shared_libs_check() {
 	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SHARED_LIBS_START
 
 
-	# Library preloading exported variables.
+	#
+	# First check for preloading exported variables.
+	#
+
+	VARFOUND=""
 
 	for RKHTMPVAR in LD_PRELOAD LD_AOUT_PRELOAD LD_ELF_PRELOAD; do
 		RKHTMPVAR_RES=`eval echo "\\$${RKHTMPVAR}"`
+
 		if [ -n "${RKHTMPVAR_RES}" ]; then
-			display --to LOG --type WARNING --result BAD SHARED_LIBS_VAR_BAD "${RKHTMPVAR}"
-		else
-			display --to LOG --type PLAIN --result OK SHARED_LIBS_VAR_OK "${RKHTMPVAR}"
+			VARFOUND="${VARFOUND} ${RKHTMPVAR}"
 		fi
 	done
 
+	if [ -z "${VARFOUND}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_VAR
+		display --to LOG --type INFO SHARED_LIBS_PRELOAD_NO_VAR
+	else
+		display --to SCREEN+LOG --type WARNING --result BAD --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_VAR
+		display --to LOG --type WARNING SHARED_LIBS_PRELOAD_VAR_FOUND "${VARFOUND}"
+	fi
 
-	# Library preload file.
+
+	#
+	# Next check for a preload file.
+	#
 
 	RKHTMPVAR=${ROOTDIR}/etc/ld.so.preload
 
 	if [ -f ${RKHTMPVAR} ]; then
-		display --to LOG --type WARNING --result BAD SHARED_LIBS_PRE_BAD "${RKHTMPVAR}"
+		display --to SCREEN+LOG --type WARNING --result BAD --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+		display --to LOG --type WARNING SHARED_LIBS_PRELOAD_FILE_FOUND "${RKHTMPVAR}"
 	else
-		display --to LOG --type PLAIN --result OK SHARED_LIBS_PRE_OK "${RKHTMPVAR}"
+		display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+		display --to LOG --type INFO SHARED_LIBS_PRELOAD_NO_FILE "${RKHTMPVAR}"
 	fi
 
 
-	# LD_LIBRARY_PATH check
+	#
+	# Finally we check the LD_LIBRARY_PATH. This check may be
+	# disabled by the user if the 'ldd' command is not available.
+	#
 
-	if [ -n "${LDD_CMD}" ]; then
-		RKHTMPVAR=`eval echo "\\$${LD_LIBRARY_PATH}"`
+	if `check_test shared_libs_path`; then
+		if [ -n "${LDD_CMD}" ]; then
+			if [ -n "${LD_LIBRARY_PATH}" ]; then
+				LD_LIBR_FAILED=0
+				LD_LIBRARY_PATH_SAVED="${LD_LIBRARY_PATH}"
 
-		if [ -n "${RKHTMPVAR}" ]; then
-			LD_LIBR_FAILED=0
-			LD_LIBRARY_PATH_SAVED=${LD_LIBRARY_PATH}
-			RKHTMPVAR_BIN="
-				${FIND_CMD}
-				${PS_CMD}
-				${STRINGS_CMD}
-				${MD5_CMD}
-				${LS_CMD}
-				${STAT_CMD}
-				"
+				RKHTMPVAR_BIN="${FIND_CMD} ${PS_CMD}
+					${STRINGS_CMD} ${MD5_CMD} ${LS_CMD}
+					${STAT_CMD}"
 
-			for RKHTMPVAR in $RKHTMPVAR_BIN; do
+				for RKHTMPVAR in ${RKHTMPVAR_BIN}; do
+					LD_LIBRARY_PATH="${LD_LIBRARY_PATH_SAVED}"
+					export LD_LIBRARY_PATH
+					RKHTMPVAR_WITH=`${LDD_CMD} ${RKHTMPVAR} 2>&1`
+
+					unset LD_LIBRARY_PATH
+					RKHTMPVAR_WITHOUT=`${LDD_CMD} ${RKHTMPVAR} 2>&1`
+
+					if [ "${RKHTMPVAR_WITH}" != "${RKHTMPVAR_WITHOUT}" ]; then
+						#
+						# Testing one command should be "evidence" enough.
+						#
+
+						LD_LIBR_FAILED=1
+						break
+					fi
+				done
+
+
+				#
+				# Reset things to the way they were before.
+				#
+
+				LD_LIBRARY_PATH="${LD_LIBRARY_PATH_SAVED}"
 				export LD_LIBRARY_PATH
-				RKHTMPVAR_WITH=`${LDD_CMD} $RKHTMPVAR`
-				unset LD_LIBRARY_PATH
-				RKHTMPVAR_WITHOUT=`${LDD_CMD} $RKHTMPVAR`
 
-				if [ "${RKHTMPVAR_WITH}" != "${RKHTMPVAR_WITHOUT}" ]; then
-					# display --to LOG --type WARNING --result BAD SHARED_LIBS_PATH_BAD "${RKHTMPVAR}"
-					LD_LIBR_FAILED=1
-					# Testing one command should be "evidence" enough.
-					break
+
+				if [ $LD_LIBR_FAILED -eq 0 ]; then
+					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PATH
+				else
+					display --to SCREEN+LOG --type WARNING --result BAD --color RED --screen-indent 4 SHARED_LIBS_PATH
+					display --to LOG --type WARNING SHARED_LIBS_PATH_BAD "${LD_LIBRARY_PATH}"
 				fi
-			done
-
-			LD_LIBRARY_PATH=${LD_LIBRARY_PATH_SAVED}
-
-			if [ $LD_LIBR_FAILED -eq 0 ]; then
-				display --to SCREEN --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PATH_OK
 			else
-				display --to SCREEN --type PLAIN --result BAD --color RED --screen-indent 4 SHARED_LIBS_PATH_BAD
+				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PATH
+				display --to LOG --type INFO SHARED_LIBS_NO_PATH
 			fi
-		# else
-		# 	Don't mention.
-		# 	no LD_LIBRARY_PATH set
+		else
+			display --to SCREEN+LOG --type WARNING --result BAD --color RED --screen-indent 4 SHARED_LIBS_PATH
+			display --to LOG --type WARNING SHARED_LIBS_PATH_CMD
 		fi
 	else
-		display --to SCREEN+LOG --type WARNING --result SKIPPED --color YELLOW --screen-indent 4 SHARED_LIBS_PATH_CMD
+		display --to LOG --type INFO USER_DISABLED_TEST shared_libs_path
 	fi
 
 	return
 }
 
 
-do_known_good_hash_check() {
+do_file_properties_check() {
 
 	#
 	# This function carries out a check of system command property
 	# values checked against their previous value, which is stored
-	# in the rkhunter.dat file.
+	# in the rkhunter.dat file. Other checks work on the current
+	# file, and do not use any previously stored value (for example,
+	# the immutable bit check).
 	#
 
-	if ! `check_test hashes`; then
-		display --to LOG --type INFO --nl USER_DISABLED_TEST hashes
+	#
+	# Each test will set the variable TEST_RESULT, and use it to
+	# display the actual result. Typically a null string indicates
+	# 'OK', and anything else is 'BAD'.
+	#
+
+	TEST_RESULT=""
+	WHITELIST_RESULT=""
+	SKIP_ATTR=0; SKIP_HASH=0; SKIP_IMMUT=0; SKIP_SCRIPT=0
+	USE_DAT_FILE=1
+	SKIP_IMMUT_OS=0
+	PROP_FILE_LIST_COUNT=0
+
+	#
+	# In order to disable the whole test we have to check if
+	# each specific test has been disabled.
+	#
+
+	for RKHTMPVAR in attributes hashes immutable scripts; do
+		if ! `check_test ${RKHTMPVAR}`; then
+			test "${RKHTMPVAR}" = "attributes" && SKIP_ATTR=1
+			test "${RKHTMPVAR}" = "hashes" && SKIP_HASH=1
+			test "${RKHTMPVAR}" = "immutable" && SKIP_IMMUT=1
+			test "${RKHTMPVAR}" = "scripts" && SKIP_SCRIPT=1
+		fi
+	done
+
+	#
+	# The immutable-bit test is only applicable to Linux systems.
+	# We need to disable the test, but not have it logged as if
+	# the user had disabled it (that would be confusing).
+	#
+
+	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
+		test $SKIP_IMMUT -eq 0 && SKIP_IMMUT_OS=1
+		SKIP_IMMUT=1
+	fi
+
+	if ! `check_test properties`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
+		return
+	elif [ $SKIP_ATTR -eq 1 -a $SKIP_HASH -eq 1 -a $SKIP_IMMUT -eq 1 -a $SKIP_SCRIPT -eq 1 ]; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
 		return
 	fi
 
 
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 GOOD_HASH_START
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILE_PROP_START
 
 
 	#
-	# If we have to skip the test, then does so and log the reason why.
+	# If the user wants to skip a test then log it.
 	#
 
-	if [ $SKIP_GOODHASH_MSG -gt 0 ]; then
-		display --to SCREEN+LOG --type WARNING --screen-indent 4 SKIP_GOODHASH_CHECK${SKIP_GOODHASH_MSG}
+	for RKHTMPVAR in attributes hashes immutable scripts; do
+		test "${RKHTMPVAR}" = "attributes" && TEST_NAME=$SKIP_ATTR
+		test "${RKHTMPVAR}" = "hashes" && TEST_NAME=$SKIP_HASH
+		test "${RKHTMPVAR}" = "scripts" && TEST_NAME=$SKIP_SCRIPT
 
-		if [ $SKIP_GOODHASH_MSG -eq 4 -o $SKIP_GOODHASH_MSG -eq 5 -o $SKIP_GOODHASH_MSG -eq 6 ]; then
-			display --to LOG --type WARNING --nl HASHUPD_WARN
+		if [ "${RKHTMPVAR}" = "immutable" ]; then
+			TEST_NAME=0
+			test $SKIP_IMMUT_OS -eq 0 && TEST_NAME=$SKIP_IMMUT
 		fi
 
-		return
+		if [ $TEST_NAME -eq 1 ]; then
+			display --to LOG --type INFO USER_DISABLED_TEST ${RKHTMPVAR}
+		fi
+	done
+
+
+	#
+	# The first test we do is on the commands needed to
+	# perform all the file checks. If the user has not
+	# disabled any test, and a command is missing, then
+	# we must let them know that without marking each file
+	# test as 'BAD' (because that could hide a real problem).
+	# We include checks on the rkhunter.dat file as well.
+	#
+
+	RKHTMPVAR=""
+
+	if [ $SKIP_ATTR -eq 0 -a -z "${STAT_CMD}" ]; then
+		SKIP_ATTR=1
+		RKHTMPVAR="${RKHTMPVAR} attr"
+	fi
+
+	if [ $SKIP_HASH -eq 0 ]; then
+		if [ -z "${HASH_FUNC}" ]; then
+			SKIP_HASH=1
+			RKHTMPVAR="${RKHTMPVAR} hash"
+		fi
+
+		if [ -z "${PRELINK_CMD}" ]; then
+			SKIP_HASH=1
+			RKHTMPVAR="${RKHTMPVAR} prelink"
+		fi
+
+		if [ $PRELINKED -eq 1 ]; then
+			if [ $SKIP_HASH_MSG -eq 2 ]; then
+				SKIP_HASH=1
+				RKHTMPVAR="${RKHTMPVAR} sha1"
+			fi
+
+			if [ $SKIP_HASH_MSG -eq 3 ]; then
+				SKIP_HASH=1
+				RKHTMPVAR="${RKHTMPVAR} libsafe"
+			fi
+		fi
+	fi
+
+	if [ $SKIP_IMMUT -eq 0 -a -z "${LSATTR_CMD}" ]; then
+		SKIP_IMMUT=1
+		RKHTMPVAR="${RKHTMPVAR} immutable"
+	fi
+
+	if [ $SKIP_SCRIPT -eq 0 -a -z "${FILE_CMD}" ]; then
+		SKIP_SCRIPT=1
+		RKHTMPVAR="${RKHTMPVAR} script"
+	fi
+
+	if [ $SKIP_ATTR -eq 0 -o $SKIP_HASH -eq 0 ]; then
+		if [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
+			SKIP_HASH=1
+			SKIP_ATTR=1
+			USE_DAT_FILE=0
+			RKHTMPVAR="${RKHTMPVAR} missing"
+		fi
+
+		if [ $USE_DAT_FILE -eq 1 -a ! -s "${DB_PATH}/rkhunter.dat" ]; then
+			SKIP_HASH=1
+			SKIP_ATTR=1
+			USE_DAT_FILE=0
+			RKHTMPVAR="${RKHTMPVAR} empty"
+		fi
+	else
+		#
+		# If we are not checking the file attributes or
+		# the hash value, then we don't need to look at
+		# the rkhunter.dat file. The other tests can be
+		# done without the file.
+		#
+
+		USE_DAT_FILE=0
+	fi
+
+	#
+	# If all the previous checks have disabled all the tests,
+	# then we tell the user and then return.
+	#
+
+	if [ $SKIP_ATTR -eq 1 -a $SKIP_HASH -eq 1 -a $SKIP_IMMUT -eq 1 -a $SKIP_SCRIPT -eq 1 ]; then
+		RKHTMPVAR="${RKHTMPVAR} notests"
 	fi
 
 
 	#
-	# Otherwise, just carry on with the checks.
+	# Display the results.
 	#
 
-	if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
-		SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+	if [ $SKIP_IMMUT_OS -eq 1 ]; then
+		display --to LOG --type INFO FILE_PROP_IMMUT_OS
+	fi
+
+	if [ -z "${RKHTMPVAR}" ]; then
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN FILE_PROP_CMDS
 	else
-		if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
-			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+		SUMMARY_PROP_REQCMDS=1
+
+		display --to SCREEN+LOG --type WARNING --screen-indent 4 --result WARNING --color RED FILE_PROP_CMDS
+
+
+		RKHTMPVAR2=0
+		for TEST_RESULT in ${RKHTMPVAR}; do
+			case "${TEST_RESULT}" in
+			attr)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_ATTR
+				;;
+			hash|prelink|sha1|libsafe)
+				if [ $RKHTMPVAR2 -eq 0 ]; then
+					RKHTMPVAR2=1
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_HASH
+				fi
+
+				case "${TEST_RESULT}" in
+				hash)
+					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_FUNC
+					;;
+				prelink)
+					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_PRELINK
+					;;
+				sha1)
+					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_SHA1
+					;;
+				libsafe)
+					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_LIBSAFE
+					;;
+				esac
+				;;
+			immutable)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT
+				;;
+			script)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_SCRIPT
+				;;
+			missing)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_DAT_MISSING
+				;;
+			empty)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_DAT_EMPTY
+				;;
+			esac
+		done
+
+
+		if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'libsafe|missing|empty'`" ]; then
+			display --to LOG --type WARNING --nl PROPUPD_WARN
+		fi
+
+		if [ -n "`echo \"${RKHTMPVAR}\" | grep 'notests'`" ]; then
+			display --to LOG --type WARNING --nl FILE_PROP_SKIP_ALL
+			return
+		fi
+	fi
+
+
+	#
+	# Set up some local variables depending on what
+	# commands we have available.
+	#
+
+	if [ $SKIP_ATTR -eq 1 ]; then
+		SCMD=""
+		FDATA=""
+	else
+		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
+			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
 		else
-			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+			if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+				SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+			else
+				SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+			fi
 		fi
 	fi
 
-	if [ $PRELINKED -eq 0 ]; then
-		HCMD=$HASH_FUNC
+	if [ $SKIP_HASH -eq 1 ]; then
+		HCMD=""
+		SYSHASH=""
 	else
-		if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
-			HCMD="${PRELINK_CMD} --verify --md5"
+		if [ $PRELINKED -eq 0 ]; then
+			HCMD=$HASH_FUNC
 		else
-			HCMD="${PRELINK_CMD} --verify --sha"
+			if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
+				HCMD="${PRELINK_CMD} --verify --md5"
+			else
+				HCMD="${PRELINK_CMD} --verify --sha"
+			fi
+		fi
+
+		if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
+			HSH_FLD_IDX=4
+		else
+			HSH_FLD_IDX=1
 		fi
 	fi
 
-	if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
-		HSH_FLD_IDX=4
-	else
-		HSH_FLD_IDX=1
+	#
+	# Set up some whitelist variables. There is no point
+	# recalculating the (static) whitelist as we look at
+	# each file. We may as well just do it the once here.
+	#
+
+	if [ $SKIP_HASH -eq 0 ]; then
+		HASHWHITELIST=`grep '^HASHWHITELIST=' ${CONFIGFILE} | sed -e 's/HASHWHITELIST=//g'`
+	fi
+
+	if [ $SKIP_ATTR -eq 0 ]; then
+		ATTRWHITELIST=`grep '^ATTRWHITELIST=' ${CONFIGFILE} | sed -e 's/ATTRWHITELIST=//g'`
+		WRITEWHITELIST=`grep '^WRITEWHITELIST=' ${CONFIGFILE} | sed -e 's/WRITEWHITELIST=//g'`
+	fi
+
+	if [ $SKIP_IMMUT -eq 0 ]; then
+		IMMUTWHITELIST=`grep '^IMMUTWHITELIST=' ${CONFIGFILE} | sed -e 's/IMMUTWHITELIST=//g'`
+	fi
+
+	if [ $SKIP_SCRIPT -eq 0 ]; then
+		SCRIPTWHITELIST=`grep '^SCRIPTWHITELIST=' ${CONFIGFILE} | sed -e 's/SCRIPTWHITELIST=//g'`
 	fi
 
 
-	for DIR in ${HASHDIRS}; do
-		for FNAME in ${HASHFILES}; do
-			HASH_OK=0; MISSING=0
+	#
+	# Now loop through each of the files and
+	# perform the tests on each one.
+	#
 
-			RKHLINE=`grep "^File:${DIR}/${FNAME}:" ${DB_PATH}/rkhunter.dat`
+	for DIR in ${PROP_DIR_LIST}; do
+		for FNAME in ${PROP_FILE_LIST}; do
+			TEST_RESULT=""
+			WHITELIST_RESULT=""
+
+
+			#
+			# We first need to test if the file exists or not,
+			# and if the file is listed in the rkhunter.dat
+			# file or not. This can indicate files that have
+			# appeared or disappeared on the system.
+			#
 
 			if [ -f "${DIR}/${FNAME}" -a ! -h "${DIR}/${FNAME}" ]; then
-				if [ -n "${RKHLINE}" ]; then
-					HASH_COUNT=`expr ${HASH_COUNT} + 1`
+				FILE_EXISTS=1
+				PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+			else
+				FILE_EXISTS=0
+			fi
 
-					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+			if [ $USE_DAT_FILE -eq 1 ]; then
+				RKHLINE=`grep "^File:${DIR}/${FNAME}:" ${DB_PATH}/rkhunter.dat`
 
-					if [ -n "${RKHHASH}" ]; then
-						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
-						FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+				if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
+					TEST_RESULT="${TEST_RESULT} norkhline"
+				elif [ $FILE_EXISTS -eq 0 ]; then
+					if [ -n "${RKHLINE}" ]; then
+						PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
-						RKHUID=`echo ${RKHLINE} | cut -d: -f6`
-						RKHGID=`echo ${RKHLINE} | cut -d: -f7`
-
-						SYSPERM=`echo ${FDATA} | cut -d: -f2`
-						SYSUID=`echo ${FDATA} | cut -d: -f3`
-						SYSGID=`echo ${FDATA} | cut -d: -f4`
-
-						#
-						# Prelinking will change the inode and DTM of a
-						# file. As such, we only check those properties
-						# for non-prelinked systems, or if there has been
-						# a problem getting the hash value.
-						#
-
-						if [ $PRELINKED -eq 0 -o -z "${SYSHASH}" ]; then
-							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
-							RKHDTM=`echo ${RKHLINE} | cut -d: -f8`
-
-							SYSINODE=`echo ${FDATA} | cut -d: -f1`
-							SYSDTM=`echo ${FDATA} | cut -d: -f5`
-						fi
-
-
-						#
-						# We check the file permissions here to see if
-						# the 'other' permission contains a 'w'. The check
-						# is against the octal value.
-						#
-
-						WRITE_PERM=`echo ${SYSPERM} | grep '[2367]$'`
-
-
-						if [ "${RKHHASH}" = "${SYSHASH}" -a "${RKHINODE}" = "${SYSINODE}" -a "${RKHPERM}" = "${SYSPERM}" -a "${RKHUID}" = "${SYSUID}" -a "${RKHGID}" = "${SYSGID}" -a "${RKHDTM}" = "${SYSDTM}" -a -z "${WRITE_PERM}" ]; then
-							HASH_OK=1
-						fi
-					else
-						MISSING=1
-						display --to LOG --type WARNING GOOD_HASH_NO_VALUE "${DIR}" "${FNAME}"
+						display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED FILE_PROP_FILENAME "${DIR}/${FNAME}"
+						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${DIR}/${FNAME}"
 					fi
-				else
-					MISSING=1
-					display --to LOG --type WARNING GOOD_HASH_NOT_EXIST "${DIR}" "${FNAME}"
+
+					continue
 				fi
 			else
-				if [ -n "${RKHLINE}" ]; then
-					MISSING=1
-					display --to LOG --type WARNING GOOD_HASH_FILE_NOT_EXIST "${DIR}" "${FNAME}"
+				if [ $FILE_EXISTS -eq 1 ]; then
+					RKHLINE=""
 				else
 					continue
 				fi
 			fi
 
 
-			if [ $HASH_OK -eq 0 -a $MISSING -eq 0 ]; then
-				for WHITELISTSTRING in `grep '^HASHWHITELIST=' ${CONFIGFILE} | sed -e 's/HASHWHITELIST=//g'`; do
-					WHITELISTFILE=`echo ${WHITELISTSTRING} | cut -d: -f1`
-					WHITELISTHASH=`echo ${WHITELISTSTRING} | cut -d: -f2`
+			if [ $USE_DAT_FILE -eq 1 -a -n "${RKHLINE}" ]; then
+				#
+				# Do the file hash value check.
+				#
 
-					if [ "${WHITELISTFILE}" = "${FNAME}" -a "${WHITELISTHASH}" = "${RKHHASH}" ]; then
-						HASH_OK=1
-						display --to LOG --type INFO GOOD_HASH_WHITELIST "${FNAME}" "${RKHHASH}"
+				if [ $SKIP_HASH -eq 0 ]; then
+					RKHTMPVAR=""
+					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+
+					if [ -n "${RKHHASH}" ]; then
+						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
+
+						if [ "${RKHHASH}" != "${SYSHASH}" ]; then
+							RKHTMPVAR="hashchanged"
+						fi
+					else
+						RKHTMPVAR="norkhhash"
 					fi
-				done
+
+
+					#
+					# Test if the file is whitelisted.
+					#
+
+					if [ -n "${RKHTMPVAR}" ]; then
+						for WHITELISTFILE in ${HASHWHITELIST}; do
+							WL_FILE=`echo ${WHITELISTFILE} | cut -d: -f1`
+							WL_HASH=`echo ${WHITELISTFILE} | cut -d: -f2`
+
+							if [ "${WL_FILE}" = "${DIR}/${FNAME}" ]; then
+								if [ "${WL_HASH}" = "${RKHHASH}" ]; then
+									RKHTMPVAR=""
+									WHITELIST_RESULT="${WHITELIST_RESULT} hash"
+								else
+									RKHTMPVAR="${RKHTMPVAR} hwlinvalid"
+								fi
+
+								break
+							fi
+						done
+
+						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+					fi
+				fi
+
+
+				#
+				# Do the file attributes checks.
+				# This checks the files permissions, and the
+				# uid/gid. If prelinking is not in use then
+				# the inode and modification date-time are
+				# checked as well. We also check the file
+				# permissions to see if 'w' has been
+				# allowed for all users.
+				#
+
+				if [ $SKIP_ATTR -eq 0 ]; then
+					RKHTMPVAR=""
+					WL_FILE=""
+
+					#
+					# We check to see if the file is whitelisted here,
+					# just the once. It is better than checking after
+					# each individual attribute test.
+					#
+
+					for WHITELISTFILE in ${ATTRWHITELIST}; do
+						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+							WL_FILE="whitelisted"
+							WHITELIST_RESULT="${WHITELIST_RESULT} attr"
+							break
+						fi
+					done
+
+					FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+
+					if [ -z "${WL_FILE}" -a -n "${FDATA}" ]; then
+						#
+						# Check the file permissions.
+						#
+
+						RKHTMPVAR=""
+
+						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
+						SYSPERM=`echo ${FDATA} | cut -d: -f2`
+
+						if [ -n "${RKHPERM}" ]; then
+							if [ "${RKHPERM}" != "${SYSPERM}" ]; then
+								RKHTMPVAR="permchanged"
+							fi
+						else
+							RKHTMPVAR="norkhperm"
+						fi
+
+						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+
+
+						#
+						# Check the file user-id.
+						#
+
+						RKHTMPVAR=""
+						RKHUID=`echo ${RKHLINE} | cut -d: -f6`
+						SYSUID=`echo ${FDATA} | cut -d: -f3`
+
+						if [ -n "${RKHUID}" ]; then
+							if [ "${RKHUID}" != "${SYSUID}" ]; then
+								RKHTMPVAR="uidchanged"
+							fi
+						else
+							RKHTMPVAR="norkhuid"
+						fi
+
+						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+
+
+						#
+						# Check the file group-id.
+						#
+
+						RKHTMPVAR=""
+						RKHGID=`echo ${RKHLINE} | cut -d: -f7`
+						SYSGID=`echo ${FDATA} | cut -d: -f4`
+
+						if [ -n "${RKHGID}" ]; then
+							if [ "${RKHGID}" != "${SYSGID}" ]; then
+								RKHTMPVAR="gidchanged"
+							fi
+						else
+							RKHTMPVAR="norkhgid"
+						fi
+
+						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+
+
+						if [ $PRELINKED -eq 0 ]; then
+							#
+							# Check the file inode number.
+							#
+
+							RKHTMPVAR=""
+							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
+							SYSINODE=`echo ${FDATA} | cut -d: -f1`
+
+							if [ -n "${RKHINODE}" ]; then
+								if [ "${RKHINODE}" != "${SYSINODE}" ]; then
+									RKHTMPVAR="inodechanged"
+								fi
+							else
+								RKHTMPVAR="norkhinode"
+							fi
+
+							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+
+
+							#
+							# Check the file modification date-time.
+							#
+
+							RKHTMPVAR=""
+							RKHDTM=`echo ${RKHLINE} | cut -d: -f8`
+							SYSDTM=`echo ${FDATA} | cut -d: -f5`
+
+							if [ -n "${RKHDTM}" ]; then
+								if [ "${RKHDTM}" != "${SYSDTM}" ]; then
+									RKHTMPVAR="dtmchanged"
+								fi
+							else
+								RKHTMPVAR="norkhdtm"
+							fi
+
+							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+						fi
+					elif [ -z "${WL_FILE}" ]; then
+						TEST_RESULT="${TEST_RESULT} sysattrunavail"
+					fi
+
+
+					#
+					# We check the file permissions here
+					# to see if the 'other' permission
+					# contains a 'w'. The check is
+					# against the octal value.
+					#
+
+					SYSPERM=`echo ${FDATA} | cut -d: -f2`
+					RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
+
+					if [ -n "${RKHTMPVAR}" ]; then
+						for WHITELISTFILE in ${WRITEWHITELIST}; do
+							if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+								RKHTMPVAR=""
+								WHITELIST_RESULT="${WHITELIST_RESULT} write"
+								break
+							fi
+						done
+
+						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} write"
+					elif [ -z "${SYSPERM}" ]; then
+						TEST_RESULT="${TEST_RESULT} syspermunavail"
+					fi
+				fi
+			fi
+
+
+			#
+			# We can now carry out the tests which do not
+			# require the rkhunter.dat file.
+			#
+
+			#
+			# Do the file immutable-bit check.
+			#
+
+			if [ $SKIP_IMMUT -eq 0 ]; then
+				RKHTMPVAR=`${LSATTR_CMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+
+
+				#
+				# Test if the file is whitelisted.
+				#
+
+				if [ -n "${RKHTMPVAR}" ]; then
+					for WHITELISTFILE in ${IMMUTWHITELIST}; do
+						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+							RKHTMPVAR=""
+							WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
+							break
+						fi
+					done
+
+					test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} immutable"
+				fi
+			fi
+
+
+			#
+			# Do the file script replacement check.
+			#
+
+			if [ $SKIP_SCRIPT -eq 0 ]; then
+				SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | egrep -i ' script( |$)'`
+
+
+				#
+				# Test if the file is whitelisted.
+				#
+
+				if [ -n "${SYSSCRIPT}" ]; then
+					for WHITELISTFILE in ${SCRIPTWHITELIST}; do
+						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+							SYSSCRIPT=""
+							WHITELIST_RESULT="${WHITELIST_RESULT} file"
+							break
+						fi
+					done
+
+					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} file"
+				fi
 			fi
 
 
@@ -3828,121 +4393,141 @@ do_known_good_hash_check() {
 			# Now output the results.
 			#
 
-			if [ $HASH_OK -eq 1 ]; then
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
+			if [ -z "${TEST_RESULT}" ]; then
+				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN FILE_PROP_FILENAME "${DIR}/${FNAME}"
 			else
-				HASH_DIFFERENT=`expr ${HASH_DIFFERENT} + 1`
+				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED FILE_PROP_FILENAME "${DIR}/${FNAME}"
 
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
+				PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-				if [ $MISSING -eq 0 ]; then
-					display --to LOG --type WARNING GOOD_HASH_VALUES_CHANGED
-					display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_VALUES_CHANGED2 "${DIR}" "${FNAME}"
-
-					if [ "${SYSHASH}" != "${RKHHASH}" ]; then
-						if [ -z "${SYSHASH}" ]; then
-							display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_HASH_UNAVAIL
-						else
-							display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_HASH_CHANGED "${SYSHASH}"
+				RKHTMPVAR2=0
+				for RKHTMPVAR in ${TEST_RESULT}; do
+					case "${RKHTMPVAR}" in
+					hashchanged|permchanged|uidchanged|gidchanged|inodechanged|dtmchanged)
+						if [ $RKHTMPVAR2 -eq 0 ]; then
+							RKHTMPVAR2=1
+							display --to LOG --type WARNING FILE_PROP_CHANGED
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${DIR}/${FNAME}"
 						fi
 
-						display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_DB_CHANGED "${RKHHASH}"
-					fi
+						case "${RKHTMPVAR}" in
+						hashchanged)
+							if [ -z "${SYSHASH}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_UNAVAIL
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH "${SYSHASH}"
+							fi
 
-					if [ "${SYSPERM}" != "${RKHPERM}" -o -n "${WRITE_PERM}" ]; then
-						display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_PERM_CHANGED "${SYSPERM}" "${RKHPERM}"
-						test -n "${WRITE_PERM}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_WRITE_PERM_SET
-					fi
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH "${RKHHASH}"
+							;;
+						permchanged)
+							if [ -z "${SYSPERM}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_PERM_UNAVAIL "${RKHPERM}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_PERM "${SYSPERM}" "${RKHPERM}"
+							fi
+							;;
+						uidchanged)
+							if [ -z "${SYSUID}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_UID_UNAVAIL "${RKHUID}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_UID "${SYSUID}" "${RKHUID}"
+							fi
+							;;
+						gidchanged)
+							if [ -z "${SYSGID}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_GID_UNAVAIL "${RKHGID}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_GID "${SYSGID}" "${RKHGID}"
+							fi
+							;;
+						inodechanged)
+							if [ -z "${SYSINODE}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_INODE_UNAVAIL "${RKHINODE}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_INODE "${SYSINODE}" "${RKHINODE}"
+							fi
+							;;
+						dtmchanged)
+							if [ -z "${SYSDTM}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM_UNAVAIL
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM "${SYSDTM}"
+							fi
 
-					test "${SYSINODE}" != "${RKHINODE}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_INODE_CHANGED "${SYSINODE}" "${RKHINODE}"
-					test "${SYSUID}" != "${RKHUID}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_UID_CHANGED "${SYSUID}" "${RKHUID}"
-					test "${SYSGID}" != "${RKHGID}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_GID_CHANGED "${SYSGID}" "${RKHGID}"
-					test "${SYSDTM}" != "${RKHDTM}" && display --to LOG --type PLAIN --log-indent 9 GOOD_HASH_DTM_CHANGED "${SYSDTM}" "${RKHDTM}"
-				fi
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM}"
+							;;
+						esac
+						;;
+					norkhline)
+						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "${DIR}/${FNAME}"
+						;;
+					norkhhash)
+						display --to LOG --type WARNING FILE_PROP_NO_RKHHASH "${DIR}/${FNAME}"
+						;;
+					norkhperm)
+						display --to LOG --type WARNING FILE_PROP_NO_RKHPERM "${DIR}/${FNAME}"
+						;;
+					norkhuid)
+						display --to LOG --type WARNING FILE_PROP_NO_RKHUID "${DIR}/${FNAME}"
+						;;
+					norkhgid)
+						display --to LOG --type WARNING FILE_PROP_NO_RKHGID "${DIR}/${FNAME}"
+						;;
+					norkhinode)
+						display --to LOG --type WARNING FILE_PROP_NO_RKHINODE "${DIR}/${FNAME}"
+						;;
+					norkhdtm)
+						display --to LOG --type WARNING FILE_PROP_NO_RKHDTM "${DIR}/${FNAME}"
+						;;
+					sysattrunavail)
+						display --to LOG --type WARNING FILE_PROP_NO_SYSATTR "${DIR}/${FNAME}"
+						;;
+					write)
+						display --to LOG --type WARNING FILE_PROP_WRITE "${DIR}/${FNAME}"
+						;;
+					syspermunavail)
+						display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "${DIR}/${FNAME}"
+						;;
+					immutable)
+						display --to LOG --type WARNING FILE_PROP_IMMUT "${DIR}/${FNAME}"
+						;;
+					file)
+						display --to LOG --type WARNING FILE_PROP_SCRIPT "${DIR}/${FNAME}" "${SYSSCRIPT}"
+						;;
+					esac
+				done
+			fi
+
+			if [ -n "${WHITELIST_RESULT}" ]; then
+				for WL_FILE in ${WHITELIST_RESULT}; do
+					case "${WL_FILE}" in
+					hash)
+						RKHTMPVAR="file hash"
+						;;
+					attr)
+						RKHTMPVAR="file attributes"
+						;;
+					write)
+						RKHTMPVAR="file write permission"
+						;;
+					immutable)
+						RKHTMPVAR="file immutable-bit"
+						;;
+					file)
+						RKHTMPVAR="script replacement"
+						;;
+					esac
+
+					display --to LOG --type INFO FILE_PROP_WL "${DIR}/${FNAME}" "${RKHTMPVAR}"
+				done
+			fi
+
+			if [ -n "`echo \"${TEST_RESULT}\" | grep 'hwlinvalid'`" ]; then
+				display --to LOG -type INFO FILE_PROP_HASH_WL_INVALID "${DIR}/${FNAME}" "${WL_HASH}"
 			fi
 		done
 	done
-
-
-	if [ $HASH_COUNT -eq 0 ]; then
-		display --to SCREEN+LOG --type WARNING --screen-indent 2 GOOD_HASH_NO_HASHES
-	fi
-
-	keypresspause
-
-	return
-}
-
-
-do_script_replacement_check() {
-
-# jh - move this up in to the hash check. Rename hash to property.
-	#
-	# This function carries out a check of the system commands to
-	# see if any have been replaced by a script.
-	#
-
-	if ! `check_test scripts`; then
-		display --to LOG --type INFO --nl USER_DISABLED_TEST scripts
-		return
-	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SCRIPTS_START
-
-
-	#
-	# We only perform the test if we have the 'file' command.
-	#
-
-	if [ -z "${FILE_CMD}" ]; then
-		display --to SCREEN+LOG --type WARNING --result SKIPPED --color YELLOW --screen-indent 4 SCRIPTS_CHECK_SKIP
-		return
-	fi
-
-
-	#
-	# Otherwise, just carry on with the checks.
-	#
-
-	for DIR in ${HASHDIRS}; do
-		for FNAME in ${HASHFILES}; do
-			if [ -f "${DIR}/${FNAME}" -a ! -h "${DIR}/${FNAME}" ]; then
-				SCRIPT_REPL=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | egrep -i ' script( |$)'`
-
-				#
-				# See if the command is whitelisted.
-				#
-
-				if [ -n "${SCRIPT_REPL}" ]; then
-					for WHITELISTFILE in `grep '^ALLOWSCRIPTCMD=' ${CONFIGFILE} | sed -e 's/ALLOWSCRIPTCMD=//g'`; do
-						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
-							SCRIPT_REPL="whitelisted"
-							break
-						fi
-					done
-				fi
-
-
-				#
-				# Now output the result.
-				#
-
-				if [ -z "${SCRIPT_REPL}" ]; then
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
-				elif [ "${SCRIPT_REPL}" = "whitelisted" ]; then
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
-					display --to LOG --type INFO SCRIPTS_WHITELIST "${DIR}/${FNAME}"
-				else
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED GOOD_HASH_FILENAME "${DIR}" "${FNAME}"
-					display --to LOG --type WARNING SCRIPTS_FILE_REPLACED "${DIR}/${FNAME}" "${SCRIPT_REPL}"
-				fi
-			fi
-		done
-	done
-
-
-	keypresspause
 
 	return
 }
@@ -3953,7 +4538,7 @@ do_system_commands_checks() {
 	#
 	# This function carries out a sequence of tests on
 	# system commands. These consist of the 'strings' command
-	# check, library checks and the file hash check.
+	# check, library checks and the file properties checks.
 	#
 
 	if ! `check_test system_commands`; then
@@ -3969,9 +4554,9 @@ do_system_commands_checks() {
 
 	do_shared_libs_check
 
-	do_known_good_hash_check
+	do_file_properties_check
 
-	do_script_replacement_check
+	keypresspause
 
 	return
 }
@@ -4690,8 +5275,8 @@ do_malware_checks() {
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 	else
-		INFECTED_COUNT=`expr ${INFECTED_COUNT} + 1`
-		INFECTED_NAMES="${INFECTED_NAMES} / ${INFO} "
+		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES} / ${INFO} "
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
@@ -4729,7 +5314,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 			FILENAME=`echo ${I} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 			SUSP_FILES="${SUSP_FILES}|${FILENAME}"
 		done
-		SEARCHFILES=`${LSOF_CMD} -F n -w | sort | uniq | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})$"`
+		SEARCHFILES=`${LSOF_CMD} -F n -w | ${SORT_CMD} | ${UNIQ_CMD} | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})$"`
 		if [ ! "${SEARCHFILES}" = "" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${RED}BAD${NORMAL} ]"
@@ -4867,7 +5452,7 @@ hydra.restore:THC-Hydra%%(password%%capture)
 			logtext --nodate "Skipped"
 		fi
 	else
-		display --to LOG --type INFO --nl USER_DISABLED_TEST deleted_files
+		display --to LOG --type INFO USER_DISABLED_TEST deleted_files
 	fi # end CHKDEL
 
 
@@ -5283,45 +5868,6 @@ hydra.restore:THC-Hydra%%(password%%capture)
 			else
 				logtext "Info: no 'lsmod' command found. Lsmod test skipped"
 			fi
-		fi
-
-
-
-		logtext "--------------------------- File attributes ---------------------------"
-
-		SIZE=27
-		displaytext -n "     Checking file attributes"
-# jh - this test needs to go into the hash/property test - for Linux OS only
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-
-		FOUND=0
-
-		if [ -n "${LSATTR_CMD}" ]; then
-			for I in ${BINPATHS}; do
-				logtext "Checking $I file attributes"
-				if [ -d "${I}" ]; then
-					for J in `ls ${I}`; do
-						LSAT=`${LSATTR_CMD} ${I}/${J} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
-						if [ -n "${LSAT}" ]; then
-							FOUND=1
-							logtext "Found 'immutable' binary (${I}/${J})"
-						fi
-					done
-				fi
-			done
-			if [ ${FOUND} -eq 0 ]; then
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-			else
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${YELLOW}Special attributes found!${NORMAL} ]"
-				logtext "Found special attributes on some binaries! This can be performed by security software OR"
-				logtext "by a rootkit. Please inspect these files and try to find the reason of this immutable flag."
-				logtext "See 'man chattr' for more information about this attributes."
-			fi
-		else
-			insertlayout
-			displaytext $E "   ${file}${LAYOUT}[ ${WHITE}Skipped!${NORMAL} ]"
 		fi
 
 
@@ -5787,7 +6333,7 @@ do_local_host_checks() {
 			logtext "Can't find /etc/group file?!?"
 		fi
 	else
-		display --to LOG --type INFO --nl USER_DISABLED_TEST passwd
+		display --to LOG --type INFO USER_DISABLED_TEST passwd
 	fi
 
 
@@ -6159,7 +6705,7 @@ do_local_host_checks() {
 		case "$SCAN_MODE_DEV" in
 		LAZY)	
 			displaytext -n "   Checking /dev for suspicious files... (in explicit LAZY mode)"
-			SPECIALFILES=`file "${ROOTDIR}/dev/"* | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
+			SPECIALFILES=`file "${ROOTDIR}/dev/"* | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
 			;;
 		THOROUGH|*) 
 			displaytext -n "   Checking /dev for suspicious files... "
@@ -6306,6 +6852,7 @@ do_app_checks() {
 	# This function carries out a sequence of application checks.
 	#
 
+# jh - remove need for programs_good.dat; only warn user if a programs_bad entry is seen.
 	if ! `check_test apps`; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST apps
 		return
@@ -6380,6 +6927,8 @@ do_app_checks() {
 		displaytext ""
 		displaytext "* Application version scan"
 
+		APPS_COUNT=0
+
 		#BINPATHS="/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/libexec"
 
 		if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
@@ -6414,6 +6963,9 @@ nonvulnerable:%2.4.24%
 		FOUND=0
 		FOUNDUNKNOWN=0
 
+		APPS_TOTAL_COUNT=`echo "${SCANFILES}" | wc -l | tr -d ' '`
+		APPS_TOTAL_COUNT=`expr ${APPS_TOTAL_COUNT} - 2`
+
 		for J in ${SCANFILES}; do
 			APPLICATION=`echo ${J} | cut -d: -f1`
 			APPLICATIONNAME=`echo ${J} | cut -d: -f2`
@@ -6427,6 +6979,9 @@ nonvulnerable:%2.4.24%
 				if [ -f "${I}/${APPLICATION}" ]; then
 					FILEFOUND=1
 					VERSION=""
+
+					APPS_COUNT=`expr ${APPS_COUNT} + 1`
+
 					case "${APPLICATION}" in
 					exim)
 						VERSION=`${I}/exim -bV | grep 'Exim version' | awk '{ print $3 }'`
@@ -6460,9 +7015,6 @@ nonvulnerable:%2.4.24%
 						;;
 					proftpd)
 						VERSION=`${I}/proftpd -v 2>&1 | awk '{ print $4 }'`
-						;;
-					squid)
-						VERSION=`${I}/squid -v | grep 'Squid Cache' | awk '{ print $4 }'`
 						;;
 					sshd)
 						VERSION=`${I}/sshd -t -d 2>&1 | head -n 1 | awk '{ print $4 }' | cut -d'_' -f2`
@@ -6519,7 +7071,7 @@ nonvulnerable:%2.4.24%
 								displaytext $E "${LAYOUT}[ ${RED}Vulnerable${NORMAL} ]"
 							fi
 							FOUND=1
-							VULNERABLE_ITEM_COUNT=`expr ${VULNERABLE_ITEM_COUNT} + 1`
+							APPS_FAILED_COUNT=`expr ${APPS_FAILED_COUNT} + 1`
 						fi
 					fi
 				fi
@@ -6540,6 +7092,7 @@ nonvulnerable:%2.4.24%
 
 	fi
 
+	display --to LOG --type INFO APPS_TOTAL_COUNT $APPS_COUNT $APPS_TOTAL_COUNT
 
 	return
 }
@@ -6547,115 +7100,90 @@ nonvulnerable:%2.4.24%
 
 display_check_summary() {
 
-	displaytext ""; displaytext ""
-	displaytext "---------------------------- Scan results ----------------------------"
+	#
+	# This function displays a short summary of some of the
+	# groups of checks performed.
+	#
 
-	displaytext ""
-	displaytext "${YELLOW}Hash scan${NORMAL}"
-	if [ $GOOD_HASH_ENABLED -eq 1 ]; then
-		displaytext "Scanned files: ${HASH_COUNT}"
-		displaytext -n "Incorrect hash checksums: "
-		if [ "${HASH_DIFFERENT}" -eq 0 ]; then
-			displaytext -n "${GREEN}"
-		else
-			displaytext -n "${RED}"
+	test $QUIET -eq 0 && echo ""
+
+	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_TITLE1
+	display --to SCREEN+LOG --type PLAIN SUMMARY_TITLE2
+
+
+	#
+	# Do file properties summary.
+	#
+
+	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_PROP_SCAN
+
+	if check_test properties; then
+		if [ $SUMMARY_PROP_REQCMDS -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_REQCMDS
 		fi
-		displaytext "${HASH_DIFFERENT}${NORMAL}"
+
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_COUNT $PROP_FILE_LIST_COUNT
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_FAILED $PROP_FAILED_COUNT
 	else
-		displaytext "Skipped"
-		logtext "Hash scan skipped"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_CHKS_SKIPPED
 	fi
 
-	displaytext ""
-	displaytext "${YELLOW}File scan${NORMAL}"
-	displaytext "Scanned files: ${SCANNED_COUNT}"
-	displaytext -n "Possible infected files: "
-	if [ "${INFECTED_COUNT}" -eq 0 ]; then
-		displaytext -n "${GREEN}"
+
+	#
+	# Do rootkit check summary.
+	#
+
+	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_RKT_SCAN
+
+	if check_test rootkits; then
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_COUNT $ROOTKIT_COUNT
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_FAILED $ROOTKIT_FAILED_COUNT
+
+		if [ -n "${ROOTKIT_FAILED_NAMES}" ]; then
+			ROOTKIT_FAILED_NAMES=`echo "${ROOTKIT_FAILED_NAMES}" | sed -e 's/, $//'`
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_NAMES "${ROOTKIT_FAILED_NAMES}"
+		fi
 	else
-		displaytext -n "${RED}"
-	fi
-	displaytext "${INFECTED_COUNT}${NORMAL}"
-	logtext "Rootkits scanned for: ${ROOTKIT_TESTS}"
-	if [ ! "${INFECTED_NAMES}" = "" ]; then
-		displaytext "Possible rootkits: ${INFECTED_NAMES}"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_CHKS_SKIPPED
 	fi
 
-	displaytext ""
-	displaytext "${YELLOW}Application scan${NORMAL}"
+
+	#
+	# Do application check summary.
+	#
+
+	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_APPS_SCAN
+
 	if [ $APPS_CHECK_ENABLED -eq 1 ]; then
-		logtext "${VULNERABLE_ITEM_COUNT} vulnerable applications found"
-		displaytext -n "Vulnerable applications: "
-		if [ "${VULNERABLE_ITEM_COUNT}" -eq 0 ]; then
-			displaytext -n "${GREEN}"
-		else
-			displaytext -n "${RED}"
-		fi
-		displaytext ${VULNERABLE_ITEM_COUNT}${NORMAL}
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_APPS_COUNT $APPS_COUNT
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_APPS_FAILED $APPS_FAILED_COUNT
 	else
-		displaytext "Skipped"
-		logtext "Application scan skipped"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_CHKS_SKIPPED
 	fi
 
-	displaytext ""
-	test $BEGINTIME -ne 0 && displaytext "Scanning took ${TOTALTIME}."
 
-	if [ "${REPORTMODE}" -eq 0 ]; then
-		if [ $NOLOG -eq 0 ]; then
-			displaytext ""
-			displaytext "Scan results written to logfile ($LOGFILE)"
-		fi
+	#
+	# Display the amount of time the system checking took.
+	#
 
-		displaytext ""
-		displaytext "-----------------------------------------------------------------------"
-		displaytext ""
-		displaytext "Do you have some problems, undetected rootkits, false positives, ideas"
-	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailing list"
-	    displaytext "at rkhunter-users@lists.sourceforge.net"
-		displaytext ""
-		displaytext "-----------------------------------------------------------------------"
-
+	if [ $BEGINTIME -eq 0 ]; then
+		display --to SCREEN+LOG --type PLAIN --nl SUMMARY_NO_SCAN_TIME
 	else
-
-		# Force output (because we are in quiet mode)
-		echo ""
-		echo "* Hash scan"
-		if [ $GOOD_HASH_ENABLED -eq 1 ]; then
-			echo "Hash compared            : ${HASH_COUNT}"
-			echo "Incorrect hash checksums : ${HASH_DIFFERENT}"
-		else
-			echo "Skipped"
-		fi
-		echo ""
-		echo "* File scan"
-		echo "Scanned files: ${SCANNED_COUNT}"
-		echo "Possible infected files: ${INFECTED_COUNT}"
-		echo ""
-		echo "* Rootkits"
-		echo "Possible rootkits: ${INFECTED_NAMES}"
-		echo ""
-		echo "* Application scan"
-		if [ $APPS_CHECK_ENABLED -eq 1 ]; then
-			echo "Vulnerable applications: ${VULNERABLE_ITEM_COUNT}"
-		else
-			echo "Skipped"
-		fi
-		echo ""
-		test $BEGINTIME -ne 0 && displaytext "Scanning took ${TOTALTIME}."
-		echo ""
-		echo "*important*"
-		echo "Scan your system manually sometimes with full output enabled!"
-
-		displaytext ""
-		displaytext "-----------------------------------------------------------------------"
-		displaytext ""
-		displaytext "Do you have some problems, undetected rootkits, false positives, ideas"
-	    displaytext "or suggestions? Please e-mail us through the Rootkit Hunter mailing list"
-	    displaytext "at rkhunter-users@lists.sourceforge.net"
-		displaytext ""
-		displaytext "-----------------------------------------------------------------------"
-
+		display --to SCREEN+LOG --type PLAIN --nl SUMMARY_SCAN_TIME "${TOTAL_SCANTIME}"
 	fi
+
+
+	#
+	# Display where the log file is located, if there is one.
+	#
+
+	if [ $NOLOG -eq 0 ]; then
+		display --to SCREEN --type PLAIN --nl SUMMARY_LOGFILE "${LOGFILE}"
+	else
+		display --to SCREEN --type PLAIN --nl SUMMARY_NO_LOGFILE
+	fi
+
+	test $QUIET -eq 0 && echo ""
 
 	return
 }
@@ -6773,24 +7301,24 @@ do_system_check() {
 			ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 		fi
 
-		TOTALTIME=`expr ${ENDTIME} - ${BEGINTIME}`
-		TOTALMINS=`expr ${TOTALTIME} / 60`
-		TOTALSECS=`expr ${TOTALTIME} % 60`
+		TOTAL_SCANTIME=`expr ${ENDTIME} - ${BEGINTIME}`
+		TOTALMINS=`expr ${TOTAL_SCANTIME} / 60`
+		TOTALSECS=`expr ${TOTAL_SCANTIME} % 60`
 
 		if [ $TOTALMINS -gt 0 ]; then
 			if [ $TOTALMINS -eq 1 ]; then
-				TOTALTIME="${TOTALMINS} minute and "
+				TOTAL_SCANTIME="${TOTALMINS} minute and "
 			else
-				TOTALTIME="${TOTALMINS} minutes and "
+				TOTAL_SCANTIME="${TOTALMINS} minutes and "
 			fi
 		else
-			TOTALTIME=""
+			TOTAL_SCANTIME=""
 		fi
 
 		if [ $TOTALSECS -eq 1 ]; then
-			TOTALTIME="${TOTALTIME}${TOTALSECS} second"
+			TOTAL_SCANTIME="${TOTAL_SCANTIME}${TOTALSECS} second"
 		else
-			TOTALTIME="${TOTALTIME}${TOTALSECS} seconds"
+			TOTAL_SCANTIME="${TOTAL_SCANTIME}${TOTALSECS} seconds"
 		fi
 	fi
 
@@ -6799,7 +7327,34 @@ do_system_check() {
 	# Display the summary of the results.
 	#
 
-	display_check_summary
+	if [ $SHOW_SUMMARY -eq 1 ]; then
+		#
+		# Unfortunately we need to do a kludge here!
+		# The user may have used the '--quiet' option,
+		# so we need to force the summary to be displayed.
+		# By resetting the NOTTY variable we can get
+		# the output shown.
+		#
+
+		OLD_NOTTY=$NOTTY
+		test $SHOW_SUMMARY_OPT -eq 1 && NOTTY=0
+
+		display_check_summary
+
+		if [ $WARNING_COUNT -eq 0 ]; then
+			display --to SCREEN --type PLAIN CHECK_WARNINGS_NOT_FOUND
+		else
+			display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND
+
+			if [ $NOLOG -eq 1 ]; then
+				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_RERUN
+			else
+				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_CHK_LOG "${LOGFILE}"
+			fi
+		fi
+
+		NOTTY=$OLD_NOTTY
+	fi
 
 
 	#
@@ -6807,7 +7362,7 @@ do_system_check() {
 	#
 
 	if [ -n "${USE_SYSLOG}" ]; then
-		${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Scanning took ${TOTALTIME}"
+		${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Scanning took ${TOTAL_SCANTIME}"
 	fi
 
 
@@ -6825,7 +7380,29 @@ do_system_check() {
 	#
 
 	if [ $WARNING_COUNT -gt 0 ]; then
-		test $SHOWWARNINGSONLY -eq 1 && display_warnings
+		if [ $SHOWWARNINGSONLY -eq 1 ]; then
+			#
+			# Unfortunately we need to do a kludge again!
+			# By requesting that only warnings are shown,
+			# the following output would not normally be
+			# displayed (because they are not warnings).
+			#
+
+			OLD_NOTTY=$NOTTY
+			NOTTY=0
+
+			display --to SCREEN --type PLAIN --nl CHECK_WARNINGS_FOUND
+
+			if [ $NOLOG -eq 1 ]; then
+				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_RERUN
+			else
+				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_CHK_LOG "${LOGFILE}"
+			fi
+
+			display_warnings
+
+			NOTTY=$OLD_NOTTY
+		fi
 
 
 		if [ -n "${USE_SYSLOG}" ]; then
@@ -6835,17 +7412,6 @@ do_system_check() {
 
 		if [ -n "${MAILONWARNING}" ]; then
 			eval "echo 'Please inspect this machine, because it may be infected' | ${MAIL_CMD} ${MAILONWARNING}"
-		fi
-
-
-		if [ $QUIET -eq 1 ]; then
-			display --to SCREEN --type PLAIN CHECK_ERRS_FOUND
-
-			if [ $NOLOG -eq 1 ]; then
-				display --to SCREEN --type PLAIN CHECK_ERRS_FOUND_RERUN
-			else
-				display --to SCREEN --type PLAIN CHECKS_ERRS_FOUND_CHK_LOG "${LOGFILE}"
-			fi
 		fi
 
 		RET_CODE=1
@@ -6860,8 +7426,9 @@ check_os_info() {
 	#
 	# This function checks the current O/S information against
 	# that stored in the rkhunter.dat file. Any change could
-	# mean that file hash checks will give several false-positive
-	# answers. As such we warn users that a change has occurred.
+	# mean that the file properties checks could give several
+	# false-positive answers. As such we warn users that
+	# a change has occurred.
 	#
 
 	#
@@ -6949,7 +7516,7 @@ check_os_info() {
 	if [ $FOUND -eq 1 ]; then
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG1
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG2
-		display --to LOG --type WARNING --nl HASHUPD_WARN
+		display --to LOG --type WARNING --nl PROPUPD_WARN
 	else
 		display --to LOG --type INFO OSINFO_END
 	fi
@@ -6958,27 +7525,32 @@ check_os_info() {
 }
 
 
-set_hash_dirs_files() {
+set_file_prop_dirs_files() {
 
 	#
 	# This function sets up the list of directories we look in,
 	# and the list of files we look for, in order to perform
-	# the file hash checks.
+	# the file properties checks.
 	#
 
-	HASHDIRS="${ROOTDIR}/bin ${ROOTDIR}/sbin ${ROOTDIR}/usr/bin ${ROOTDIR}/usr/sbin ${ROOTDIR}/usr/local/bin ${ROOTDIR}/usr/local/sbin"
+	PROP_DIR_LIST=""
 
-	HASHFILES="adduser amd basename cat chattr checkproc chkconfig chmod
-	    chown chroot cron csh date depmod df dirname dmesg du echo ed egrep
-	    env fgrep file find grep groupadd groupdel groupmod groups grpck
-	    head id ifconfig ifdown ifstatus ifup inetd init insmod ip kallsyms
-	    kill killall ksyms kudzu last lastlog less locate logger login ls
-	    lsattr lsmod lynx md5 md5sum mlocate modinfo modload modprobe
-	    modstat modunload more mount netstat newgrp newsyslog nologin
-	    passwd ps pstree pwck rmmod runlevel sh sha1 sha1sum size slocate
-	    sockstat sort stat strace strings su sudo sulogin sysctl syslogd
-	    systat tail tcpd test top touch uname useradd userdel usermod users
-	    vipw vmstat w watch wc wget whatis whereis which who whoami xinetd"
+	for DIR in ${BINPATHS}; do
+		PROP_DIR_LIST="${PROP_DIR_LIST} ${ROOTDIR}${DIR}"
+	done
+
+	PROP_FILE_LIST="adduser amd basename cat chattr checkproc chkconfig
+	    chmod chown chroot cron csh date depmod df dirname dmesg du echo
+	    ed egrep env fgrep file find grep groupadd groupdel groupmod
+	    groups grpck head id ifconfig ifdown ifstatus ifup inetd init
+	    insmod ip kallsyms kill killall ksyms kudzu last lastlog less
+	    locate logger login ls lsattr lsmod lynx md5 md5sum mlocate modinfo
+	    modload modprobe modstat modunload more mount netstat newgrp
+	    newsyslog nologin passwd ps pstree pwck rmmod runlevel sh sha1
+	    sha1sum size slocate sockstat sort stat strace strings su sudo
+	    sulogin sysctl syslogd systat tail tcpd test top touch uname
+	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
+	    whereis which who whoami xinetd"
 
 
 	#
@@ -6990,23 +7562,25 @@ set_hash_dirs_files() {
 		if [ -h ${ROOTDIR}/bin ]; then
 			B=""
 
-			for DIR in ${HASHDIRS}; do
+			for DIR in ${PROP_DIR_LIST}; do
 				test "${DIR}" != "${ROOTDIR}/bin" && B="${B} ${DIR}"
 			done
 
-			HASHDIRS=`echo ${B} | sed -e 's/^ *//'`
+			PROP_DIR_LIST=`echo ${B} | sed -e 's/^ *//'`
 		fi
 
-		HASHFILES="${HASHFILES} gbasename gcat gchmod gchown gdate
-		    gdirname gecho gfind gfile ggroups ghead gid glocate
+		PROP_FILE_LIST="${PROP_FILE_LIST} gbasename gcat gchmod gchown
+		    gdate gdirname gecho gfind gfile ggroups ghead gid glocate
 		    gmd5sum gsize gtail gtest gtouch guname gusers truss"
 	elif [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
-		HASHFILES="${HASHFILES} kldload kldstat kldunload"
+		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload"
 	fi
 
 
 	add_extra_dirs
-	HASHDIRS="${HASHDIRS}${EXTRA_DIRS}"
+	PROP_DIR_LIST="${PROP_DIR_LIST}${EXTRA_DIRS}"
+
+	PROP_FILE_LIST_TOTAL=`echo ${PROP_FILE_LIST} | wc -w | tr -d ' '`
 
 	return
 }
@@ -7051,16 +7625,13 @@ display_tests() {
 
 	echo "Available test names:"
 
-	while true; do
+	while test -n "${KNOWN_TESTS}"; do
 		STR=`echo ${KNOWN_TESTS} | cut -d' ' -f1-6`
-
-		if [ -n "`echo \"${KNOWN_TESTS}\" | grep ' '`" ]; then
-			KNOWN_TESTS=`echo ${KNOWN_TESTS} | cut -d' ' -f7-`
-		else
-			break
-		fi
+		KNOWN_TESTS=`echo ${KNOWN_TESTS} | cut -d' ' -f7-`
 
 		echo "    ${STR}"
+
+		test "${STR}" = "${KNOWN_TESTS}" && KNOWN_TESTS=""
 	done
 
 
@@ -7133,6 +7704,9 @@ display_tests() {
 		echo "    ${GROUP_NAME} => ${TEST_NAMES}"
 	done
 
+	echo ""
+	echo "Please see the README file for a brief description of the test names."
+
 	return
 }
 
@@ -7153,14 +7727,9 @@ display_languages() {
 	fi
 
 
-	while true; do
+	while test -n "${KNOWN_LANGS}"; do
 		STR=`echo ${KNOWN_LANGS} | cut -d' ' -f1-10`
-
-		if [ -n "`echo \"${KNOWN_LANGS}\" | grep ' '`" ]; then
-			KNOWN_LANGS=`echo ${KNOWN_LANGS} | cut -d' ' -f11-`
-		else
-			break
-		fi
+		KNOWN_LANGS=`echo ${KNOWN_LANGS} | cut -d' ' -f11-`
 
 		if [ $TITLE -eq 1 ]; then
 			TITLE=0
@@ -7168,6 +7737,43 @@ display_languages() {
 		else
 			echo "                                ${STR}"
 		fi
+
+		test "${STR}" = "${KNOWN_LANGS}" && KNOWN_LANGS=""
+	done
+
+	return
+}
+
+
+display_rootkits() {
+
+	#
+	# This function is used to simply output all the rootkit
+	# names which rkhunter will check for.
+	#
+
+	SORT_CMD=`find_cmd sort`
+
+	if [ -n "${SORT_CMD}" ]; then
+		KNOWN_ROOTKITS=`echo " ${KNOWN_ROOTKITS}" | tr ',' '\n' | sort | tr '\n' ','`
+	fi
+
+	KNOWN_ROOTKITS=`echo "${KNOWN_ROOTKITS}" | sed -e 's/,$//' | sed -e 's/^,*//'`
+
+
+	echo "Rootkits checked:"
+
+	while test -n "${KNOWN_ROOTKITS}"; do
+		STR=`echo ${KNOWN_ROOTKITS} | cut -d',' -f1-4`
+		KNOWN_ROOTKITS=`echo ${KNOWN_ROOTKITS} | cut -d',' -f5-`
+
+		if [ "${STR}" = "${KNOWN_ROOTKITS}" -o -z "${KNOWN_ROOTKITS}" ]; then
+			KNOWN_ROOTKITS=""
+		else
+			STR="${STR},"
+		fi
+
+		echo "    ${STR}"
 	done
 
 	return
@@ -7181,7 +7787,7 @@ help() {
 	#
 
 	echo ""
-	echo "Usage: rkhunter (--check | --cronjob | --update | --hashupd |"
+	echo "Usage: rkhunter (--check | --cronjob | --update | --propupd |"
 	echo "                 --versioncheck | --version | --help) [option]..."
 	echo ""
 
@@ -7203,23 +7809,25 @@ help() {
 	echo "       --enable  <test>[,<test>...]    Enable specific tests"
 	echo "                                       (Default is to enable all tests)"
 	echo "       --hash                          Specify the hash function to use"
-	echo "       --hashupd                       Update the local file hash database"
 	echo "   -h, --help                          Display this help menu, then exit"
 	echo "       --language <language>           Specify the language (ISO code) to use"
 	echo "                                       (Default is English)"
-	echo "       --list [tests | languages]      List the available test names or"
-	echo "                                       languages"
+	echo "       --list [tests | languages |     List the available test names or"
+	echo "               rootkits]               languages, or checked for rootkits."
 	echo "   -l, --logfile [logfile]             Write to a logfile"
 	echo "                                       (default is $DFLT_LOGFILE)"
 	echo "       --noappend-log                  Do not append to the logfile, overwrite it"
 	echo "       --nocolors                      Use black and white output"
 	echo "       --nolog                         Do not write to a logfile"
-	echo "   -q, --quiet                         Quiet mode (only show warnings)"
-	echo "       --report-mode                   Only show interesting information"
-	echo "       --report-warnings-only          Show only warnings (less output than"
-	echo "                                       --report-mode more than --quiet)"
+	echo "       --nomow                         Do not send a message if warnings occur"
+	echo "       --nosummary                     Do not show the summary of check results"
+	echo "       --propupd                       Update the file properties database"
+	echo "   -q, --quiet                         Quiet mode (no output at all)"
+	echo "       --report-warnings-only          Show only warnings"
 	echo "   -r, --rootdir <rootdir>             Use <rootdir> instead of '/'"
 	echo "  -sk, --skip-keypress                 Don't wait for a keypress after each test"
+	echo "       --summary                       Show the summary of system check results"
+	echo "                                       (This is the default)"
 	echo "       --syslog [facility.priority]    Log check start and finish times to syslog"
 	echo "                                       (Default level is $SYSLOG_DFLT_PRIO)"
 	echo "       --tmpdir <tempdir>              Use specified temporary directory"
@@ -7249,15 +7857,18 @@ PROGRAM_NAME="Rootkit Hunter"
 PROGRAM_version="1.2.9"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2006, ${PROGRAM_copyright_owner}"
+PROGRAM_blurb="
+Currently under active development by the ${PROGRAM_NAME} project team.
+To report bugs, updates, patches, comments and questions please go to:
+http://rkhunter.sourceforge.net
+
+${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under the
+terms of the GNU General Public License. See the LICENSE file for details.
+"
 PROGRAM_license="
 ${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
-
-Under active development by the ${PROGRAM_NAME} project team. For reporting
-bugs, updates, patches, comments and questions please go to: http://rkhunter.sourceforge.net
-
-${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY. This is free software,
-and you are welcome to redistribute it under the terms of the GNU General
-Public License. See LICENSE for details.
+${PROGRAM_blurb}
 "
 
 # Set to run as a cronjob.
@@ -7283,15 +7894,21 @@ SYSLOG_DFLT_PRIO="authpriv.notice"
 
 DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
 
+# By default do not send a mail-on-warning message.
+NOMOW=0
+MAILONWARNING=""
+
 HASH_FUNC=""
-HASHDIRS=""
-HASHFILES=""
+PROP_DIR_LIST=""
+PROP_FILE_LIST=""
+PROP_FILE_LIST_COUNT=0
+PROP_FILE_LIST_TOTAL=0
 
 PRELINKED=0
-PRELINK_CMD=''
+PRELINK_CMD=""
 
 UPDATE=0
-HASH_UPDATE=0
+PROP_UPDATE=0
 VERSIONCHECK=0
 
 # By default use coloured output.
@@ -7303,10 +7920,6 @@ CLRSET2=0
 AUTO_X_DTCT=0
 AUTO_X_OPT=0
 
-# Perform the application check.
-APPS_CHECK_ENABLED=0
-VULNERABLE_ITEM_COUNT=0
-
 PREVIOUSTEXT=""
 
 # Set to be quiet. No output, but the return code will be set.
@@ -7315,15 +7928,15 @@ QUIET=0
 # Set to only show warnings.
 SHOWWARNINGSONLY=0
 
-# This will be set if the known good hash check is to be performed.
-GOOD_HASH_ENABLED=0
-SKIP_GOODHASH_MSG=0
+# This will be set if the file properties check is to be performed.
+HASH_CHECK_ENABLED=0
+SKIP_HASH_MSG=0
+
+# This will be set if the applications check is to be performed.
+APPS_CHECK_ENABLED=0
 
 # Users can reset this to a new root directory.
 ROOTDIR=""
-
-# Set to use report mode (do not show footer and make a 'professional' report)
-REPORTMODE=0
 
 # Default 'id' command. Solaris will reset this.
 ID_CMD="id"
@@ -7334,14 +7947,25 @@ SKIP_KEY_PRESS=0
 # Is the Gentoo operating system?
 GENTOO=0
 
-# This can be set in the configuration file to allow SSH root login.
+# These SSH options can only be set in the configuration file.
+ALLOW_SSH_PROT_V1=0
 ALLOW_SSH_ROOT_USER=0
 
-INFECTED_COUNT=0
-INFECTED_NAMES=""
-SCANNED_COUNT=0
-HASH_COUNT=0
-HASH_DIFFERENT=0
+# Set check counters to be used by the summary
+ROOTKIT_COUNT=0
+ROOTKIT_FAILED_COUNT=0
+ROOTKIT_FAILED_NAMES=""
+
+PROP_FAILED_COUNT=0
+SUMMARY_PROP_REQCMDS=0
+
+APPS_COUNT=0
+APPS_TOTAL_COUNT=0
+APPS_FAILED_COUNT=0
+
+# Timers for the system check.
+BEGINTIME=0
+TOTAL_SCANTIME=""
 
 # This will be set if a warning message is logged.
 WARNING_COUNT=0
@@ -7388,9 +8012,11 @@ else
 fi
 
 # This is the return code for the program actions - update, check, etc.
-# Its value will either be 0 (no error) or 1 (an error occurred).
-# The '--versioncheck' option may set the return code to 2 to indicate
-# that an update is available.
+# Its value may either be 0 (no error) or 1 (an error occurred).
+# The '--versioncheck' option may set the return code to 2 to
+# indicate that an update is available.
+# The '--update' option may set the return code to 2 to
+# indicate that an update occurred.
 RET_CODE=0
 
 # Set the default language to English.
@@ -7400,8 +8026,8 @@ LANGUAGE=en
 KNOWN_LANGS=en
 
 # A space-separated list of test names we recognise.
-#
-KNOWN_TESTS="strings hashes scripts deleted_files packet_cap_apps apps rootkits local_host network passwd system_commands shared_libs"
+KNOWN_TESTS="strings properties hashes scripts immutable attributes deleted_files
+             packet_cap_apps apps rootkits local_host network passwd system_commands shared_libs shared_libs_path"
 
 # A space-separated list of test 'group names'. This list allows test
 # names to be grouped together. For example, 'system_commands' can include
@@ -7410,9 +8036,24 @@ KNOWN_TESTS="strings hashes scripts deleted_files packet_cap_apps apps rootkits 
 # enable/disable options. In this list group names are colon-separated
 # from the specific test names.
 #
-GROUPED_TESTS="system_commands:strings:hashes:scripts:shared_libs
-               network:packet_cap_apps
-               local_host:passwd"
+GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:shared_libs_path:immutable:attributes
+	       properties:hashes:scripts:immutable:attributes
+	       shared_libs:shared_libs_path
+	       network:packet_cap_apps
+	       local_host:passwd"
+
+# A comma-separated list of rootkits we check for.
+# NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
+# put between double-quotes.
+KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient (ark) Rootkit,
+  Balaur Rootkit, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), Danny-Boy'"'"'s Abuse Kit,
+  Devil RootKit, Dica, Dreams Rootkit, Duarawkz, Enye LKM, Flea Linux Rootkit, FreeBSD Rootkit,
+  Fuck`it Rootkit, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, Irix Rootkit, Kitko,
+  Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0 Rootkit, RootKit for SunOS / NSDAP,
+  Optic Kit (Tux), Oz Rootkit, Phalanx, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s rootkit,
+  RSHA'"'"'s rootkit, Scalper Worm, Shutdown, SHV4, SHV5, Sin Rootkit, Slapper, Sneakin Rootkit,
+  Suckit Rootkit, SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn Rootkit,
+  Trojanit Kit, Tuxtendo, URK, VcKit, Volc Rootkit, X-Org SunOS Rootkit, zaRwT.KiT Rootkit'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
@@ -7426,6 +8067,10 @@ BLANK_LINE="                                                              "
 
 # Initially say that we are connected to a terminal.
 NOTTY=0
+
+# By default show the system check summary
+SHOW_SUMMARY=1
+SHOW_SUMMARY_OPT=0
 
 
 ######################################################################
@@ -7550,9 +8195,6 @@ while [ $# -ge 1 ]; do
 			;;
 		esac
 		;;
-	--hashupd | --hash-update | --hashupdate)
-		HASH_UPDATE=1
-		;;
 	-h | --help)
 		help
 		exit 0
@@ -7591,10 +8233,15 @@ while [ $# -ge 1 ]; do
 		lang|langs|language|languages)
 			display_languages
 			;;
+		rootkit|rootkits)
+			display_rootkits
+			;;
 		"")
 			display_tests
 			echo ""
 			display_languages
+			echo ""
+			display_rootkits
 			;;
 		*)
 			echo "Invalid --list option specified: $2"
@@ -7612,12 +8259,18 @@ while [ $# -ge 1 ]; do
 	--nolog | --no-log)
 		LOGFILE="/dev/null"
 		;;
+	--nomow | --no-mow | --no-mailonwarning | --no-mail-on-warning)
+		NOMOW=1
+		;;
+	--ns | --nosummary | --no-summary)
+		SHOW_SUMMARY=0
+		SHOW_SUMMARY_OPT=1
+		;;
+	--propupd | --prop-update | --propupdate | --properties-update | --hashupd)
+		PROP_UPDATE=1
+		;;
 	-q | --quiet)
 		QUIET=1
-		;;
-	--report-mode | --reportmode)
-		QUIET=1
-		REPORTMODE=1
 		;;
 	--report-warnings-only | --rwo | --show-warnings-only | --swo)
 		QUIET=1
@@ -7637,6 +8290,10 @@ while [ $# -ge 1 ]; do
 		;;
 	--skip-keypress | --skipkeypress | -sk | --sk)
 		SKIP_KEY_PRESS=1
+		;;
+	--summary)
+		SHOW_SUMMARY=1
+		SHOW_SUMMARY_OPT=1
 		;;
 	--syslog)
 		USE_SYSLOG="${SYSLOG_DFLT_PRIO}"
@@ -7668,7 +8325,8 @@ while [ $# -ge 1 ]; do
 		UPDATE=1
 		;;
 	-V | --version)
-		echo $ECHOOPT "${PROGRAM_NAME} ${PROGRAM_version}"
+		echo "${PROGRAM_NAME} ${PROGRAM_version}"
+		echo "${PROGRAM_blurb}"
 		exit 0
 		;;
 	--versioncheck)
@@ -7697,7 +8355,9 @@ done
 # help and version command-line options are valid.
 #
 
-test "${OPERATING_SYSTEM}" = "SunOS" && ID_CMD="/usr/xpg4/bin/id"
+if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	test -x "/usr/xpg4/bin/id" && ID_CMD="/usr/xpg4/bin/id"
+fi
 
 if [ "`${ID_CMD} -u 2>/dev/null`" != "0" ]; then
 	echo "You must be the root user to run this program."
@@ -7783,30 +8443,6 @@ if [ $CHECK -eq 1 ]; then
 
 
 	#
-	# To perform the hash check requires a valid hash function command.
-	# If required we simply tell the user that no hash function can be
-	# found. If one is found, then set up the necessary hash directories
-	# and file names.
-	#
-
-	if [ $GOOD_HASH_ENABLED -eq 1 ]; then
-		if [ -z "${HASH_FUNC}" ]; then
-			SKIP_GOODHASH_MSG=2
-		else
-			set_hash_dirs_files
-		fi
-	fi
-
-
-	#
-	# To perform the script replacement check requires the list
-	# of hash directories and file names.
-	#
-
-	check_test scripts && set_hash_dirs_files
-
-
-	#
 	# Check if we have a ksyms or kallsyms file.
 	#
 
@@ -7844,37 +8480,34 @@ if [ $CHECK -eq 1 -o $UPDATE -eq 1 ]; then
 fi
 
 
-if [ $HASH_UPDATE -eq 1 ]; then
-
-	#
-	# For a hash update we must have a valid hash function to use.
-	#
-
-	if [ -z "${HASH_FUNC}" ]; then
-		echo "Unable to find any hash function command to perform hash update."
-		exit 1
-	elif [ -z "${STAT_CMD}" ]; then
-		echo "No 'stat' command can be found to perform the update."
-		exit 1
-	elif [ -h "${DB_PATH}/rkhunter.dat" ]; then
+if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
+	if [ -h "${DB_PATH}/rkhunter.dat" ]; then
 		echo "The rkhunter.dat file is a symbolic link: ${DB_PATH}/rkhunter.dat"
-		echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
+		echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
 		exit 1
-	elif [ $PRELINKED -eq 1 ]; then
-		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
-		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
-			echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
-			exit 1
-		fi
 	fi
 
 
 	#
-	# Set up the hash files and directories
-	# to be used for the hash checks.
+	# Set up the file properties checks directories and file names.
 	#
 
-	set_hash_dirs_files
+	set_file_prop_dirs_files
+fi
+
+
+if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 ]; then
+	#
+	# For a hash update on a prelinked system, we must
+	# have a valid hash function to use.
+	#
+
+	RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+
+	if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+		echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+		exit 1
+	fi
 fi
 
 
@@ -7919,7 +8552,7 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 	done
 
 	if [ $FOUND -eq 0 ]; then
-		echo "The \"--update\" and \"--versioncheck\" options require a command able to"
+		echo "The '--update' and '--versioncheck' options require a command able to"
 		echo "download files from the web. No such command can be found on the system."
 		echo "Examples of commands that could be used are: ${WEBCMDLIST}"
 		exit 1
@@ -7934,7 +8567,7 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 		GUNZIP_CMD=`find_cmd gunzip`
 
 		if [ -z "${GUNZIP_CMD}" ]; then
-			echo "The \"--update\" option requires the \"gunzip\" command."
+			echo "The '--update' option requires the 'gunzip' command."
 			echo "This command cannot be found on the system."
 			exit 1
 		fi
@@ -7946,7 +8579,7 @@ fi
 # If no option is given for the program to action, then say so and exit.
 #
 
-if [ $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 -a $HASH_UPDATE -eq 0 ]; then
+if [ $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 -a $PROP_UPDATE -eq 0 ]; then
 	echo "You must enter an option for the program to perform."
 	echo "Type in 'rkhunter --help' to see the available options,"
 	echo "or read the rkhunter man page."
@@ -8078,13 +8711,18 @@ fi
 
 display --to LOG --type INFO CONFIG_TMPDIR "${TMPDIR}"
 
-if [ -z "${MAILONWARNING}" ]; then
-	display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
+if [ $NOMOW -eq 1 ]; then
+	display --to LOG --type INFO CONFIG_MOW_DISABLED
 else
-	display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
+	if [ -z "${MAILONWARNING}" ]; then
+		display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
+	else
+		display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
+	fi
 fi
 
 test $ALLOW_SSH_ROOT_USER -eq 1 && display --to LOG --type INFO CONFIG_SSH_ROOT
+test $ALLOW_SSH_PROT_V1 -eq 1 && display --to LOG --type INFO CONFIG_SSH_PROTV1
 
 test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
 test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
@@ -8107,9 +8745,9 @@ for CMD in ${WEBCMDLIST}; do
 	fi
 done
 
-if [ $HASH_UPDATE -eq 1 -o $GOOD_HASH_ENABLED -eq 1 ]; then
+if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	if [ $PRELINKED -eq 1 ]; then
-		RKHTMPVAR=$PRELINK_CMD
+		RKHTMPVAR="${PRELINK_CMD}"
 		test -n "${RUNCON_CMD}" && RKHTMPVAR=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
 
 		display --to LOG --type INFO FOUND_CMD 'prelink' "${RKHTMPVAR}"
@@ -8122,21 +8760,23 @@ if [ $HASH_UPDATE -eq 1 -o $GOOD_HASH_ENABLED -eq 1 ]; then
 
 		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
-			SKIP_GOODHASH_MSG=3
+			SKIP_HASH_MSG=2
 		elif [ -n "`echo ${RKHTMPVAR} | egrep -i 'sha1'`" ]; then
-			display --to LOG --type INFO SYS_PRELINK_SHA1 "${HASH_FUNC}"
+			display --to LOG --type INFO SYS_PRELINK_FUNC 'SHA1' "${HASH_FUNC}"
 		else
-			display --to LOG --type INFO SYS_PRELINK_MD5 "${HASH_FUNC}"
+			display --to LOG --type INFO SYS_PRELINK_FUNC 'MD5' "${HASH_FUNC}"
 		fi
 	else
 		display --to LOG --type INFO SYS_NO_PRELINK
 
 		if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
-			display --to LOG --type INFO HASH_PERL_SHA1
+			display --to LOG --type INFO HASH_FUNC_PERL 'SHA1'
 		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
-			display --to LOG --type INFO HASH_PERL_MD5
+			display --to LOG --type INFO HASH_FUNC_PERL 'MD5'
+		elif [ -n "${HASH_FUNC}" ]; then
+			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
 		else
-			display --to LOG --type INFO HASH_PERL_FUNC "${HASH_FUNC}"
+			display --to LOG --type INFO HASH_NO_FUNC
 		fi
 	fi
 fi
@@ -8148,6 +8788,8 @@ if [ $CHECK -eq 1 ]; then
 	display --to LOG --type INFO DISABLED_TESTS "${DISABLE_TESTS}"
 
 	test -z "${KSYMS_FILE}" && display --to LOG --type INFO KSYMS_MISSING
+
+	test $SHOW_SUMMARY -eq 0 && display --to LOG --type INFO CONFIG_NO_SHOW_SUMMARY
 
 
 	#
@@ -8169,6 +8811,28 @@ if [ $CHECK -eq 1 ]; then
 			fi
 		fi
 	fi
+
+
+	#
+	# If the user wants to run the file properties checks, and the
+	# rkhunter.dat file exists, then check the O/S info. If the
+	# rkhunter.dat file does not exist, then this will be logged
+	# later on.
+	#
+
+	if [ -f "${DB_PATH}/rkhunter.dat" -a -s "${DB_PATH}/rkhunter.dat" ]; then
+		#
+		# We perform a simple check of some of the stored
+		# O/S information, and compare it to the current
+		# info. Basically we are just seeing if the system
+		# has changed at all because it could affect the
+		# file properties checks.
+		#
+
+		rkh_dat_get_os_info
+
+		check_os_info
+	fi
 fi
 
 
@@ -8185,43 +8849,12 @@ fi
 # doing any full system check.
 #
 
+
 #
-# If the user wants to run a system check, then the rkhunter.dat
-# file must exist. If it does not, or is empty, then we log the
-# fact and inform the user to run RKH with the --hashupd option.
-# The program will continue, but without the file hash checking.
+# The user wants to update the O/S and the file properties data.
 #
 
-if [ $HASH_UPDATE -eq 0 ]; then
-	if [ $GOOD_HASH_ENABLED -eq 1 ]; then
-		if [ ! -f "${DB_PATH}/rkhunter.dat" -o ! -s "${DB_PATH}/rkhunter.dat" ]; then
-			if [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
-				SKIP_GOODHASH_MSG=4
-			else
-				SKIP_GOODHASH_MSG=5
-			fi
-		else
-
-			#
-			# We perform a simple check of some of the stored
-			# O/S information, and compare it to the current
-			# info. Basically we are just seeing if the system
-			# has changed at all because it could affect the
-			# file hash check. If it does then log it.
-			#
-
-			rkh_dat_get_os_info
-
-			check_os_info
-		fi
-	fi
-else
-	#
-	# The user wants to update the O/S and file hash data.
-	#
-
-	do_hash_update
-fi
+test $PROP_UPDATE -eq 1 && do_prop_update
 
 
 #
