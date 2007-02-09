@@ -87,6 +87,7 @@
    The '--summary' option, as well as the '--report-warnings-only' option,
    will override the '--quiet' option if they are specified. However, no
    other information will be displayed if '--quiet' is used.
+ - Added SunOS SInAR rootkit check
 
  Changes:
  - Improved command-line and config file option checking.

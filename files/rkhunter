@@ -1814,37 +1814,45 @@ get_hash_function() {
 	return
 }
 
+
 get_scan_mode_dev_option() {
 
+	#
 	# SCAN_MODE_DEV governs how we scan /dev for suspicious files.
 	# The two allowed options are "commented out" or LAZY.
-	# If commented out we do a thorough scan which adds 1 minute runtime.
+	# If commented out, the default, we do a thorough scan which
+	# will increase the runtime of rkhunter.
+	#
+
 	#
 	# See if the option is specified in the configuration file.
 	# If it is then we do a simple check on whether it is empty,
-	# a space, or not 0 or 1.
+	# a space.
 	#
 
 	SCAN_MODE_DEV=`grep '^SCAN_MODE_DEV=' ${CONFIGFILE} | tail -1`
 
 	if [ -n "${SCAN_MODE_DEV}" ]; then
-		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | sed -e 's/SCAN_MODE_DEV=//' | tr -d '"' | tr -s ' '`
+		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | sed -e 's/SCAN_MODE_DEV=//' | tr -d '"' | tr -s ' ' | tr '[a-z]' '[A-Z]'`
 
-		case "$SCAN_MODE_DEV" in
-		THOROUGH|LAZY) SCAN_MODE_DEV="$SCAN_MODE_DEV"
+		case "${SCAN_MODE_DEV}" in
+		THOROUGH|LAZY)
+			SCAN_MODE_DEV="${SCAN_MODE_DEV}"
 			;;
 		*)	# Don't make this fatal.
-			echo "Invalid SCAN_MODE_DEV configuration option: using THOROUGH."
+			echo "Invalid SCAN_MODE_DEV configuration option: ${SCAN_MODE_DEV}"
+			echo "Defaulting to THOROUGH mode."
+
 			SCAN_MODE_DEV="THOROUGH"
 			;;
 		esac
 	else
-		# Default to thorough
 		SCAN_MODE_DEV="THOROUGH"
 	fi
 
 	return
 }
+
 
 get_configfile_options() {
 
@@ -5007,9 +5015,7 @@ do_rootkit_file_dir_checks() {
 	scanrootkit
 
 	# SInAR
-
-	logtext "Debug: SInAR"
-	displaytext -n "   SInAR"
+# jh - go through this
 
 	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 		STATUS=0
@@ -6702,16 +6708,13 @@ do_local_host_checks() {
 		# FreeBSD (5): character special, symbolic link to,directory
 		# Linux (Debian): block special, socket, fifo (named pipe)
 
-		case "$SCAN_MODE_DEV" in
-		LAZY)	
+		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			displaytext -n "   Checking /dev for suspicious files... (in explicit LAZY mode)"
 			SPECIALFILES=`file "${ROOTDIR}/dev/"* | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
-			;;
-		THOROUGH|*) 
+		else
 			displaytext -n "   Checking /dev for suspicious files... "
-			SPECIALFILES=`find "${ROOTDIR}/dev/" | while read f; do file "${f}" | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'; done`
-			;;
-		esac
+			SPECIALFILES=`find "${ROOTDIR}/dev/" | while read f; do file "${f}" | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'; done`
+		fi
 
 		SIZE=39
 		jump=`expr ${defaultcolumn} - ${SIZE}`
@@ -7546,8 +7549,8 @@ set_file_prop_dirs_files() {
 	    insmod ip kallsyms kill killall ksyms kudzu last lastlog less
 	    locate logger login ls lsattr lsmod lynx md5 md5sum mlocate modinfo
 	    modload modprobe modstat modunload more mount netstat newgrp
-	    newsyslog nologin passwd ps pstree pwck rmmod runlevel sh sha1
-	    sha1sum size slocate sockstat sort stat strace strings su sudo
+	    newsyslog nologin passwd ps pstree pwck rkhunter rmmod runlevel sh
+	    sha1 sha1sum size slocate sockstat sort stat strace strings su sudo
 	    sulogin sysctl syslogd systat tail tcpd test top touch uname
 	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"

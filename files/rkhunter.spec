@@ -34,10 +34,10 @@ URL: http://rkhunter.sourceforge.net/
 BuildRoot: %{_tmppath}/%{name}-%{version}
 
 %description
-Rootkit Hunter is a scanning tool to ensure you about 99.9%% you are
+Rootkit Hunter is a scanning tool to ensure you are about 99.9%%
 clean of nasty tools. It scans for rootkits, backdoors and local
 exploits by running tests like:
-	- file hash check
+	- File hash check
 	- Look for default files used by rootkits
 	- Wrong file permissions for binaries
 	- Look for suspected strings in LKM and KLD modules
