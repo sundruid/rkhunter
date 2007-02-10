@@ -61,6 +61,7 @@ CONFIG_SSH_PROTV1:Explicit option set to allow SSH protocol version 1
 CONFIG_X_AUTO:X will be automatically detected
 CONFIG_CLRSET2:Using second color set
 CONFIG_NO_SHOW_SUMMARY:Disabling system check summary at users request
+CONFIG_SCAN_MODE_DEV:SCAN_MODE_DEV set to '$1'
 
 FOUND_CMD:Found '$1' command: $2
 NOT_FOUND_CMD:Unable to find '$1' command
@@ -77,6 +78,8 @@ GRSECINSTALLED:Found GRSEC installed
 SYSLOG_ENABLED:Using syslog for some logging - facility/priority level is '$1'.
 SYSLOG_DISABLED:Disabling use of syslog at users request.
 SYSLOG_NO_LOGGER:Disabling use of syslog - unable to find 'logger' command.
+
+PRESSENTER:[Press <ENTER> to continue]
 
 SUMMARY_TITLE1:System checks summary
 SUMMARY_TITLE2:=====================
@@ -175,7 +178,7 @@ STRINGS_CHECK:Checking 'strings' command...
 STRINGS_CHECK:Check skipped - no 'strings' command found.
 
 FILE_PROP_START:Performing file properties checks
-FILE_PROP_CMDS:Checking for required commands
+FILE_PROP_CMDS:Checking for prerequisites...
 FILE_PROP_IMMUT_OS:Skipping all immutable-bit checks. This check is only available for Linux systems.
 FILE_PROP_SKIP_ATTR:Unable to find 'stat' command - all file attribute checks will be skipped.
 FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:

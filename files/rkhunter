@@ -106,7 +106,8 @@ display() {
 	# message. All the messages are indexed in the language file.
 	#
 	# Syntax: display --to <destination> --type <type>
-	#		  [--screen-indent <n>] [--log-indent <n>] [--nl]
+	#		  [--screen-indent <n>] [--log-indent <n>]
+	#		  [--nl [<n>]] [--nl-after]
 	#		  [--result <result> --color <colour>]
 	#		  <message index> [optional message arguments]
 	#
@@ -117,7 +118,9 @@ display() {
 	# The --screen-indent and --log-indent options are used to
 	# forcibly indent a message.
 	# The --nl option causes a blank-line to be output before the
-	# message.
+	# message. A following number can be used to indicate how many
+	# blank lines should be displayed.
+	# The --nl-after option outputs a blank line after the message.
 	#
 
 
@@ -126,7 +129,7 @@ display() {
 	# process the switches used.
 	#
 
-	WARN_MSG=0; NL=0; LOGINDENT=0; SCREENINDENT=0
+	WARN_MSG=0; NL=0; NLAFTER=0; LOGINDENT=0; SCREENINDENT=0
 	WRITETO=''; TYPE=''; RESULT=''; COLOR=''; MSG=''
 	LINE1=''; LOGLINE1=''; SPACES=''
 
@@ -139,95 +142,112 @@ display() {
 
 	while [ $# -ge 1 ]; do
 		case "$1" in
-			--to)
-				case "$2" in
-					SCREEN|LOG|SCREEN+LOG)
-						WRITETO=$2
-						;;
-					*)
-						echo "Error: Invalid display destination: $2   Display line: ${DISPLAY_LINE}"
-						return
-						;;
-				esac
-
-				shift
-				;;
-			--type)
-				TYPE=`eval echo "\\$MSG_TYPE_$2"`
-
-				if [ -z "${TYPE}" -a "$2" != "PLAIN" ]; then
-					echo "Error: Invalid display type: $2   Display line: ${DISPLAY_LINE}"
-					return
-				fi
-
-				test "$2" = "WARNING" && WARN_MSG=1
-
-				shift
-				;;
-			--result)
-				RESULT=`eval echo "\\$MSG_RESULT_$2"`
-
-				if [ -z "${RESULT}" ]; then
-					echo "Error: Invalid display result: $2   Display line: ${DISPLAY_LINE}"
-					return
-				fi
-
-				shift
-				;;
-			--color)
-				if [ $COLORS -eq 1 ]; then
-					test -n "$2" && COLOR=`eval "echo \\${$2}"`
-
-					if [ -z "${COLOR}" ]; then
-						echo "Error: Invalid display color: $2   Display line: ${DISPLAY_LINE}"
-						return
-					fi
-				fi
-
-				shift
-				;;
-			--log-indent)
-				LOGINDENT=$2
-
-				if [ -z "${LOGINDENT}" ]; then
-					echo "Error: No --log-indent value given.   Display line: ${DISPLAY_LINE}"
-					return
-				elif [ -z "`echo ${LOGINDENT} | grep '^[0-9]*$'`" ]; then
-					echo "Error: Invalid --log-indent value given: $2   Display line: ${DISPLAY_LINE}"
-					return
-				fi
-
-				shift
-				;;
-			--screen-indent)
-				SCREENINDENT=$2
-
-				if [ -z "${SCREENINDENT}" ]; then
-					echo "Error: No --screen-indent value given.   Display line: ${DISPLAY_LINE}"
-					return
-				elif [ -z "`echo ${SCREENINDENT} | grep '^[0-9]*$'`" ]; then
-					echo "Error: Invalid --screen-indent value given: $2   Display line: ${DISPLAY_LINE}"
-					return
-				fi
-
-				shift
-				;;
-			--nl)
-				NL=1
-				;;
-			-*)
-				echo "Error: Invalid display option given: $1   Display line: ${DISPLAY_LINE}"
-				return
+		--to)
+			case "$2" in
+			SCREEN|LOG|SCREEN+LOG)
+				WRITETO=$2
 				;;
 			*)
-				MSG=$1
-				shift
-				break
+				echo "Error: Invalid display destination: $2   Display line: ${DISPLAY_LINE}"
+				return
 				;;
+			esac
+
+			shift
+			;;
+		--type)
+			TYPE=`eval echo "\\$MSG_TYPE_$2"`
+
+			if [ -z "${TYPE}" -a "$2" != "PLAIN" ]; then
+				echo "Error: Invalid display type: $2   Display line: ${DISPLAY_LINE}"
+				return
+			fi
+
+			test "$2" = "WARNING" && WARN_MSG=1
+
+			shift
+			;;
+		--result)
+			RESULT=`eval echo "\\$MSG_RESULT_$2"`
+
+			if [ -z "${RESULT}" ]; then
+				echo "Error: Invalid display result: $2   Display line: ${DISPLAY_LINE}"
+				return
+			fi
+
+			shift
+			;;
+		--color)
+			if [ $COLORS -eq 1 ]; then
+				test -n "$2" && COLOR=`eval "echo \\${$2}"`
+
+				if [ -z "${COLOR}" ]; then
+					echo "Error: Invalid display color: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
+			fi
+
+			shift
+			;;
+		--log-indent)
+			LOGINDENT=$2
+
+			if [ -z "${LOGINDENT}" ]; then
+				echo "Error: No --log-indent value given.   Display line: ${DISPLAY_LINE}"
+				return
+			elif [ -z "`echo ${LOGINDENT} | grep '^[0-9]*$'`" ]; then
+				echo "Error: Invalid --log-indent value given: $2   Display line: ${DISPLAY_LINE}"
+				return
+			fi
+
+			shift
+			;;
+		--screen-indent)
+			SCREENINDENT=$2
+
+			if [ -z "${SCREENINDENT}" ]; then
+				echo "Error: No --screen-indent value given.   Display line: ${DISPLAY_LINE}"
+				return
+			elif [ -z "`echo ${SCREENINDENT} | grep '^[0-9]*$'`" ]; then
+				echo "Error: Invalid --screen-indent value given: $2   Display line: ${DISPLAY_LINE}"
+				return
+			fi
+
+			shift
+			;;
+		--nl)
+			NL=1
+
+			case "$2" in
+			[0-9])
+				NL=$2
+				shift
+				;;
+			esac
+			;;
+		--nl-after)
+			NLAFTER=1
+			;;
+		-*)
+			echo "Error: Invalid display option given: $1   Display line: ${DISPLAY_LINE}"
+			return
+			;;
+		*)
+			MSG=$1
+			shift
+			break
+			;;
 		esac
 
 		shift
 	done
+
+
+	#
+	# Before anything we must record if this is a warning message.
+	#
+
+	test $WARN_MSG -eq 1 && WARNING_COUNT=`expr ${WARNING_COUNT} + 1`
 
 
 	#
@@ -312,7 +332,7 @@ display() {
 	if [ $WRITETOLOG -eq 1 ]; then
 		LOGLINE1=`date '+[%H:%M:%S]'`
 
-		test $NL -eq 1 && echo "${LOGLINE1}" >>${LOGFILE}
+		test $NL -gt 0 && echo "${LOGLINE1}" >>${LOGFILE}
 
 		if [ -n "${TYPE}" ]; then
 			LOGLINE1="${LOGLINE1} ${TYPE}: ${LINE1}"
@@ -356,15 +376,18 @@ display() {
 
 
 	#
-	# We can now output the message. We start with the first line, and
-	# then if this is a warning message we write to the log file any
-	# additional lines.
+	# We can now output the message. We start with any required blank
+	# lines, and then the first line. If this is a warning message we
+	# write to the log file any additional lines.
 	#
 
-	test $WARN_MSG -eq 1 && WARNING_COUNT=`expr ${WARNING_COUNT} + 1`
-
 	if [ $WRITETOTTY -eq 1 ]; then
-		test $NL -eq 1 && echo ""
+		NLLOOP=$NL
+		while test $NLLOOP -gt 0; do
+			echo ""
+			NLLOOP=`expr ${NLLOOP} - 1`
+		done
+
 		echo $NEWECHOOPT "${LINE1}"
 	fi
 
@@ -390,6 +413,12 @@ display() {
 		fi
 	fi
 
+	#
+	# Output a final blank line if requested to do so.
+	#
+
+	test $WRITETOTTY -eq 1 -a $NLAFTER -eq 1 && echo ""
+
 	return
 }
 
@@ -401,9 +430,8 @@ keypresspause() {
 	#
 
 	if [ $SKIP_KEY_PRESS -eq 0 -a $QUIET -eq 0 ]; then
-		echo ""
-		echo "[Press <ENTER> to continue]"
-		read a
+		display --to SCREEN --type PLAIN --nl PRESSENTER
+		read RKHTMPVAR
 	fi
 
 	return
@@ -1505,7 +1533,7 @@ get_enable_option() {
 			# name is not 'all'.
 			#
 
-			if [ -z "${DISABLE_TESTS}" -a "${ENABLE_TESTS}" != "all" -a -z "`echo \"${ENABLE_TESTS}\" | grep ' '`" ]; then
+			if [ "${ENABLE_TESTS}" != "all" -a -z "`echo \"${ENABLE_TESTS}\" | grep ' '`" ]; then
 				SKIP_KEY_PRESS=1
 			fi
 		fi
@@ -5015,23 +5043,22 @@ do_rootkit_file_dir_checks() {
 	scanrootkit
 
 	# SInAR
-# jh - go through this
 
 	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 		STATUS=0
 		SIZE=28
+		SINARFILES=""
 
 		logtext "Debug: SInAR"
 		displaytext -n "   Rootkit SInAR"
 
-		GFIND_CMD=`find_cmd gfind`
-		if [ -x "${GFIND_CMD}" ]; then
-
-			# Search for name in path. No trade off for speed.
+		if [ -n "${FIND_CMD}" ]; then
+			# Search for name in path.
 			for DIR in ${BINPATH}; do
-				${GFIND_CMD} "${DIR}" -type f -name sinar\* | while read RESULT; do
-					if `grep -qi 'sinar' ${RESULT} >/dev/null 2>&1`; then
+				${FIND_CMD} "${DIR}" -type f -name \*[sS][iI][nN][aA][rR]\* | while read RESULT; do
+					if `grep -i 'sinar' ${RESULT} >/dev/null 2>&1`; then
 						STATUS=1
+						SINARFILES="${SINARFILES} ${RESULT}"
 					fi
 				done
 			done
@@ -5045,12 +5072,13 @@ do_rootkit_file_dir_checks() {
 				insertlayout
 				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
 				displaytext "${FOUNDTRACES}"
+				logtext "Found SInAR in: ${SINARFILES}"
 			fi
 		else
 			jump=`expr ${defaultcolumn} - ${SIZE}`
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
-			logtext "Skipped test (Rootkit SInAR), due to missing 'gfind' command"
+			logtext "Skipped test (Rootkit SInAR), due to missing 'find' command"
 		fi
 	fi
 
@@ -6708,6 +6736,7 @@ do_local_host_checks() {
 		# FreeBSD (5): character special, symbolic link to,directory
 		# Linux (Debian): block special, socket, fifo (named pipe)
 
+# jh - add in whitelisting for /dev files.
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			displaytext -n "   Checking /dev for suspicious files... (in explicit LAZY mode)"
 			SPECIALFILES=`file "${ROOTDIR}/dev/"* | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
@@ -6843,7 +6872,6 @@ do_local_host_checks() {
 	fi
 
 	keypresspause
-
 
 	return
 }
@@ -7108,9 +7136,7 @@ display_check_summary() {
 	# groups of checks performed.
 	#
 
-	test $QUIET -eq 0 && echo ""
-
-	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_TITLE1
+	display --to SCREEN+LOG --type PLAIN --nl 2 SUMMARY_TITLE1
 	display --to SCREEN+LOG --type PLAIN SUMMARY_TITLE2
 
 
@@ -7181,12 +7207,10 @@ display_check_summary() {
 	#
 
 	if [ $NOLOG -eq 0 ]; then
-		display --to SCREEN --type PLAIN --nl SUMMARY_LOGFILE "${LOGFILE}"
+		display --to SCREEN --type PLAIN --nl --nl-after SUMMARY_LOGFILE "${LOGFILE}"
 	else
-		display --to SCREEN --type PLAIN --nl SUMMARY_NO_LOGFILE
+		display --to SCREEN --type PLAIN --nl --nl-after SUMMARY_NO_LOGFILE
 	fi
-
-	test $QUIET -eq 0 && echo ""
 
 	return
 }
@@ -7345,14 +7369,14 @@ do_system_check() {
 		display_check_summary
 
 		if [ $WARNING_COUNT -eq 0 ]; then
-			display --to SCREEN --type PLAIN CHECK_WARNINGS_NOT_FOUND
+			display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_NOT_FOUND
 		else
 			display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND
 
 			if [ $NOLOG -eq 1 ]; then
-				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_RERUN
+				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_FOUND_RERUN
 			else
-				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_CHK_LOG "${LOGFILE}"
+				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_FOUND_CHK_LOG "${LOGFILE}"
 			fi
 		fi
 
@@ -7618,6 +7642,11 @@ display_tests() {
 
 	KNOWN_TESTS="all none ${KNOWN_TESTS}"
 
+	#
+	# We have to look for the sort command because
+	# it won't have been set yet.
+	#
+
 	SORT_CMD=`find_cmd sort`
 
 	if [ -n "${SORT_CMD}" ]; then
@@ -7723,6 +7752,11 @@ display_languages() {
 
 	TITLE=1
 
+	#
+	# We have to look for the sort command because
+	# it won't have been set yet.
+	#
+
 	SORT_CMD=`find_cmd sort`
 
 	if [ -n "${SORT_CMD}" ]; then
@@ -7753,6 +7787,11 @@ display_rootkits() {
 	#
 	# This function is used to simply output all the rootkit
 	# names which rkhunter will check for.
+	#
+
+	#
+	# We have to look for the sort command because
+	# it won't have been set yet.
 	#
 
 	SORT_CMD=`find_cmd sort`
@@ -7999,7 +8038,7 @@ SPACEDPATH=`echo ${PATH} | tr ':' ' ' 2>/dev/null`
 CMDLIST="diff file find ifconfig ip ldd ls lsattr lsmod lsof mktemp netstat perl ps readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
-REQCMDS="awk cut date egrep grep head sed tail tr uname wc"
+REQCMDS="awk cut date egrep grep head ls sed tail tr uname wc"
 
 # List of commands used to download files from the web. This list is 
 # used by the '--update' and '--versioncheck' options. Preferred commands
@@ -8794,6 +8833,8 @@ if [ $CHECK -eq 1 ]; then
 
 	test $SHOW_SUMMARY -eq 0 && display --to LOG --type INFO CONFIG_NO_SHOW_SUMMARY
 
+	display --to LOG --type INFO CONFIG_SCAN_MODE_DEV "${SCAN_MODE_DEV}"
+
 
 	#
 	# To use syslog we must have the logger command present.
@@ -8823,18 +8864,20 @@ if [ $CHECK -eq 1 ]; then
 	# later on.
 	#
 
-	if [ -f "${DB_PATH}/rkhunter.dat" -a -s "${DB_PATH}/rkhunter.dat" ]; then
-		#
-		# We perform a simple check of some of the stored
-		# O/S information, and compare it to the current
-		# info. Basically we are just seeing if the system
-		# has changed at all because it could affect the
-		# file properties checks.
-		#
+	if [ $HASH_CHECK_ENABLED -eq 1 ]; then
+		if [ -f "${DB_PATH}/rkhunter.dat" -a -s "${DB_PATH}/rkhunter.dat" ]; then
+			#
+			# We perform a simple check of some of the stored
+			# O/S information, and compare it to the current
+			# info. Basically we are just seeing if the system
+			# has changed at all because it could affect the
+			# file properties checks.
+			#
 
-		rkh_dat_get_os_info
+			rkh_dat_get_os_info
 
-		check_os_info
+			check_os_info
+		fi
 	fi
 fi
 
