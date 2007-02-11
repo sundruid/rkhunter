@@ -6,7 +6,7 @@
 #%%dump
 
 %define name rkhunter
-%define ver 1.2.9
+%define ver 1.3.0
 %define rel 1
 %define epoch 0
 
@@ -97,7 +97,7 @@ fi
 
 
 %changelog
-* Mon Nov 27 2006 unSpawn - pre-1.3.0
+* Sun Feb 11 2007 unSpawn - pre-1.3.0
 - Sync spec with fixes, installer and CVS
 
 * Sun Nov 12 2006 unSpawn - 1.2.9

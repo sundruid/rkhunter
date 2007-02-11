@@ -24,7 +24,7 @@ of the GNU General Public License. See LICENSE for details.
 "
 
 APPNAME="rkhunter"
-APPVERSION="1.2.9"
+APPVERSION="1.3.0"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
@@ -502,7 +502,14 @@ done; retValChk
 # Application
 for FILE in ${RKHINST_BIN_FILES}; do
 	echo $N " Installing ${FILE}: " 
-	sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" ./files/"${FILE}" > "${RKHINST_BIN_DIR}/${FILE}"; retValChk
+	case "${RKHINST_LAYOUT}" in
+		RPM)	
+			cp -f ./files/"${FILE}" "${RKHINST_BIN_DIR}/${FILE}"; retValChk
+			;;
+		*)	
+			sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" ./files/"${FILE}" > "${RKHINST_BIN_DIR}/${FILE}"; retValChk
+			;;
+	esac
 	chmod "${RKHINST_MODE_EX}" "${RKHINST_BIN_DIR}/${FILE}"
 done
 
