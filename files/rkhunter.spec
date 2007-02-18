@@ -11,7 +11,7 @@
 %define epoch 0
 
 # Don't change this define or also:
-# 1. use installer.sh with like --layout /usr or --layout custom /some/dir
+# 1. installer.sh --layout custom /temporary/dir/usr --striproot /temporary/dir --install
 # 2. rewrite the files section below.
 %define _prefix /usr/local
 
@@ -55,7 +55,7 @@ Rootkit Hunter is released as a GPL licensed project and free for everyone to us
 %build
 
 %install
-sh ./installer.sh --install --layout RPM
+sh ./installer.sh --layout RPM --install
 
 
 # make a cron.daily file to mail us the reports

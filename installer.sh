@@ -29,6 +29,7 @@ RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
 USE_CVS=0
+STRIPROOT=""
 
 umask 027
 
@@ -85,11 +86,9 @@ showHelp() { # Show help / version
 	echo "${INSTALLER_NAME}"
 	echo "Usage: $0 <parameters>."
 	echo ""
-	echo "Valid parameters:"
+	echo "Ordered valid parameters:"
 	echo "--help (-h)      : Show this help."
-	echo "--install        : Install according to chosen layout."
-	echo "--show           : Show chosen layout."
-	echo "--remove         : Uninstall according to chosen layout."
+	echo "--examples       : Show --layout examples."
 	echo "--layout <value> : Chose installation template (mandatory switch)."
 	echo "                   The templates are:"
         echo "                    - default: (FHS compliant),"
@@ -99,7 +98,10 @@ showHelp() { # Show help / version
 	echo "                    - custom: supply your own prefix,"
 	echo "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
 	echo "                    If no layout value is given the default layout is used."
-	echo "--examples       : Show --layout examples."
+	echo "--striproot      : Strip path from custom layout (for package maintainers)."
+	echo "--install        : Install according to chosen layout."
+	echo "--show           : Show chosen layout."
+	echo "--remove         : Uninstall according to chosen layout."
 
 	exit 1
 }
@@ -108,16 +110,22 @@ showExamples() { # Show examples
 	echo "${INSTALLER_NAME}"
 	echo ""
 	echo "Examples: "
-	echo " Show layout, files in /usr:"
-	echo "     installer.sh --show --layout /usr"
-	echo " Show custom layout, files in /opt:"
-	echo "     installer.sh --show --layout custom /opt"
-	echo " Install, layout /usr/local:"
-	echo "     installer.sh --install --layout /usr/local"
-	echo " Remove files, layout /usr/local:"
-	echo "     installer.sh --remove --layout /usr/local"
+	echo "1. Show layout, files in /usr:"
+	echo "     installer.sh --layout /usr --show"
 	echo ""
-	echo " The installer will not remove files when RPM or custom layout is chosen."
+	echo "2. Install, layout /usr/local:"
+	echo "     installer.sh --layout /usr/local --install"
+	echo ""
+	echo "3. Install in temporary directory /tmp/rkhunter/usr/local,"
+	echo " with files in /usr/local (for package maintainers):"
+	echo "      mkdir -p /tmp/rkhunter/usr/local"
+	echo "     installer.sh --layout custom /tmp/rkhunter/usr/local \\"
+	echo "     --striproot /tmp/rkhunter --install"
+	echo ""
+	echo "4. Remove files, layout /usr/local:"
+	echo "     installer.sh --layout /usr/local --remove"
+	echo ""
+	echo "Please note: this installer will not remove files when custom layout is chosen."
 
 	exit 1
 }
@@ -133,22 +141,17 @@ case "$1" in
 				;;
 			custom_*)
 				PREFIX=`echo "${RKHINST_LAYOUT}"|sed "s|custom_||g"`
-				#if [ "X${PREFIX}" = "X" ]; then
-				#	echo $E "Bad prefix chosen, exiting."
-				#	exit 1
-				#else
-					case "${PREFIX}" in
-						.)
-							echo "Rewriting for local install."
-							;;
-						.*|/.*)
-							echo "Bad prefix chosen, exiting."
-							exit 1
-							;;
-					esac
+				case "${PREFIX}" in
+					.)
+						echo "Rewriting for local install."
+						;;
+					.*|/.*)
+						echo "Bad prefix chosen, exiting."
+						exit 1
+						;;
+				esac
 				echo "${PATH}" | grep -q "${PREFIX}/bin" || \
-				echo "MAKE SURE YOU WANT PREFIX to be ${PREFIX}"
-				#fi
+				echo; echo "Please make sure you want PREFIX to be ${PREFIX}"; echo
 				;;
 			RPM)	if [ -n "${RPM_BUILD_ROOT}" ]; then
 					PREFIX="${RPM_BUILD_ROOT}/usr/local"
@@ -166,6 +169,7 @@ case "$1" in
 			*)
 				if [ ! -d "${PREFIX}" ]; then
 					echo "Bad prefix chosen (nonexistent dirname), exiting."
+					echo "\"mkdir -p ${PREFIX}\" first?"
 					exit 1
 				fi
 				;;
@@ -248,6 +252,9 @@ showTemplate() { # Take input from the "--installdir parameter"
 			echo "Scripts:            ${RKHINST_SCRIPT_DIR}"
 			echo "Databases:          ${RKHINST_DB_DIR}"
 			echo "Temporary files:    ${RKHINST_TMP_DIR}"
+			if [ -n "${STRIPROOT}" ]; then
+				echo; echo "Got STRIPROOT="${STRIPROOT}"."
+			fi
 			;;
 	esac
 		
@@ -554,6 +561,14 @@ RANDVAL=`date +%N%s%N`
 		fi
 	fi
 done
+
+# Strip root from fake root install.
+find "${PREFIX}" -type f | while read f; do 
+	grep -q "${PREFIX}" "${f}" && { echo $N " Striproot ${f}: "; sed -i "s|${STRIPROOT}||g" "${f}"; retValChk; }
+done
+
+echo "Installation finished."
+
 } # End doInstall
 
 
@@ -623,7 +638,7 @@ done
 # Helper scripts: remove dir
 # Application documents: remove dir
 # Databases: remove dir
-# Languag support: remove dir
+# Language support: remove dir
 
 echo "Removing installation directories:"
 
@@ -647,6 +662,8 @@ done
 
 # Could use patch for removing custom $VARDIR $SHAREDIR $PREFIX here.
 
+echo "Done removing files. Please double-check."
+
 } # end doRemove
 
 if [ $# -eq 0 ]; then
@@ -655,16 +672,15 @@ fi
 
 while [ $# -ge 1 ]; do
 	case $1 in
-	-h | --help | --usage)
+	h | -h | --help | --usage)
 		showHelp
+		;;
+	-e | --examples) showExamples
 		;;
 	-v | --version)
 		showVersion
 		;;
-	--show|--remove|--install)
-		action=`echo "$1"|sed "s/-//g"`
-		;;
-	--layout)
+	-l | --layout)
 		shift 1
 		case "$1" in
 			custom)
@@ -683,6 +699,18 @@ while [ $# -ge 1 ]; do
 				RKHINST_LAYOUT="default"
 				;;
 		esac
+		;;
+	-s | --striproot)
+		shift 1
+		if [ -n "$1" ]; then
+			STRIPROOT="$1"
+		else
+			echo "Striproot requested but no directoryname given, exiting."
+			exit 1
+		fi
+		;;
+	--show|--remove|--install)
+		action=`echo "$1"|sed "s/-//g"`;
 		case "$action" in
 			show)	showTemplate $RKHINST_LAYOUT
 				;;
@@ -692,15 +720,14 @@ while [ $# -ge 1 ]; do
 			install) selectTemplate $RKHINST_LAYOUT
 				 doInstall
 				 ;;
-			*)	echo "No option given, exiting."
+			*)	echo "No action given, exiting."
 				exit 1
 				;;
 		esac
-		;;
-	--examples) showExamples
+		exit 0
 		;;
 	*)
-		echo "Wrong option given, exiting."
+		echo "Wrong option \""${1}"\" given, exiting."
 		showHelp
 		;;
 	esac
