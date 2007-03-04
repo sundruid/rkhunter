@@ -1,4 +1,4 @@
-Version:2007020800
+Version:2007022700
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -62,9 +62,12 @@ CONFIG_X_AUTO:X will be automatically detected
 CONFIG_CLRSET2:Using second color set
 CONFIG_NO_SHOW_SUMMARY:Disabling system check summary at users request
 CONFIG_SCAN_MODE_DEV:SCAN_MODE_DEV set to '$1'
+CONFIG_NO_VL:Disabling verbose logging at users request
+CONFIG_XINETD_PATH:Using $1 configuration file '$2'
+CONFIG_SOL10_INETD:Using Solaris 10 and later inetd mechanism
 
-FOUND_CMD:Found '$1' command: $2
-NOT_FOUND_CMD:Unable to find '$1' command
+FOUND_CMD:Found the '$1' command: $2
+NOT_FOUND_CMD:Unable to find the '$1' command
 
 SYS_NO_PRELINK:System is not using prelinking
 SYS_PRELINK_FUNC:System is using prelinking - using $1 ($2) for hash checks
@@ -89,9 +92,9 @@ SUMMARY_PROP_COUNT:Files checked: $1
 SUMMARY_PROP_FAILED:Suspect files: $1
 SUMMARY_CHKS_SKIPPED:All checks skipped
 SUMMARY_RKT_SCAN:Rootkit checks...
-SUMMARY_RKT_COUNT:Files checked: $1
-SUMMARY_RKT_FAILED:Suspect files: $1
-SUMMARY_RKT_NAMES:Possible rootkits: $1
+SUMMARY_RKT_COUNT:Rootkits checked : $1
+SUMMARY_RKT_FAILED:Possible rootkits: $1
+SUMMARY_RKT_NAMES:Rootkit names    : $1
 SUMMARY_APPS_SCAN:Applications checks...
 SUMMARY_APPS_COUNT:Applications checked: $1
 SUMMARY_APPS_FAILED:Suspect applications: $1
@@ -158,7 +161,8 @@ PROPUPD_WARN:cannot determine what has caused the change, that is for the user t
 ENABLED_TESTS:Enabled tests are: $1
 DISABLED_TESTS:Disabled tests are: $1
 
-KSYMS_MISSING:ksyms and kallsyms checks will be skipped - neither file is present on the system.
+KSYMS_FOUND:Found ksym file '$1'
+KSYMS_MISSING:All ksyms and kallsyms checks will be skipped - neither file is present on the system.
 
 USER_DISABLED_TEST:Test '$1' disabled at users request.
 
@@ -169,16 +173,15 @@ CHECK_WARNINGS_FOUND_RERUN:Please re-run the check, ensuring that a log file is 
 CHECK_WARNINGS_FOUND_CHK_LOG:Please check the log file ($1)
 
 CHECK_SYS_COMMANDS:Checking system commands...
-
 STRINGS_CHECK_START:Performing 'strings' command checks
 STRINGS_SCANNING_OK:Scanning for string $1
 STRINGS_SCANNING_BAD:Scanning for string $1
 STRINGS_SCANNING_BAD:String not found in 'strings' command
-STRINGS_CHECK:Checking 'strings' command...
+STRINGS_CHECK:Checking 'strings' command
 STRINGS_CHECK:Check skipped - no 'strings' command found.
 
 FILE_PROP_START:Performing file properties checks
-FILE_PROP_CMDS:Checking for prerequisites...
+FILE_PROP_CMDS:Checking for prerequisites
 FILE_PROP_IMMUT_OS:Skipping all immutable-bit checks. This check is only available for Linux systems.
 FILE_PROP_SKIP_ATTR:Unable to find 'stat' command - all file attribute checks will be skipped.
 FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:
@@ -193,73 +196,163 @@ FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, 
 FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
 
 FILE_PROP_FILENAME:$1
-FILE_PROP_FILE_NOT_EXIST:The file $1 does not exist on the system, but it is present in the rkhunter.dat file.
-FILE_PROP_WL:File $1 is whitelisted for the $2 check
-FILE_PROP_NO_RKH_REC:The file $1 exists on the system, but it is not present in the rkhunter.dat file.
-FILE_PROP_HASH_WL_INVALID:The file $1 whitelist hash value ($2) does not match the current hash value.
+FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
+FILE_PROP_WL:File '$1' is whitelisted for the '$2' check
+FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the rkhunter.dat file.
+FILE_PROP_HASH_WL_INVALID:The file '$1' whitelist hash value ($2) does not match the current hash value.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
 FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
 FILE_PROP_SYSHASH:Current hash: $1
 FILE_PROP_RKHHASH:Stored hash : $1
-FILE_PROP_NO_RKHHASH: No hash value found for file $1 in the rkhunter.dat file.
-FILE_PROP_NO_RKHPERM: No file permissions value found for file $1 in the rkhunter.dat file.
+FILE_PROP_NO_RKHHASH: No hash value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHPERM: No file permissions value found for file '$1' in the rkhunter.dat file.
 FILE_PROP_PERM_UNAVAIL:Current permissions: Unavailable    Stored permissions: $1
 FILE_PROP_PERM:Current permissions: $1    Stored permissions: $2
 FILE_PROP_UID_UNAVAIL:Current uid: Unavailable    Stored uid: $1
 FILE_PROP_UID:Current uid: $1    Stored uid: $2
-FILE_PROP_NO_RKHUID: No user-id value found for file $1 in the rkhunter.dat file.
+FILE_PROP_NO_RKHUID: No user-id value found for file '$1' in the rkhunter.dat file.
 FILE_PROP_GID_UNAVAIL:Current gid: Unavailable    Stored gid: $1
 FILE_PROP_GID:Current gid: $1    Stored gid: $2
-FILE_PROP_NO_RKHGID: No group-id value found for file $1 in the rkhunter.dat file.
+FILE_PROP_NO_RKHGID: No group-id value found for file '$1' in the rkhunter.dat file.
 FILE_PROP_INODE_UNAVAIL:Current inode: Unavailable    Stored inode: $1
 FILE_PROP_INODE:Current inode: $1    Stored inode: $2
-FILE_PROP_NO_RKHINODE: No inode value found for file $1 in the rkhunter.dat file.
+FILE_PROP_NO_RKHINODE: No inode value found for file '$1' in the rkhunter.dat file.
 FILE_PROP_SYSDTM_UNAVAIL:Current file modification time: Unavailable
 FILE_PROP_SYSDTM:Current file modification time: $1
 FILE_PROP_RKHDTM:Stored file modification time : $1
-FILE_PROP_NO_RKHDTM: No file modification time value found for file $1 in the rkhunter.dat file.
-FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file $1
-FILE_PROP_WRITE:Write permission is set on file $1 for all users.
-FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file $1
-FILE_PROP_IMMUT:File $1 has the immutable-bit set.
-FILE_PROP_SCRIPT:The command $1 has been replaced by a script: $2
+FILE_PROP_NO_RKHDTM: No file modification time value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file '$1'
+FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
+FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file '$1'
+FILE_PROP_IMMUT:File '$1' has the immutable-bit set.
+FILE_PROP_SCRIPT:The command '$1' has been replaced by a script: $2
 
-CHECK_ROOTKITS:Checking for rootkits
-ROOTKIT_FILES_DIRS_START:Performing check of default files and directories
+CHECK_ROOTKITS:Checking for rootkits...
+ROOTKIT_FILES_DIRS_START:Performing check of known rootkit files and directories
+ROOTKIT_FILES_DIRS_NAME:$1
+ROOTKIT_FILES_DIRS_NAME_LOG:Checking for ${1}...
+ROOTKIT_FILES_DIRS_FILE:Checking for file '$1'
+ROOTKIT_FILES_DIRS_DIR:Checking for directory '$1'
+ROOTKIT_FILES_DIRS_KSYM:Checking for kernel symbol '$1'
+ROOTKIT_FILES_DIRS_FILE_FOUND:File '$1' found
+ROOTKIT_FILES_DIRS_DIR_FOUND:Directory '$1' found
+ROOTKIT_FILES_DIRS_KSYM_FOUND:Kernel symbol '$1' found
+ROOTKIT_FILES_DIRS_STR:Checking for string '$1'
+ROOTKIT_FILES_DIRS_STR_FOUND:Found string '$1' in file '$2'
+ROOTKIT_FILES_DIRS_NOFILE:The file '$1' does not exist!
+ROOTKIT_FILES_DIRS_SINAR_DIR:Checking in '$1'
+ROOTKIT_FILES_DIRS_SINAR:Found SInAR in: $1
+
+ROOTKIT_ADD_START:Performing additional rootkit checks
+ROOTKIT_ADD_SUCKIT:Suckit Rookit additional checks
+ROOTKIT_ADD_SUCKIT_LOG:Performing Suckit Rookit additional checks
+ROOTKIT_ADD_SUCKIT_LINK:Checking /sbin/init link count
+ROOTKIT_ADD_SUCKIT_LINK_NOCMD:Checking /sbin/init link count: no 'stat' command found
+ROOTKIT_ADD_SUCKIT_LINK_ERR:Checking /sbin/init link count: error from 'stat' command
+ROOTKIT_ADD_SUCKIT_LINK_FOUND:Checking /sbin/init link count: count is $1, it should be 1
+ROOTKIT_ADD_SUCKIT_EXT:Checking for hidden file extensions
+ROOTKIT_ADD_SUCKIT_EXT_FOUND:Checking for hidden file extensions: $1
+ROOTKIT_ADD_SUCKIT_SKDET:Running skdet command
+ROOTKIT_ADD_SUCKIT_SKDET_FOUND:Running skdet command: found: $1
+ROOTKIT_ADD_SUCKIT_SKDET_VER:Running skdet command: unknown version: $1
+
+ROOTKIT_POSS_FILES_DIRS:Checking for possible rootkit files and directories
+ROOTKIT_POSS_FILES_DIRS_LOG:Performing check of possible rootkit files and directories
+ROOTKIT_POSS_FILES_FILE_FOUND:Found file '$1'. Possible rootkit: $2
+ROOTKIT_POSS_FILES_DIR_FOUND:Found directory '$1'. Possible rootkit: $2
+
+ROOTKIT_POSS_STRINGS:Checking for possible rootkit strings
+ROOTKIT_POSS_STRINGS_LOG:Performing check for possible rootkit strings
+ROOTKIT_POSS_STRINGS_RCFILE:Found system startup file '$1'
+ROOTKIT_POSS_STRINGS_FOUND:Found string '$1' in file '$2'. Possible rootkit: $3
+
 ROOTKIT_MALWARE_START:Performing malware checks
+ROOTKIT_MALWARE_SUSP_FILES:Checking running processes for suspicious files
+ROOTKIT_MALWARE_SUSP_FILES_FOUND:One or more of these files were found: $1
+ROOTKIT_MALWARE_SUSP_FILES_FOUND:Check the output of the lsof command 'lsof -F n -w -n'
+ROOTKIT_MALWARE_HIDDEN_PROCS:Checking for hidden processes
+ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND:Hidden processes found: $1
+ROOTKIT_MALWARE_DELETED_FILES:Checking running processes for deleted files
+ROOTKIT_MALWARE_DELETED_FILES_FOUND:The following processes are using deleted files:
+ROOTKIT_MALWARE_DELETED_FILES_FOUND_DATA:Process: $1    PID: $2    File: $3
+ROOTKIT_MALWARE_LOGIN_BDOOR:Checking for login backdoors
+ROOTKIT_MALWARE_LOGIN_BDOOR_LOG:Performing check for login backdoors
+ROOTKIT_MALWARE_LOGIN_BDOOR_CHK:Checking for '$1'
+ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND:Found login backdoor file: $1
+ROOTKIT_MALWARE_SUSP_DIR:Checking for suspicious directories
+ROOTKIT_MALWARE_SUSP_DIR_LOG:Performing check for suspicious directories
+ROOTKIT_MALWARE_SUSP_DIR_FOUND:Found suspicious directory: $1
+ROOTKIT_MALWARE_SFW_INTRUSION:Checking for software intrusions
+ROOTKIT_MALWARE_SFW_INTRUSION_FOUND:The file '$1' contains the string '$2'. Possible rootkit: SHV5
+ROOTKIT_MALWARE_SFW_INTRUSION_SKIP:Check skipped - tripwire not installed
+ROOTKIT_MALWARE_SNIFFER:Checking for sniffer log files
+ROOTKIT_MALWARE_SNIFFER_LOG:Performing check for sniffer log files
+ROOTKIT_MALWARE_SNIFFER_FOUND:Found possible sniffer log file: $1
+
+ROOTKIT_TROJAN_START:Performing trojan specific checks
+ROOTKIT_TROJAN_INETD:Checking for enabled inetd services
+ROOTKIT_TROJAN_INETD_SKIP:Check skipped - file '$1' does not exist.
+ROOTKIT_TROJAN_INETD_FOUND:Found enabled inetd service: $1
+ROOTKIT_TROJAN_XINETD:Checking for enabled xinetd services
+ROOTKIT_TROJAN_XINETD_LOG:Performing check for enabled xinetd services
+ROOTKIT_TROJAN_XINETD_ENABLED:Checking '$1' for enabled services
+ROOTKIT_TROJAN_XINETD_INCLUDE:Found 'include $1' directive
+ROOTKIT_TROJAN_XINETD_INCLUDEDIR:Found 'includedir $1' directive
+ROOTKIT_TROJAN_XINETD_ENABLED_FOUND:Found enabled xinetd service: $1
+ROOTKIT_TROJAN_XINETD_WHITELIST:Service '$1' is $2 whitelisted.
+
+ROOTKIT_OS_START:Performing $1 specific checks
+ROOTKIT_OS_SKIPPED:No specific tests available
+ROOTKIT_OS_BSD_SOCKNET:Checking sockstat and netstat commands
+ROOTKIT_OS_BSD_SOCKNET_FOUND:Differences found between sockstat and netstat output:
+ROOTKIT_OS_BSD_SOCKNET_OUTPUT:$1 output: $2
+ROOTKIT_OS_FREEBSD_KLD:Checking for KLD backdoors
+ROOTKIT_OS_FREEBSD_KLD_FOUND:Found possible FreeBSD KLD backdoor. 'kldstat -v' command shows string '$1'
+ROOTKIT_OS_FREEBSD_PKGDB:Checking package database
+ROOTKIT_OS_FREEBSD_PKGDB_NOTOK:The package database seems to have inconsistencies.
+ROOTKIT_OS_FREEBSD_PKGDB_NOTOK:This may not be a security issue, but running 'pkgdb -F' may help diagnose the problem.
+ROOTKIT_OS_LINUX_LKM:Checking kernel module commands
+ROOTKIT_OS_LINUX_LKM_FOUND:Differences found between the lsmod command and the /proc/modules file:
+ROOTKIT_OS_LINUX_LKM_OUTPUT:$1 output: $2
+ROOTKIT_OS_LINUX_LKM_EMPTY:No output found from the lsmod command or the /proc/modules file:
+ROOTKIT_OS_LINUX_LKM_MOD_MISSING:The modules file '$1' is missing.
+ROOTKIT_OS_LINUX_LKMNAMES:Checking kernel module names
+ROOTKIT_OS_LINUX_LKMNAMES_PATH:Using modules pathname of '$1'
+ROOTKIT_OS_LINUX_LKMNAMES_FOUND:Known bad kernel module found in '$1': $2
+ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING:The kernel module directory '$1' is missing.
 
 CHECK_LOCALHOST:Checking the local host
 
 CHECK_APPS:Checking applications
 APPS_TOTAL_COUNT:Applications checked: $1 out of $2
 
-CHECK_NETWORK:Checking the network
+CHECK_NETWORK:Checking the network...
 NETWORK_PORTS_START:Performing check for backdoor ports
 NETWORK_PORTS_FILE_MISSING:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) is missing or empty.
-NETWORK_PORTS:Checking $1 port ${2}...
-NETWORK_PORTS_FOUND:Network $1 port $2 is being used. This may be caused by the '$3' rootkit.
+NETWORK_PORTS_FILE_NO_NETSTAT:All backdoor port checks skipped.
+NETWORK_PORTS_FILE_NO_NETSTAT:Unable to find the 'netstat' command
+NETWORK_PORTS:Checking $1 port ${2}
+NETWORK_PORTS_FOUND:Network $1 port $2 is being used. Possible rootkit: $3
 NETWORK_PORTS_FOUND:Run the 'netstat -an' command to check this.
 NETWORK_INTERFACE_START:Performing checks on the network interfaces
-NETWORK_PROMISC_CHECK:Checking for promiscuous interfaces...
+NETWORK_PROMISC_CHECK:Checking for promiscuous interfaces
+NETWORK_PROMISC_NO_IFCONFIG:Promiscuous network interface check skipped - unable to find the 'ifconfig' command.
+NETWORK_PROMISC_NO_IP:Promiscuous network interface check using 'ip' command skipped - unable to find the 'ip' command.
 NETWORK_PROMISC_IF:Possible promiscuous interfaces:
-NETWORK_PROMISC_IF_1:'ifconfig' test output: $1
-NETWORK_PROMISC_IF_2:'ip' test output: $1
-NETWORK_PACKET_CAP_CHECK:Checking for packet capturing applications...
-NETWORK_PACKET_CAP_CHECK:Check skipped - no 'lsof' command found.
-NETWORK_PACKET_CAP_FOUND:Process $1 (PID $2) is listening on the network.
-NETWORK_PACKET_CAP_WHITE:Found process $1 on whitelist.
+NETWORK_PROMISC_IF_1:'ifconfig' command output: $1
+NETWORK_PROMISC_IF_2:'ip' command output: $1
+NETWORK_PACKET_CAP_CHECK:Checking for packet capturing applications
+NETWORK_PACKET_CAP_CHECK_NO_FILE:Packet capturing application check skipped - the '$1' file is missing.
+NETWORK_PACKET_CAP_FOUND:Process '$1' (PID $2) is listening on the network.
+NETWORK_PACKET_CAP_WHITE:Found process '$1' on whitelist.
 
 SHARED_LIBS_START:Performing 'shared libraries' checks
-SHARED_LIBS_PRELOAD_VAR:Checking for preloading variables...
-SHARED_LIBS_PRELOAD_NO_VAR:No preloading variables found.
+SHARED_LIBS_PRELOAD_VAR:Checking for preloading variables
 SHARED_LIBS_PRELOAD_VAR_FOUND:Found library preload variable(s): $1
-SHARED_LIBS_PRELOAD_FILE:Checking for preload file...
-SHARED_LIBS_PRELOAD_NO_FILE:The preload file $1 does not exist.
+SHARED_LIBS_PRELOAD_FILE:Checking for preload file
 SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1
-SHARED_LIBS_PATH:Checking LD_LIBRARY_PATH variable...
-SHARED_LIBS_NO_PATH:The LD_LIBRARY_PATH environment variable is not set.
+SHARED_LIBS_PATH:Checking LD_LIBRARY_PATH variable
 SHARED_LIBS_PATH_BAD:The LD_LIBRARY_PATH environment variable influences binaries: $1
-SHARED_LIBS_PATH_CMD:Check skipped - no 'ldd' command found.
 

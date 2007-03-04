@@ -87,7 +87,14 @@
    The '--summary' option, as well as the '--report-warnings-only' option,
    will override the '--quiet' option if they are specified. However, no
    other information will be displayed if '--quiet' is used.
- - Added SunOS SInAR rootkit check
+ - Added SunOS SInAR rootkit check.
+ - Added '--verbose-logging/--no-verbose-logging' options. This cuts down on
+   some of the logging for some of the tests. By default verbose logging is
+   enabled.
+ - The inetd and xinetd configuration file pathnames can now be specified
+   in the rkhunter configuration file. Also, enabled inetd and xinetd
+   services can now be whitelisted.
+ - Added support for Solaris 10 inetd mechanism (inetadm).
 
  Changes:
  - Improved command-line and config file option checking.
@@ -177,12 +184,17 @@
  - File permissions check improved to check if 'other' has the 'w' bit set.
    Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
    check into the file hash check.
+ - The '--report-mode' option has been removed. It was not seen as being
+   useful, and combinations of the other options will provide the same, if
+   not better, reporting.
+ - The xinetd.conf check now handles the 'include' directive. It also now
+   handles the 'includedir' directive in all files, and not just in the
+   initial xinetd configuration file.
 
  Bugfixes:
- - Corrected SHV4/Tripwire check.
  - Command-line options requiring an argument now work correctly under Solaris.
  - The -h/--help option now works as expected.
- - The ignoKit rootkit check was not checking all the required files.
+ - The 'ignoKit rootkit' check was not checking all the required files.
  - Some checks were not respecting the ROOTDIR option in their pathnames. This
    has now been corrected (possibly not completely though). Also, some tests
    were using ROOTDIR pathnames in grep/strings checks when they shouldn't
@@ -206,8 +218,33 @@
  - The '--quiet' option now does what it says. No output is shown unless other
    options are specified by the user. E.g. using '--quiet' on its own produces
    no output, but sets the return code. If the '--report-warnings-only'
-   option is usedas well, then warnings will be shown despite '--quiet'
+   option is used as well, then warnings will be shown despite '--quiet'
    being used.
+ - Enabled the login backdoor check. It was coded, but used the wrong variable.
+   It also checked for directory names rather than file names. This looked
+   wrong, but I could not find any more info about it. As such we now check
+   for their existence rather than whether they are files or directories.
+ - Corrected the suspicious directories check.
+ - The xinetd.conf check only occurred for Linux systems. It will now occur
+   for all O/S's. Also, the check always reported the file was clean,
+   regardless of whether this was true or not.
+
+ --
+
+ * 1.2.10 (28/02/2007)
+
+ New:
+ - Enabled Ohhara Rootkit check
+
+ Changes:
+ - If duplicate configuration file options are seen, then only the last
+   one seen is used
+
+ Bugfixes:
+ - Lsof resolution fix
+ - Fixed Danny Boy's Abuse Kit check
+ - Fixed SHV5/Tripwire check
+ - Fixed ignoKit check
 
  --
 
