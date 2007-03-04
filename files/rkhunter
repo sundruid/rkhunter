@@ -6245,7 +6245,7 @@ sol10_inetd() {
 	# be used later.
 	#
 
-	FOUNDSTRING=`${INETADM_CMD} | grep '^enabled' | awk '{ print $3 }' | cut -d: -f2`
+	FOUNDSTRING=`${INETADM_CMD} | grep '^enabled' | cut -d: -f2`
 
 	if [ -f "${ROOTDIR}${INETD_CONF_PATH}" ]; then
 		STR=`grep -v '^#' ${ROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
@@ -6328,19 +6328,24 @@ trojan_checks() {
 
 			if [ $FOUND -eq 0 ]; then
 				#
-				# We need to change the RPC services in to
-				# an actual executable name, if we can.
+				# We want to change any RPC services into
+				# an actual executable name, if we can. The
+				# executable is the sixth field. If the
+				# sixth field is empty or this is an internal
+				# service, then we just use the service name.
 				#
 
 				if [ -n "`echo \"${STR}\" | grep '^[0-9/]*$'`" ]; then
-					STRING=`grep "^${STR}" ${ROOTDIR}${INETD_CONF_PATH} | awk '{ print $6 }'`
+					EXECNAME=`grep "^${STR}" ${ROOTDIR}${INETD_CONF_PATH} | awk '{ print $6 }'`
 
-					test -z "${STRING}" && STRING="${STR}"
-				else
-					STRING="${STR}"
+					if [ -z "${EXECNAME}" -o "${EXECNAME}" = "internal" ]; then
+						EXECNAME="${STR}"
+					fi
+
+					STR="${EXECNAME}"
 				fi
 
-				RKHTMPVAR="${RKHTMPVAR} ${STRING}"
+				RKHTMPVAR="${RKHTMPVAR} ${STR}"
 			fi
 		done
 
