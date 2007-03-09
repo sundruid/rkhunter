@@ -1,4 +1,4 @@
-Version:2007022700
+Version:2007030801
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -101,7 +101,7 @@ SUMMARY_APPS_FAILED:Suspect applications: $1
 SUMMARY_SCAN_TIME:The system checks took: $1
 SUMMARY_NO_SCAN_TIME:The system check took: Unable to determine clock time
 SUMMARY_LOGFILE:All results have been written to the logfile ($1)
-SUMMARY_NO_LOGFILE:No log file created
+SUMMARY_NO_LOGFILE:No log file created.
 
 CREATED_TEMP_FILE:Created temporary file '$1'
 
@@ -113,19 +113,20 @@ MIRRORS_ROTATED:Mirrors file '$1' has been rotated.
 DOWNLOAD_CMD:Executing download command '$1'
 DOWNLOAD_FAIL:Download failed - $1 mirrors left.
 
-VERSIONCHECK_START:Starting program version check...
-VERSIONCHECK_FAIL_ALL:Download failed - unable to determine the latest program version number.
+VERSIONCHECK_START:Checking rkhunter version...
+VERSIONCHECK_FAIL_ALL:Download failed: Unable to determine the latest program version number.
 VERSIONCHECK_CURRENT:This version  : $1
 VERSIONCHECK_LATEST:Latest version: $1
+VERSIONCHECK_LATEST_FAIL:Latest version: Download failed
 VERSIONCHECK_UPDT_AVAIL:Update available
 VERSIONCHECK_CONV_FAIL:Unable to compare version numbers: Program: '$1'    Latest: '$2'
 
-UPDATE_START:Starting check of '.dat' files...
+UPDATE_START:Checking rkhunter data files...
 UPDATE_CHECKING_FILE:Checking file $1
 UPDATE_FILE_NO_VERS:File '$1' has no valid version number. Downloading a new copy.
 UPDATE_FILE_MISSING:File '$1' is missing or empty. Downloading a new copy.
-UPDATE_DECOMP_FAIL:Uncompressing new '$1' file failed. Original file left in place.
-UPDATE_FILE_NO_VERS_UNCOMP:New '$1' file has no valid version number. Original file left in place.
+UPDATE_DOWNLOAD_FAIL:Download of '$1' failed: Unable to determine the latest version number.
+UPDATE_I18N_NO_VERS:No i18n language file version numbers can be found.
 
 OSINFO_START:Checking if the O/S has changed since last time...
 OSINFO_END:Nothing seems to have changed
@@ -169,7 +170,7 @@ USER_DISABLED_TEST:Test '$1' disabled at users request.
 CHECK_START:Starting system checks...
 CHECK_WARNINGS_NOT_FOUND:No warnings were found while checking the system.
 CHECK_WARNINGS_FOUND:One or more warnings have been found while checking the system.
-CHECK_WARNINGS_FOUND_RERUN:Please re-run the check, ensuring that a log file is created.
+CHECK_WARNINGS_FOUND_RERUN:Please re-run rkhunter, ensuring that a log file is created.
 CHECK_WARNINGS_FOUND_CHK_LOG:Please check the log file ($1)
 
 CHECK_SYS_COMMANDS:Checking system commands...
