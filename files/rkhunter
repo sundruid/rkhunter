@@ -339,7 +339,7 @@ display() {
 	if [ $WRITETOLOG -eq 1 ]; then
 		LOGLINE1=`date '+[%H:%M:%S]'`
 
-		test $NL -gt 0 -o $LOGNL -eq 1 && echo "${LOGLINE1}" >>${LOGFILE}
+		test $NL -gt 0 -o $LOGNL -eq 1 && echo "${LOGLINE1}" >>${RKHLOGFILE}
 
 		if [ -n "${TYPE}" ]; then
 			LOGLINE1="${LOGLINE1} ${TYPE}: ${LINE1}"
@@ -399,7 +399,7 @@ display() {
 	fi
 
 	if [ $WRITETOLOG -eq 1 ]; then
-		echo $NEWECHOOPT "${LOGLINE1}" >>${LOGFILE}
+		echo $NEWECHOOPT "${LOGLINE1}" >>${RKHLOGFILE}
 
 		if [ $WARN_MSG -eq 1 ]; then
 			test $SHOWWARNINGSONLY -eq 1 && echo $NEWECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
@@ -412,7 +412,7 @@ display() {
 					continue
 				else
 					test $SHOWWARNINGSONLY -eq 1 && echo $NEWECHOOPT "         ${LOGLINE1}"
-					echo $NEWECHOOPT "           ${LOGLINE1}" >>${LOGFILE}
+					echo $NEWECHOOPT "           ${LOGLINE1}" >>${RKHLOGFILE}
 				fi
 			done
 		elif [ $SHOWWARNINGSONLY -eq 1 -a -n "`echo \"${LOGLINE1}\" | egrep '^\[([0-9][0-9]:){2}[0-9][0-9]\]         '`" ]; then
@@ -453,9 +453,9 @@ logtext() {
 	if [ "$1" = "--nodate" ]; then
 		:
 	elif [ "$1" = "--indent" ]; then
-		echo -n "           " >>${LOGFILE}
+		echo -n "           " >>${RKHLOGFILE}
 	else
-		echo -n "`date '+[%H:%M:%S] '`" >>${LOGFILE}
+		echo -n "`date '+[%H:%M:%S] '`" >>${RKHLOGFILE}
 	fi
 
 	NE1="n"
@@ -464,15 +464,15 @@ logtext() {
 
 	if [ "$NE1" = "y" ]; then
 		if [ "$MYSHELL" = "ksh" ]; then
-			[ "$1" = "-n" ] &&  echo -n "$2" >>$LOGFILE || echo $ECHOOPT $2 >>$LOGFILE
+			[ "$1" = "-n" ] &&  echo -n "$2" >>$RKHLOGFILE || echo $ECHOOPT $2 >>$RKHLOGFILE
 		else
-			echo $1 "$2" >>$LOGFILE
+			echo $1 "$2" >>$RKHLOGFILE
 		fi
 	else
 		if [ "$1" = "--nodate" -o "$1" = "--indent" ]; then
-			echo $ECHOOPT "$2" >>$LOGFILE
+			echo $ECHOOPT "$2" >>$RKHLOGFILE
 		else
-			echo $ECHOOPT "$1" >>$LOGFILE
+			echo $ECHOOPT "$1" >>$RKHLOGFILE
 		fi
 	fi
 }
@@ -627,7 +627,7 @@ suckit_extra_checks() {
 	HIDDEN=""
 
 	for EXT in xrk mem; do
-		get_temp_file "${TMPDIR}/suckitexttest"
+		get_temp_file "${RKHTMPDIR}/suckitexttest"
 
 		touch ${TEMPFILE}
 		rm -f ${TEMPFILE}.${EXT} >/dev/null 2>&1
@@ -975,16 +975,16 @@ get_installdir_option() {
 	# be set by the installer script, and has no default.
 	#
 
-	INSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | tail -1 | sed -e 's/INSTALLDIR=//' | tr -d '"' | tr -s ' '`
+	RKHINSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | tail -1 | sed -e 's/INSTALLDIR=//' | tr -d '"' | tr -s ' '`
 
-	if [ -z "${INSTALLDIR}" -o "${INSTALLDIR}" = " " ]; then
+	if [ -z "${RKHINSTALLDIR}" -o "${RKHINSTALLDIR}" = " " ]; then
 		echo "Invalid INSTALLDIR configuration option - no installation directory specified."
 		exit 1
-	elif [ ! -d "${INSTALLDIR}" ]; then
-		echo "Installation directory does not exist: ${INSTALLDIR}"
+	elif [ ! -d "${RKHINSTALLDIR}" ]; then
+		echo "Installation directory does not exist: ${RKHINSTALLDIR}"
 		exit 1
-	elif [ ! -r "${INSTALLDIR}" ]; then
-		echo "Installation directory is not readable: ${INSTALLDIR}"
+	elif [ ! -r "${RKHINSTALLDIR}" ]; then
+		echo "Installation directory is not readable: ${RKHINSTALLDIR}"
 		exit 1
 	fi
 
@@ -1045,26 +1045,26 @@ get_logfile_option() {
 	# it is empty or a space.
 	#
 
-	if [ -n "${LOGFILE}" ]; then
-		LOGFILE=`echo "${LOGFILE}" | tr -s ' '`
+	if [ -n "${RKHLOGFILE}" ]; then
+		RKHLOGFILE=`echo "${RKHLOGFILE}" | tr -s ' '`
 
-		if [ "${LOGFILE}" = " " ]; then
+		if [ "${RKHLOGFILE}" = " " ]; then
 			echo "Invalid --logfile option - no logfile name given."
 			exit 1
 		fi
 	else
-		LOGFILE=`grep '^LOGFILE=' ${CONFIGFILE} | tail -1`
+		RKHLOGFILE=`grep '^LOGFILE=' ${CONFIGFILE} | tail -1`
 
-		if [ -n "${LOGFILE}" ]; then
-			LOGFILE=`echo "${LOGFILE}" | sed -e 's/LOGFILE=//' | tr -d '"' | tr -s ' '`
+		if [ -n "${RKHLOGFILE}" ]; then
+			RKHLOGFILE=`echo "${RKHLOGFILE}" | sed -e 's/LOGFILE=//' | tr -d '"' | tr -s ' '`
 
-			if [ -z "${LOGFILE}" -o "${LOGFILE}" = " " ]; then
+			if [ -z "${RKHLOGFILE}" -o "${RKHLOGFILE}" = " " ]; then
 				echo "Invalid LOGFILE configuration option - no logfile name specified."
 				exit 1
 			fi
 		else
 			echo "Default logfile will be used ($DFLT_LOGFILE)."
-			LOGFILE=$DFLT_LOGFILE
+			RKHLOGFILE=$DFLT_LOGFILE
 		fi
 	fi
 
@@ -1072,33 +1072,33 @@ get_logfile_option() {
 	# Now check that the given option is useable.
 	#
 
-	if [ "${LOGFILE}" = "/dev/null" ]; then
+	if [ "${RKHLOGFILE}" = "/dev/null" ]; then
 		APPEND_LOG=0
 	else
-		LOGDIR=`echo "${LOGFILE}" | sed -e 's/\/[^/][^/]*$//'`
+		LOGDIR=`echo "${RKHLOGFILE}" | sed -e 's/\/[^/][^/]*$//'`
 
 		if [ -z "`echo ${LOGDIR} | grep '/'`" ]; then
 			LOGDIR="."
 		fi
 
-		if [ "${LOGDIR}" = "${LOGFILE}" ]; then
-			echo "No log filename given: ${LOGFILE}"
+		if [ "${LOGDIR}" = "${RKHLOGFILE}" ]; then
+			echo "No log filename given: ${RKHLOGFILE}"
 			exit 1
 		elif [ ! -d "${LOGDIR}" ]; then
-			echo "Logfile directory does not exist: ${LOGFILE}"
+			echo "Logfile directory does not exist: ${RKHLOGFILE}"
 			exit 1
 		elif [ ! -w "${LOGDIR}" ]; then
-			echo "Logfile directory is not writable: ${LOGFILE}"
+			echo "Logfile directory is not writable: ${RKHLOGFILE}"
 			exit 1
 		elif [ ! -r "${LOGDIR}" ]; then
-			echo "Logfile directory is not readable: ${LOGFILE}"
+			echo "Logfile directory is not readable: ${RKHLOGFILE}"
 			exit 1
-		elif [ -h "${LOGFILE}" ]; then
-			echo "Logfile is a symbolic link: ${LOGFILE}"
+		elif [ -h "${RKHLOGFILE}" ]; then
+			echo "Logfile is a symbolic link: ${RKHLOGFILE}"
 			echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
 			exit 1
-		elif [ -e "${LOGFILE}" -a ! -f "${LOGFILE}" ]; then
-			echo "Logfile already exists but it is not a file: ${LOGFILE}"
+		elif [ -e "${RKHLOGFILE}" -a ! -f "${RKHLOGFILE}" ]; then
+			echo "Logfile already exists but it is not a file: ${RKHLOGFILE}"
 			exit 1
 		fi
 
@@ -1139,25 +1139,25 @@ get_tmpdir_option() {
 	# it is empty or a space.
 	#
 
-	if [ -n "${TMPDIR}" ]; then
-		TMPDIR=`echo "${TMPDIR}" | tr -s ' '`
+	if [ -n "${RKHTMPDIR}" ]; then
+		RKHTMPDIR=`echo "${RKHTMPDIR}" | tr -s ' '`
 
-		if [ "${TMPDIR}" = " " ]; then
+		if [ "${RKHTMPDIR}" = " " ]; then
 			echo "Invalid --tmpdir option - no directory name given."
 			exit 1
 		fi
 	else
-		TMPDIR=`grep '^TMPDIR=' ${CONFIGFILE} | tail -1`
+		RKHTMPDIR=`grep '^TMPDIR=' ${CONFIGFILE} | tail -1`
 
-		if [ -n "${TMPDIR}" ]; then
-			TMPDIR=`echo "${TMPDIR}" | sed -e 's/TMPDIR=//' | tr -d '"' | tr -s ' '`
+		if [ -n "${RKHTMPDIR}" ]; then
+			RKHTMPDIR=`echo "${RKHTMPDIR}" | sed -e 's/TMPDIR=//' | tr -d '"' | tr -s ' '`
 
-			if [ -z "${TMPDIR}" -o "${TMPDIR}" = " " ]; then
+			if [ -z "${RKHTMPDIR}" -o "${RKHTMPDIR}" = " " ]; then
 				echo "Invalid TMPDIR configuration option - no directory name specified."
 				exit 1
 			fi
 		else
-			TMPDIR="${INSTALLDIR}/lib/rkhunter/tmp"
+			RKHTMPDIR="${RKHINSTALLDIR}/lib/rkhunter/tmp"
 		fi
 	fi
 
@@ -1165,21 +1165,21 @@ get_tmpdir_option() {
 	# Now check that the given option is useable.
 	#
 
-	if [ ! -d "${TMPDIR}" ]; then
-		echo "Temporary directory does not exist: ${TMPDIR}"
+	if [ ! -d "${RKHTMPDIR}" ]; then
+		echo "Temporary directory does not exist: ${RKHTMPDIR}"
 		exit 1
-	elif [ ! -w "${TMPDIR}" ]; then
-		echo "Temporary directory is not writable: ${TMPDIR}"
+	elif [ ! -w "${RKHTMPDIR}" ]; then
+		echo "Temporary directory is not writable: ${RKHTMPDIR}"
 		exit 1
-	elif [ ! -r "${TMPDIR}" ]; then
-		echo "Temporary directory is not readable: ${TMPDIR}"
+	elif [ ! -r "${RKHTMPDIR}" ]; then
+		echo "Temporary directory is not readable: ${RKHTMPDIR}"
 		exit 1
-	elif [ "${TMPDIR}" = "${ROOTDIR}/tmp" -o "${TMPDIR}" = "${ROOTDIR}/var/tmp" ]; then
-		echo "Do not use ${TMPDIR} as the temporary directory."
+	elif [ "${RKHTMPDIR}" = "${RKHROOTDIR}/tmp" -o "${RKHTMPDIR}" = "${RKHROOTDIR}/var/tmp" ]; then
+		echo "Do not use ${RKHTMPDIR} as the temporary directory."
 		echo "This directory will be used by rkhunter to contain system files, so it must be secure."
 		exit 1
-	elif [ "${TMPDIR}" = "${ROOTDIR}/etc" ]; then
-		echo "Do not use ${TMPDIR} as the temporary directory."
+	elif [ "${RKHTMPDIR}" = "${RKHROOTDIR}/etc" ]; then
+		echo "Do not use ${RKHTMPDIR} as the temporary directory."
 		echo "This directory will be used by rkhunter to copy and delete certain system files."
 		exit 1
 	fi
@@ -1214,7 +1214,7 @@ get_dbdir_option() {
 				exit 1
 			fi
 		else
-			DB_PATH="${INSTALLDIR}/lib/rkhunter/db"
+			DB_PATH="${RKHINSTALLDIR}/lib/rkhunter/db"
 		fi
 	fi
 
@@ -1357,7 +1357,7 @@ get_bindir_option() {
 	#
 	# This is a simple check that each directory begins with
 	# a '.' or '/'. We allow non-existent directories because
-	# this list may be used with ROOTDIR. As such the directory
+	# this list may be used with RKHROOTDIR. As such the directory
 	# may not exist on the local host, but may exist on a
 	# remotely diagnosed system.
 	#
@@ -1451,20 +1451,20 @@ get_rootdir_option() {
 	# it is empty or a space.
 	#
 
-	if [ -n "${ROOTDIR}" ]; then
-		ROOTDIR=`echo "${ROOTDIR}" | tr -s ' '`
+	if [ -n "${RKHROOTDIR}" ]; then
+		RKHROOTDIR=`echo "${RKHROOTDIR}" | tr -s ' '`
 
-		if [ "${ROOTDIR}" = " " ]; then
+		if [ "${RKHROOTDIR}" = " " ]; then
 			echo "Invalid --rootdir option - no directory name given."
 			exit 1
 		fi
 	else
-		ROOTDIR=`grep '^ROOTDIR=' ${CONFIGFILE} | tail -1`
+		RKHROOTDIR=`grep '^ROOTDIR=' ${CONFIGFILE} | tail -1`
 
-		if [ -n "${ROOTDIR}" ]; then
-			ROOTDIR=`echo "${ROOTDIR}" | sed -e 's/ROOTDIR=//' | tr -d '"' | tr -s ' '`
+		if [ -n "${RKHROOTDIR}" ]; then
+			RKHROOTDIR=`echo "${RKHROOTDIR}" | sed -e 's/ROOTDIR=//' | tr -d '"' | tr -s ' '`
 
-			if [ -z "${ROOTDIR}" -o "${ROOTDIR}" = " " ]; then
+			if [ -z "${RKHROOTDIR}" -o "${RKHROOTDIR}" = " " ]; then
 				echo "Invalid ROOTDIR configuration option - no directory name specified."
 				exit 1
 			fi
@@ -1475,12 +1475,12 @@ get_rootdir_option() {
 	# Now check that the given option is useable.
 	#
 
-	if [ -n "${ROOTDIR}" ]; then
-		if [ ! -d "${ROOTDIR}" ]; then
-			echo "The root directory does not exist: ${ROOTDIR}"
+	if [ -n "${RKHROOTDIR}" ]; then
+		if [ ! -d "${RKHROOTDIR}" ]; then
+			echo "The root directory does not exist: ${RKHROOTDIR}"
 			exit 1
-		elif [ ! -r "${ROOTDIR}" ]; then
-			echo "The root directory is not readable: ${ROOTDIR}"
+		elif [ ! -r "${RKHROOTDIR}" ]; then
+			echo "The root directory is not readable: ${RKHROOTDIR}"
 			exit 1
 		fi
 	fi
@@ -1966,7 +1966,7 @@ get_if_prelinked() {
 	LIBSAFE_TEST1=""
 	LIBSAFE_TEST2=""
 
-	if [ -f "${ROOTDIR}/etc/prelink.cache" ]; then
+	if [ -f "${RKHROOTDIR}/etc/prelink.cache" ]; then
 		PRELINK_CMD=`find_cmd prelink`
 
 		# Test (twice) for existance of Libsafe since this seems to
@@ -1976,12 +1976,12 @@ get_if_prelinked() {
 		# If Libsafe is found *and* this is a prelink system, we'll
 		# skip the prelink test.
 		#
-		if [ -f "${ROOTDIR}/etc/ld.so.preload" ]; then
-			LIBSAFE_TEST1=`grep libsafe ${ROOTDIR}/etc/ld.so.preload 2>&1`
+		if [ -f "${RKHROOTDIR}/etc/ld.so.preload" ]; then
+			LIBSAFE_TEST1=`grep libsafe ${RKHROOTDIR}/etc/ld.so.preload 2>&1`
 		fi
 
-		if [ -n "${LDD_CMD}" -a -f "${ROOTDIR}/lib/libdl.so.?" ]; then
-			LIBSAFE_TEST2=`${LDD_CMD} ${ROOTDIR}/lib/libdl.so.? | grep libsafe 2>&1`
+		if [ -n "${LDD_CMD}" -a -f "${RKHROOTDIR}/lib/libdl.so.?" ]; then
+			LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib/libdl.so.? | grep libsafe 2>&1`
 		fi
 
 		if [ -z "${PRELINK_CMD}" ]; then
@@ -2312,28 +2312,28 @@ rkh_dat_get_os_info() {
 
 	ARCH=`uname -m 2>/dev/null`
 
-	REL_FILES="${ROOTDIR}/etc/lsb-release ${ROOTDIR}/etc/debian_version ${ROOTDIR}/etc/slackware-version ${ROOTDIR}/var/ipcop/general-functions.pl ${ROOTDIR}/etc/release ${ROOTDIR}/etc/*-release"
+	REL_FILES="${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
 
 	for FNAME in ${REL_FILES}; do
 		if [ -f "${FNAME}" -a ! -h "${FNAME}" ]; then
 			RELEASE=$FNAME
 
 			case "${RELEASE}" in
-			${ROOTDIR}/etc/lsb-release)
+			${RKHROOTDIR}/etc/lsb-release)
 				OSNAME=`cat ${RELEASE} | grep '^DISTRIB_DESCRIPTION=' | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
 				;;
-			${ROOTDIR}/etc/gentoo-release)
+			${RKHROOTDIR}/etc/gentoo-release)
 				GENTOO=1
-				if [ -h ${ROOTDIR}/etc/make.profile ]; then
-					OSNAME="Gentoo `ls -l ${ROOTDIR}/etc/make.profile 2>/dev/null | sed -e 's/^.*\/\([^\/]*\)$/\1/'`"
+				if [ -h ${RKHROOTDIR}/etc/make.profile ]; then
+					OSNAME="Gentoo `ls -l ${RKHROOTDIR}/etc/make.profile 2>/dev/null | sed -e 's/^.*\/\([^\/]*\)$/\1/'`"
 				else
 					OSNAME=`head -n 1 ${RELEASE} | tr -s ' '`
 				fi
 				;;
-			${ROOTDIR}/var/ipcop/general-functions.pl)
+			${RKHROOTDIR}/var/ipcop/general-functions.pl)
 				OSNAME=`grep 'version *=' ${RELEASE} | head -n 1`
 				;;
-			${ROOTDIR}/etc/debian_version)
+			${RKHROOTDIR}/etc/debian_version)
 				OSNAME="Debian `cat ${RELEASE}`"
 				;;
 			*)
@@ -2402,6 +2402,7 @@ rkh_dat_set_file_properties() {
 
 	DIR_FILE_COUNT=0
 	PROP_FILE_LIST_COUNT=0
+	NOHASH_COUNT=0
 
 	display --to LOG --type PLAIN SET_FILE_PROP_START
 
@@ -2460,6 +2461,16 @@ rkh_dat_set_file_properties() {
 
 			if [ -n "${HCMD}" ]; then
 				SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
+
+				if [ -z "${SYSHASH}" ]; then
+					NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
+
+					display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${DIR}/${FNAME}"
+
+					RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1 | tr '\n' ':' | sed -e 's/:$//'`
+
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
+				fi
 			fi
 
 			if [ -n "${SCMD}" ]; then
@@ -2479,7 +2490,12 @@ rkh_dat_set_file_properties() {
 		RKHTMPVAR="created"
 	fi
 
-	display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
+	if [ $NOHASH_COUNT -eq 0 ]; then
+		display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
+	else
+		RET_CODE=1
+		display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+	fi
 
 	return
 }
@@ -2498,7 +2514,7 @@ do_prop_update() {
 	# First we need to get a temporary file name to use.
 	#
 
-	get_temp_file "${TMPDIR}/rkhunter.dat"
+	get_temp_file "${RKHTMPDIR}/rkhunter.dat"
 	RKHDAT_FILE=$TEMPFILE
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_FILE}"
@@ -2532,7 +2548,7 @@ do_prop_update() {
 		display --to LOG --type INFO PROPUPD_REL_FILE "${RELEASE}"
 	else
 		display --to LOG --type INFO PROPUPD_NO_REL_FILE
-		display --to LOG --type PLAIN PROPUPD_NO_REL_FILE2 "      `ls -d ${ROOTDIR}/etc/*release* ${ROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
+		display --to LOG --type PLAIN PROPUPD_NO_REL_FILE2 "      `ls -d ${RKHROOTDIR}/etc/*release* ${RKHROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
 	fi
 
 	if [ -n "${OSNAME}" ]; then
@@ -2630,7 +2646,7 @@ get_next_mirror() {
 	# We need to get a temporary file name to use.
 	#
 
-	get_temp_file "${TMPDIR}/mirrors.dat"
+	get_temp_file "${RKHTMPDIR}/mirrors.dat"
 	MIRRORS_FILE=$TEMPFILE
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${MIRRORS_FILE}"
@@ -2917,7 +2933,7 @@ do_update() {
 	# First we need to get a temporary file name to use.
 	#
 
-	get_temp_file "${TMPDIR}/rkhunter.upd"
+	get_temp_file "${RKHTMPDIR}/rkhunter.upd"
 	RKHUPD_FILE=$TEMPFILE
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHUPD_FILE}"
@@ -3029,7 +3045,7 @@ do_update() {
 		if [ $NOLOG -eq 1 ]; then
 			display --to SCREEN --type PLAIN --nl --nl-after CHECK_WARNINGS_FOUND_RERUN
 		else
-			display --to SCREEN --type PLAIN --nl --nl-after CHECK_WARNINGS_FOUND_CHK_LOG "${LOGFILE}"
+			display --to SCREEN --type PLAIN --nl --nl-after CHECK_WARNINGS_FOUND_CHK_LOG "${RKHLOGFILE}"
 		fi
 	fi
 
@@ -3058,7 +3074,7 @@ do_versioncheck() {
 	# First we need to get a temporary file name to use.
 	#
 
-	get_temp_file "${TMPDIR}/rkhunter.vc"
+	get_temp_file "${RKHTMPDIR}/rkhunter.vc"
 	RKHVC_FILE=$TEMPFILE
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHVC_FILE}"
@@ -3140,179 +3156,179 @@ do_system_check_initialisation() {
 
 
 	# 55808 Variant A
-	W55808A_FILES="${ROOTDIR}/tmp/.../r
-		       ${ROOTDIR}/tmp/.../a"
+	W55808A_FILES="${RKHROOTDIR}/tmp/.../r
+		       ${RKHROOTDIR}/tmp/.../a"
 
 
 	# AjaKit Rootkit
-	AJAKIT_FILES="${ROOTDIR}/dev/tux/.addr
-		      ${ROOTDIR}/dev/tux/.proc
-		      ${ROOTDIR}/dev/tux/.file
-		      ${ROOTDIR}/lib/.libgh-gh/cleaner
-		      ${ROOTDIR}/lib/.libgh-gh/Patch/patch
-		      ${ROOTDIR}/lib/.libgh-gh/sb0k"
-	AJAKIT_DIRS="${ROOTDIR}/dev/tux
-		     ${ROOTDIR}/lib/.libgh-gh"
+	AJAKIT_FILES="${RKHROOTDIR}/dev/tux/.addr
+		      ${RKHROOTDIR}/dev/tux/.proc
+		      ${RKHROOTDIR}/dev/tux/.file
+		      ${RKHROOTDIR}/lib/.libgh-gh/cleaner
+		      ${RKHROOTDIR}/lib/.libgh-gh/Patch/patch
+		      ${RKHROOTDIR}/lib/.libgh-gh/sb0k"
+	AJAKIT_DIRS="${RKHROOTDIR}/dev/tux
+		     ${RKHROOTDIR}/lib/.libgh-gh"
 
 
 	# aPa Kit Rootkit
-	APAKIT_FILES="${ROOTDIR}/usr/share/.aPa"
+	APAKIT_FILES="${RKHROOTDIR}/usr/share/.aPa"
 
 
 	# Apache Worm
-	APACHEWORM_FILES="${ROOTDIR}/bin/.log"
+	APACHEWORM_FILES="${RKHROOTDIR}/bin/.log"
 
 
 	# Ambient (ark) Rootkit
-	ARK_FILES="${ROOTDIR}/usr/lib/.ark?
-		   ${ROOTDIR}/dev/ptyxx/.log
-		   ${ROOTDIR}/dev/ptyxx/.file"
-	ARK_DIRS="${ROOTDIR}/dev/ptyxx"
+	ARK_FILES="${RKHROOTDIR}/usr/lib/.ark?
+		   ${RKHROOTDIR}/dev/ptyxx/.log
+		   ${RKHROOTDIR}/dev/ptyxx/.file"
+	ARK_DIRS="${RKHROOTDIR}/dev/ptyxx"
 
 
 	# Balaur Rootkit 2.0 (LRK5 based)
-	BALAUR_FILES="${ROOTDIR}/usr/lib/liblog.o"
-	BALAUR_DIRS="${ROOTDIR}/usr/lib/.kinetic
-		     ${ROOTDIR}/usr/lib/.egcs
-		     ${ROOTDIR}/usr/lib/.wormie"
+	BALAUR_FILES="${RKHROOTDIR}/usr/lib/liblog.o"
+	BALAUR_DIRS="${RKHROOTDIR}/usr/lib/.kinetic
+		     ${RKHROOTDIR}/usr/lib/.egcs
+		     ${RKHROOTDIR}/usr/lib/.wormie"
 
 
 	# Beastkit Rootkit
-	BEASTKIT_FILES="${ROOTDIR}/usr/sbin/arobia
-			${ROOTDIR}/usr/sbin/idrun
-			${ROOTDIR}/usr/lib/elm/arobia/elm
-			${ROOTDIR}/usr/lib/elm/arobia/elm/hk
-			${ROOTDIR}/usr/lib/elm/arobia/elm/hk.pub
-			${ROOTDIR}/usr/lib/elm/arobia/elm/sc
-			${ROOTDIR}/usr/lib/elm/arobia/elm/sd.pp
-			${ROOTDIR}/usr/lib/elm/arobia/elm/sdco
-			${ROOTDIR}/usr/lib/elm/arobia/elm/srsd"
-	BEASTKIT_DIRS="${ROOTDIR}/lib/ldd.so/bktools"
+	BEASTKIT_FILES="${RKHROOTDIR}/usr/sbin/arobia
+			${RKHROOTDIR}/usr/sbin/idrun
+			${RKHROOTDIR}/usr/lib/elm/arobia/elm
+			${RKHROOTDIR}/usr/lib/elm/arobia/elm/hk
+			${RKHROOTDIR}/usr/lib/elm/arobia/elm/hk.pub
+			${RKHROOTDIR}/usr/lib/elm/arobia/elm/sc
+			${RKHROOTDIR}/usr/lib/elm/arobia/elm/sd.pp
+			${RKHROOTDIR}/usr/lib/elm/arobia/elm/sdco
+			${RKHROOTDIR}/usr/lib/elm/arobia/elm/srsd"
+	BEASTKIT_DIRS="${RKHROOTDIR}/lib/ldd.so/bktools"
 
 
 	# beX2 Rootkit
-	BEX_DIRS="${ROOTDIR}/usr/include/bex"
+	BEX_DIRS="${RKHROOTDIR}/usr/include/bex"
 
 
 	# BOBkit Rootkit
-	BOBKIT_FILES="${ROOTDIR}/usr/sbin/ntpsx
-		      ${ROOTDIR}/usr/lib/.../ls
-		      ${ROOTDIR}/usr/lib/.../netstat
-		      ${ROOTDIR}/usr/lib/.../lsof
-		      ${ROOTDIR}/usr/lib/.../bkit-ssh/bkit-shdcfg
-		      ${ROOTDIR}/usr/lib/.../bkit-ssh/bkit-shhk
-		      ${ROOTDIR}/usr/lib/.../bkit-ssh/bkit-pw
-		      ${ROOTDIR}/usr/lib/.../bkit-ssh/bkit-shrs
-		      ${ROOTDIR}/usr/lib/.../uconf.inv
-		      ${ROOTDIR}/usr/lib/.../psr
-		      ${ROOTDIR}/usr/lib/.../find
-		      ${ROOTDIR}/usr/lib/.../pstree
-		      ${ROOTDIR}/usr/lib/.../slocate
-		      ${ROOTDIR}/usr/lib/.../du
-		      ${ROOTDIR}/usr/lib/.../top"
-	BOBKIT_DIRS="${ROOTDIR}/usr/lib/...
-		     ${ROOTDIR}/usr/lib/.../bkit-ssh
-		     ${ROOTDIR}/usr/lib/.bkit-
-		     ${ROOTDIR}/tmp/.bkp"
+	BOBKIT_FILES="${RKHROOTDIR}/usr/sbin/ntpsx
+		      ${RKHROOTDIR}/usr/lib/.../ls
+		      ${RKHROOTDIR}/usr/lib/.../netstat
+		      ${RKHROOTDIR}/usr/lib/.../lsof
+		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shdcfg
+		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shhk
+		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-pw
+		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shrs
+		      ${RKHROOTDIR}/usr/lib/.../uconf.inv
+		      ${RKHROOTDIR}/usr/lib/.../psr
+		      ${RKHROOTDIR}/usr/lib/.../find
+		      ${RKHROOTDIR}/usr/lib/.../pstree
+		      ${RKHROOTDIR}/usr/lib/.../slocate
+		      ${RKHROOTDIR}/usr/lib/.../du
+		      ${RKHROOTDIR}/usr/lib/.../top"
+	BOBKIT_DIRS="${RKHROOTDIR}/usr/lib/...
+		     ${RKHROOTDIR}/usr/lib/.../bkit-ssh
+		     ${RKHROOTDIR}/usr/lib/.bkit-
+		     ${RKHROOTDIR}/tmp/.bkp"
 
 
 	# CiNIK Worm (Slapper.B variant)
-	CINIK_DIRS="${ROOTDIR}/tmp/.font-unix/.cinik"
-	CINIK_FILES="${ROOTDIR}/tmp/.cinik"
+	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
+	CINIK_FILES="${RKHROOTDIR}/tmp/.cinik"
 
 
 	# Danny-Boy's Abuse Kit
-	DANNYBOYS_FILES="${ROOTDIR}/dev/mdev
-			 ${ROOTDIR}/usr/lib/libX.a"
+	DANNYBOYS_FILES="${RKHROOTDIR}/dev/mdev
+			 ${RKHROOTDIR}/usr/lib/libX.a"
 
 
 	# Devil Rootkit
-	DEVIL_FILES="${ROOTDIR}/var/lib/games/.src
-		     ${ROOTDIR}/dev/dsx
-		     ${ROOTDIR}/dev/caca"
+	DEVIL_FILES="${RKHROOTDIR}/var/lib/games/.src
+		     ${RKHROOTDIR}/dev/dsx
+		     ${RKHROOTDIR}/dev/caca"
 
 
 	# Dica-Kit (T0rn variant) Rootkit
-	DICA_FILES="${ROOTDIR}/lib/.sso
-		    ${ROOTDIR}/lib/.so
-		    ${ROOTDIR}/var/run/...dica/clean
-		    ${ROOTDIR}/var/run/...dica/xl
-		    ${ROOTDIR}/var/run/...dica/xdr
-		    ${ROOTDIR}/var/run/...dica/psg
-		    ${ROOTDIR}/var/run/...dica/secure
-		    ${ROOTDIR}/var/run/...dica/rdx
-		    ${ROOTDIR}/var/run/...dica/va
-		    ${ROOTDIR}/var/run/...dica/cl.sh
-		    ${ROOTDIR}/usr/bin/.etc"
-	DICA_DIRS="${ROOTDIR}/var/run/...dica
-		   ${ROOTDIR}/var/run/...dica/mh
-		   ${ROOTDIR}/var/run/...dica/scan"
+	DICA_FILES="${RKHROOTDIR}/lib/.sso
+		    ${RKHROOTDIR}/lib/.so
+		    ${RKHROOTDIR}/var/run/...dica/clean
+		    ${RKHROOTDIR}/var/run/...dica/xl
+		    ${RKHROOTDIR}/var/run/...dica/xdr
+		    ${RKHROOTDIR}/var/run/...dica/psg
+		    ${RKHROOTDIR}/var/run/...dica/secure
+		    ${RKHROOTDIR}/var/run/...dica/rdx
+		    ${RKHROOTDIR}/var/run/...dica/va
+		    ${RKHROOTDIR}/var/run/...dica/cl.sh
+		    ${RKHROOTDIR}/usr/bin/.etc"
+	DICA_DIRS="${RKHROOTDIR}/var/run/...dica
+		   ${RKHROOTDIR}/var/run/...dica/mh
+		   ${RKHROOTDIR}/var/run/...dica/scan"
 
 
 	# Dreams Rootkit
-	DREAMS_FILES="${ROOTDIR}/dev/ttyoa
-		      ${ROOTDIR}/dev/ttyof
-		      ${ROOTDIR}/dev/ttyop
-		      ${ROOTDIR}/usr/bin/sense
-		      ${ROOTDIR}/usr/bin/sl2
-		      ${ROOTDIR}/usr/bin/logclear
-		      ${ROOTDIR}/usr/bin/(swapd)
-		      ${ROOTDIR}/usr/bin/snfs
-		      ${ROOTDIR}/usr/lib/libsss"
-	DREAMS_DIRS="${ROOTDIR}/dev/ida/.hpd"
+	DREAMS_FILES="${RKHROOTDIR}/dev/ttyoa
+		      ${RKHROOTDIR}/dev/ttyof
+		      ${RKHROOTDIR}/dev/ttyop
+		      ${RKHROOTDIR}/usr/bin/sense
+		      ${RKHROOTDIR}/usr/bin/sl2
+		      ${RKHROOTDIR}/usr/bin/logclear
+		      ${RKHROOTDIR}/usr/bin/(swapd)
+		      ${RKHROOTDIR}/usr/bin/snfs
+		      ${RKHROOTDIR}/usr/lib/libsss"
+	DREAMS_DIRS="${RKHROOTDIR}/dev/ida/.hpd"
 
 
 	# Duarawkz Rootkit
-	DUARAWKZ_FILES="${ROOTDIR}/usr/bin/duarawkz/loginpass"
-	DUARAWKZ_DIRS="${ROOTDIR}/usr/bin/duarawkz"
+	DUARAWKZ_FILES="${RKHROOTDIR}/usr/bin/duarawkz/loginpass"
+	DUARAWKZ_DIRS="${RKHROOTDIR}/usr/bin/duarawkz"
 
 	# ENYE LKM v1.1
 	# Installer default.
-	ENYELKM_FILES="${ROOTDIR}/etc/.enyelkmHIDE^IT.ko"
+	ENYELKM_FILES="${RKHROOTDIR}/etc/.enyelkmHIDE^IT.ko"
 
 	# Flea Linux Rootkit
-	FLEA_FILES="${ROOTDIR}/etc/ld.so.hash
-		    ${ROOTDIR}/lib/security/.config/ssh/ssh_host_key
-		    ${ROOTDIR}/lib/security/.config/ssh/ssh_host_key.pub
-		    ${ROOTDIR}/lib/security/.config/ssh/ssh_random_seed
-		    ${ROOTDIR}/usr/bin/ssh2d
-		    ${ROOTDIR}/usr/lib/ldlibns.so
-		    ${ROOTDIR}/usr/lib/ldlibpst.so
-		    ${ROOTDIR}/usr/lib/ldlibdu.so
-		    ${ROOTDIR}/usr/lib/ldlibct.so"
-	FLEA_DIRS="${ROOTDIR}/lib/security/.config/ssh
-		   ${ROOTDIR}/dev/..0
-		   ${ROOTDIR}/dev/..0/backup"
+	FLEA_FILES="${RKHROOTDIR}/etc/ld.so.hash
+		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key
+		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key.pub
+		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_random_seed
+		    ${RKHROOTDIR}/usr/bin/ssh2d
+		    ${RKHROOTDIR}/usr/lib/ldlibns.so
+		    ${RKHROOTDIR}/usr/lib/ldlibpst.so
+		    ${RKHROOTDIR}/usr/lib/ldlibdu.so
+		    ${RKHROOTDIR}/usr/lib/ldlibct.so"
+	FLEA_DIRS="${RKHROOTDIR}/lib/security/.config/ssh
+		   ${RKHROOTDIR}/dev/..0
+		   ${RKHROOTDIR}/dev/..0/backup"
 
 
 	# FreeBSD Rootkit
-	FREEBSD_RK_FILES="${ROOTDIR}/usr/lib/.fx/sched_host.2
-			  ${ROOTDIR}/usr/lib/.fx/random_d.2
-			  ${ROOTDIR}/usr/lib/.fx/set_pid.2
-			  ${ROOTDIR}/usr/lib/.fx/cons.saver
-			  ${ROOTDIR}/usr/lib/.fx/adore/adore/adore.ko
-			  ${ROOTDIR}/bin/sysback
-			  ${ROOTDIR}/usr/local/bin/sysback"
-	FREEBSD_RK_DIRS="${ROOTDIR}/usr/lib/.fx
-			 ${ROOTDIR}/usr/lib/.fx/adore"
+	FREEBSD_RK_FILES="${RKHROOTDIR}/usr/lib/.fx/sched_host.2
+			  ${RKHROOTDIR}/usr/lib/.fx/random_d.2
+			  ${RKHROOTDIR}/usr/lib/.fx/set_pid.2
+			  ${RKHROOTDIR}/usr/lib/.fx/cons.saver
+			  ${RKHROOTDIR}/usr/lib/.fx/adore/adore/adore.ko
+			  ${RKHROOTDIR}/bin/sysback
+			  ${RKHROOTDIR}/usr/local/bin/sysback"
+	FREEBSD_RK_DIRS="${RKHROOTDIR}/usr/lib/.fx
+			 ${RKHROOTDIR}/usr/lib/.fx/adore"
 
 
 	# Fuckit Rootkit
-	FUCKIT_FILES="${ROOTDIR}/dev/proc/fuckit/hax0r
-		      ${ROOTDIR}/dev/proc/fuckit/hax0rshell
-		      ${ROOTDIR}/dev/proc/fuckit/config/lports
-		      ${ROOTDIR}/dev/proc/fuckit/config/rports
-		      ${ROOTDIR}/dev/proc/fuckit/config/rkconf
-		      ${ROOTDIR}/dev/proc/fuckit/config/password
-		      ${ROOTDIR}/dev/proc/fuckit/config/progs
-		      ${ROOTDIR}/dev/proc/system-bins/init"
+	FUCKIT_FILES="${RKHROOTDIR}/dev/proc/fuckit/hax0r
+		      ${RKHROOTDIR}/dev/proc/fuckit/hax0rshell
+		      ${RKHROOTDIR}/dev/proc/fuckit/config/lports
+		      ${RKHROOTDIR}/dev/proc/fuckit/config/rports
+		      ${RKHROOTDIR}/dev/proc/fuckit/config/rkconf
+		      ${RKHROOTDIR}/dev/proc/fuckit/config/password
+		      ${RKHROOTDIR}/dev/proc/fuckit/config/progs
+		      ${RKHROOTDIR}/dev/proc/system-bins/init"
 
 
 	# GasKit Rootkit
-	GASKIT_FILES="${ROOTDIR}/dev/dev/gaskit/sshd/sshdd"
-	GASKIT_DIRS="${ROOTDIR}/dev/dev
-		     ${ROOTDIR}/dev/dev/gaskit
-		     ${ROOTDIR}/dev/dev/gaskit/sshd"
+	GASKIT_FILES="${RKHROOTDIR}/dev/dev/gaskit/sshd/sshdd"
+	GASKIT_DIRS="${RKHROOTDIR}/dev/dev
+		     ${RKHROOTDIR}/dev/dev/gaskit
+		     ${RKHROOTDIR}/dev/dev/gaskit/sshd"
 
 
 	# Heroin LKM
@@ -3320,478 +3336,478 @@ do_system_check_initialisation() {
 
 
 	# HjC Kit Rootkit
-	HJCKIT_DIRS="${ROOTDIR}/dev/.hijackerz"
+	HJCKIT_DIRS="${RKHROOTDIR}/dev/.hijackerz"
 
 
 	# ignoKit Rootkit
-	IGNOKIT_FILES="${ROOTDIR}/lib/defs/p
-		       ${ROOTDIR}/lib/defs/q
-		       ${ROOTDIR}/lib/defs/r
-		       ${ROOTDIR}/lib/defs/s
-		       ${ROOTDIR}/lib/defs/t
-		       ${ROOTDIR}/usr/lib/defs/p
-		       ${ROOTDIR}/usr/lib/defs/q
-		       ${ROOTDIR}/usr/lib/defs/r
-		       ${ROOTDIR}/usr/lib/defs/s
-		       ${ROOTDIR}/usr/lib/defs/t
-		       ${ROOTDIR}/usr/lib/.libigno/pkunsec
-		       ${ROOTDIR}/usr/lib/.libigno/.igno/psybnc/psybnc"
-	IGNOKIT_DIRS="${ROOTDIR}/usr/lib/.libigno
-		      ${ROOTDIR}/usr/lib/.libigno/.igno/"
+	IGNOKIT_FILES="${RKHROOTDIR}/lib/defs/p
+		       ${RKHROOTDIR}/lib/defs/q
+		       ${RKHROOTDIR}/lib/defs/r
+		       ${RKHROOTDIR}/lib/defs/s
+		       ${RKHROOTDIR}/lib/defs/t
+		       ${RKHROOTDIR}/usr/lib/defs/p
+		       ${RKHROOTDIR}/usr/lib/defs/q
+		       ${RKHROOTDIR}/usr/lib/defs/r
+		       ${RKHROOTDIR}/usr/lib/defs/s
+		       ${RKHROOTDIR}/usr/lib/defs/t
+		       ${RKHROOTDIR}/usr/lib/.libigno/pkunsec
+		       ${RKHROOTDIR}/usr/lib/.libigno/.igno/psybnc/psybnc"
+	IGNOKIT_DIRS="${RKHROOTDIR}/usr/lib/.libigno
+		      ${RKHROOTDIR}/usr/lib/.libigno/.igno/"
 
 
 	# ImperalsS-FBRK (FreeBSD Rootkit)
-	IMPFRB_DIRS="${ROOTDIR}/dev/fd/.88
-		     ${ROOTDIR}/dev/fd/.99"
+	IMPFRB_DIRS="${RKHROOTDIR}/dev/fd/.88
+		     ${RKHROOTDIR}/dev/fd/.99"
 
 
 	# Irix Rootkit (for Irix 6.x)
-	IRIXRK_DIRS="${ROOTDIR}/dev/pts/01
-		     ${ROOTDIR}/dev/pts/01/backup
-		     ${ROOTDIR}/dev/pts/01/etc
-		     ${ROOTDIR}/dev/pts/01/tmp"
+	IRIXRK_DIRS="${RKHROOTDIR}/dev/pts/01
+		     ${RKHROOTDIR}/dev/pts/01/backup
+		     ${RKHROOTDIR}/dev/pts/01/etc
+		     ${RKHROOTDIR}/dev/pts/01/tmp"
 
 
 	# Kitko Rootkit
-	KITKO_DIRS="${ROOTDIR}/usr/src/redhat/SRPMS/..."
+	KITKO_DIRS="${RKHROOTDIR}/usr/src/redhat/SRPMS/..."
 
 
 	# Knark Rootkit
-	KNARK_FILES="${ROOTDIR}/proc/knark/pids"
-	KNARK_DIRS="${ROOTDIR}/proc/knark"
+	KNARK_FILES="${RKHROOTDIR}/proc/knark/pids"
+	KNARK_DIRS="${RKHROOTDIR}/proc/knark"
 
 
 	# Lion Worm
-	LION_FILES="${ROOTDIR}/bin/in.telnetd
-		    ${ROOTDIR}/bin/mjy
-		    ${ROOTDIR}/usr/man/man1/man1/lib/.lib/mjy
-		    ${ROOTDIR}/usr/man/man1/man1/lib/.lib/in.telnetd
-		    ${ROOTDIR}/usr/man/man1/man1/lib/.lib/.x
-		    ${ROOTDIR}/dev/.lib/lib/scan/1i0n.sh
-		    ${ROOTDIR}/dev/.lib/lib/scan/hack.sh
-		    ${ROOTDIR}/dev/.lib/lib/scan/bind
-		    ${ROOTDIR}/dev/.lib/lib/scan/randb
-		    ${ROOTDIR}/dev/.lib/lib/scan/scan.sh
-		    ${ROOTDIR}/dev/.lib/lib/scan/pscan
-		    ${ROOTDIR}/dev/.lib/lib/scan/star.sh
-		    ${ROOTDIR}/dev/.lib/lib/scan/bindx.sh
-		    ${ROOTDIR}/dev/.lib/lib/scan/bindname.log
-		    ${ROOTDIR}/dev/.lib/lib/1i0n.sh
-		    ${ROOTDIR}/dev/.lib/lib/lib/netstat
-		    ${ROOTDIR}/dev/.lib/lib/lib/dev/.1addr
-		    ${ROOTDIR}/dev/.lib/lib/lib/dev/.1logz
-		    ${ROOTDIR}/dev/.lib/lib/lib/dev/.1proc
-		    ${ROOTDIR}/dev/.lib/lib/lib/dev/.1file"
+	LION_FILES="${RKHROOTDIR}/bin/in.telnetd
+		    ${RKHROOTDIR}/bin/mjy
+		    ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/mjy
+		    ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/in.telnetd
+		    ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.x
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/1i0n.sh
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/hack.sh
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/bind
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/randb
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/scan.sh
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/pscan
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/star.sh
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/bindx.sh
+		    ${RKHROOTDIR}/dev/.lib/lib/scan/bindname.log
+		    ${RKHROOTDIR}/dev/.lib/lib/1i0n.sh
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/netstat
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1addr
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1logz
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1proc
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1file"
 
 
 	# Lockit (a.k.a. LJK2) Rootkit
-	LOCKIT_FILES="${ROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_config
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_random_seed*
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/sshd_config
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/du
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ifconfig
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/inetd.conf
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/locate
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/login
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ls
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/netstat
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ps
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/pstree
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/rc.sysinit
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/syslogd
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/tcpd
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/top
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1sauber
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1wted
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1parser
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1sniff
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1addr
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1dir
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1log
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1proc
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/RK1phidemod.c
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/README.modules
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/RK1hidem.c
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/RK1phide
-		      ${ROOTDIR}/usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh"
-	LOCKIT_DIRS="${ROOTDIR}/usr/lib/libmen.oo/.LJK2"
+	LOCKIT_FILES="${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_config
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_random_seed*
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/sshd_config
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/du
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ifconfig
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/inetd.conf
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/locate
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/login
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ls
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/netstat
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ps
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/pstree
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/rc.sysinit
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/syslogd
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/tcpd
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/top
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1sauber
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1wted
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1parser
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1sniff
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1addr
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1dir
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1log
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1proc
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/RK1phidemod.c
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/README.modules
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/RK1hidem.c
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/RK1phide
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh"
+	LOCKIT_DIRS="${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2"
 
 
 	# MRK (MiCrobul?) RootKit (based on Devil RootKit)
-	MRK_FILES="${ROOTDIR}/dev/ida/.inet/pid
-		   ${ROOTDIR}/dev/ida/.inet/ssh_host_key
-		   ${ROOTDIR}/dev/ida/.inet/ssh_random_seed
-		   ${ROOTDIR}/dev/ida/.inet/tcp.log"
-	MRK_DIRS="${ROOTDIR}/dev/ida/.inet
-		  ${ROOTDIR}/var/spool/cron/.sh"
+	MRK_FILES="${RKHROOTDIR}/dev/ida/.inet/pid
+		   ${RKHROOTDIR}/dev/ida/.inet/ssh_host_key
+		   ${RKHROOTDIR}/dev/ida/.inet/ssh_random_seed
+		   ${RKHROOTDIR}/dev/ida/.inet/tcp.log"
+	MRK_DIRS="${RKHROOTDIR}/dev/ida/.inet
+		  ${RKHROOTDIR}/var/spool/cron/.sh"
 
 
 	# Mood-NT Rootkit
 	# Binary is by default called "mood-nt" but can be anywhere.
 	# Here we look for collaterals, from include/prefs.h defaults
 	# until sig-based dirscan() is added.
-	MOODNT_FILES="${ROOTDIR}/sbin/init__mood-nt-_-_cthulhu
-		      ${ROOTDIR}/_cthulhu/mood-nt.init
-		      ${ROOTDIR}/_cthulhu/mood-nt.conf
-		      ${ROOTDIR}/_cthulhu/mood-nt.sniff"
-	MOODNT_DIRS="${ROOTDIR}/_cthulhu"
+	MOODNT_FILES="${RKHROOTDIR}/sbin/init__mood-nt-_-_cthulhu
+		      ${RKHROOTDIR}/_cthulhu/mood-nt.init
+		      ${RKHROOTDIR}/_cthulhu/mood-nt.conf
+		      ${RKHROOTDIR}/_cthulhu/mood-nt.sniff"
+	MOODNT_DIRS="${RKHROOTDIR}/_cthulhu"
 
 
 	# Ni0 Rootkit
-	NIO_FILES="${ROOTDIR}/var/lock/subsys/...datafile.../...net...
-		   ${ROOTDIR}/var/lock/subsys/...datafile.../...port...
-		   ${ROOTDIR}/var/lock/subsys/...datafile.../...ps...
-		   ${ROOTDIR}/var/lock/subsys/...datafile.../...file..."
-	NIO_DIRS="${ROOTDIR}/tmp/waza
-		  ${ROOTDIR}/var/lock/subsys/...datafile...
-		  ${ROOTDIR}/usr/sbin/es"
+	NIO_FILES="${RKHROOTDIR}/var/lock/subsys/...datafile.../...net...
+		   ${RKHROOTDIR}/var/lock/subsys/...datafile.../...port...
+		   ${RKHROOTDIR}/var/lock/subsys/...datafile.../...ps...
+		   ${RKHROOTDIR}/var/lock/subsys/...datafile.../...file..."
+	NIO_DIRS="${RKHROOTDIR}/tmp/waza
+		  ${RKHROOTDIR}/var/lock/subsys/...datafile...
+		  ${RKHROOTDIR}/usr/sbin/es"
 
 
 	# Ohhara Rootkit
-	OHHARA_FILES="${ROOTDIR}/var/lock/subsys/...datafile.../...datafile.../in.smbd.log"
-	OHHARA_DIRS="${ROOTDIR}/var/lock/subsys/...datafile...
-		     ${ROOTDIR}/var/lock/subsys/...datafile.../...datafile...
-		     ${ROOTDIR}/var/lock/subsys/...datafile.../...datafile.../bin
-		     ${ROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/bin
-		     ${ROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/sbin
-		     ${ROOTDIR}/var/lock/subsys/...datafile.../...datafile.../lib/security"
+	OHHARA_FILES="${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../in.smbd.log"
+	OHHARA_DIRS="${RKHROOTDIR}/var/lock/subsys/...datafile...
+		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile...
+		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../bin
+		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/bin
+		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/sbin
+		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../lib/security"
 
 
 	# Optic Kit (Tux variant) Rootkit
-	OPTICKIT_DIRS="${ROOTDIR}/dev/tux
-		       ${ROOTDIR}/usr/bin/xchk
-		       ${ROOTDIR}/usr/bin/xsf
-		       ${ROOTDIR}/usr/bin/ssh2d"
+	OPTICKIT_DIRS="${RKHROOTDIR}/dev/tux
+		       ${RKHROOTDIR}/usr/bin/xchk
+		       ${RKHROOTDIR}/usr/bin/xsf
+		       ${RKHROOTDIR}/usr/bin/ssh2d"
 
 
 	# Oz Rootkit
-	OZ_FILES="${ROOTDIR}/dev/.oz/.nap/rkit/terror"
-	OZ_DIRS="${ROOTDIR}/dev/.oz"
+	OZ_FILES="${RKHROOTDIR}/dev/.oz/.nap/rkit/terror"
+	OZ_DIRS="${RKHROOTDIR}/dev/.oz"
 
 
 	# PHALANX Rootkit
-	PHALANX_FILES="${ROOTDIR}/usr/share/.home.ph1/cb
-		       ${ROOTDIR}/etc/host.ph1
-		       ${ROOTDIR}/bin/host.ph1
-		       ${ROOTDIR}/usr/share/.home.ph1/phalanx"
-	PHALANX_DIRS="${ROOTDIR}/usr/share/.home.ph1"
+	PHALANX_FILES="${RKHROOTDIR}/usr/share/.home.ph1/cb
+		       ${RKHROOTDIR}/etc/host.ph1
+		       ${RKHROOTDIR}/bin/host.ph1
+		       ${RKHROOTDIR}/usr/share/.home.ph1/phalanx"
+	PHALANX_DIRS="${RKHROOTDIR}/usr/share/.home.ph1"
 
 
 	# Portacelo Rootkit
-	PORTACELO_FILES="${ROOTDIR}/var/lib/.../.ak
-			 ${ROOTDIR}/var/lib/.../.hk
-			 ${ROOTDIR}/var/lib/.../.rs
-			 ${ROOTDIR}/var/lib/.../.p
-			 ${ROOTDIR}/var/lib/.../getty
-			 ${ROOTDIR}/var/lib/.../lkt.o
-			 ${ROOTDIR}/var/lib/.../show
-			 ${ROOTDIR}/var/lib/.../nlkt.o
-			 ${ROOTDIR}/var/lib/.../ssshrc
-			 ${ROOTDIR}/var/lib/.../sssh_equiv
-			 ${ROOTDIR}/var/lib/.../sssh_known_hosts
-			 ${ROOTDIR}/var/lib/.../sssh_pid ~/.sssh/known_hosts"
+	PORTACELO_FILES="${RKHROOTDIR}/var/lib/.../.ak
+			 ${RKHROOTDIR}/var/lib/.../.hk
+			 ${RKHROOTDIR}/var/lib/.../.rs
+			 ${RKHROOTDIR}/var/lib/.../.p
+			 ${RKHROOTDIR}/var/lib/.../getty
+			 ${RKHROOTDIR}/var/lib/.../lkt.o
+			 ${RKHROOTDIR}/var/lib/.../show
+			 ${RKHROOTDIR}/var/lib/.../nlkt.o
+			 ${RKHROOTDIR}/var/lib/.../ssshrc
+			 ${RKHROOTDIR}/var/lib/.../sssh_equiv
+			 ${RKHROOTDIR}/var/lib/.../sssh_known_hosts
+			 ${RKHROOTDIR}/var/lib/.../sssh_pid ~/.sssh/known_hosts"
 
 
 	# R3dstorm Toolkit
-	REDSTORM_FILES="${ROOTDIR}/var/log/tk02/see_all
-			${ROOTDIR}/bin/.../sshd/sbin/sshd1
-			${ROOTDIR}/bin/.../hate/sk
-			${ROOTDIR}/bin/.../see_all"
-	REDSTORM_DIRS="${ROOTDIR}/var/log/tk02
-		       ${ROOTDIR}/var/log/tk02/old
-		       ${ROOTDIR}/bin/..."
+	REDSTORM_FILES="${RKHROOTDIR}/var/log/tk02/see_all
+			${RKHROOTDIR}/bin/.../sshd/sbin/sshd1
+			${RKHROOTDIR}/bin/.../hate/sk
+			${RKHROOTDIR}/bin/.../see_all"
+	REDSTORM_DIRS="${RKHROOTDIR}/var/log/tk02
+		       ${RKHROOTDIR}/var/log/tk02/old
+		       ${RKHROOTDIR}/bin/..."
 
 
 	# RH-Sharpe's Rootkit
-	RHSHARPES_FILES="${ROOTDIR}/bin/lps
-			 ${ROOTDIR}/usr/bin/lpstree
-			 ${ROOTDIR}/usr/bin/ltop
-			 ${ROOTDIR}/usr/bin/lkillall
-			 ${ROOTDIR}/usr/bin/ldu
-			 ${ROOTDIR}/usr/bin/lnetstat
-			 ${ROOTDIR}/usr/bin/wp
-			 ${ROOTDIR}/usr/bin/shad
-			 ${ROOTDIR}/usr/bin/vadim
-			 ${ROOTDIR}/usr/bin/slice
-			 ${ROOTDIR}/usr/bin/cleaner
-			 ${ROOTDIR}/usr/include/rpcsvc/du"
+	RHSHARPES_FILES="${RKHROOTDIR}/bin/lps
+			 ${RKHROOTDIR}/usr/bin/lpstree
+			 ${RKHROOTDIR}/usr/bin/ltop
+			 ${RKHROOTDIR}/usr/bin/lkillall
+			 ${RKHROOTDIR}/usr/bin/ldu
+			 ${RKHROOTDIR}/usr/bin/lnetstat
+			 ${RKHROOTDIR}/usr/bin/wp
+			 ${RKHROOTDIR}/usr/bin/shad
+			 ${RKHROOTDIR}/usr/bin/vadim
+			 ${RKHROOTDIR}/usr/bin/slice
+			 ${RKHROOTDIR}/usr/bin/cleaner
+			 ${RKHROOTDIR}/usr/include/rpcsvc/du"
 
 
 	# RSHA's Rootkit
-	RSHA_FILES="${ROOTDIR}/bin/kr4p
-		    ${ROOTDIR}/usr/bin/n3tstat
-		    ${ROOTDIR}/usr/bin/chsh2
-		    ${ROOTDIR}/usr/bin/slice2
-		    ${ROOTDIR}/usr/src/linux/arch/alpha/lib/.lib/.1proc
-		    ${ROOTDIR}/etc/rc.d/arch/alpha/lib/.lib/.1addr"
-	RSHA_DIRS="${ROOTDIR}/etc/rc.d/rsha
-		   ${ROOTDIR}/etc/rc.d/arch/alpha/lib/.lib"
+	RSHA_FILES="${RKHROOTDIR}/bin/kr4p
+		    ${RKHROOTDIR}/usr/bin/n3tstat
+		    ${RKHROOTDIR}/usr/bin/chsh2
+		    ${RKHROOTDIR}/usr/bin/slice2
+		    ${RKHROOTDIR}/usr/src/linux/arch/alpha/lib/.lib/.1proc
+		    ${RKHROOTDIR}/etc/rc.d/arch/alpha/lib/.lib/.1addr"
+	RSHA_DIRS="${RKHROOTDIR}/etc/rc.d/rsha
+		   ${RKHROOTDIR}/etc/rc.d/arch/alpha/lib/.lib"
 
 
 	# Shutdown Rootkit
 	# The '%%' characters represent a space.
-	SHUTDOWN_FILES="${ROOTDIR}/usr/man/man5/..%%/.dir/scannah/asus
-			${ROOTDIR}/usr/man/man5/..%%/.dir/see
-			${ROOTDIR}/usr/man/man5/..%%/.dir/nscd
-			${ROOTDIR}/usr/man/man5/..%%/.dir/alpd
-			${ROOTDIR}/etc/rc.d/rc.local%%"
-	SHUTDOWN_DIRS="${ROOTDIR}/usr/man/man5/..%%/.dir/
-		       ${ROOTDIR}/usr/man/man5/..%%/.dir/scannah
-		       ${ROOTDIR}/etc/rc.d/rc0.d/..%%/.dir"
+	SHUTDOWN_FILES="${RKHROOTDIR}/usr/man/man5/..%%/.dir/scannah/asus
+			${RKHROOTDIR}/usr/man/man5/..%%/.dir/see
+			${RKHROOTDIR}/usr/man/man5/..%%/.dir/nscd
+			${RKHROOTDIR}/usr/man/man5/..%%/.dir/alpd
+			${RKHROOTDIR}/etc/rc.d/rc.local%%"
+	SHUTDOWN_DIRS="${RKHROOTDIR}/usr/man/man5/..%%/.dir/
+		       ${RKHROOTDIR}/usr/man/man5/..%%/.dir/scannah
+		       ${RKHROOTDIR}/etc/rc.d/rc0.d/..%%/.dir"
 
 
 	# Scalper (FreeBSD.Scalper.Worm) Worm
-	SCALPER_FILES="${ROOTDIR}/tmp/.a
-		       ${ROOTDIR}/tmp/.uua"
+	SCALPER_FILES="${RKHROOTDIR}/tmp/.a
+		       ${RKHROOTDIR}/tmp/.uua"
 
 
 	# SHV4 Rootkit
-	SHV4_FILES="${ROOTDIR}/etc/ld.so.hash
-		    ${ROOTDIR}/lib/libext-2.so.7
-		    ${ROOTDIR}/lib/lidps1.so
-		    ${ROOTDIR}/usr/sbin/xntps"
-	SHV4_DIRS="${ROOTDIR}/lib/security/.config
-		   ${ROOTDIR}/lib/security/.config/ssh"
+	SHV4_FILES="${RKHROOTDIR}/etc/ld.so.hash
+		    ${RKHROOTDIR}/lib/libext-2.so.7
+		    ${RKHROOTDIR}/lib/lidps1.so
+		    ${RKHROOTDIR}/usr/sbin/xntps"
+	SHV4_DIRS="${RKHROOTDIR}/lib/security/.config
+		   ${RKHROOTDIR}/lib/security/.config/ssh"
 
 
 	# SHV5 Rootkit
-	SHV5_FILES="${ROOTDIR}/etc/sh.conf
-		    ${ROOTDIR}/dev/srd0"
-	SHV5_DIRS="${ROOTDIR}/usr/lib/libsh"
+	SHV5_FILES="${RKHROOTDIR}/etc/sh.conf
+		    ${RKHROOTDIR}/dev/srd0"
+	SHV5_DIRS="${RKHROOTDIR}/usr/lib/libsh"
 
 
 	# Sin Rootkit
-	SINROOTKIT_FILES="${ROOTDIR}/dev/.haos/haos1/.f/Denyed
-			  ${ROOTDIR}/dev/ttyoa
-			  ${ROOTDIR}/dev/ttyof
-			  ${ROOTDIR}/dev/ttyop
-			  ${ROOTDIR}/dev/ttyos
-			  ${ROOTDIR}/usr/lib/.lib
-			  ${ROOTDIR}/usr/lib/sn/.X
-			  ${ROOTDIR}/usr/lib/sn/.sys
-			  ${ROOTDIR}/usr/lib/ld/.X
-			  ${ROOTDIR}/usr/man/man1/...
-			  ${ROOTDIR}/usr/man/man1/.../.m
-			  ${ROOTDIR}/usr/man/man1/.../.w"
-	SINROOTKIT_DIRS="${ROOTDIR}/usr/lib/sn
-			 ${ROOTDIR}/usr/lib/man1/...
-			 ${ROOTDIR}/dev/.haos"
+	SINROOTKIT_FILES="${RKHROOTDIR}/dev/.haos/haos1/.f/Denyed
+			  ${RKHROOTDIR}/dev/ttyoa
+			  ${RKHROOTDIR}/dev/ttyof
+			  ${RKHROOTDIR}/dev/ttyop
+			  ${RKHROOTDIR}/dev/ttyos
+			  ${RKHROOTDIR}/usr/lib/.lib
+			  ${RKHROOTDIR}/usr/lib/sn/.X
+			  ${RKHROOTDIR}/usr/lib/sn/.sys
+			  ${RKHROOTDIR}/usr/lib/ld/.X
+			  ${RKHROOTDIR}/usr/man/man1/...
+			  ${RKHROOTDIR}/usr/man/man1/.../.m
+			  ${RKHROOTDIR}/usr/man/man1/.../.w"
+	SINROOTKIT_DIRS="${RKHROOTDIR}/usr/lib/sn
+			 ${RKHROOTDIR}/usr/lib/man1/...
+			 ${RKHROOTDIR}/dev/.haos"
 
 
 	# Slapper Worm
-	SLAPPER_FILES="${ROOTDIR}/tmp/.bugtraq
-		       ${ROOTDIR}/tmp/.uubugtraq
-		       ${ROOTDIR}/tmp/.bugtraq.c
-		       ${ROOTDIR}/tmp/httpd
-		       ${ROOTDIR}/tmp/.unlock
-		       ${ROOTDIR}/tmp/update
-		       ${ROOTDIR}/tmp/.cinik
-		       ${ROOTDIR}/tmp/.b"
+	SLAPPER_FILES="${RKHROOTDIR}/tmp/.bugtraq
+		       ${RKHROOTDIR}/tmp/.uubugtraq
+		       ${RKHROOTDIR}/tmp/.bugtraq.c
+		       ${RKHROOTDIR}/tmp/httpd
+		       ${RKHROOTDIR}/tmp/.unlock
+		       ${RKHROOTDIR}/tmp/update
+		       ${RKHROOTDIR}/tmp/.cinik
+		       ${RKHROOTDIR}/tmp/.b"
 
 
 	# Sneakin Rootkit
-	SNEAKIN_DIRS="${ROOTDIR}/tmp/.X11-unix/.../rk"
+	SNEAKIN_DIRS="${RKHROOTDIR}/tmp/.X11-unix/.../rk"
 
 
 	# Suckit Rootkit
-	SUCKIT_FILES="${ROOTDIR}/sbin/initsk12
-		      ${ROOTDIR}/sbin/initxrk
-		      ${ROOTDIR}/usr/bin/null
-		      ${ROOTDIR}/usr/share/locale/sk/.sk12/sk
-		      ${ROOTDIR}/etc/rc.d/rc0.d/S23kmdac
-		      ${ROOTDIR}/etc/rc.d/rc1.d/S23kmdac
-		      ${ROOTDIR}/etc/rc.d/rc2.d/S23kmdac
-		      ${ROOTDIR}/etc/rc.d/rc3.d/S23kmdac
-		      ${ROOTDIR}/etc/rc.d/rc4.d/S23kmdac
-		      ${ROOTDIR}/etc/rc.d/rc5.d/S23kmdac
-		      ${ROOTDIR}/etc/rc.d/rc6.d/S23kmdac"
-	SUCKIT_DIRS="${ROOTDIR}/dev/sdhu0/tehdrakg
-		     ${ROOTDIR}/etc/.MG
-		     ${ROOTDIR}/usr/share/locale/sk/.sk12
-		     ${ROOTDIR}/usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist"
+	SUCKIT_FILES="${RKHROOTDIR}/sbin/initsk12
+		      ${RKHROOTDIR}/sbin/initxrk
+		      ${RKHROOTDIR}/usr/bin/null
+		      ${RKHROOTDIR}/usr/share/locale/sk/.sk12/sk
+		      ${RKHROOTDIR}/etc/rc.d/rc0.d/S23kmdac
+		      ${RKHROOTDIR}/etc/rc.d/rc1.d/S23kmdac
+		      ${RKHROOTDIR}/etc/rc.d/rc2.d/S23kmdac
+		      ${RKHROOTDIR}/etc/rc.d/rc3.d/S23kmdac
+		      ${RKHROOTDIR}/etc/rc.d/rc4.d/S23kmdac
+		      ${RKHROOTDIR}/etc/rc.d/rc5.d/S23kmdac
+		      ${RKHROOTDIR}/etc/rc.d/rc6.d/S23kmdac"
+	SUCKIT_DIRS="${RKHROOTDIR}/dev/sdhu0/tehdrakg
+		     ${RKHROOTDIR}/etc/.MG
+		     ${RKHROOTDIR}/usr/share/locale/sk/.sk12
+		     ${RKHROOTDIR}/usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist"
 
 
 	# SunOS / NSDAP Rootkit
-	NSDAP_FILES="${ROOTDIR}/usr/lib/vold/nsdap/.kit
-		     ${ROOTDIR}/usr/lib/vold/nsdap/defines
-		     ${ROOTDIR}/usr/lib/vold/nsdap/patcher
-		     ${ROOTDIR}/usr/lib/vold/nsdap/pg
-		     ${ROOTDIR}/usr/lib/vold/nsdap/cleaner
-		     ${ROOTDIR}/usr/lib/vold/nsdap/utime
-		     ${ROOTDIR}/usr/lib/vold/nsdap/crypt
-		     ${ROOTDIR}/usr/lib/vold/nsdap/findkit
-		     ${ROOTDIR}/usr/lib/vold/nsdap/sn2
-		     ${ROOTDIR}/usr/lib/vold/nsdap/sniffload
-		     ${ROOTDIR}/usr/lib/vold/nsdap/runsniff
-		     ${ROOTDIR}/usr/lib/lpset"
-	NSDAP_DIRS="${ROOTDIR}/usr/lib/vold/nsdap"
+	NSDAP_FILES="${RKHROOTDIR}/usr/lib/vold/nsdap/.kit
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/defines
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/patcher
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/pg
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/cleaner
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/utime
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/crypt
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/findkit
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/sn2
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/sniffload
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/runsniff
+		     ${RKHROOTDIR}/usr/lib/lpset"
+	NSDAP_DIRS="${RKHROOTDIR}/usr/lib/vold/nsdap"
 
 
 	# SunOS Rootkit
-	SUNOSROOTKIT_FILES="${ROOTDIR}/etc/ld.so.hash
-			    ${ROOTDIR}/lib/libext-2.so.7
-			    ${ROOTDIR}/usr/bin/ssh2d
-			    ${ROOTDIR}/bin/xlogin
-			    ${ROOTDIR}/usr/lib/crth.o
-			    ${ROOTDIR}/usr/lib/crtz.o
-			    ${ROOTDIR}/sbin/login
-			    ${ROOTDIR}/lib/security/.config/sn
-			    ${ROOTDIR}/lib/security/.config/lpsched
-			    ${ROOTDIR}/dev/kmod
-			    ${ROOTDIR}/dev/dos"
+	SUNOSROOTKIT_FILES="${RKHROOTDIR}/etc/ld.so.hash
+			    ${RKHROOTDIR}/lib/libext-2.so.7
+			    ${RKHROOTDIR}/usr/bin/ssh2d
+			    ${RKHROOTDIR}/bin/xlogin
+			    ${RKHROOTDIR}/usr/lib/crth.o
+			    ${RKHROOTDIR}/usr/lib/crtz.o
+			    ${RKHROOTDIR}/sbin/login
+			    ${RKHROOTDIR}/lib/security/.config/sn
+			    ${RKHROOTDIR}/lib/security/.config/lpsched
+			    ${RKHROOTDIR}/dev/kmod
+			    ${RKHROOTDIR}/dev/dos"
 
 
 	# Superkit Rootkit
-	SUPERKIT_FILES="${ROOTDIR}/usr/man/.sman/sk"
+	SUPERKIT_FILES="${RKHROOTDIR}/usr/man/.sman/sk"
 
 
 	# Telnet Backdoor
-	TBD_FILES="${ROOTDIR}/usr/lib/.tbd"
+	TBD_FILES="${RKHROOTDIR}/usr/lib/.tbd"
 
 
 	# TeLeKiT Rootkit
-	TELEKIT_FILES="${ROOTDIR}/usr/man/man3/.../TeLeKiT/bin/sniff
-		       ${ROOTDIR}/usr/man/man3/.../TeLeKiT/bin/telnetd
-		       ${ROOTDIR}/usr/man/man3/.../TeLeKiT/bin/teleulo
-		       ${ROOTDIR}/usr/man/man3/.../cl
-		       ${ROOTDIR}/dev/ptyr
-		       ${ROOTDIR}/dev/ptyp
-		       ${ROOTDIR}/dev/ptyq
-		       ${ROOTDIR}/dev/hda06
-		       ${ROOTDIR}/usr/info/libc1.so"
-	TELEKIT_DIRS="${ROOTDIR}/usr/man/man3/...
-		      ${ROOTDIR}/usr/man/man3/.../lsniff
-		      ${ROOTDIR}/usr/man/man3/.../TeLeKiT"
+	TELEKIT_FILES="${RKHROOTDIR}/usr/man/man3/.../TeLeKiT/bin/sniff
+		       ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT/bin/telnetd
+		       ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT/bin/teleulo
+		       ${RKHROOTDIR}/usr/man/man3/.../cl
+		       ${RKHROOTDIR}/dev/ptyr
+		       ${RKHROOTDIR}/dev/ptyp
+		       ${RKHROOTDIR}/dev/ptyq
+		       ${RKHROOTDIR}/dev/hda06
+		       ${RKHROOTDIR}/usr/info/libc1.so"
+	TELEKIT_DIRS="${RKHROOTDIR}/usr/man/man3/...
+		      ${RKHROOTDIR}/usr/man/man3/.../lsniff
+		      ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT"
 
 
 	# Torn (and misc) Rootkit
-	TORN_FILES="${ROOTDIR}/dev/.lib/lib/lib/t0rns
-		    ${ROOTDIR}/dev/.lib/lib/lib/du
-		    ${ROOTDIR}/dev/.lib/lib/lib/ls
-		    ${ROOTDIR}/dev/.lib/lib/lib/t0rnsb
-		    ${ROOTDIR}/dev/.lib/lib/lib/ps
-		    ${ROOTDIR}/dev/.lib/lib/lib/t0rnp
-		    ${ROOTDIR}/dev/.lib/lib/lib/find
-		    ${ROOTDIR}/dev/.lib/lib/lib/ifconfig
-		    ${ROOTDIR}/dev/.lib/lib/lib/pg
-		    ${ROOTDIR}/dev/.lib/lib/lib/ssh.tgz
-		    ${ROOTDIR}/dev/.lib/lib/lib/top
-		    ${ROOTDIR}/dev/.lib/lib/lib/sz
-		    ${ROOTDIR}/dev/.lib/lib/lib/login
-		    ${ROOTDIR}/dev/.lib/lib/lib/in.fingerd
-		    ${ROOTDIR}/dev/.lib/lib/lib/1i0n.sh
-		    ${ROOTDIR}/dev/.lib/lib/lib/pstree
-		    ${ROOTDIR}/dev/.lib/lib/lib/in.telnetd
-		    ${ROOTDIR}/dev/.lib/lib/lib/mjy
-		    ${ROOTDIR}/dev/.lib/lib/lib/sush
-		    ${ROOTDIR}/dev/.lib/lib/lib/tfn
-		    ${ROOTDIR}/dev/.lib/lib/lib/name
-		    ${ROOTDIR}/dev/.lib/lib/lib/getip.sh
-		    ${ROOTDIR}/usr/info/.torn/sh*
-		    ${ROOTDIR}/usr/src/.puta/
-		    ${ROOTDIR}/usr/src/.puta/.1addr
-		    ${ROOTDIR}/usr/src/.puta/.1file
-		    ${ROOTDIR}/usr/src/.puta/.1proc
-		    ${ROOTDIR}/usr/src/.puta/.1logz
-		    ${ROOTDIR}/usr/info/.t0rn/"
-	TORN_DIRS="${ROOTDIR}/dev/.lib/
-		   ${ROOTDIR}/dev/.lib/lib/
-		   ${ROOTDIR}/dev/.lib/lib/lib/
-		   ${ROOTDIR}/dev/.lib/lib/lib/dev/
-		   ${ROOTDIR}/dev/.lib/lib/scan/
-		   ${ROOTDIR}/usr/src/.puta/
-		   ${ROOTDIR}/usr/man/man1/man1/
-		   ${ROOTDIR}/usr/man/man1/man1/lib/
-		   ${ROOTDIR}/usr/man/man1/man1/lib/.lib/
-		   ${ROOTDIR}/usr/man/man1/man1/lib/.lib/.backup/"
+	TORN_FILES="${RKHROOTDIR}/dev/.lib/lib/lib/t0rns
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/du
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/ls
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/t0rnsb
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/ps
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/t0rnp
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/find
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/ifconfig
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/pg
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/ssh.tgz
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/top
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/sz
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/login
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/in.fingerd
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/1i0n.sh
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/pstree
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/in.telnetd
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/mjy
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/sush
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/tfn
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/name
+		    ${RKHROOTDIR}/dev/.lib/lib/lib/getip.sh
+		    ${RKHROOTDIR}/usr/info/.torn/sh*
+		    ${RKHROOTDIR}/usr/src/.puta/
+		    ${RKHROOTDIR}/usr/src/.puta/.1addr
+		    ${RKHROOTDIR}/usr/src/.puta/.1file
+		    ${RKHROOTDIR}/usr/src/.puta/.1proc
+		    ${RKHROOTDIR}/usr/src/.puta/.1logz
+		    ${RKHROOTDIR}/usr/info/.t0rn/"
+	TORN_DIRS="${RKHROOTDIR}/dev/.lib/
+		   ${RKHROOTDIR}/dev/.lib/lib/
+		   ${RKHROOTDIR}/dev/.lib/lib/lib/
+		   ${RKHROOTDIR}/dev/.lib/lib/lib/dev/
+		   ${RKHROOTDIR}/dev/.lib/lib/scan/
+		   ${RKHROOTDIR}/usr/src/.puta/
+		   ${RKHROOTDIR}/usr/man/man1/man1/
+		   ${RKHROOTDIR}/usr/man/man1/man1/lib/
+		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/
+		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.backup/"
 
 
 	# Trojanit Kit Rootkit
-	TROJANIT_FILES="${ROOTDIR}/bin/.ls
-			${ROOTDIR}/bin/.ps
-			${ROOTDIR}/bin/.netstat
-			${ROOTDIR}/usr/bin/.nop
-			${ROOTDIR}/usr/bin/.who"
+	TROJANIT_FILES="${RKHROOTDIR}/bin/.ls
+			${RKHROOTDIR}/bin/.ps
+			${RKHROOTDIR}/bin/.netstat
+			${RKHROOTDIR}/usr/bin/.nop
+			${RKHROOTDIR}/usr/bin/.who"
 
 
 	# Tuxtendo (Tuxkit) Rootkit
-	TUXTENDO_FILES="${ROOTDIR}/dev/tux/.addr
-			${ROOTDIR}/dev/tux/.cron
-			${ROOTDIR}/dev/tux/.file
-			${ROOTDIR}/dev/tux/.log
-			${ROOTDIR}/dev/tux/.proc
-			${ROOTDIR}/dev/tux/backup/crontab
-			${ROOTDIR}/dev/tux/backup/df
-			${ROOTDIR}/dev/tux/backup/dir
-			${ROOTDIR}/dev/tux/backup/find
-			${ROOTDIR}/dev/tux/backup/ifconfig
-			${ROOTDIR}/dev/tux/backup/locate
-			${ROOTDIR}/dev/tux/backup/netstat
-			${ROOTDIR}/dev/tux/backup/ps
-			${ROOTDIR}/dev/tux/backup/pstree
-			${ROOTDIR}/dev/tux/backup/syslogd
-			${ROOTDIR}/dev/tux/backup/tcpd
-			${ROOTDIR}/dev/tux/backup/top
-			${ROOTDIR}/dev/tux/backup/updatedb
-			${ROOTDIR}/dev/tux/backup/vdir"
-	TUXTENDO_DIRS="${ROOTDIR}/dev/tux
-		       ${ROOTDIR}/dev/tux/ssh2
-		       ${ROOTDIR}/dev/tux/backup"
+	TUXTENDO_FILES="${RKHROOTDIR}/dev/tux/.addr
+			${RKHROOTDIR}/dev/tux/.cron
+			${RKHROOTDIR}/dev/tux/.file
+			${RKHROOTDIR}/dev/tux/.log
+			${RKHROOTDIR}/dev/tux/.proc
+			${RKHROOTDIR}/dev/tux/backup/crontab
+			${RKHROOTDIR}/dev/tux/backup/df
+			${RKHROOTDIR}/dev/tux/backup/dir
+			${RKHROOTDIR}/dev/tux/backup/find
+			${RKHROOTDIR}/dev/tux/backup/ifconfig
+			${RKHROOTDIR}/dev/tux/backup/locate
+			${RKHROOTDIR}/dev/tux/backup/netstat
+			${RKHROOTDIR}/dev/tux/backup/ps
+			${RKHROOTDIR}/dev/tux/backup/pstree
+			${RKHROOTDIR}/dev/tux/backup/syslogd
+			${RKHROOTDIR}/dev/tux/backup/tcpd
+			${RKHROOTDIR}/dev/tux/backup/top
+			${RKHROOTDIR}/dev/tux/backup/updatedb
+			${RKHROOTDIR}/dev/tux/backup/vdir"
+	TUXTENDO_DIRS="${RKHROOTDIR}/dev/tux
+		       ${RKHROOTDIR}/dev/tux/ssh2
+		       ${RKHROOTDIR}/dev/tux/backup"
 
 
 	# URK - Universal Rootkit
-	URK_FILES="${ROOTDIR}/usr/man/man1/xxxxxxbin/find
-		   ${ROOTDIR}/usr/man/man1/xxxxxxbin/du
-		   ${ROOTDIR}/usr/man/man1/xxxxxxbin/ps
-		   ${ROOTDIR}/tmp/conf.inf"
-	URK_DIRS="${ROOTDIR}/usr/man/man1/xxxxxxbin"
+	URK_FILES="${RKHROOTDIR}/usr/man/man1/xxxxxxbin/find
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/du
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ps
+		   ${RKHROOTDIR}/tmp/conf.inf"
+	URK_DIRS="${RKHROOTDIR}/usr/man/man1/xxxxxxbin"
 
 
 	# VcKit Rootkit
-	VCKIT_DIRS="${ROOTDIR}/usr/include/linux/modules/lib.so
-		    ${ROOTDIR}/usr/include/linux/modules/lib.so/bin"
+	VCKIT_DIRS="${RKHROOTDIR}/usr/include/linux/modules/lib.so
+		    ${RKHROOTDIR}/usr/include/linux/modules/lib.so/bin"
 
 
 	# Volc Rootkit
-	VOLC_DIRS="${ROOTDIR}/var/spool/.recent
-		   ${ROOTDIR}/var/spool/.recent/.files
-		   ${ROOTDIR}/usr/lib/volc
-		   ${ROOTDIR}/usr/lib/volc/backup"
+	VOLC_DIRS="${RKHROOTDIR}/var/spool/.recent
+		   ${RKHROOTDIR}/var/spool/.recent/.files
+		   ${RKHROOTDIR}/usr/lib/volc
+		   ${RKHROOTDIR}/usr/lib/volc/backup"
 
 
 	# X-Org SunOS Rootkit
-	XORGSUNOS_FILES="${ROOTDIR}/usr/lib/libX.a/bin/tmpfl
-			 ${ROOTDIR}/usr/lib/libX.a/bin/rps
-			 ${ROOTDIR}/usr/bin/srload
-			 ${ROOTDIR}/usr/lib/libX.a/bin/sparcv7/rps
-			 ${ROOTDIR}/usr/sbin/modcheck"
-	XORGSUNOS_DIRS="${ROOTDIR}/usr/lib/libX.a
-			${ROOTDIR}/usr/lib/libX.a/bin
-			${ROOTDIR}/usr/lib/libX.a/bin/sparcv7
-			${ROOTDIR}/usr/share/man..."
+	XORGSUNOS_FILES="${RKHROOTDIR}/usr/lib/libX.a/bin/tmpfl
+			 ${RKHROOTDIR}/usr/lib/libX.a/bin/rps
+			 ${RKHROOTDIR}/usr/bin/srload
+			 ${RKHROOTDIR}/usr/lib/libX.a/bin/sparcv7/rps
+			 ${RKHROOTDIR}/usr/sbin/modcheck"
+	XORGSUNOS_DIRS="${RKHROOTDIR}/usr/lib/libX.a
+			${RKHROOTDIR}/usr/lib/libX.a/bin
+			${RKHROOTDIR}/usr/lib/libX.a/bin/sparcv7
+			${RKHROOTDIR}/usr/share/man..."
 
 
 	# zaRwT.KiT Rootkit
-	ZARWT_FILES="${ROOTDIR}/dev/rd/s/sendmeil
-		     ${ROOTDIR}/dev/ttyf
-		     ${ROOTDIR}/dev/ttyp
-		     ${ROOTDIR}/dev/ttyn
-		     ${ROOTDIR}/rk/tulz"
-	ZARWT_DIRS="${ROOTDIR}/rk
-		    ${ROOTDIR}/dev/rd/s"
+	ZARWT_FILES="${RKHROOTDIR}/dev/rd/s/sendmeil
+		     ${RKHROOTDIR}/dev/ttyf
+		     ${RKHROOTDIR}/dev/ttyp
+		     ${RKHROOTDIR}/dev/ttyn
+		     ${RKHROOTDIR}/rk/tulz"
+	ZARWT_DIRS="${RKHROOTDIR}/rk
+		    ${RKHROOTDIR}/dev/rd/s"
 
 
 	# Miscellaneous login backdoors
-	LOGIN_BACKDOOR_FILES="${ROOTDIR}/bin/.login
-			      ${ROOTDIR}/sbin/.login"
+	LOGIN_BACKDOOR_FILES="${RKHROOTDIR}/bin/.login
+			      ${RKHROOTDIR}/sbin/.login"
 
 
 	# Suspicious directories
-	SUSPICIOUS_DIRS="${ROOTDIR}/usr/X11R6/bin/.,/copy
-			 ${ROOTDIR}/dev/rd/cdb"
+	SUSPICIOUS_DIRS="${RKHROOTDIR}/usr/X11R6/bin/.,/copy
+			 ${RKHROOTDIR}/dev/rd/cdb"
 
 
 	# Evil strings
@@ -3834,20 +3850,20 @@ do_system_check_initialisation() {
 
 
 	# Possible rootkit files and directories
-	FILESCAN="file:${ROOTDIR}/dev/sdr0:Possible T0rn Rootkit MD5 hash database
-		  file:${ROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
-		  file:${ROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
-		  file:${ROOTDIR}/usr/info/.clib:Possible backdoor
-		  file:${ROOTDIR}/usr/sbin/tcp.log:Possible sniffer
-		  file:${ROOTDIR}/usr/bin/take/pid:Trojaned SSH daemon
-		  file:${ROOTDIR}/sbin/create:MzOzD Local backdoor
-		  file:${ROOTDIR}/dev/ttypz:spwn login backdoor
-		  dir:${ROOTDIR}/usr/bin/take:Trojaned SSH daemon
-		  dir:${ROOTDIR}/usr/src/.lib:Unusual directory
-		  dir:${ROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
-		  dir:${ROOTDIR}/lib/lblip.tk:Possible T0rn Rootkit directory with backdoored SSH-configuration
-		  dir:${ROOTDIR}/usr/sbin/...:Unusual directory
-		  dir:${ROOTDIR}/usr/share/.gun:Unusual directory"
+	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:Possible T0rn Rootkit MD5 hash database
+		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
+		  file:${RKHROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
+		  file:${RKHROOTDIR}/usr/info/.clib:Possible backdoor
+		  file:${RKHROOTDIR}/usr/sbin/tcp.log:Possible sniffer
+		  file:${RKHROOTDIR}/usr/bin/take/pid:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/sbin/create:MzOzD Local backdoor
+		  file:${RKHROOTDIR}/dev/ttypz:spwn login backdoor
+		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
+		  dir:${RKHROOTDIR}/usr/src/.lib:Unusual directory
+		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
+		  dir:${RKHROOTDIR}/lib/lblip.tk:Possible T0rn Rootkit directory with backdoored SSH-configuration
+		  dir:${RKHROOTDIR}/usr/sbin/...:Unusual directory
+		  dir:${RKHROOTDIR}/usr/share/.gun:Unusual directory"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -3876,13 +3892,13 @@ do_system_check_initialisation() {
 			   ${TBD_FILES} ${TORN_FILES} ${TORN_DIRS}"
 
 
-	SNIFFER_FILES="${ROOTDIR}/usr/lib/libice.log"
+	SNIFFER_FILES="${RKHROOTDIR}/usr/lib/libice.log"
 
 
-	HTTPDCONFS="${ROOTDIR}/usr/local/apache/conf/httpd.conf
-		    ${ROOTDIR}/usr/local/etc/apache/httpd.conf
-		    ${ROOTDIR}/etc/apache/httpd.conf
-		    ${ROOTDIR}/etc/httpd/conf/httpd.conf"
+	HTTPDCONFS="${RKHROOTDIR}/usr/local/apache/conf/httpd.conf
+		    ${RKHROOTDIR}/usr/local/etc/apache/httpd.conf
+		    ${RKHROOTDIR}/etc/apache/httpd.conf
+		    ${RKHROOTDIR}/etc/httpd/conf/httpd.conf"
 
 
 	# Known bad Linux kernel modules
@@ -3926,7 +3942,7 @@ strings_check() {
 
 
 	#
-	# The pathnames to check will have the ROOTDIR at
+	# The pathnames to check will have the RKHROOTDIR at
 	# the front. We need to strip this off before passing
 	# it through the 'strings' command. If we didn't then
 	# we would be looking for the wrong pathname.
@@ -3934,7 +3950,7 @@ strings_check() {
 
 	STRINGSFAILED=0
 
-	RDIR=`echo "${ROOTDIR}" | sed -e 's/\//\\\\\//g'`
+	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
 
 	for STRING in ${STRINGS_INTEGRITY}; do
 		STRING=`echo "${STRING}" | sed -e "s/^${RDIR}//"`
@@ -4013,7 +4029,7 @@ shared_libs_check() {
 	# Next check for a preload file.
 	#
 
-	RKHTMPVAR=${ROOTDIR}/etc/ld.so.preload
+	RKHTMPVAR=${RKHROOTDIR}/etc/ld.so.preload
 
 	if [ -f ${RKHTMPVAR} ]; then
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
@@ -4188,12 +4204,12 @@ file_properties_check() {
 			RKHTMPVAR="${RKHTMPVAR} hash"
 		fi
 
-		if [ -z "${PRELINK_CMD}" ]; then
-			SKIP_HASH=1
-			RKHTMPVAR="${RKHTMPVAR} prelink"
-		fi
-
 		if [ $PRELINKED -eq 1 ]; then
+			if [ $SKIP_HASH_MSG -eq 1 ]; then
+				SKIP_HASH=1
+				RKHTMPVAR="${RKHTMPVAR} prelink"
+			fi
+
 			if [ $SKIP_HASH_MSG -eq 2 ]; then
 				SKIP_HASH=1
 				RKHTMPVAR="${RKHTMPVAR} sha1"
@@ -4904,8 +4920,8 @@ rootkit_file_dir_checks() {
 		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 	fi
 
-	if [ -f "${ROOTDIR}/etc/passwd" ]; then
-		RKHTMPVAR=`grep 'w0rm' ${ROOTDIR}/etc/passwd`
+	if [ -f "${RKHROOTDIR}/etc/passwd" ]; then
+		RKHTMPVAR=`grep 'w0rm' ${RKHROOTDIR}/etc/passwd`
 
 		if [ -z "${RKHTMPVAR}" ]; then
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -4922,11 +4938,11 @@ rootkit_file_dir_checks() {
 			fi
 
 			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "w0rm" "${ROOTDIR}/etc/passwd"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "w0rm" "${RKHROOTDIR}/etc/passwd"
 		fi
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
-		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${ROOTDIR}/etc/passwd"
+		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${RKHROOTDIR}/etc/passwd"
 	fi
 
 	# AjaKit Rootkit
@@ -5220,8 +5236,8 @@ rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 		fi
 
-		if [ -f "${ROOTDIR}/bin/hostname" ]; then
-			if `grep -q 'phalanx' ${ROOTDIR}/bin/hostname >/dev/null 2>&1`; then
+		if [ -f "${RKHROOTDIR}/bin/hostname" ]; then
+			if `grep -q 'phalanx' ${RKHROOTDIR}/bin/hostname >/dev/null 2>&1`; then
 				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
@@ -5230,7 +5246,7 @@ rootkit_file_dir_checks() {
 				fi
 
 				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
-				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "phalanx" "${ROOTDIR}/bin/hostname"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "phalanx" "${RKHROOTDIR}/bin/hostname"
 			else
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "phalanx"
@@ -5240,7 +5256,7 @@ rootkit_file_dir_checks() {
 			fi
 		else
 			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${ROOTDIR}/bin/hostname"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${RKHROOTDIR}/bin/hostname"
 		fi
 	fi
 
@@ -5560,9 +5576,7 @@ possible_rootkit_file_dir_checks() {
 	FOUND=0
 	FOUNDFILES=""
 	FOUNDDIRS=""
-
-	IFS="
-"
+	IFS=$IFSNL
 
 	for RKHTMPVAR in ${FILESCAN}; do
 		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
@@ -5603,7 +5617,7 @@ possible_rootkit_file_dir_checks() {
 		esac
 	done
 
-	IFS=$ORIGIFS
+	IFS=$RKHIFS
 
 
 	#
@@ -5641,7 +5655,7 @@ possible_rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_DIR_FOUND "${FILE}" "${INFO}"
 		done
 
-		IFS=$ORIGIFS
+		IFS=$RKHIFS
 	fi
 
 	return
@@ -5681,9 +5695,9 @@ possible_rootkit_string_checks() {
 	#
 
 	if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
-		RCFILE="${ROOTDIR}/etc/inittab"
+		RCFILE="${RKHROOTDIR}/etc/inittab"
 	else
-		RCFILE="${ROOTDIR}/etc/rc.d/rc.sysinit"
+		RCFILE="${RKHROOTDIR}/etc/rc.d/rc.sysinit"
 	fi
 
 	if [ -f "${RCFILE}" ]; then
@@ -5697,8 +5711,7 @@ possible_rootkit_string_checks() {
 
 	FOUND=0
 	FOUNDFILES=""
-	IFS="
-"
+	IFS=$IFSNL
 
 	for RKHTMPVAR in ${STRINGSCAN}; do
 		FOUNDFILE=0
@@ -5729,10 +5742,10 @@ possible_rootkit_string_checks() {
 			# two loops which are using different field separators.
 			#
 
-			IFS=$ORIGIFS
+			IFS=$RKHIFS
 
 			for DIR in ${BINPATHS}; do
-				FILENAME="${ROOTDIR}${DIR}/${FILE}"
+				FILENAME="${RKHROOTDIR}${DIR}/${FILE}"
 
 				if [ -f "${FILENAME}" ]; then
 					FOUNDFILE=1
@@ -5760,11 +5773,10 @@ possible_rootkit_string_checks() {
 			fi
 		fi
 
-		IFS="
-"
+		IFS=$IFSNL
 	done
 
-	IFS=$ORIGIFS
+	IFS=$RKHIFS
 
 
 	#
@@ -5791,7 +5803,7 @@ possible_rootkit_string_checks() {
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${FILESTRING}" "${FILE}" "${INFO}"
 		done
 
-		IFS=$ORIGIFS
+		IFS=$RKHIFS
 	fi
 
 	return
@@ -5872,8 +5884,7 @@ malware_checks() {
 				fi
 
 
-				IFS="
-"
+				IFS=$IFSNL
 
 				for LINE in `${LSOF_CMD} -n -l -w | grep '(dele'`; do
 					PROC=`echo "$LINE" | awk '{ print $1 }'`
@@ -5978,7 +5989,7 @@ ${PROC} ${PID} ${FNAME}"
 				done
 			fi
 
-			IFS=$ORIGIFS
+			IFS=$RKHIFS
 
 			for RKHTMPVAR in $WHITEPROC; do
 				display --to LOG --type INFO NETWORK_PACKET_CAP_WHITE "${RKHTMPVAR}"
@@ -6000,8 +6011,7 @@ ${PROC} ${PID} ${FNAME}"
 	if `check_test running_procs`; then
 		if [ -n "${LSOF_CMD}" ]; then
 			SUSP_FILES=""
-			IFS="
-"
+			IFS=$IFSNL
 
 			for RKHTMPVAR in ${SUSP_FILES_INFO}; do
 				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
@@ -6009,7 +6019,7 @@ ${PROC} ${PID} ${FNAME}"
 				SUSP_FILES="${SUSP_FILES}|${FILENAME}"
 			done
 
-			IFS=$ORIGIFS
+			IFS=$RKHIFS
 
 			SUSP_FILES=`echo "${SUSP_FILES}" | sed -e 's/^|//'`
 
@@ -6020,7 +6030,7 @@ ${PROC} ${PID} ${FNAME}"
 			#
 
 			if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-				FILENAME=`${LSOF_CMD} -F n -w -n | ${SORT_CMD} | ${UNIQ_CMD} | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})$"`
+				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | ${SORT_CMD} | ${UNIQ_CMD} | egrep "/(${SUSP_FILES})$"`
 			else
 				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | "/(${SUSP_FILES})$"`
 			fi
@@ -6092,8 +6102,7 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR_LOG
 	fi
 
-	IFS="
-"
+	IFS=$IFSNL
 
 	for FILE in ${LOGIN_BACKDOOR_FILES}; do
 		FILE=`echo "${FILE}" | sed -e 's/^[ 	]*//'`
@@ -6110,7 +6119,7 @@ ${PROC} ${PID} ${FNAME}"
 		fi
 	done
 
-	IFS=$ORIGIFS
+	IFS=$RKHIFS
 
 
 	#
@@ -6139,8 +6148,7 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR_LOG
 	fi
 
-	IFS="
-"
+	IFS=$IFSNL
 
 	for DIR in ${SUSPICIOUS_DIRS}; do
 		DIR=`echo "${DIR}" | sed -e 's/^[ 	]*//'`
@@ -6157,7 +6165,7 @@ ${PROC} ${PID} ${FNAME}"
 		fi
 	done
 
-	IFS=$ORIGIFS
+	IFS=$RKHIFS
 
 
 	#
@@ -6179,7 +6187,7 @@ ${PROC} ${PID} ${FNAME}"
 	# Next we check for any software intrusions.
 	#
 
-	TRIPWIREFILE="${ROOTDIR}/var/lib/tripwire/`uname -n 2>/dev/null`.twd"
+	TRIPWIREFILE="${RKHROOTDIR}/var/lib/tripwire/`uname -n 2>/dev/null`.twd"
 
 	if [ -f "${TRIPWIREFILE}" ]; then
 		if [ -z "`grep 'Tripwire segment-faulted !' ${TRIPWIREFILE}`" ]; then
@@ -6205,8 +6213,7 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_SNIFFER_LOG
 	fi
 
-	IFS="
-"
+	IFS=$IFSNL
 
 	for FNAME in ${SNIFFER_FILES}; do
 		FNAME=`echo "${FNAME}" | sed -e 's/^[ 	]*//'`
@@ -6223,7 +6230,7 @@ ${PROC} ${PID} ${FNAME}"
 		fi
 	done
 
-	IFS=$ORIGIFS
+	IFS=$RKHIFS
 
 
 	#
@@ -6256,7 +6263,7 @@ xinetd_include() {
 	# is ignored. Also absolute pathnames must be used.
 	#
 
-	test -z "$1" -o ! -f "${ROOTDIR}$1" && return
+	test -z "$1" -o ! -f "${RKHROOTDIR}$1" && return
 	test -z "`echo \"$1\" | grep '^/'`" && return
 
 	test -n "`echo \"$1\" | grep '/[^/]*\.[^/]*$'`" -a "$1" != "${XINETD_CONF_PATH}" && return
@@ -6267,7 +6274,7 @@ xinetd_include() {
 	# First see if any services have been enabled.
 	#
 
-	if [ -n "`grep '^[ 	]*disable[ 	]*=[ 	]*no' ${ROOTDIR}$1`" ]; then
+	if [ -n "`grep '^[ 	]*disable[ 	]*=[ 	]*no' ${RKHROOTDIR}$1`" ]; then
 		#
 		# See if the file is whitelisted.
 		#
@@ -6283,17 +6290,17 @@ xinetd_include() {
 
 		if [ $RKHTMPVAR -eq 0 ]; then
 			FOUND=1
-			FOUNDFILES="${FOUNDFILES} ${ROOTDIR}$1"
+			FOUNDFILES="${FOUNDFILES} ${RKHROOTDIR}$1"
 
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${ROOTDIR}$1"
+				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
 			fi
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${ROOTDIR}$1"
+			display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
 			display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "$1" "xinetd"
 		fi
 	elif [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${ROOTDIR}$1"
+		display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
 	fi
 
 
@@ -6301,7 +6308,7 @@ xinetd_include() {
 	# Next we look for any 'include' directives.
 	#
 
-	for FNAME in `grep '^[ 	]*include[ 	]' ${ROOTDIR}$1 | awk '{ print $2 }'`; do
+	for FNAME in `grep '^[ 	]*include[ 	]' ${RKHROOTDIR}$1 | awk '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDE "${FNAME}"
 		fi
@@ -6314,7 +6321,7 @@ xinetd_include() {
 	# Finally we look for any 'includedir' directives.
 	#
 
-	for DIR in `grep '^[ 	]*includedir[ 	]' ${ROOTDIR}$1 | awk '{ print $2 }'`; do
+	for DIR in `grep '^[ 	]*includedir[ 	]' ${RKHROOTDIR}$1 | awk '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDEDIR "${DIR}"
 		fi
@@ -6334,11 +6341,11 @@ xinetd_includedir() {
 	# Absolute pathnames must be used.
 	#
 
-	test -z "$1" -o ! -d "${ROOTDIR}$1" && return
+	test -z "$1" -o ! -d "${RKHROOTDIR}$1" && return
 	test -z "`echo \"$1\" | grep '^/'`" && return
 
 
-	for FNAME in `ls ${ROOTDIR}$1`; do
+	for FNAME in `ls ${RKHROOTDIR}$1`; do
 		xinetd_include "$1/${FNAME}"
 	done
 
@@ -6359,8 +6366,8 @@ sol10_inetd() {
 
 	FOUNDSTRING=`${INETADM_CMD} | grep '^enabled' | cut -d: -f2`
 
-	if [ -f "${ROOTDIR}${INETD_CONF_PATH}" ]; then
-		STR=`grep -v '^#' ${ROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
+	if [ -f "${RKHROOTDIR}${INETD_CONF_PATH}" ]; then
+		STR=`grep -v '^#' ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
 		if [ -n "${FOUNDSTRING}" -o -n "${STR}" ]; then
 			FOUNDSTRING="${FOUNDSTRING} ${STR}"
 		fi
@@ -6398,7 +6405,7 @@ trojan_checks() {
 	fi
 
 
-	if [ -f "${ROOTDIR}${INETD_CONF_PATH}" -o -f "${ROOTDIR}${XINETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
+	if [ -f "${RKHROOTDIR}${INETD_CONF_PATH}" -o -f "${RKHROOTDIR}${XINETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
 		RKHTMPVAR="SCREEN+LOG"
 	else
 		RKHTMPVAR="LOG"
@@ -6412,11 +6419,11 @@ trojan_checks() {
 	# Solaris 10 inetd services as well.
 	#
 
-	if [ -f "${ROOTDIR}${INETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
+	if [ -f "${RKHROOTDIR}${INETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
 		if [ -z "${INETADM_CMD}" ]; then
 			display --to LOG --type INFO CONFIG_XINETD_PATH "inetd" "${INETD_CONF_PATH}"
 
-			FOUNDSTRING=`grep -v '^#' ${ROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
+			FOUNDSTRING=`grep -v '^#' ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
 		else
 			display --to LOG --type INFO CONFIG_SOL10_INETD
 		fi
@@ -6448,7 +6455,7 @@ trojan_checks() {
 				#
 
 				if [ -n "`echo \"${STR}\" | grep '^[0-9/]*$'`" ]; then
-					EXECNAME=`grep "^${STR}" ${ROOTDIR}${INETD_CONF_PATH} | awk '{ print $6 }'`
+					EXECNAME=`grep "^${STR}" ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $6 }'`
 
 					if [ -z "${EXECNAME}" -o "${EXECNAME}" = "internal" ]; then
 						EXECNAME="${STR}"
@@ -6479,7 +6486,7 @@ trojan_checks() {
 		fi
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_INETD
-		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${ROOTDIR}${INETD_CONF_PATH}"
+		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${RKHROOTDIR}${INETD_CONF_PATH}"
 	fi
 
 
@@ -6494,7 +6501,7 @@ trojan_checks() {
 		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_TROJAN_XINETD_LOG
 	fi
 
-	if [ -f "${ROOTDIR}${XINETD_CONF_PATH}" ]; then
+	if [ -f "${RKHROOTDIR}${XINETD_CONF_PATH}" ]; then
 		display --to LOG --type INFO CONFIG_XINETD_PATH "xinetd" "${XINETD_CONF_PATH}"
 
 		xinetd_include "${XINETD_CONF_PATH}"
@@ -6515,7 +6522,7 @@ trojan_checks() {
 		fi
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_XINETD
-		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${ROOTDIR}${XINETD_CONF_PATH}"
+		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${RKHROOTDIR}${XINETD_CONF_PATH}"
 	fi
 
 	return
@@ -6638,8 +6645,8 @@ linux_specific_checks() {
 	# First we check the currently loaded kernel modules.
 	#
 
-	if [ -f "${ROOTDIR}/proc/modules" -a -n "${LSMOD_CMD}" -a -n "${SORT_CMD}" ]; then
-		PROC_OUTPUT=`cat ${ROOTDIR}/proc/modules | cut -d' ' -f1 | ${SORT_CMD}`
+	if [ -f "${RKHROOTDIR}/proc/modules" -a -n "${LSMOD_CMD}" -a -n "${SORT_CMD}" ]; then
+		PROC_OUTPUT=`cat ${RKHROOTDIR}/proc/modules | cut -d' ' -f1 | ${SORT_CMD}`
 		LSMOD_OUTPUT=`${LSMOD_CMD} | grep -v 'Size *Used *by' | cut -d' ' -f1 | ${SORT_CMD}`
 
 
@@ -6660,10 +6667,10 @@ linux_specific_checks() {
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "/proc/modules" "${PROC_OUTPUT}"
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "lsmod" "${LSMOD_OUTPUT}"
 		fi
-	elif [ ! -f "${ROOTDIR}/proc/modules" ]; then
+	elif [ ! -f "${RKHROOTDIR}/proc/modules" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
-		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "${ROOTDIR}/proc/modules"
+		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "${RKHROOTDIR}/proc/modules"
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
@@ -6689,10 +6696,10 @@ linux_specific_checks() {
 	# In this case we simply look in '/lib/modules'.
 	#
 
-	if [ -z "${ROOTDIR}" ]; then
-		LKMPATH="${ROOTDIR}/lib/modules/`uname -r 2>/dev/null`"
+	if [ -z "${RKHROOTDIR}" ]; then
+		LKMPATH="${RKHROOTDIR}/lib/modules/`uname -r 2>/dev/null`"
 	else
-		LKMPATH="${ROOTDIR}/lib/modules"
+		LKMPATH="${RKHROOTDIR}/lib/modules"
 	fi
 
 	display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKMPATH}"
@@ -6869,8 +6876,7 @@ do_network_port_checks() {
 	# Now do the test.
 	#
 
-	IFS="
-"
+	IFS=$IFSNL
 
 	for LINE in `cat ${DB_PATH}/backdoorports.dat`; do
 		if [ -n "`echo \"${LINE}\" | egrep -i '^#|version'`" ]; then
@@ -6920,7 +6926,7 @@ do_network_port_checks() {
 		fi
 	done
 
-	IFS=$ORIGIFS
+	IFS=$RKHIFS
 
 	return
 }
@@ -6996,9 +7002,9 @@ do_network_interface_checks() {
 	if ! `check_test packet_cap_apps`; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
 		return
-	elif [ ! -f "${ROOTDIR}/proc/net/packet" ]; then
+	elif [ ! -f "${RKHROOTDIR}/proc/net/packet" ]; then
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
-		display --to LOG --type WARNING NETWORK_PACKET_CAP_CHECK_NO_FILE "${ROOTDIR}/proc/net/packet"
+		display --to LOG --type WARNING NETWORK_PACKET_CAP_CHECK_NO_FILE "${RKHROOTDIR}/proc/net/packet"
 		return
 	elif [ -z "${LSOF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
@@ -7014,7 +7020,7 @@ do_network_interface_checks() {
 	FOUND=0
 	WHITEPROC=""; BLACKPROC=""
 
-	LIBPCAPRES=`egrep -v '^sk|888e' ${ROOTDIR}/proc/net/packet | cut -c1`
+	LIBPCAPRES=`egrep -v '^sk|888e' ${RKHROOTDIR}/proc/net/packet | head -n 1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
 		#
@@ -7024,34 +7030,42 @@ do_network_interface_checks() {
 		ALLOWPROCLISTENERS=`grep '^ALLOWPROCLISTEN=' ${CONFIGFILE} | sed -e 's/ALLOWPROCLISTEN=//g'`
 
 
-		for INODE in `egrep -v '^sk|888e' ${ROOTDIR}/proc/net/packet | awk '{print $9}'`; do
-			for PID in `${LSOF_CMD} -lMnP | grep "$INODE" | awk '{print $2}'`; do
-				if [ -n "${READLINK_CMD}" ]; then
-					NAME=`${READLINK_CMD} -f ${ROOTDIR}/proc/$PID/exe`
-				else
-					NAME=`grep '^Name:.' ${ROOTDIR}/proc/$PID/status | sed -e 's/^Name:.//'`
-				fi
+		INODE_LIST=""
+
+		for INODE in `egrep -v '^sk|888e' ${RKHROOTDIR}/proc/net/packet | awk '{ print $9 }'`; do
+			INODE_LIST="${INODE_LIST}|$INODE"
+		done
+
+		INODE_LIST=`echo "${INODE_LIST}" | sed -e 's/^|//'`
+		test -z "${INODE_LIST}" && INODE_LIST="RKHunterPktCapture"
 
 
-				AMATCH=1
+		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](${INODE_LIST})[ 	]" | awk '{ print $2 }'`; do
+			if [ -n "${READLINK_CMD}" ]; then
+				NAME=`${READLINK_CMD} -f ${RKHROOTDIR}/proc/$PID/exe`
+			else
+				NAME=`grep '^Name:.' ${RKHROOTDIR}/proc/$PID/status | sed -e 's/^Name:.//'`
+			fi
 
-				for RKHTMPVAR in ${ALLOWPROCLISTENERS}; do
-					if [ "${NAME}" = "${RKHTMPVAR}" ]; then
-						AMATCH=0; break
-					fi
-				done
 
-				if [ $AMATCH -eq 0 ]; then
-					FNAME=`echo "${NAME}" | sed -e 's/\./\\\./g'`
-					if [ -z "`echo ${WHITEPROC} | egrep \"${FNAME}( |$)\"`" ]; then
-						WHITEPROC="${WHITEPROC} ${NAME}"
-					fi
-				else
-					FOUND=1
-					BLACKPROC="${BLACKPROC}
-${NAME} ${PID}"
+			AMATCH=1
+
+			for RKHTMPVAR in ${ALLOWPROCLISTENERS}; do
+				if [ "${NAME}" = "${RKHTMPVAR}" ]; then
+					AMATCH=0; break
 				fi
 			done
+
+			if [ $AMATCH -eq 0 ]; then
+				FNAME=`echo "${NAME}" | sed -e 's/\./\\\./g'`
+				if [ -z "`echo ${WHITEPROC} | egrep \"${FNAME}( |$)\"`" ]; then
+					WHITEPROC="${WHITEPROC} ${NAME}"
+				fi
+			else
+				FOUND=1
+				BLACKPROC="${BLACKPROC}
+${NAME} ${PID}"
+			fi
 		done
 	fi
 
@@ -7066,8 +7080,7 @@ ${NAME} ${PID}"
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
 
 
-		IFS="
-"
+		IFS=$IFSNL
 
 		for RKHTMPVAR in ${BLACKPROC}; do
 			test -z "${RKHTMPVAR}" && continue
@@ -7078,7 +7091,7 @@ ${NAME} ${PID}"
 			display --to LOG --type WARNING NETWORK_PACKET_CAP_FOUND "${NAME}" "${PID}"
 		done
 
-		IFS=$IFSORIG
+		IFS=$RKHIFS
 	fi
 
 	for NAME in $WHITEPROC; do
@@ -7131,6 +7144,7 @@ do_local_host_checks() {
 	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_LOCALHOST
 
 
+# jhxx
 	displaytext "* Allround tests${NORMAL}"
 
 	displaytext -n "   Checking hostname... "
@@ -7146,8 +7160,8 @@ do_local_host_checks() {
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 	displaytext -n "   Checking for passwordless user accounts... "
 	logtext "Checking for passwordless user accounts... "
-	if [ -f "${ROOTDIR}/etc/shadow" ]; then
-		for I in `cat ${ROOTDIR}/etc/shadow`; do
+	if [ -f "${RKHROOTDIR}/etc/shadow" ]; then
+		for I in `cat ${RKHROOTDIR}/etc/shadow`; do
 			USER=`echo "${I}" | cut -d: -f1`
 			PASSWORD=`echo "${I}" | cut -d: -f2`
 			# Exclude NIS-user (+::::::)
@@ -7175,9 +7189,9 @@ do_local_host_checks() {
 
 	if `check_test passwd`; then
 		displaytext -n "   Checking for differences in user accounts... "
-		if [ -f "${ROOTDIR}/etc/passwd" ]; then
-			if [ -f "${TMPDIR}/passwd" ]; then
-				differences=`diff ${ROOTDIR}/etc/passwd ${TMPDIR}/passwd 2>/dev/null | grep ':'`
+		if [ -f "${RKHROOTDIR}/etc/passwd" ]; then
+			if [ -f "${RKHTMPDIR}/passwd" ]; then
+				differences=`diff ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep ':'`
 				if [ "${differences}" = "" ]; then
 					displaytext "${GREEN}OK. ${NORMAL}No differences."
 				else
@@ -7195,21 +7209,21 @@ do_local_host_checks() {
 						displaytext "   Info: Some items have been removed (items marked with '>')"
 					fi
 				fi
-				rm -f ${TMPDIR}/passwd >/dev/null 2>&1
+				rm -f ${RKHTMPDIR}/passwd >/dev/null 2>&1
 			else
 				jump=44
 				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
 			fi
-			cp ${ROOTDIR}/etc/passwd ${TMPDIR}/passwd
+			cp ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
 		else
 			displaytext "${RED}Error. ${NORMAL}Cannot find /etc/passwd"
 			logtext "Can't find /etc/passwd file?!?"
 		fi
 
 		displaytext -n "   Checking for differences in user groups... "
-		if [ -f "${ROOTDIR}/etc/group" ]; then
-			if [ -f "${TMPDIR}/group" ]; then
-				differences=`diff ${ROOTDIR}/etc/group ${TMPDIR}/group | grep ':'`
+		if [ -f "${RKHROOTDIR}/etc/group" ]; then
+			if [ -f "${RKHTMPDIR}/group" ]; then
+				differences=`diff ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group | grep ':'`
 				if [ "${differences}" = "" ]; then
 					displaytext "${GREEN}OK. ${NORMAL}No differences."
 				else
@@ -7227,11 +7241,11 @@ do_local_host_checks() {
 						displaytext "   Info: Some items have been removed (items marked with '>')"
 					fi
 				fi
-				rm -f ${TMPDIR}/group >/dev/null 2>&1
+				rm -f ${RKHTMPDIR}/group >/dev/null 2>&1
 			else
 				displaytext "${YELLOW}Creating file ${NORMAL}It seems this is your first time."
 			fi
-			cp ${ROOTDIR}/etc/group ${TMPDIR}/group
+			cp ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
 		else
 			displaytext "${RED}Error. ${NORMAL}Cannot find /etc/group"
 			logtext "Can't find /etc/group file?!?"
@@ -7246,7 +7260,7 @@ do_local_host_checks() {
 	displaytext "   Checking boot.local/rc.local file... "
 
 	# Gentoo: /etc/conf.d/local.start
-	RCLOCATIONS="${ROOTDIR}/etc/rc.local ${ROOTDIR}/etc/rc.d/rc.local ${ROOTDIR}/usr/local/etc/rc.local ${ROOTDIR}/usr/local/etc/rc.d/rc.local ${ROOTDIR}/etc/conf.d/local.start ${ROOTDIR}/etc/init.d/boot.local"
+	RCLOCATIONS="${RKHROOTDIR}/etc/rc.local ${RKHROOTDIR}/etc/rc.d/rc.local ${RKHROOTDIR}/usr/local/etc/rc.local ${RKHROOTDIR}/usr/local/etc/rc.d/rc.local ${RKHROOTDIR}/etc/conf.d/local.start ${RKHROOTDIR}/etc/init.d/boot.local"
 	FOUNDRCSIGN=0
 
 	for FILE in ${RCLOCATIONS}; do
@@ -7286,11 +7300,11 @@ do_local_host_checks() {
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 	displaytext -n "   Checking rc.d files... "
 
-	if [ -d "${ROOTDIR}/etc/rc.d" ]; then
+	if [ -d "${RKHROOTDIR}/etc/rc.d" ]; then
 		# Insert end-of-line
 		displaytext ""
 		displaytext -n "     Processing"
-		for I in `find ${ROOTDIR}/etc/rc.d/*`; do
+		for I in `find ${RKHROOTDIR}/etc/rc.d/*`; do
 			# Only check files, not directories
 			if [ -f "${I}" ]; then
 				COUNTER=`expr ${COUNTER} + 1`
@@ -7326,20 +7340,20 @@ do_local_host_checks() {
 		displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
 	fi
 
-	if [ -f "${ROOTDIR}/etc/conf.d/local.start" ]; then
+	if [ -f "${RKHROOTDIR}/etc/conf.d/local.start" ]; then
 		SIZE=37
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 		displaytext -n "   Checking Gentoo local.start file... "
-		logtext "Found ${ROOTDIR}/etc/conf.d/local.start file (Gentoo)"
+		logtext "Found ${RKHROOTDIR}/etc/conf.d/local.start file (Gentoo)"
 
-		INSPECTLINES=`grep -v '^#' ${ROOTDIR}/etc/conf.d/local.start | grep -v '^$'`
+		INSPECTLINES=`grep -v '^#' ${RKHROOTDIR}/etc/conf.d/local.start | grep -v '^$'`
 
 		for J in ${RCLOCAL_STRINGS}; do
 			STRING=`echo ${J} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 			FOUND=`echo ${INSPECTLINES} | grep "${STRING}"`
 			if [ ! "${FOUND}" = "" ]; then
 				FOUNDRCSIGN=1
-				logtext "Found ${FOUND} while checking ${ROOTDIR}/etc/conf.d/local.start"
+				logtext "Found ${FOUND} while checking ${RKHROOTDIR}/etc/conf.d/local.start"
 			fi
 		done
 
@@ -7361,8 +7375,8 @@ do_local_host_checks() {
 
 	displaytext -n "     Bourne Shell"
 
-	if [ -f "${ROOTDIR}/root/.bash_history" ]; then
-		ATTRIBUTE=`ls -l ${ROOTDIR}/root/.bash_history | cut -c1`
+	if [ -f "${RKHROOTDIR}/root/.bash_history" ]; then
+		ATTRIBUTE=`ls -l ${RKHROOTDIR}/root/.bash_history | cut -c1`
 		if [ "${ATTRIBUTE}" = "l" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (redirection found) ]"
@@ -7384,8 +7398,8 @@ do_local_host_checks() {
 
 
 	displaytext "* Check: Groups and Accounts${NORMAL}"
-	displaytext -n "   Searching for ${ROOTDIR}/etc/passwd... "
-	if [ -f "${ROOTDIR}/etc/passwd" ]; then
+	displaytext -n "   Searching for ${RKHROOTDIR}/etc/passwd... "
+	if [ -f "${RKHROOTDIR}/etc/passwd" ]; then
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${GREEN}Found${NORMAL} ]"
 		displaytext -n "   Checking users with UID '0' (root)... "
@@ -7393,7 +7407,7 @@ do_local_host_checks() {
 		SIZE=39
 		jump=`expr ${defaultcolumn} - ${SIZE}`
 
-		users_with_uid0=`grep -v '^:0:0:::' ${ROOTDIR}/etc/passwd | grep ':0:' | cut -d: -f1,3 | grep '0' | grep -v 'root:0'`
+		users_with_uid0=`grep -v '^:0:0:::' ${RKHROOTDIR}/etc/passwd | grep ':0:' | cut -d: -f1,3 | grep '0' | grep -v 'root:0'`
 		if [ "${users_with_uid0}" = "" ]; then
 			insertlayout
 			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
@@ -7415,7 +7429,7 @@ do_local_host_checks() {
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
 	displaytext "   Searching for sshd_config... "
-	SSHDCONFIG_PLACES="${ROOTDIR}/etc ${ROOTDIR}/etc/ssh ${ROOTDIR}/usr/local/etc ${ROOTDIR}/usr/local/etc/ssh"
+	SSHDCONFIG_PLACES="${RKHROOTDIR}/etc ${RKHROOTDIR}/etc/ssh ${RKHROOTDIR}/usr/local/etc ${RKHROOTDIR}/usr/local/etc/ssh"
 	for I in ${SSHDCONFIG_PLACES}; do
 		if [ -f "${I}/sshd_config" ]; then
 			FOUND=0
@@ -7537,7 +7551,7 @@ do_local_host_checks() {
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
 
-	if [ -f "${ROOTDIR}/etc/syslog.conf" -o -f "${ROOTDIR}/etc/syslog-ng/syslog-ng.conf" ]; then
+	if [ -f "${RKHROOTDIR}/etc/syslog.conf" -o -f "${RKHROOTDIR}/etc/syslog-ng/syslog-ng.conf" ]; then
 		insertlayout
 		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
 		SIZE=38
@@ -7571,15 +7585,15 @@ do_local_host_checks() {
 		displaytext -n "   Checking for logging to remote system... "
 
 		# First do syslog
-		if [ -f "${ROOTDIR}/etc/syslog.conf" ]; then
-			logtoremote=`grep '@' ${ROOTDIR}/etc/syslog.conf | grep -v '#'`
+		if [ -f "${RKHROOTDIR}/etc/syslog.conf" ]; then
+			logtoremote=`grep '@' ${RKHROOTDIR}/etc/syslog.conf | grep -v '#'`
 		else
 			# Second try syslog-ng
-			if [ -f "${ROOTDIR}/etc/syslog-ng/syslog-ng.conf" ]; then
+			if [ -f "${RKHROOTDIR}/etc/syslog-ng/syslog-ng.conf" ]; then
 				# Yes, we found the configuration file
 				# Gready regex necessary due to allowed formatting (indentation, destination names, destinations)
 				# As result logtxt below may contain partial lines.
-				logtoremote=`egrep -iA1 '^destination.*{' ${ROOTDIR}/etc/syslog-ng/syslog-ng.conf | egrep '(udp|tcp).*\(' | grep -v '/'`
+				logtoremote=`egrep -iA1 '^destination.*{' ${RKHROOTDIR}/etc/syslog-ng/syslog-ng.conf | egrep '(udp|tcp).*\(' | grep -v '/'`
 			else
 				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
 				displaytext "Warning: Cannot find syslog-ng configuration file"
@@ -7602,7 +7616,7 @@ do_local_host_checks() {
 	displaytext ""
 	displaytext "* Filesystem checks${NORMAL}"
 
-	if [ -d "${ROOTDIR}/dev" ]; then
+	if [ -d "${RKHROOTDIR}/dev" ]; then
 		# FreeBSD (5): character special, symbolic link to,directory
 		# Linux (Debian): block special, socket, fifo (named pipe)
 
@@ -7611,10 +7625,10 @@ do_local_host_checks() {
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			displaytext -n "   Checking /dev for suspicious files... (in explicit LAZY mode)"
-			SPECIALFILES=`file "${ROOTDIR}/dev/"* | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
+			SPECIALFILES=`file "${RKHROOTDIR}/dev/"* | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
 		else
 			displaytext -n "   Checking /dev for suspicious files... "
-			SPECIALFILES=`find "${ROOTDIR}/dev/" | while read f; do file "${f}" | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'; done`
+			SPECIALFILES=`find "${RKHROOTDIR}/dev/" | while read f; do file "${f}" | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'; done`
 		fi
 
 		SIZE=39
@@ -7640,7 +7654,7 @@ do_local_host_checks() {
 
 	displaytext -n "   Scanning for hidden files..."
 
-	SEARCHINDIRS="${ROOTDIR}/dev ${ROOTDIR}/bin ${ROOTDIR}/usr ${ROOTDIR}/usr/man ${ROOTDIR}/usr/share/man ${ROOTDIR}/usr/man/man1 ${ROOTDIR}/usr/share/man/man1 ${ROOTDIR}/usr/man/man8 ${ROOTDIR}/usr/share/man/man8 ${ROOTDIR}/usr/bin ${ROOTDIR}/usr/sbin ${ROOTDIR}/sbin ${ROOTDIR}/etc"
+	SEARCHINDIRS="${RKHROOTDIR}/dev ${RKHROOTDIR}/bin ${RKHROOTDIR}/usr ${RKHROOTDIR}/usr/man ${RKHROOTDIR}/usr/share/man ${RKHROOTDIR}/usr/man/man1 ${RKHROOTDIR}/usr/share/man/man1 ${RKHROOTDIR}/usr/man/man8 ${RKHROOTDIR}/usr/share/man/man8 ${RKHROOTDIR}/usr/bin ${RKHROOTDIR}/usr/sbin ${RKHROOTDIR}/sbin ${RKHROOTDIR}/etc"
 	# Only reset status once
 	STATUS=0
 
@@ -7698,14 +7712,14 @@ do_local_host_checks() {
 						SEARCHDIR=0
 						if [ "${FILETYPE}" = "directory" ]; then
 							for ALLOWHIDDENDIRS in `grep '^ALLOWHIDDENDIR=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENDIR=//g'`; do
-								if [ "${ROOTDIR}${ALLOWHIDDENDIRS}" = "${I}" ]; then
+								if [ "${RKHROOTDIR}${ALLOWHIDDENDIRS}" = "${I}" ]; then
 									SEARCHDIR=1
 									logtext "Found hidden directory ${I} on whitelist"
 								fi
 							done
 						else
 							for ALLOWHIDDENFILES in `grep '^ALLOWHIDDENFILE=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENFILE=//g'`; do
-								if [ "${ROOTDIR}${ALLOWHIDDENFILES}" = "${I}" ]; then
+								if [ "${RKHROOTDIR}${ALLOWHIDDENFILES}" = "${I}" ]; then
 									SEARCHDIR=1
 									logtext "Found hidden file ${I} on whitelist"
 								fi
@@ -7774,9 +7788,9 @@ do_app_checks() {
 	displaytext -n "   Checking Apache2 modules... "
 	jump=`expr ${defaultcolumn} - ${SIZE}`
 
-	if [ -d "${ROOTDIR}/etc/apache2/mods-enabled" ]; then
-		SEARCHSTRING=`ls ${ROOTDIR}/etc/apache2/mods-enabled/* | egrep 'mod_rootme2?\.so'`
-		logtext -n "Checking Apache2 modules in ${ROOTDIR}/etc/apache2/mods-enabled... "
+	if [ -d "${RKHROOTDIR}/etc/apache2/mods-enabled" ]; then
+		SEARCHSTRING=`ls ${RKHROOTDIR}/etc/apache2/mods-enabled/* | egrep 'mod_rootme2?\.so'`
+		logtext -n "Checking Apache2 modules in ${RKHROOTDIR}/etc/apache2/mods-enabled... "
 		if [ -n "${SEARCHSTRING}" ]; then
 			logtext --nodate "Warning! Possible bad module found."
 			FOUNDSTRING=1
@@ -8085,7 +8099,7 @@ display_check_summary() {
 	#
 
 	if [ $NOLOG -eq 0 ]; then
-		display --to SCREEN --type PLAIN --nl --nl-after SUMMARY_LOGFILE "${LOGFILE}"
+		display --to SCREEN --type PLAIN --nl --nl-after SUMMARY_LOGFILE "${RKHLOGFILE}"
 	else
 		display --to SCREEN --type PLAIN --nl --nl-after SUMMARY_NO_LOGFILE
 	fi
@@ -8099,7 +8113,7 @@ display_warnings() {
 	echo "-----------------------------------------------------------------"
 	echo ""
 	echo "Found warnings:"
-	egrep 'Warning|WARNING|BAD|Bad|Vulnerable' $LOGFILE
+	egrep 'Warning|WARNING|BAD|Bad|Vulnerable' $RKHLOGFILE
 	echo ""
 	echo "-----------------------------------------------------------------"
 	echo ""
@@ -8245,7 +8259,7 @@ do_system_check() {
 			if [ $NOLOG -eq 1 ]; then
 				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_FOUND_RERUN
 			else
-				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_FOUND_CHK_LOG "${LOGFILE}"
+				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_FOUND_CHK_LOG "${RKHLOGFILE}"
 			fi
 		fi
 
@@ -8285,7 +8299,7 @@ do_system_check() {
 			if [ $NOLOG -eq 1 ]; then
 				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_RERUN
 			else
-				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_CHK_LOG "${LOGFILE}"
+				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_CHK_LOG "${RKHLOGFILE}"
 			fi
 
 			display_warnings
@@ -8425,7 +8439,7 @@ set_file_prop_dirs_files() {
 	PROP_DIR_LIST=""
 
 	for DIR in ${BINPATHS}; do
-		PROP_DIR_LIST="${PROP_DIR_LIST} ${ROOTDIR}${DIR}"
+		PROP_DIR_LIST="${PROP_DIR_LIST} ${RKHROOTDIR}${DIR}"
 	done
 
 	PROP_FILE_LIST="adduser amd basename cat chattr checkproc chkconfig
@@ -8448,11 +8462,11 @@ set_file_prop_dirs_files() {
 	#
 
 	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-		if [ -h ${ROOTDIR}/bin ]; then
+		if [ -h ${RKHROOTDIR}/bin ]; then
 			B=""
 
 			for DIR in ${PROP_DIR_LIST}; do
-				test "${DIR}" != "${ROOTDIR}/bin" && B="${B} ${DIR}"
+				test "${DIR}" != "${RKHROOTDIR}/bin" && B="${B} ${DIR}"
 			done
 
 			PROP_DIR_LIST=`echo ${B} | sed -e 's/^ *//'`
@@ -8784,7 +8798,7 @@ CHECK=0
 CATLOGFILE=0
 
 NOLOG=0
-LOGFILE=""
+RKHLOGFILE=""
 DFLT_LOGFILE="/var/log/rkhunter.log"
 
 # Set to have the logfile appended to rather than overwritten.
@@ -8841,7 +8855,7 @@ SKIP_HASH_MSG=0
 APPS_CHECK_ENABLED=0
 
 # Users can reset this to a new root directory.
-ROOTDIR=""
+RKHROOTDIR=""
 
 # Default 'id' command. Solaris will reset this.
 ID_CMD="id"
@@ -8989,8 +9003,14 @@ SHOW_SUMMARY_OPT=0
 # By default log most things that are checked.
 VERBOSE_LOGGING=1
 
-# Record this now since we reset IFS a few times.
+# We copy the original IFS value, and set RKHIFS to space, tab, newline.
+# IFSNL is set to just a newline.
 ORIGIFS=$IFS
+RKHIFS=" 	
+"
+IFSNL="
+"
+IFS=$RKHIFS
 
 # Set a default for the inetd configuration file.
 INETD_CONF_PATH="/etc/inetd.conf"
@@ -9128,7 +9148,7 @@ while [ $# -ge 1 ]; do
 		exit 0
 		;;
 	-l | --log | --logfile | --createlogfile | --createlog | --create-log | --create-logfile)
-		LOGFILE="${DFLT_LOGFILE}"
+		RKHLOGFILE="${DFLT_LOGFILE}"
 
 		case "$2" in
 		"")
@@ -9137,7 +9157,7 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
-			LOGFILE="$1"
+			RKHLOGFILE="$1"
 			;;
 		esac
 		;;
@@ -9185,7 +9205,7 @@ while [ $# -ge 1 ]; do
 		COLORS=0
 		;;
 	--nolog | --no-log)
-		LOGFILE="/dev/null"
+		RKHLOGFILE="/dev/null"
 		;;
 	--nomow | --no-mow | --no-mailonwarning | --no-mail-on-warning)
 		NOMOW=1
@@ -9215,7 +9235,7 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
-			ROOTDIR="$1"
+			RKHROOTDIR="$1"
 			;;
 		esac
 		;;
@@ -9248,7 +9268,7 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
-			TMPDIR="$1"
+			RKHTMPDIR="$1"
 			;;
 		esac
 		;;
@@ -9361,7 +9381,7 @@ get_configfile_options
 # would see no output and might assume that all was well.
 #
 
-if [ "${LOGFILE}" = "/dev/null" ]; then
+if [ "${RKHLOGFILE}" = "/dev/null" ]; then
 	NOLOG=1
 
 	if [ $SHOWWARNINGSONLY -eq 1 ]; then
@@ -9400,10 +9420,10 @@ if [ $CHECK -eq 1 ]; then
 	# Check if we have a ksyms or kallsyms file.
 	#
 
-	if [ -f "${ROOTDIR}/proc/ksyms" ]; then
-		KSYMS_FILE="${ROOTDIR}/proc/ksyms"
-	elif [ -f "${ROOTDIR}/proc/kallsyms" ]; then
-		KSYMS_FILE="${ROOTDIR}/proc/kallsyms"
+	if [ -f "${RKHROOTDIR}/proc/ksyms" ]; then
+		KSYMS_FILE="${RKHROOTDIR}/proc/ksyms"
+	elif [ -f "${RKHROOTDIR}/proc/kallsyms" ]; then
+		KSYMS_FILE="${RKHROOTDIR}/proc/kallsyms"
 	fi
 
 
@@ -9530,8 +9550,7 @@ fi
 # in the actual language file. This allows the language files to work
 # even if we add or remove any of the TYPE or RESULT keywords.
 #
-IFS="
-"
+IFS=$IFSNL
 
 for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
 	TYPE=`echo "${LINE}" | cut -d: -f1`
@@ -9546,7 +9565,7 @@ for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
 	eval $TYPE=\"${RKHTMPVAR}\"
 done
 
-IFS=$ORIGIFS
+IFS=$RKHIFS
 
 
 #
@@ -9557,12 +9576,12 @@ IFS=$ORIGIFS
 
 if [ $NOLOG -eq 0 ]; then
 	if [ $APPEND_LOG -eq 0 ]; then
-		mv -f ${LOGFILE} ${LOGFILE}.old >/dev/null 2>&1
-		touch ${LOGFILE} >/dev/null 2>&1
-		chmod 600 ${LOGFILE} >/dev/null 2>&1
+		mv -f ${RKHLOGFILE} ${RKHLOGFILE}.old >/dev/null 2>&1
+		touch ${RKHLOGFILE} >/dev/null 2>&1
+		chmod 600 ${RKHLOGFILE} >/dev/null 2>&1
 	else
-		echo "" >>${LOGFILE}
-		echo "" >>${LOGFILE}
+		echo "" >>${RKHLOGFILE}
+		echo "" >>${RKHLOGFILE}
 	fi
 fi
 
@@ -9605,13 +9624,25 @@ display --to LOG --type PLAIN --nl CONFIG_CHECK_START
 
 display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
 
+if [ -s "${DB_PATH}/rkhunter.dat" ]; then
+	RKHTMPVAR=`grep '^OS:' ${DB_PATH}/rkhunter.dat 2>/dev/null | sed -e 's/^OS://'`
+
+	if [ -n "${RKHTMPVAR}" ]; then
+		display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${RKHTMPVAR}"
+	else
+		display --to LOG --type INFO UNAME "`uname -a`"
+	fi
+else
+	display --to LOG --type INFO UNAME "`uname -a`"
+fi
+
 display --to LOG --type INFO CONFIG_CMDLINE "${CMD_LINE}"
 
 display --to LOG --type INFO CONFIG_ENVSHELL ${SHELL} ${MYSHELL}
 
 display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
 
-display --to LOG --type INFO CONFIG_INSTALLDIR "${INSTALLDIR}"
+display --to LOG --type INFO CONFIG_INSTALLDIR "${RKHINSTALLDIR}"
 
 display --to LOG --type INFO CONFIG_LANGUAGE "${LANGUAGE}"
 
@@ -9621,13 +9652,13 @@ display --to LOG --type INFO CONFIG_SCRIPTDIR "${SCRIPT_PATH}"
 
 display --to LOG --type INFO CONFIG_BINDIR "${BINPATHS}"
 
-if [ -z "${ROOTDIR}" ]; then
+if [ -z "${RKHROOTDIR}" ]; then
 	display --to LOG --type INFO CONFIG_ROOTDIR "/"
 else
-	display --to LOG --type INFO CONFIG_ROOTDIR "${ROOTDIR}"
+	display --to LOG --type INFO CONFIG_ROOTDIR "${RKHROOTDIR}"
 fi
 
-display --to LOG --type INFO CONFIG_TMPDIR "${TMPDIR}"
+display --to LOG --type INFO CONFIG_TMPDIR "${RKHTMPDIR}"
 
 if [ $NOMOW -eq 1 ]; then
 	display --to LOG --type INFO CONFIG_MOW_DISABLED
@@ -9810,7 +9841,9 @@ display --to LOG --type INFO --nl RKH_ENDDATE "`date`"
 # If the user asked to see the logfile, then show it.
 #
 
-test $CATLOGFILE -eq 1 && cat ${LOGFILE}
+test $CATLOGFILE -eq 1 && cat ${RKHLOGFILE}
 
+
+IFS=$ORIGIFS
 
 exit $RET_CODE
