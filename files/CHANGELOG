@@ -95,6 +95,15 @@
    in the rkhunter configuration file. Also, enabled inetd and xinetd
    services can now be whitelisted.
  - Added support for Solaris 10 inetd mechanism (inetadm).
+ - The directory containing the SSH configuration file can be specified
+   in the rkhunter config file.
+ - The pathname to the syslog configuration file can now be specified
+   in the rkhunter config file.
+ - The use of syslog remote logging can be allowed in the configuration file.
+ - The pathnames to the local system startup file (rc.local), and the
+   startup directory (/etc/rc.d) can now be specified in the rkhunter
+   config file.
+ - Files in /dev can now be whitelisted.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -148,7 +157,10 @@
  - Removed the '--disable-md5-check' option. This is now the 'known_good_hash'
    test name, and can be disabled by the '--disable' option.
  - Removed the '--allow-ssh-root-user' option from the command-line. This
-   can still be set/unset in the configuration file.
+   can still be set/unset in the configuration file. This option must now
+   be set to the value of the 'PermitRootLogin' option in the SSH config
+   file. This then allows root access to be set, but will check to see if
+   the option has changed. A default value of "no" is used. 
  - The --rootdir/ROOTDIR configuration option has been changed to be more
    intuitive. Previously the specified ROOTDIR had to end in a slash (e.g.
    '/abc/'). Now this is not necessary, a normal directory name can be used
@@ -191,6 +203,12 @@
    initial xinetd configuration file.
  - The '--display-logfile' option can now be used after any option. Previously
    the log file was only shown after checking the system.
+ - The checks on accounts and the password and shadow files, have been improved.
+   The user can configure the pathname to the password and shadow files, as
+   well as being able to whitelist accounts with no password or which are root
+   equivalent. There is now support for NetBSD.
+ - Improved the hidden files and directories checks. Some directories are now
+   searched more thoroughly, and checks against the file type are more robust.
 
  Bugfixes:
  - Command-line options requiring an argument now work correctly under Solaris.
@@ -233,10 +251,12 @@
  - The xinetd.conf check only occurred for Linux systems. It will now occur
    for all O/S's. Also, the check always reported the file was clean,
    regardless of whether this was true or not.
+ - The hidden files and directories check was not working correctly for
+   Gentoo users.
 
  --
 
- * 1.2.10 (28/02/2007)
+ * 1.2.10 (Not released)
 
  New:
  - Enabled Ohhara Rootkit check

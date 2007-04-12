@@ -1,4 +1,4 @@
-Version:2007032201
+Version:2007041101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -22,7 +22,10 @@ MSG_RESULT_BAD:BAD
 MSG_RESULT_SKIPPED:Skipped
 MSG_RESULT_WARNING:Warning
 MSG_RESULT_FOUND:Found
-MSG_RESULT_NOT_FOUND:Not Found
+MSG_RESULT_NOT_FOUND:Not found
+MSG_RESULT_NONE_FOUND:None found
+MSG_RESULT_ALLOWED:Allowed
+MSG_RESULT_NOT_ALLOWED:Not allowed
 
 MSG_RESULT_UPD:Updated
 MSG_RESULT_NO_UPD:No update
@@ -57,8 +60,8 @@ CONFIG_TMPDIR:Using '$1' as the temporary directory
 CONFIG_NO_MAIL_ON_WARN:No mail-on-warning address configured
 CONFIG_MOW_DISABLED:Disabling use of mail-on-warning at users request
 CONFIG_MAIL_ON_WARN:Emailing warnings to '$1' using command '$2'
-CONFIG_SSH_ROOT:Explicit option set to allow root logins via SSH
-CONFIG_SSH_PROTV1:Explicit option set to allow SSH protocol version 1
+CONFIG_SSH_ROOT:Rkhunter option ALLOW_SSH_ROOT_USER set to '$1'.
+CONFIG_SSH_PROTV1:Rkhunter option set to allow SSH protocol version 1
 CONFIG_X_AUTO:X will be automatically detected
 CONFIG_CLRSET2:Using second color set
 CONFIG_NO_SHOW_SUMMARY:Disabling system check summary at users request
@@ -84,6 +87,8 @@ SYSLOG_DISABLED:Disabling use of syslog at users request.
 SYSLOG_NO_LOGGER:Disabling use of syslog - unable to find 'logger' command.
 
 PRESSENTER:[Press <ENTER> to continue]
+
+NAME:$1
 
 SUMMARY_TITLE1:System checks summary
 SUMMARY_TITLE2:=====================
@@ -151,7 +156,6 @@ PROPUPD_OSINFO_START:Collecting O/S info...
 PROPUPD_ARCH_FOUND:Found system architecture: $1
 PROPUPD_REL_FILE:Found release file: $1
 PROPUPD_NO_REL_FILE:Unable to find a release file: LS output shows:
-PROPUPD_NO_REL_FILE2:$1
 PROPUPD_OSNAME_FOUND:Found O/S name: $1
 PROPUPD_ERROR:Error installing new rkhunter.dat file. Code $1
 PROPUPD_NEW_DAT_FILE:New rkhunter.dat file installed
@@ -198,7 +202,6 @@ FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not
 FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, and so must be created. To do this type in 'rkhunter --propupd'.
 FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
 
-FILE_PROP_FILENAME:$1
 FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
 FILE_PROP_WL:File '$1' is whitelisted for the '$2' check
 FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the rkhunter.dat file.
@@ -207,6 +210,7 @@ FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
+FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.
 FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
 FILE_PROP_SYSHASH:Current hash: $1
 FILE_PROP_RKHHASH:Stored hash : $1
@@ -235,7 +239,6 @@ FILE_PROP_SCRIPT:The command '$1' has been replaced by a script: $2
 
 CHECK_ROOTKITS:Checking for rootkits...
 ROOTKIT_FILES_DIRS_START:Performing check of known rootkit files and directories
-ROOTKIT_FILES_DIRS_NAME:$1
 ROOTKIT_FILES_DIRS_NAME_LOG:Checking for ${1}...
 ROOTKIT_FILES_DIRS_FILE:Checking for file '$1'
 ROOTKIT_FILES_DIRS_DIR:Checking for directory '$1'
@@ -328,6 +331,74 @@ ROOTKIT_OS_LINUX_LKMNAMES_FOUND:Known bad kernel module found in '$1': $2
 ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING:The kernel module directory '$1' is missing.
 
 CHECK_LOCALHOST:Checking the local host...
+STARTUP_FILES_START:Checking system startup files
+STARTUP_HOSTNAME:Checking for host name
+STARTUP_NO_HOSTNAME:No host name found.
+STARTUP_LOCAL_RC_FILE:Checking for local startup file
+STARTUP_FOUND_LOCAL_RC_FILE:Found local startup file: $1
+STARTUP_NO_LOCAL_RC_FILE:No local startup file found.
+STARTUP_CHECK_LOCAL_RC:Checking local startup file for malware
+STARTUP_CHECK_SYSTEM_RC:Checking system startup files for malware
+STARTUP_CHECK_SYSTEM_RC_FOUND:Found system startup directory: $1
+STARTUP_CHECK_SYSTEM_RC_NONE:No system startup files found.
+
+ACCOUNTS_START:Checking groups and accounts
+ACCOUNTS_PWD_FILE_CHECK:Checking for passwd file
+ACCOUNTS_FOUND_PWD_FILE:Found password file: $1
+ACCOUNTS_NO_PWD_FILE:Password file $1 does not exist.
+ACCOUNTS_UID0:Checking for root equivalent (UID 0) accounts
+ACCOUNTS_UID0_WL:Found whitelisted root equivalent account: $1
+ACCOUNTS_UID0_FOUND:Account '$1' is root equivalent (UID = 0)
+ACCOUNTS_SHADOW_FILE:Found shadow file: $1
+ACCOUNTS_PWDLESS:Checking for passwordless accounts
+ACCOUNTS_PWDLESS_FOUND:Found passwordless account: $1
+ACCOUNTS_NO_SHADOW_FILE:No shadow/password file found.
+
+PASSWD_CHANGES:Checking for passwd file changes
+PASSWD_CHANGES_NO_TMP:Unable to check for passwd file differences: no copy of the passwd file exists.
+PASSWD_CHANGES_ADDED:Users have been added to the passwd file:
+PASSWD_CHANGES_REMOVED:Users have been removed from the passwd file:
+
+GROUP_CHANGES:Checking for group file changes
+GROUP_CHANGES_NO_FILE:Group file $1 does not exist.
+GROUP_CHANGES_NO_TMP:Unable to check for group file differences: no copy of the group file exists.
+GROUP_CHANGES_ADDED:Groups have been added to the group file:
+GROUP_CHANGES_REMOVED:Groups have been removed from the group file:
+
+HISTORY_CHECK:Checking root account shell history files
+HISTORY_CHECK_FOUND:Root account $1 shell history file is a symbolic link: $2
+
+SYSTEM_CONFIGS_START:Checking system configuration files
+SYSTEM_CONFIGS_FILE:Checking for $1 configuration file
+SYSTEM_CONFIGS_FILE_FOUND:Found $1 configuration file: $2
+SYSTEM_CONFIGS_SSH_ROOT:Checking if SSH root access is allowed
+SYSTEM_CONFIGS_SSH_ROOT_FOUND:The SSH and rkhunter configuration options should be the same:
+SYSTEM_CONFIGS_SSH_ROOT_FOUND1:SSH configuration option 'PermitRootLogin': $1
+SYSTEM_CONFIGS_SSH_ROOT_FOUND2:Rkhunter configuration option 'ALLOW_SSH_ROOT_USER': $1
+SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND:The SSH configuration option 'PermitRootLogin' has not been set.
+SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND:The default value may be 'yes', to allow root access.
+SYSTEM_CONFIGS_SSH_PROTO:Checking if SSH protocol v1 is allowed
+SYSTEM_CONFIGS_SSH_PROTO_FOUND:SSH protocol v1 has been enabled in the SSH configuration file ($1).
+SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The SSH configuration option 'Protocol' has not been set.
+SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The default value may be '2,1', to allow the use of protocol v1.
+SYSTEM_CONFIGS_SYSLOG:Checking for running syslog daemon
+SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:The syslog daemon is not running.
+SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:The syslog daemon is not running, but a metalog daemon has been found.
+SYSTEM_CONFIGS_SYSLOG_NO_FILE:The syslog daemon is running, but no configuration file can be found.
+SYSTEM_CONFIGS_SYSLOG_REMOTE:Checking if syslog allows remote logging
+SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog configuration file allows remote logging: $1
+SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter configuration option 'ALLOW_SYSLOG_REMOTE_LOGGING' has been enabled.
+
+FILESYSTEM_START:Checking filesystems
+FILESYSTEM_DEV_CHECK:Checking /dev for suspicious files
+FILESYSTEM_DEV_CHECK_NO_DEV:/dev does not exist.
+FILESYSTEM_DEV_FILE_WL:File '$1' is whitelisted.
+FILESYSTEM_DEV_FILE_FOUND:Suspicious files found in ${1}:
+FILESYSTEM_HIDDEN_DIR_WL:Hidden directory '$1' is whitelisted.
+FILESYSTEM_HIDDEN_FILE_WL:Hidden file '$1' is whitelisted.
+FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories
+FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
+FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 
 CHECK_APPS:Checking applications
 APPS_TOTAL_COUNT:Applications checked: $1 out of $2

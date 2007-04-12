@@ -405,8 +405,10 @@ display() {
 			test $SHOWWARNINGSONLY -eq 1 && echo $NEWECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
 
 			LINE1=1
+			OLDIFS="${IFS}"
+			IFS=$IFSNL
 
-			grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | cut -d: -f2- | while read LOGLINE1; do
+			for LOGLINE1 in `grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | cut -d: -f2-`; do
 				if [ $LINE1 -eq 1 ]; then
 					LINE1=0
 					continue
@@ -415,6 +417,8 @@ display() {
 					echo $NEWECHOOPT "           ${LOGLINE1}" >>${RKHLOGFILE}
 				fi
 			done
+
+			IFS="${OLDIFS}"
 		elif [ $SHOWWARNINGSONLY -eq 1 -a -n "`echo \"${LOGLINE1}\" | egrep '^\[([0-9][0-9]:){2}[0-9][0-9]\]         '`" ]; then
 			echo $NEWECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
 		fi
@@ -841,12 +845,12 @@ scanrootkit() {
 	#
 
 	if [ $SCAN_STATUS -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 	else
 		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
-		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 
 
 		#
@@ -1635,14 +1639,15 @@ get_syslog_option() {
 get_ssh_options() {
 
 	#
-	# We check for two SSH options in this function. Both can only
+	# We check some SSH options in this function. They can only
 	# be set in the configuration file.
 	#
 
 	#
 	# See if the ALLOW_SSH_ROOT_USER option is specified in the
-	# configuration file. If it is then we do a simple check on
-	# whether it is empty, a space, or not 0 or 1.
+	# configuration file. The value should match what has been set
+	# in the SSH configuration file for the PermitRootLogin option.
+	# As such it's value is not just zero or one.
 	#
 
 	ALLOW_SSH_ROOT_USER=`grep '^ALLOW_SSH_ROOT_USER=' ${CONFIGFILE} | tail -1`
@@ -1653,12 +1658,17 @@ get_ssh_options() {
 		if [ -z "${ALLOW_SSH_ROOT_USER}" -o "${ALLOW_SSH_ROOT_USER}" = " " ]; then
 			echo "Invalid ALLOW_SSH_ROOT_USER configuration option - no value specified."
 			exit 1
-		elif [ "${ALLOW_SSH_ROOT_USER}" != "0" -a "${ALLOW_SSH_ROOT_USER}" != "1" ]; then
-			echo "Invalid ALLOW_SSH_ROOT_USER configuration option: ${ALLOW_SSH_ROOT_USER}"
-			exit 1
+		else
+			ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[A-Z]' '[a-z]'`
 		fi
 	else
-		ALLOW_SSH_ROOT_USER=0
+		#
+		# By default SSH tends to allow root access. However, we
+		# do not. By doing this the user will receive a warning
+		# unless they set the options the same.
+		#
+
+		ALLOW_SSH_ROOT_USER="no"
 	fi
 
 
@@ -1682,6 +1692,74 @@ get_ssh_options() {
 		fi
 	else
 		ALLOW_SSH_PROT_V1=0
+	fi
+
+
+	#
+	# See if the directory of the SSH configuration file has been set.
+	#
+
+	SSH_CONFIG_DIR=`grep '^SSH_CONFIG_DIR=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${SSH_CONFIG_DIR}" ]; then
+		SSH_CONFIG_DIR=`echo "${SSH_CONFIG_DIR}" | sed -e 's/SSH_CONFIG_DIR=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${SSH_CONFIG_DIR}" -o "${SSH_CONFIG_DIR}" = " " ]; then
+			echo "Invalid SSH_CONFIG_DIR configuration option - no value specified."
+			exit 1
+		elif [ ! -d "${SSH_CONFIG_DIR}" ]; then
+			echo "The SSH configuration file directory does not exist: ${SSH_CONFIG_DIR}"
+			exit 1
+		fi
+	fi
+
+	return
+}
+
+
+get_syslog_config_options() {
+
+	#
+	# We check some syslog configuration options in this function.
+	# They can only be set in the configuration file.
+	#
+
+	#
+	# See if the ALLOW_SYSLOG_REMOTE_LOGGING option is specified
+	# in the configuration file. If it is then we do a simple check
+	# on whether it is empty, a space, or not 0 or 1.
+	#
+
+	ALLOW_SYSLOG_REMOTE_LOGGING=`grep '^ALLOW_SYSLOG_REMOTE_LOGGING=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${ALLOW_SYSLOG_REMOTE_LOGGING}" ]; then
+		ALLOW_SYSLOG_REMOTE_LOGGING=`echo "${ALLOW_SYSLOG_REMOTE_LOGGING}" | sed -e 's/ALLOW_SYSLOG_REMOTE_LOGGING=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${ALLOW_SYSLOG_REMOTE_LOGGING}" -o "${ALLOW_SYSLOG_REMOTE_LOGGING}" = " " ]; then
+			echo "Invalid ALLOW_SYSLOG_REMOTE_LOGGING configuration option - no value specified."
+			exit 1
+		elif [ "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "0" -a "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "1" ]; then
+			echo "Invalid ALLOW_SYSLOG_REMOTE_LOGGING configuration option: ${ALLOW_SYSLOG_REMOTE_LOGGING}"
+			exit 1
+		fi
+	else
+		ALLOW_SYSLOG_REMOTE_LOGGING=0
+	fi
+
+
+	#
+	# See if the pathname to the syslog configuration file has been set.
+	#
+
+	SYSLOG_CONFIG_FILE=`grep '^SYSLOG_CONFIG_FILE=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+		SYSLOG_CONFIG_FILE=`echo "${SYSLOG_CONFIG_FILE}" | sed -e 's/SYSLOG_CONFIG_FILE=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${SYSLOG_CONFIG_FILE}" -o "${SYSLOG_CONFIG_FILE}" = " " ]; then
+			echo "Invalid SYSLOG_CONFIG_FILE configuration option - no value specified."
+			exit 1
+		fi
 	fi
 
 	return
@@ -2217,6 +2295,8 @@ get_configfile_options() {
 
 		get_ssh_options
 
+		get_syslog_config_options
+
 		get_syslog_option
 
 		get_scan_mode_dev_option
@@ -2470,6 +2550,10 @@ rkh_dat_set_file_properties() {
 					RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1 | tr '\n' ':' | sed -e 's/:$//'`
 
 					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
+
+					if [ -n "`echo \"${RKHTMPVAR}\" | grep 'dependencies'`" ]; then
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
+					fi
 				fi
 			fi
 
@@ -2548,7 +2632,7 @@ do_prop_update() {
 		display --to LOG --type INFO PROPUPD_REL_FILE "${RELEASE}"
 	else
 		display --to LOG --type INFO PROPUPD_NO_REL_FILE
-		display --to LOG --type PLAIN PROPUPD_NO_REL_FILE2 "      `ls -d ${RKHROOTDIR}/etc/*release* ${RKHROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
+		display --to LOG --type PLAIN NAME "      `ls -d ${RKHROOTDIR}/etc/*release* ${RKHROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
 	fi
 
 	if [ -n "${OSNAME}" ]; then
@@ -2570,8 +2654,8 @@ do_prop_update() {
 	# Now put the new rkhunter.dat file in place.
 	#
 
-	cp -f ${DB_PATH}/rkhunter.dat ${DB_PATH}/rkhunter.dat.old >/dev/null 2>&1
-	cp ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
+	cp -f -p ${DB_PATH}/rkhunter.dat ${DB_PATH}/rkhunter.dat.old >/dev/null 2>&1
+	cp -f ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
 	RKHTMPVAR=$?
 
 	if [ $RKHTMPVAR -ne 0 ]; then
@@ -3870,9 +3954,11 @@ do_system_check_initialisation() {
 	KLDSTATKEYWORDS="backd00r backdoor"
 
 
-	RCLOCAL_STRINGS="/usr/bin/rpc.wall:Unknown
-			 sshdd:Possible%%GasKit
-			 hidef:Possible%%part%%of%%Knark%%found"
+	# Suspicious startup file strings
+	RCLOCAL_STRINGS="/usr/bin/rpc.wall:Possible Linux Rootkit (LRK4)
+			 sshdd:Possible GasKit rootkit
+			 hidef:Possible part of Knark rootkit"
+
 
 	# Suspicious open files
 	SUSP_FILES_INFO="backdoor:Generic backdoor
@@ -3885,6 +3971,7 @@ do_system_check_initialisation() {
 			 mod_klgr.o:klgr, keyboard logger (kernel module)
 			 hydra:THC-Hydra (password capture)
 			 hydra.restore:THC-Hydra (password capture)"
+
 
 	# Integrity tests
 	STRINGS_INTEGRITY="${BOBKIT_FILES} ${BOBKIT_DIRS} ${CINIK_FILES}
@@ -4050,8 +4137,10 @@ shared_libs_check() {
 				LD_LIBR_FAILED=0
 				LD_LIBRARY_PATH_SAVED="${LD_LIBRARY_PATH}"
 
+				LS_CMD=`find_cmd ls`
+
 				RKHTMPVAR_BIN="${FIND_CMD} ${PS_CMD}
-					${STRINGS_CMD} ${MD5_CMD} ${LS_CMD}
+					${STRINGS_CMD} ${MD5_CMD} {LS_CMD}
 					${STAT_CMD}"
 
 				for RKHTMPVAR in ${RKHTMPVAR_BIN}; do
@@ -4436,7 +4525,7 @@ file_properties_check() {
 					if [ -n "${RKHLINE}" ]; then
 						PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-						display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED FILE_PROP_FILENAME "${DIR}/${FNAME}"
+						display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED NAME "${DIR}/${FNAME}"
 						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${DIR}/${FNAME}"
 					fi
 
@@ -4718,9 +4807,9 @@ file_properties_check() {
 			#
 
 			if [ -z "${TEST_RESULT}" ]; then
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN FILE_PROP_FILENAME "${DIR}/${FNAME}"
+				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN NAME "${DIR}/${FNAME}"
 			else
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED FILE_PROP_FILENAME "${DIR}/${FNAME}"
+				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${DIR}/${FNAME}"
 
 				PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
@@ -4928,7 +5017,7 @@ rootkit_file_dir_checks() {
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "w0rm"
 			fi
 
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		else
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
@@ -4937,11 +5026,11 @@ rootkit_file_dir_checks() {
 				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "w0rm"
 			fi
 
-			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "w0rm" "${RKHROOTDIR}/etc/passwd"
 		fi
 	else
-		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${RKHROOTDIR}/etc/passwd"
 	fi
 
@@ -5245,17 +5334,17 @@ rootkit_file_dir_checks() {
 					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "phalanx"
 				fi
 
-				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "phalanx" "${RKHROOTDIR}/bin/hostname"
 			else
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "phalanx"
 				fi
 
-				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			fi
 		else
-			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${RKHROOTDIR}/bin/hostname"
 		fi
 	fi
@@ -5327,7 +5416,7 @@ rootkit_file_dir_checks() {
 			fi
 		fi
 
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 	else
 		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
@@ -5336,7 +5425,7 @@ rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "adore or sebek"
 		fi
 
-		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_KSYM_FOUND "adore or sebek"
 	fi
 
@@ -5409,16 +5498,16 @@ rootkit_file_dir_checks() {
 			#
 
 			if [ $FOUND -eq 0 ]; then
-				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			else
 				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
-				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_SINAR "${SINARFILES}"
 			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 ROOTKIT_FILES_DIRS_NAME "${SCAN_ROOTKIT}"
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			display --to LOG --type INFO NOT_FOUND_CMD "find"
 		fi
 	fi
@@ -7128,6 +7217,1062 @@ do_network_checks() {
 }
 
 
+do_system_startup_file_checks() {
+
+	#
+	# This function carries out checks on the system startup files.
+	#
+
+	if ! `check_test startup_files`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_files
+		return
+	fi
+
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STARTUP_FILES_START
+
+	#
+	# First we check that the local host name has been set.
+	#
+
+	if [ -n "${HOST_NAME}" ]; then
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 STARTUP_HOSTNAME
+	else
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_HOSTNAME
+		display --to LOG --type WARNING STARTUP_NO_HOSTNAME
+	fi
+
+
+	#
+	# Next, check that a local startup file exists. This will be some
+	# sort of 'rc' file. We check if the user has set a pathname in
+	# the config file, and use that or the default list.
+	#
+
+	RC_FILE=""
+
+	FNAME=`grep '^LOCAL_RC_PATH=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${FNAME}" ]; then
+		FNAME=`echo "${FNAME}" | sed -e 's/LOCAL_RC_PATH=//' | tr -d '"' | tr -s ' '`
+
+		test "${FNAME}" = " " && FNAME=""
+	fi
+
+	if [ -n "${FNAME}" ]; then
+		RCLOCATIONS="${RKHROOTDIR}${FNAME}"
+	else
+		RCLOCATIONS="${RKHROOTDIR}/etc/rc.local ${RKHROOTDIR}/etc/rc.d/rc.local ${RKHROOTDIR}/usr/local/etc/rc.local ${RKHROOTDIR}/usr/local/etc/rc.d/rc.local ${RKHROOTDIR}/etc/conf.d/local.start ${RKHROOTDIR}/etc/init.d/boot.local"
+	fi
+
+
+	for FILE in ${RCLOCATIONS}; do
+		if [ -f "${FILE}" -a ! -h "${FILE}" ]; then
+			RC_FILE="${FILE}"
+			break
+		fi
+	done
+
+	if [ -n "${RC_FILE}" ]; then
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
+		display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${RC_FILE}"
+	else
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
+		display --to LOG --type WARNING STARTUP_NO_LOCAL_RC_FILE
+	fi
+
+
+	#
+	# Next we check all the startup files for any suspicious
+	# strings in them.
+	#
+	# First check the local startup file.
+	#
+
+	if ! `check_test startup_malware`; then
+		display --to LOG --type INFO USER_DISABLED_TEST startup_malware
+	elif [ -n "${RC_FILE}" ]; then
+		FOUND=0
+		FOUNDSTRINGS=""
+
+		IFS=$IFSNL
+
+		for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
+			RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
+			STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
+			STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
+			INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
+
+			if [ -n "`grep "${STRING}" ${RC_FILE} | grep -v '^#'`" ]; then
+				FOUND=1
+				FOUNDSTRINGS="${FOUNDSTRINGS}%${STR}:${INFO}"
+			fi
+		done
+
+		IFS=$RKHIFS
+
+
+		#
+		# Now display the results.
+		#
+
+		if [ $FOUND -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 STARTUP_CHECK_LOCAL_RC
+		else
+			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_CHECK_LOCAL_RC
+
+			IFS="%"
+
+			for RKHTMPVAR in ${FOUNDSTRINGS}; do
+				STRING=`echo "${RKHTMPVAR}" | cut -d: -f1`
+
+				test -z "${STRING}" && continue
+
+				INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
+
+				display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${RC_FILE}" "${INFO}"
+			done
+
+			IFS=$RKHIFS
+		fi
+	else
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 STARTUP_CHECK_LOCAL_RC
+		display --to LOG --type WARNING STARTUP_NO_LOCAL_RC_FILE
+	fi
+
+
+	#
+	# Next check the system startup files.
+	# We look in either /etc/rc.d, /etc/init.d or the directory
+	# specified in the config file.
+	#
+
+	if ! `check_test startup_malware`; then
+		# The above check will have displayed a log message that
+		# this test has been disabled.
+		:
+	elif [ -n "${FIND_CMD}" ]; then
+		RC_DIR=""
+
+		DIR=`grep '^RC_DIR=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${DIR}" ]; then
+			DIR=`echo "${DIR}" | sed -e 's/RC_DIR=//' | tr -d '"' | tr -s ' '`
+
+			test "${DIR}" = " " && DIR=""
+		fi
+
+		if [ -n "${DIR}" -a -d "${RKHROOTDIR}${DIR}" ]; then
+			RC_DIR="${RKHROOTDIR}${DIR}"
+		elif [ -d "${RKHROOTDIR}/etc/rc.d" ]; then
+			RC_DIR="${RKHROOTDIR}/etc/rc.d"
+		elif [ -d "${RKHROOTDIR}/etc/init.d" ]; then
+			RC_DIR="${RKHROOTDIR}/etc/init.d"
+		fi
+
+
+		if [ -n "${RC_DIR}" ]; then
+			FOUND=0
+			FOUNDSTRINGS=""
+
+			display --to LOG --type INFO STARTUP_CHECK_SYSTEM_RC_FOUND "${RC_DIR}"
+
+
+			#
+			# Since we are going to be checking a lot of files
+			# for strings that are static, we may as well do
+			# some pre-processing of the string, and then we
+			# only need to spend time if a string is found.
+			#
+
+			RCSTRINGS=""
+
+			IFS=$IFSNL
+
+			for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
+				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
+				STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
+				STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
+				RCSTRINGS="${RCSTRINGS} ${STRING}"
+			done
+
+			IFS=$RKHIFS
+
+			RCSTRINGS=`echo "${RCSTRINGS}" | sed -e 's/^ //'`
+
+
+			for FILE in `${FIND_CMD} ${RC_DIR} -type f`; do
+				test -h "${FILE}" && continue
+
+				for STRING in ${RCSTRINGS}; do
+					if [ -n "`grep "${STRING}" ${FILE} | grep -v '^#'`" ]; then
+						FOUND=1
+						FOUNDSTRINGS="${FOUNDSTRINGS}%${FILE}:${STRING}"
+					fi
+				done
+			done
+
+
+			#
+			# Now display the results.
+			#
+
+			if [ $FOUND -eq 0 ]; then
+				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
+
+				IFS="%"
+
+				for RKHTMPVAR in ${FOUNDSTRINGS}; do
+					FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
+
+					test -z "${FILE}" && continue
+
+					STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
+					STRING=`echo "${STRING}" | sed -e 's/\\\././g'`
+
+					#
+					# Having obtained the original string,
+					# we now need to find the original
+					# information about it.
+					#
+
+					IFS=$IFSNL
+
+					for RKHTMPVAR2 in ${RCLOCAL_STRINGS}; do
+						RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/^[ 	]*//'`
+						STR=`echo "${RKHTMPVAR2}" | cut -d: -f1`
+
+						if [ "${STR}" = "${STRING}" ]; then
+							INFO=`echo "${RKHTMPVAR2}" | cut -d: -f2`
+							break
+						fi
+					done
+
+					IFS="%"
+
+					display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FILE}" "${INFO}"
+				done
+
+				IFS=$RKHIFS
+			fi
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
+			display --to LOG --type WARNING STARTUP_CHECK_SYSTEM_RC_NONE
+		fi
+	else
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
+		display --to LOG --type INFO NOT_FOUND_CMD "find"
+	fi
+
+	return
+}
+
+
+do_group_accounts_check() {
+
+	#
+	# This function carries out checks on the /etc/passwd and
+	# /etc/group files.
+	#
+
+	if ! `check_test group_accounts`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST group_accounts
+		return
+	fi
+
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ACCOUNTS_START
+
+	#
+	# First check that /etc/passwd exists.
+	#
+
+	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
+		display --to LOG --type INFO ACCOUNTS_FOUND_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+	else
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
+		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+	fi
+
+
+	#
+	# Next, check for root equivalent accounts. These will have
+	# a UID of zero.
+	#
+
+	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+		UID_LIST=""
+
+		RKHTMPVAR=`grep '^[^:]*:[^:]*:0:' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`
+
+
+		#
+		# We need to remove the whitelisted UID 0 accounts
+		# from the above list.
+		#
+
+		UID_WHITELIST=`grep '^UID0_ACCOUNTS=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${UID_WHITELIST}" ]; then
+			UID_WHITELIST=`echo "${UID_WHITELIST}" | sed -e 's/UID0_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
+		fi
+
+		UID_WHITELIST=" root ${UID_WHITELIST} "
+
+		for RKHTMPVAR2 in ${RKHTMPVAR}; do
+			RKHUSERID=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+
+			if [ -z "`echo \"${UID_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
+				UID_LIST="${UID_LIST} ${RKHTMPVAR2}"
+			elif [ "${RKHTMPVAR2}" != "root" ]; then
+				display --to LOG --type INFO ACCOUNTS_UID0_WL "${RKHTMPVAR2}"
+			fi
+		done
+
+
+		#
+		# Now display the results.
+		#
+
+		if [ -z "${UID_LIST}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
+
+			for RKHTMPVAR in ${UID_LIST}; do
+				display --to LOG --type WARNING ACCOUNTS_UID0_FOUND "${RKHTMPVAR}"
+			done
+		fi
+	else
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
+		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+	fi
+
+
+	#
+	# Now check for any passwordless accounts. We must, however,
+	# first find where the passwords are kept. If the user has
+	# provided this in the config file, then we use that.
+	#
+
+	SHADOW_FILE=`grep '^PASSWORD_FILE=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${SHADOW_FILE}" ]; then
+		SHADOW_FILE=`echo "${SHADOW_FILE}" | sed -e 's/PASSWORD_FILE=//' | tr -d '"' | tr -s ' '`
+
+		test "${SHADOW_FILE}" = " " && SHADOW_FILE=""
+		test -n "${SHADOW_FILE}" -a ! -s "${RKHROOTDIR}${SHADOW_FILE}" && SHADOW_FILE=""
+	fi
+
+	if [ -n "${SHADOW_FILE}" ]; then
+		SHADOW_FILE="${RKHROOTDIR}${SHADOW_FILE}"
+	elif [ -s "${RKHROOTDIR}/etc/shadow" ]; then
+		SHADOW_FILE="${RKHROOTDIR}/etc/shadow"
+	elif [ "${OPERATING_SYSTEM}" = "NetBSD" -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
+		SHADOW_FILE="${RKHROOTDIR}/etc/master.passwd"
+	elif [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+		#
+		# If the passwords are stored in the passwd file, then
+		# it should contain at least 3 non-colon characters in the
+		# second field. Checking for 3 characters allows for normal
+		# shadow entries such as 'x', '!!' or '*'. It is assumed
+		# that at least one account will have a password.
+		#
+
+		if [ -n "`grep '^[^:]*:[^:][^:][^:]' ${RKHROOTDIR}/etc/passwd`" ]; then
+			SHADOW_FILE="${RKHROOTDIR}/etc/passwd"
+		fi
+	fi
+
+
+	if [ -n "${SHADOW_FILE}" ]; then
+		display --to LOG --type INFO ACCOUNTS_SHADOW_FILE "${SHADOW_FILE}"
+
+		#
+		# We need to remove any whitelisted passwordless accounts.
+		#
+
+		UID_WHITELIST=`grep '^PWDLESS_ACCOUNTS=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${UID_WHITELIST}" ]; then
+			UID_WHITELIST=`echo "${UID_WHITELIST}" | sed -e 's/PWDLESS_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
+		fi
+
+		UID_WHITELIST=" ${UID_WHITELIST} "
+
+		UID_LIST=""
+
+		for RKHTMPVAR in `grep '^[^:]*::' ${SHADOW_FILE} | cut -d: -f1`; do
+			# Ignore any NIS/YP entries
+			test "${RKHTMPVAR}" = "+" && continue
+
+			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
+
+			if [ -z "`echo \"${UID_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
+				UID_LIST="${UID_LIST} ${RKHTMPVAR}"
+			fi
+		done
+
+
+		#
+		# Now display the results.
+		#
+
+		if [ -z "${UID_LIST}" ]; then
+			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
+		else
+			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
+
+			for RKHTMPVAR in ${UID_LIST}; do
+				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "${RKHTMPVAR}"
+			done
+		fi
+	else
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
+		display --to LOG --type WARNING ACCOUNTS_NO_SHADOW_FILE
+	fi
+
+
+	#
+	# Now we check for any changes that have occurred to the passwd
+	# file since rkhunter was last run.
+	#
+
+	DIFF_CMD=`find_cmd diff`
+
+	if ! `check_test passwd_changes`; then
+		display --to LOG --type INFO USER_DISABLED_TEST passwd_changes
+	elif [ ! -f "${RKHROOTDIR}/etc/passwd" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
+		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+	elif [ -z "${DIFF_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
+		display --to LOG --type INFO NOT_FOUND_CMD "diff"
+	elif [ ! -f "${RKHTMPDIR}/passwd" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 PASSWD_CHANGES
+		display --to LOG --type WARNING PASSWD_CHANGES_NO_TMP
+	else
+		DIFFS=`${DIFF_CMD} ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep '^[<>]'`
+
+		if [ -z "${DIFFS}" ]; then
+			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 PASSWD_CHANGES
+		else
+			DIFFS_ADDED=`echo "${DIFFS}" | grep '^< '`
+			DIFFS_REMOVED=`echo "${DIFFS}" | grep '^> '`
+
+			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 PASSWD_CHANGES
+
+			if [ -n "${DIFFS_ADDED}" ]; then
+				display --to LOG --type WARNING PASSWD_CHANGES_ADDED
+
+				IFS=$IFSNL
+
+				for RKHTMPVAR in ${DIFFS_ADDED}; do
+					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^< //'`
+					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
+				done
+
+				IFS=$RKHIFS
+			fi
+
+			if [ -n "${DIFFS_REMOVED}" ]; then
+				display --to LOG --type WARNING PASSWD_CHANGES_REMOVED
+
+				IFS=$IFSNL
+
+				for RKHTMPVAR in ${DIFFS_REMOVED}; do
+					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^> //'`
+					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
+				done
+
+				IFS=$RKHIFS
+			fi
+		fi
+
+
+		#
+		# Finally, take a new copy of the passwd file.
+		#
+
+		cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
+	fi
+
+
+	#
+	# Next check for any changes that have occurred to the group
+	# file since rkhunter was last run.
+	#
+
+	if ! `check_test group_changes`; then
+		display --to LOG --type INFO USER_DISABLED_TEST group_changes
+	elif [ ! -f "${RKHROOTDIR}/etc/group" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
+		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE "${RKHROOTDIR}/etc/group"
+	elif [ -z "${DIFF_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
+		display --to LOG --type INFO NOT_FOUND_CMD "diff"
+	elif [ ! -f "${RKHTMPDIR}/group" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 GROUP_CHANGES
+		display --to LOG --type WARNING GROUP_CHANGES_NO_TMP
+	else
+		DIFFS=`${DIFF_CMD} ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group 2>/dev/null | grep '^[<>]'`
+
+		if [ -z "${DIFFS}" ]; then
+			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 GROUP_CHANGES
+		else
+			DIFFS_ADDED=`echo "${DIFFS}" | grep '^< '`
+			DIFFS_REMOVED=`echo "${DIFFS}" | grep '^> '`
+
+			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 GROUP_CHANGES
+
+			if [ -n "${DIFFS_ADDED}" ]; then
+				display --to LOG --type WARNING GROUP_CHANGES_ADDED
+
+				IFS=$IFSNL
+
+				for RKHTMPVAR in ${DIFFS_ADDED}; do
+					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^< //'`
+					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
+				done
+
+				IFS=$RKHIFS
+			fi
+
+			if [ -n "${DIFFS_REMOVED}" ]; then
+				display --to LOG --type WARNING GROUP_CHANGES_REMOVED
+
+				IFS=$IFSNL
+
+				for RKHTMPVAR in ${DIFFS_REMOVED}; do
+					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^> //'`
+					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
+				done
+
+				IFS=$RKHIFS
+			fi
+		fi
+
+
+		#
+		# Finally, take a new copy of the group file.
+		#
+
+		cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
+	fi
+
+
+	#
+	# Finally we do a check on the root account shell history files.
+	# We check for bash, Korn, C-shell and zsh history files.
+	#
+
+	FOUND=0
+	FOUNDFILES=""
+
+	if [ -f "${RKHROOTDIR}/root/.bash_history" ]; then
+		FOUND=1
+
+		if [ -h "${RKHROOTDIR}/root/.bash_history" ]; then
+			FOUNDFILES="${FOUNDFILES} bash:${RKHROOTDIR}/root/.bash_history"
+		fi
+	fi
+
+	if [ -f "${RKHROOTDIR}/root/.sh_history" ]; then
+		FOUND=1
+
+		if [ -h "${RKHROOTDIR}/root/.sh_history" ]; then
+			FOUNDFILES="${FOUNDFILES} Korn:${RKHROOTDIR}/root/.sh_history"
+		fi
+	fi
+
+	if [ -f "${RKHROOTDIR}/root/.history" ]; then
+		FOUND=1
+
+		if [ -h "${RKHROOTDIR}/root/.history" ]; then
+			FOUNDFILES="${FOUNDFILES} C-shell:${RKHROOTDIR}/root/.history"
+		fi
+	fi
+
+	if [ -f "${RKHROOTDIR}/root/.zhistory" ]; then
+		FOUND=1
+
+		if [ -h "${RKHROOTDIR}/root/.zhistory" ]; then
+			FOUNDFILES="${FOUNDFILES} zsh:${RKHROOTDIR}/root/.zhistory"
+		fi
+	fi
+
+
+	#
+	# Now display the results.
+	#
+
+	if [ -z "${FOUNDFILES}" ]; then
+		test $FOUND -eq 1 && RKHTMPVAR="OK" || RKHTMPVAR="NONE_FOUND"
+
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result ${RKHTMPVAR} --log-indent 2 --screen-indent 4 HISTORY_CHECK
+	else
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 HISTORY_CHECK
+
+		for RKHTMPVAR in ${FOUNDFILES}; do
+			SHELLNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
+			FILENAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
+
+			display --to LOG --type WARNING HISTORY_CHECK_FOUND "SHELLNAME" "FILENAME"
+		done
+	fi
+
+	return
+}
+
+
+do_system_config_files_check() {
+
+	#
+	# This function carries out checks on some of the system
+	# software configurations. At present this checks the SSH
+	# and syslog configurations.
+	#
+
+	if ! `check_test system_configs`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs
+		return
+	fi
+
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SYSTEM_CONFIGS_START
+
+	#
+	# First find out where the SSH configuration file is located.
+	#
+
+	SSH_CONFIG_FILE=""
+
+	if [ -n "${SSH_CONFIG_DIR}" ]; then
+		RKHTMPVAR="${SSH_CONFIG_DIR}"
+	else
+		RKHTMPVAR="/etc /etc/ssh /usr/local/etc /usr/local/etc/ssh"
+	fi
+
+	for DIR in ${RKHTMPVAR}; do
+		if [ -f "${RKHROOTDIR}${DIR}/sshd_config" ]; then
+			SSH_CONFIG_FILE="${RKHROOTDIR}${DIR}/sshd_config"
+			break
+		fi
+	done
+
+	if [ -n "${SSH_CONFIG_FILE}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "SSH"
+
+		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "SSH" "${SSH_CONFIG_FILE}"
+
+		display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
+		test $ALLOW_SSH_PROT_V1 -eq 1 && display --to LOG --type INFO CONFIG_SSH_PROTV1
+
+
+		#
+		# Now we check some of the configuration options.
+		#
+		# First we check for allowed root access.
+		#
+
+		RKHTMPVAR=`grep -i '^PermitRootLogin[ 	]' ${SSH_CONFIG_FILE} | tail -1`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			#
+			# Get the value that has been set.
+			#
+
+			RKHTMPVAR2=`echo "${RKHTMPVAR}" | awk '{ print $2 }' | tr '[A-Z]' '[a-z]'`
+
+			if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
+				test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
+				display --to SCREEN+LOG --type PLAIN --result ${RKHTMPVAR} --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
+				display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND1 "${RKHTMPVAR2}"
+				display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND2 "${ALLOW_SSH_ROOT_USER}"
+			fi
+		elif [ "${ALLOW_SSH_ROOT_USER}" = "yes" ]; then
+			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND
+		fi
+
+
+		#
+		# Next we check to see if protocol version 1 is allowed.
+		#
+
+		RKHTMPVAR=`grep -i '^Protocol[ 	]' ${SSH_CONFIG_FILE} | tail -1`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			#
+			# Get the value that has been set.
+			#
+
+			RKHTMPVAR2=`echo "${RKHTMPVAR}" | awk '{ print $2 }' | grep '1'`
+
+			if [ -z "${RKHTMPVAR2}" ]; then
+				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+			elif [ $ALLOW_SSH_PROT_V1 -eq 1 ]; then
+				display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_FOUND "${SSH_CONFIG_FILE}"
+			fi
+		elif [ $ALLOW_SSH_PROT_V1 -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND
+		fi
+	else
+		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "SSH"
+	fi
+
+
+	#
+	# Next we find out if the syslog daemon is running.
+	#
+
+	SYSLOG_SEEN=0
+	METALOG_SEEN=0
+
+	if [ -n "${PS_CMD}" ]; then
+		PS_ARGS="ax"
+
+		test "${OPERATING_SYSTEM}" = "SunOS" && PS_ARGS="-ef"
+
+		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep '(syslogd|syslog-ng)( |$)' | grep -v 'egrep'`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			SYSLOG_SEEN=1
+
+			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+		else
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'metalog( |$)' | grep -v 'egrep'`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				METALOG_SEEN=1
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING
+			fi
+		fi
+	else
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+		display --to LOG --type INFO NOT_FOUND_CMD "ps"
+	fi
+
+
+	#
+	# Now find out where the syslog configuration file is located.
+	#
+
+	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+		RKHTMPVAR="${SYSLOG_CONFIG_FILE}"
+	else
+		RKHTMPVAR="/etc/syslog.conf /etc/syslog-ng/syslog-ng.conf"
+	fi
+
+	for FILE in ${RKHTMPVAR}; do
+		if [ -f "${RKHROOTDIR}${FILE}" ]; then
+			SYSLOG_CONFIG_FILE="${RKHROOTDIR}${FILE}"
+			break
+		fi
+	done
+
+	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "syslog" "${SYSLOG_CONFIG_FILE}"
+	elif [ $METALOG_SEEN -eq 1 ]; then
+		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+	elif [ $SYSLOG_SEEN -eq 1 ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+		display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE
+	else
+		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+	fi
+
+
+	#
+	# Next we find out if syslog allows remote logging.
+	#
+
+	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+		test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
+
+		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep '/syslog\.conf$'`" ]; then
+			RKHTMPVAR=`grep '^[^#].*[ 	]@.' ${SYSLOG_CONFIG_FILE}`
+		else
+			#
+			# For syslog-ng we must look for a destination
+			# block which uses TCP or UDP.
+			#
+
+			RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${SYSLOG_CONFIG_FILE} | egrep -i '( |	|{|^)(tcp|udp)6?( |	|\(|$)'`
+		fi
+
+		if [ -z "${RKHTMPVAR}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+		elif [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND "${RKHTMPVAR}"
+		fi
+	fi
+
+	return
+}
+
+
+do_dev_whitelist_check() {
+
+	#
+	# The check of /dev files has two methods. One uses a simple
+	# top-level file check, the other is more thorough and does a
+	# complete 'find' on the /dev directory. However, the check on
+	# whether the given file is whitelisted is the same for both
+	# methods. As such, it makes sense to use a function rather than
+	# repeating the code for each method.
+	#
+
+
+	FNAME=`${FILE_CMD} ${RKHTMPVAR} | cat -v | sed -e 's/[ 	][ 	]*/ /' | egrep -v ' (character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV)'`
+
+	test -z "${FNAME}" && return
+
+	FILE=`echo "${FNAME}" | cut -d' ' -f1 | sed -e "s/^${RKHROOTDIR}//"`
+
+	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FILE} \"`" ]; then
+		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"
+	else
+		FOUNDFILES="${FOUNDFILES}
+${FNAME}"
+	fi
+
+	return
+}
+
+
+do_filesystem_check() {
+
+	#
+	# This function carries out checks on the filesystem
+	# for suspicious files.
+	#
+
+	if ! `check_test filesystem`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST filesystem
+		return
+	fi
+
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILESYSTEM_START
+
+
+	if [ ! -d "${RKHROOTDIR}/dev" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
+		display --to LOG --type WARNING FILESYSTEM_DEV_CHECK_NO_DEV
+	elif [ -z "${FILE_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
+		display --to LOG --type INFO NOT_FOUND_CMD "file"
+	elif [ "${SCAN_MODE_DEV}" = "THOROUGH" -a -z "${FIND_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
+		display --to LOG --type INFO NOT_FOUND_CMD "find"
+	else
+		#
+		# Now we can run the check on /dev.
+		#
+
+		display --to LOG --type INFO CONFIG_SCAN_MODE_DEV "${SCAN_MODE_DEV}"
+
+
+		#
+		# Note: We do not look for hidden files here - that is,
+		# those beginning with a dot. Any hidden files will be
+		# picked up in the next check.
+		# Note2: Filenames can contain a colon (:), so we need to
+		# be careful in separating the filename from the file type.
+		#
+
+		FOUNDFILES=""
+		ALLOWDEVFILES=" "
+
+		for FNAME in `grep '^ALLOWDEVFILE=' ${CONFIGFILE} | sed -e 's/ALLOWDEVFILE=//g'`; do
+			ALLOWDEVFILES="${ALLOWDEVFILES} ${FNAME}"
+		done
+
+		ALLOWDEVFILES="${ALLOWDEVFILES} "
+
+
+		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
+			for RKHTMPVAR in ${RKHROOTDIR}/dev/*; do
+				RKHTMPVAR="${RKHROOTDIR}/dev/${RKHTMPVAR}"
+				do_dev_whitelist_check
+			done
+		else
+			for RKHTMPVAR in `${FIND_CMD} ${RKHROOTDIR}/dev ! -type d`; do
+				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
+			done
+		fi
+
+
+		#
+		# Now display the results.
+		#
+
+		if [ -z "${FOUNDFILES}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
+
+			display --to LOG --type WARNING FILESYSTEM_DEV_FILE_FOUND "${RKHROOTDIR}/dev"
+
+			IFS=$IFSNL
+
+			for RKHTMPVAR in ${FOUNDFILES}; do
+				test -z "${RKHTMPVAR}" && continue
+				display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
+			done
+
+			IFS=$RKHIFS
+		fi
+	fi
+
+
+	#
+	# Now we check various directories for hidden files and
+	# directories.
+	#
+	# First we look in two sets of directories. One set we search
+	# recursively, using 'find', the other set we only search to
+	# one-level. If we have no 'find' command, then all the
+	# directories are only searched to one-level.
+	#
+
+	FOUNDDIRS=""
+	FOUNDFILES=""
+	LOOKINDIRS=""
+
+	SHORTSEARCHDIRS="${RKHROOTDIR}/usr ${RKHROOTDIR}/etc"
+
+	LONGSEARCHDIRS="${RKHROOTDIR}/dev ${RKHROOTDIR}/bin ${RKHROOTDIR}/usr/man ${RKHROOTDIR}/usr/share/man ${RKHROOTDIR}/usr/bin ${RKHROOTDIR}/usr/sbin ${RKHROOTDIR}/sbin"
+
+	if [ -z "${FIND_CMD}" ]; then
+		SHORTSEARCHDIRS="${SHORTSEARCHDIRS} ${LONGSEARCHDIRS}"
+		LONGSEARCHDIRS=""
+	fi
+
+	for DIR in ${SHORTSEARCHDIRS}; do
+		if [ -d ${DIR} ]; then
+			RKHTMPVAR=`ls -1d ${DIR}/.* | egrep -v '/\.\.?$'`
+			LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
+		fi
+	done
+
+	for DIR in ${LONGSEARCHDIRS}; do
+		if [ -d ${DIR} ]; then
+			RKHTMPVAR=`${FIND_CMD} ${DIR} -name ".*"`
+			LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
+		fi
+	done
+
+
+	#
+	# Get the whitelisted files and directories.
+	#
+
+	ALLOWHIDDENDIRS=" "
+	ALLOWHIDDENFILES=" "
+
+	for DIR in `grep '^ALLOWHIDDENDIR=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENDIR=//g'`; do
+		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
+	done
+
+	ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
+
+	for FNAME in `grep '^ALLOWHIDDENFILE=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENFILE=//g'`; do
+		ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
+	done
+
+	ALLOWHIDDENFILES="${ALLOWHIDDENFILES} "
+
+
+	#
+	# Next we look for any whitelisted files and directories. We also
+	# exclude certain types of files, and Gentoo zero-sized files.
+	#
+
+	for FNAME in ${LOOKINDIRS}; do
+		if [ $GENTOO -eq 1 ]; then
+			test ! -s "${FNAME}" -a -n "`echo \"${FNAME}\" | grep '/\.keep$'`" && continue
+		fi
+
+		FTYPE=`${FILE_CMD} ${FNAME} | cat -v | sed -e 's/[ 	][ 	]*/ /' | cut -d' ' -f2-`
+
+		test -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
+
+
+		FILE=`echo "${FNAME}" | sed -e "s/^${RKHROOTDIR}//"`
+
+		if [ "${FTYPE}" = "directory" ]; then
+			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \" ${FILE} \"`" ]; then
+				display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "${FNAME}"
+			else
+				FOUNDDIRS="${FOUNDDIRS}
+${FNAME}"
+			fi
+		else
+			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \" ${FILE} \"`" ]; then
+				display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "${FNAME}"
+			else
+				FOUNDFILES="${FOUNDFILES}
+${FNAME}: ${FTYPE}"
+			fi
+		fi
+	done
+
+
+	#
+	# Now display the results.
+	#
+
+	if [ -z "${FOUNDDIRS}" -a -z "${FOUNDFILES}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 FILESYSTEM_HIDDEN_CHECK
+	else
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_HIDDEN_CHECK
+
+		IFS=$IFSNL
+
+		for RKHTMPVAR in ${FOUNDDIRS}; do
+			test -z "${RKHTMPVAR}" && continue
+			display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "${RKHTMPVAR}"
+		done
+
+		for RKHTMPVAR in ${FOUNDFILES}; do
+			test -z "${RKHTMPVAR}" && continue
+			display --to LOG --type WARNING FILESYSTEM_HIDDEN_FILE_FOUND "${RKHTMPVAR}"
+		done
+
+		IFS=$RKHIFS
+	fi
+
+	return
+}
+
+
 do_local_host_checks() {
 
 	#
@@ -7144,618 +8289,34 @@ do_local_host_checks() {
 	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_LOCALHOST
 
 
-# jhxx
-	displaytext "* Allround tests${NORMAL}"
+# jh - add check of OPERATING_SYSTEM - if check skipped then log something or allow check to be disabled.
+	#
+	# We start by performing checks on the startup files.
+	#
 
-	displaytext -n "   Checking hostname... "
-	if [ "${HOST_NAME}" = "" ]; then
-		displaytext "${RED}Warning. ${NORMAL}Found empty hostname. Some programs don't like this."
-	else
-		displaytext "${GREEN}Found. ${NORMAL}Hostname is ${HOST_NAME}"
-	fi
+	do_system_startup_file_checks
 
 
-	FOUND=0
-	SIZE=49
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-	displaytext -n "   Checking for passwordless user accounts... "
-	logtext "Checking for passwordless user accounts... "
-	if [ -f "${RKHROOTDIR}/etc/shadow" ]; then
-		for I in `cat ${RKHROOTDIR}/etc/shadow`; do
-			USER=`echo "${I}" | cut -d: -f1`
-			PASSWORD=`echo "${I}" | cut -d: -f2`
-			# Exclude NIS-user (+::::::)
-			if [ ! "${USER}" = "+" -a "x${PASSWORD}x" = "xx" ]; then
-				FOUND=1
-				logtext "Warning! Found passwordless account (${USER})"
-				logtext "Check this account and give it a password."
-			fi
-		done
-		if [ ${FOUND} -eq 0 ]; then
-			displaytext "${GREEN}OK${NORMAL}"
-		else
-			displaytext "${RED}Warning!${NORMAL}"
-			displaytext "Found passwordless user account. Check the logfile for more information"
-			logtext --nodate "OK"
-		fi
-	else
-		insertlayout
-		displaytext "${WHITE}Skipped${NORMAL}"
-		logtext --nodate "Skipped"
-		logtext "Skipped test because /etc/shadow doesn't exist"
-	fi
+	#
+	# Now we check the /etc/passwd file, and run some checks
+	# on the accounts and groups.
+	#
 
+	do_group_accounts_check
 
 
-	if `check_test passwd`; then
-		displaytext -n "   Checking for differences in user accounts... "
-		if [ -f "${RKHROOTDIR}/etc/passwd" ]; then
-			if [ -f "${RKHTMPDIR}/passwd" ]; then
-				differences=`diff ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep ':'`
-				if [ "${differences}" = "" ]; then
-					displaytext "${GREEN}OK. ${NORMAL}No differences."
-				else
-					diffadded=`echo "${differences}" | grep '<'`
-					diffremoved=`echo "${differences}" | grep '>'`
-					displaytext "${RED}Found differences${NORMAL}"
-					displaytext "   Info: "
-					displaytext "----------------------"
-					displaytext "${differences}"
-					displaytext "----------------------"
-					if [ ! "${diffadded}" = "" ]; then
-						displaytext "   Info: Some items have been added (items marked with '<')"
-					fi
-					if [ ! "${diffremoved}" = "" ]; then
-						displaytext "   Info: Some items have been removed (items marked with '>')"
-					fi
-				fi
-				rm -f ${RKHTMPDIR}/passwd >/dev/null 2>&1
-			else
-				jump=44
-				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
-			fi
-			cp ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
-		else
-			displaytext "${RED}Error. ${NORMAL}Cannot find /etc/passwd"
-			logtext "Can't find /etc/passwd file?!?"
-		fi
+	#
+	# Next check some of the system configuration files.
+	#
 
-		displaytext -n "   Checking for differences in user groups... "
-		if [ -f "${RKHROOTDIR}/etc/group" ]; then
-			if [ -f "${RKHTMPDIR}/group" ]; then
-				differences=`diff ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group | grep ':'`
-				if [ "${differences}" = "" ]; then
-					displaytext "${GREEN}OK. ${NORMAL}No differences."
-				else
-					diffadded=`echo "${differences}" | grep '<'`
-					diffremoved=`echo "${differences}" | grep '>'`
-					displaytext "${RED}Found differences${NORMAL}"
-					displaytext "   Info: "
-					displaytext "----------------------"
-					displaytext "${differences}"
-					displaytext "----------------------"
-					if [ ! "${diffadded}" = "" ]; then
-						displaytext "   Info: Some items have been added (items marked with '<')"
-					fi
-					if [ ! "${diffremoved}" = "" ]; then
-						displaytext "   Info: Some items have been removed (items marked with '>')"
-					fi
-				fi
-				rm -f ${RKHTMPDIR}/group >/dev/null 2>&1
-			else
-				displaytext "${YELLOW}Creating file ${NORMAL}It seems this is your first time."
-			fi
-			cp ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
-		else
-			displaytext "${RED}Error. ${NORMAL}Cannot find /etc/group"
-			logtext "Can't find /etc/group file?!?"
-		fi
-	else
-		display --to LOG --type INFO USER_DISABLED_TEST passwd
-	fi
+	do_system_config_files_check
 
 
-	SIZE=42
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-	displaytext "   Checking boot.local/rc.local file... "
+	#
+	# Finally check the filesystem for suspicious files.
+	#
 
-	# Gentoo: /etc/conf.d/local.start
-	RCLOCATIONS="${RKHROOTDIR}/etc/rc.local ${RKHROOTDIR}/etc/rc.d/rc.local ${RKHROOTDIR}/usr/local/etc/rc.local ${RKHROOTDIR}/usr/local/etc/rc.d/rc.local ${RKHROOTDIR}/etc/conf.d/local.start ${RKHROOTDIR}/etc/init.d/boot.local"
-	FOUNDRCSIGN=0
-
-	for FILE in ${RCLOCATIONS}; do
-		FILELENGTH=`echo ${FILE} | wc -c | tr -d ' '`
-		SIZE=4
-		jump=`expr ${defaultcolumn} - ${SIZE} - ${FILELENGTH}`
-
-		displaytext -n "     - ${FILE}"
-		if [ -f "${FILE}" ]; then
-			for J in ${RCLOCAL_STRINGS}; do
-				STRING=`echo ${J} | cut -d: -f1 | sed -e 's/\./\\\./g'`
-				FOUND=`grep "${STRING}" ${FILE}`
-				if [ ! "${FOUND}" = "" ]; then
-					FOUNDRCSIGN=1
-					logtext "Warning! Found unusual string in ${FILE}"
-				fi
-			done
-
-			if [ "${FOUNDRCSIGN}" -eq 1 ]; then
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found unusual signs) ]"
-				logtext "Warning! Found unusual string in rc.local/boot.local file"
-			else
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-			fi
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
-		fi
-	done
-
-	FOUNDRCSIGN=0
-	COUNTER=0
-
-	SIZE=24
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-	displaytext -n "   Checking rc.d files... "
-
-	if [ -d "${RKHROOTDIR}/etc/rc.d" ]; then
-		# Insert end-of-line
-		displaytext ""
-		displaytext -n "     Processing"
-		for I in `find ${RKHROOTDIR}/etc/rc.d/*`; do
-			# Only check files, not directories
-			if [ -f "${I}" ]; then
-				COUNTER=`expr ${COUNTER} + 1`
-				if [ ${COUNTER} -eq 40 ]; then
-					displaytext "."
-					displaytext -n "               "
-					COUNTER=0
-				else
-					displaytext -n "."
-				fi
-				for J in ${RCLOCAL_STRINGS}; do
-					STRING=`echo ${J} | cut -d: -f1 | sed -e 's/\./\\\./g'`
-					FOUND=`grep "${STRING}" ${I}`
-					if [ ! "${FOUND}" = "" ]; then
-						FOUNDRCSIGN=1
-					fi
-				done
-			fi
-		done
-
-		# Insert end-of-line
-		displaytext ""
-		displaytext -n "   Result rc.d files check"
-		if [ "${FOUNDRCSIGN}" -eq 1 ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (found unusual things) ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		fi
-	else
-		insertlayout
-		displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
-	fi
-
-	if [ -f "${RKHROOTDIR}/etc/conf.d/local.start" ]; then
-		SIZE=37
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-		displaytext -n "   Checking Gentoo local.start file... "
-		logtext "Found ${RKHROOTDIR}/etc/conf.d/local.start file (Gentoo)"
-
-		INSPECTLINES=`grep -v '^#' ${RKHROOTDIR}/etc/conf.d/local.start | grep -v '^$'`
-
-		for J in ${RCLOCAL_STRINGS}; do
-			STRING=`echo ${J} | cut -d: -f1 | sed -e 's/\./\\\./g'`
-			FOUND=`echo ${INSPECTLINES} | grep "${STRING}"`
-			if [ ! "${FOUND}" = "" ]; then
-				FOUNDRCSIGN=1
-				logtext "Found ${FOUND} while checking ${RKHROOTDIR}/etc/conf.d/local.start"
-			fi
-		done
-
-		if [ "${FOUNDRCSIGN}" -eq 1 ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		fi
-	fi
-
-
-	logtext "---------------------------- History files ----------------------------"
-
-	SIZE=15
-	displaytext "   Checking history files"
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-
-	displaytext -n "     Bourne Shell"
-
-	if [ -f "${RKHROOTDIR}/root/.bash_history" ]; then
-		ATTRIBUTE=`ls -l ${RKHROOTDIR}/root/.bash_history | cut -c1`
-		if [ "${ATTRIBUTE}" = "l" ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (redirection found) ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		fi
-	else
-		insertlayout
-		displaytext $E "${LAYOUT}[ ${GREEN}Not Found${NORMAL} ]"
-	fi
-
-
-
-	logtext "------------------------- Security advisories -------------------------"
-
-	SIZE=30
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-
-
-	displaytext "* Check: Groups and Accounts${NORMAL}"
-	displaytext -n "   Searching for ${RKHROOTDIR}/etc/passwd... "
-	if [ -f "${RKHROOTDIR}/etc/passwd" ]; then
-		insertlayout
-		displaytext $E "${LAYOUT}[ ${GREEN}Found${NORMAL} ]"
-		displaytext -n "   Checking users with UID '0' (root)... "
-
-		SIZE=39
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-
-		users_with_uid0=`grep -v '^:0:0:::' ${RKHROOTDIR}/etc/passwd | grep ':0:' | cut -d: -f1,3 | grep '0' | grep -v 'root:0'`
-		if [ "${users_with_uid0}" = "" ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${YELLOW}Warning!${NORMAL} (some users in root group) ]"
-			displaytext "    info: ${users_with_uid0}"
-		fi
-
-	else
-		insertlayout
-		displaytext $E "${LAYOUT}[ ${RED}Not Found${NORMAL} ]"
-	fi
-
-	displaytext "";
-	displaytext "* Check: SSH${NORMAL}"
-
-	SIZE=39
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-
-	displaytext "   Searching for sshd_config... "
-	SSHDCONFIG_PLACES="${RKHROOTDIR}/etc ${RKHROOTDIR}/etc/ssh ${RKHROOTDIR}/usr/local/etc ${RKHROOTDIR}/usr/local/etc/ssh"
-	for I in ${SSHDCONFIG_PLACES}; do
-		if [ -f "${I}/sshd_config" ]; then
-			FOUND=0
-			displaytext "   Found ${I}/sshd_config"
-			displaytext -n "   Checking for allowed root login... "
-			permitrootlogin=`grep 'PermitRootLogin' ${I}/sshd_config | grep -v '#'`
-			if [ "${permitrootlogin}" = "PermitRootLogin yes" ]; then
-				FOUND=1
-				logtext "Info: Found 'PermitRootLogin yes'. Unsafe for production servers..."
-				logtext "Tip: Change the option in your configuration file (${I}/sshd_config)."
-				logtext "     Use normal user accounts and 'su' to obtain root permissions."
-			else
-				permitrootlogin2=`egrep 'PermitRootLogin (no|without-password)' ${I}/sshd_config | grep -v '#'`
-				if [ "${permitrootlogin2}" = "PermitRootLogin no" -o "${permitrootlogin2}" = "PermitRootLogin without-password" ]; then
-					FOUND=0
-					logtext "Info: Found 'PermitRootLogin no' or 'PermitRootLogin without-password' in SSH configuration file ${I}/sshd_config"
-				else
-					permitrootlogin2=`grep 'PermitRootLogin forced-commands-only' ${I}/sshd_config | grep -v '#'`
-					if [ "${permitrootlogin2}" = "PermitRootLogin forced-commands-only" ]; then
-						FOUND=1
-						logtext "Info: Found 'PermitRootLogin forced-commands-only'"
-					else
-						permitrootlogin3=`grep '#PermitRootLogin yes' ${I}/sshd_config`
-						if [ -n "${permitrootlogin3}" ]; then
-							FOUND=1
-							logtext "Info: Found no PermitRootLogin value in file ${I}/sshd_config. Default value is 'yes'."
-						else
-							FOUND=0
-							logtext "Unknown PermitRootLogin value found in file ${I}/sshd_config"
-						fi
-					fi
-				fi
-			fi
-
-			if [ ${FOUND} -eq 1 ]; then
-				if [ $ALLOW_SSH_ROOT_USER -eq 0 ]; then
-					displaytext "${RED}Warning${NORMAL} Root login possible. Possible risk!"
-					if [ -z "${permitrootlogin}" ]; then
-						displaytext "    info: No 'PermitRootLogin' entry found in file ${I}/sshd_config"
-					else
-						displaytext "    info: \"${permitrootlogin}\" found in file ${I}/sshd_config"
-					fi
-					displaytext "    Hint: Check the logfile for more information about this issue"
-					logtext "Warning: root login possible. Change for your safety the 'PermitRootLogin'"
-					logtext "entry in the SSH configuration file ${I}/sshd_config to 'no', and use 'su -' to become root. "
-				else
-					logtext "Remote root login permitted, but allowed by using explicit option"
-					SIZE=36
-					jump=`expr ${defaultcolumn} - ${SIZE}`
-					insertlayout
-					displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login permitted by explicit option) ]"
-				fi
-			else
-				SIZE=36
-				jump=`expr ${defaultcolumn} - ${SIZE}`
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Remote root login disabled) ]"
-			fi
-
-			displaytext -n "   Checking for allowed protocols... "
-
-			protocols=`grep 'Protocol 2' ${I}/sshd_config | grep -v '#'`
-			if [ "${protocols}" = "Protocol 2" ]; then
-				SIZE=35
-				jump=`expr ${defaultcolumn} - ${SIZE}`
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Only SSH2 allowed) ]"
-			else
-				if [ "${protocols}" = "Protocol 2,1" -o "${protocols}" = "Protocol 1,2" -o "${protocols}" = "Protocol 1" ]; then
-					SIZE=35
-					jump=`expr ${defaultcolumn} - ${SIZE}`
-					insertlayout
-					if [ "${ALLOW_SSH_PROT_V1}" = "0" ]; then
-						displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} ]"
-						displaytext "    info: Users can use SSH1-protocol (Check the logfile for more information)."
-						logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
-					else
-						displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (SSH1-protocol permitted by explicit option) ]"
-						logtext "Info: found SSH1-protocol permitted by explicit option."
-					fi	
-				else
-					SIZE=35
-					jump=`expr ${defaultcolumn} - ${SIZE}`
-					insertlayout
-					protocols=`grep '#Protocol' ${I}/sshd_config`
-					if [ "${protocols}" = "#Protocol 2,1" -o "${protocols}" = "#Protocol 1,2" ]; then
-						FOUND=1
-						logtext "Found default option Protocol 2,1"
-					fi
-					if [ "${protocols}" = "#Protocol 1" ]; then
-						FOUND=1
-						logtext "Found default option Protocol 1"
-					fi
-
-					if [ ${FOUND} -eq 0 ];then
-						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (Only SSH2 allowed) ]"
-						displaytext "    info: found no option, most times default value is used."
-					else
-						if [ "${ALLOW_SSH_PROT_V1}" = "0" ]; then
-							displaytext $E "${LAYOUT}[ ${YELLOW}Warning${NORMAL} (SSH1-protocol allowed) ]"
-							logtext "Warning: SSH version 1 possible allowed!"
-							logtext "Hint: Change the 'Protocol xxx' line into 'Protocol 2'"
-						else
-							displaytext $E "${LAYOUT}[ ${OK}OK${NORMAL} (SSH1-protocol permitted by explicit option) ]"
-							logtext "Info: found SSH1-protocol permitted by explicit option."
-						fi
-					fi
-				fi
-			fi
-		fi
-	done
-
-
-	displaytext ""
-	displaytext "* Check: Events and Logging${NORMAL}"
-	displaytext -n "   Search for syslog configuration... "
-
-	SIZE=36
-	jump=`expr ${defaultcolumn} - ${SIZE}`
-
-
-	if [ -f "${RKHROOTDIR}/etc/syslog.conf" -o -f "${RKHROOTDIR}/etc/syslog-ng/syslog-ng.conf" ]; then
-		insertlayout
-		displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		SIZE=38
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-
-		displaytext -n "   Checking for running syslog slave... "
-
-		case "${OPERATING_SYSTEM}" in
-		SunOS)
-			syslogisrunning=`ps -ef | grep 'syslogd' | grep -v 'grep'`
-			syslogngisrunning=`ps -ef | grep 'syslog-ng' | grep -v 'grep'`
-			;;
-		*)
-			syslogisrunning=`ps ax | egrep 'syslogd|syslog-ng|metalog' | grep -v 'grep'`
-			#syslogngisrunning=`ps ax | grep syslog-ng | grep -v "grep"`
-			;;
-		esac
-
-		if [ ! "${syslogisrunning}" = "" -o ! "${syslogngisrunning}" = "" ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} ]"
-			displaytext "    Info: Cannot find syslog/syslog-ng daemon"
-		fi
-
-		SIZE=42
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-
-		displaytext -n "   Checking for logging to remote system... "
-
-		# First do syslog
-		if [ -f "${RKHROOTDIR}/etc/syslog.conf" ]; then
-			logtoremote=`grep '@' ${RKHROOTDIR}/etc/syslog.conf | grep -v '#'`
-		else
-			# Second try syslog-ng
-			if [ -f "${RKHROOTDIR}/etc/syslog-ng/syslog-ng.conf" ]; then
-				# Yes, we found the configuration file
-				# Gready regex necessary due to allowed formatting (indentation, destination names, destinations)
-				# As result logtxt below may contain partial lines.
-				logtoremote=`egrep -iA1 '^destination.*{' ${RKHROOTDIR}/etc/syslog-ng/syslog-ng.conf | egrep '(udp|tcp).*\(' | grep -v '/'`
-			else
-				displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
-				displaytext "Warning: Cannot find syslog-ng configuration file"
-				logtext "Info: Cannot find syslog-ng configuration file"
-			fi
-		fi
-
-		if [ "${logtoremote}" = "" ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (no remote logging) ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} (remote logging) ]"
-			displaytext "    info: ${logtoremote}"
-			logtext "Info: line found with logging to remote host ($logtoremote)"
-		fi
-	fi
-
-
-	displaytext ""
-	displaytext "* Filesystem checks${NORMAL}"
-
-	if [ -d "${RKHROOTDIR}/dev" ]; then
-		# FreeBSD (5): character special, symbolic link to,directory
-		# Linux (Debian): block special, socket, fifo (named pipe)
-
-# jh - add in whitelisting for /dev files.
-		display --to LOG --type INFO CONFIG_SCAN_MODE_DEV "${SCAN_MODE_DEV}"
-
-		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
-			displaytext -n "   Checking /dev for suspicious files... (in explicit LAZY mode)"
-			SPECIALFILES=`file "${RKHROOTDIR}/dev/"* | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'`
-		else
-			displaytext -n "   Checking /dev for suspicious files... "
-			SPECIALFILES=`find "${RKHROOTDIR}/dev/" | while read f; do file "${f}" | cat -v | egrep -v 'character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV'; done`
-		fi
-
-		SIZE=39
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-
-		if [ "${SPECIALFILES}" = "" ]; then
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${RED}Warning!${NORMAL} (unusual files found) ]"
-			displaytext "---------------------------------------------"
-			displaytext "Unusual files:"
-			displaytext "${SPECIALFILES}"
-			displaytext "---------------------------------------------"
-		fi
-	else
-		insertlayout
-		displaytext $E "${LAYOUT}[ ${YELLOW}NA${NORMAL} ]"
-	fi
-
-	SIZE=29
-
-	displaytext -n "   Scanning for hidden files..."
-
-	SEARCHINDIRS="${RKHROOTDIR}/dev ${RKHROOTDIR}/bin ${RKHROOTDIR}/usr ${RKHROOTDIR}/usr/man ${RKHROOTDIR}/usr/share/man ${RKHROOTDIR}/usr/man/man1 ${RKHROOTDIR}/usr/share/man/man1 ${RKHROOTDIR}/usr/man/man8 ${RKHROOTDIR}/usr/share/man/man8 ${RKHROOTDIR}/usr/bin ${RKHROOTDIR}/usr/sbin ${RKHROOTDIR}/sbin ${RKHROOTDIR}/etc"
-	# Only reset status once
-	STATUS=0
-
-	if [ -z "${LS_CMD}" ]; then
-		jump=`expr ${defaultcolumn} - ${SIZE}`
-		insertlayout
-		displaytext $E "${LAYOUT}[ ${YELLOW}Skipped${NORMAL} ]"
-		logtext "Scanning for hidden files... Skipped"
-		logtext "Test skipped because no \"ls\" command is present."
-	else
-		for I in ${SEARCHINDIRS}; do
-			# Initialize directory
-			HIDDENDIRS=""
-
-			logtext "Start scanning for hidden files in ${I}..."
-
-			if [ -d "${I}" ]; then
-				HIDDENDIRS=`${LS_CMD} -A1d ${I}/.* | egrep -v '\/\.\.?$'`
-				logtext "Value of hiddendirs: ${HIDDENDIRS}"
-			fi
-
-			if [ -n "${HIDDENDIRS}" ]; then
-				ALLHIDDENDIRS="${HIDDENDIRS} ${ALLHIDDENDIRS}"
-				STATUS=1
-			fi
-
-			logtext "End of scanning ${I}"
-		done
-
-		if [ ${STATUS} -eq 0 ]; then
-			jump=`expr ${defaultcolumn} - ${SIZE}`
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		else
-			# Reset state
-			STATUS=0
-			for I in ${ALLHIDDENDIRS}; do
-				if [ ${OPERATING_SYSTEM} = "AIX" -o ${OPERATING_SYSTEM} = "SunOS" ] ; then
-					FILETYPE=`file ${I}|awk '{print $2}'`
-				else
-					FILETYPE=`file -b ${I}`
-				fi
-
-				# Ignore some filetypes, because they are harmless
-				case "${FILETYPE}" in
-				"character special (8/0)" | "character special (254/0)" | "empty")
-					logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
-					;;
-				"TDB database"*)
-					logtext "Hidden file/dir ${I} [${FILETYPE}] seems to be OK"
-					;;
-				*)
-					# Ignore Gentoo's zero-sized files (extra check for future use)
-					if [ ! ${GENTOO} -eq 1 -a ! "${I}" = ".keep" -a ! -z ${I} ]; then
-						SEARCHDIR=0
-						if [ "${FILETYPE}" = "directory" ]; then
-							for ALLOWHIDDENDIRS in `grep '^ALLOWHIDDENDIR=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENDIR=//g'`; do
-								if [ "${RKHROOTDIR}${ALLOWHIDDENDIRS}" = "${I}" ]; then
-									SEARCHDIR=1
-									logtext "Found hidden directory ${I} on whitelist"
-								fi
-							done
-						else
-							for ALLOWHIDDENFILES in `grep '^ALLOWHIDDENFILE=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENFILE=//g'`; do
-								if [ "${RKHROOTDIR}${ALLOWHIDDENFILES}" = "${I}" ]; then
-									SEARCHDIR=1
-									logtext "Found hidden file ${I} on whitelist"
-								fi
-							done
-						fi
-
-						# Is it a directory and is it on the whitelist?
-						# searchdir: 0 = NOT on list, 1 = on list
-						if [ ${SEARCHDIR} -eq 0 ]; then
-							STATUS=1
-							HIDDENFILES="${HIDDENFILES} ${I} (${FILETYPE}) "
-							logtext "Added ${I} (${FILETYPE}) to list of unknown hidden files/dirs"
-						fi
-					fi
-					;;
-				esac
-			done
-
-			if [ ${STATUS} -eq 1 ]; then
-				jump=`expr ${defaultcolumn} - ${SIZE}`
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${YELLOW}Warning!${NORMAL} ]"
-				logtext "WARNING, found: ${HIDDENFILES}"
-
-				displaytext "---------------"
-				displaytext "${ALLHIDDENDIRS}"
-				displaytext "---------------"
-
-				displaytext "Please inspect: ${HIDDENFILES}"
-			else
-				jump=`expr ${defaultcolumn} - ${SIZE}`
-				insertlayout
-				displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-			fi
-		fi
-	fi
+	do_filesystem_check
 
 	keypresspause
 
@@ -8646,7 +9207,7 @@ display_languages() {
 
 		if [ $TITLE -eq 1 ]; then
 			TITLE=0
-			echo "Available languages (ISO code): ${STR}"
+			echo "Available languages: ${STR}"
 		else
 			echo "                                ${STR}"
 		fi
@@ -8728,7 +9289,7 @@ help() {
 	echo "                                       (Default is to enable all tests)"
 	echo "         --hash                        Specify the hash function to use"
 	echo "     -h, --help                        Display this help menu, then exit"
-	echo " --lang, --language <language>         Specify the language (ISO code) to use"
+	echo " --lang, --language <language>         Specify the language to use"
 	echo "                                       (Default is English)"
 	echo "         --list [tests | languages |   List the available test names or"
 	echo "                 rootkits]             languages, or checked for rootkits."
@@ -8868,9 +9429,14 @@ GENTOO=0
 
 # These SSH options can only be set in the configuration file.
 ALLOW_SSH_PROT_V1=0
-ALLOW_SSH_ROOT_USER=0
+ALLOW_SSH_ROOT_USER=""
+SSH_CONFIG_DIR=""
 
-# Set check counters to be used by the summary
+# These syslog options can only be set in the configuration file.
+ALLOW_SYSLOG_REMOTE_LOGGING=0
+SYSLOG_CONFIG_FILE=""
+
+# Set check counters to be used by the summary.
 ROOTKIT_COUNT=0
 ROOTKIT_FAILED_COUNT=0
 ROOTKIT_FAILED_NAMES=""
@@ -8888,9 +9454,6 @@ TOTAL_SCANTIME=""
 
 # This will be set if a warning message is logged.
 WARNING_COUNT=0
-
-FOUNDFILE=0
-FOUNDRCSIGNS=0
 
 # Set if grsec is installed.
 GRSECINSTALLED=0
@@ -8912,10 +9475,10 @@ SPACEDPATH=`echo ${PATH} | tr ':' ' ' 2>/dev/null`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="diff file find ifconfig ip ldd ls lsattr lsmod lsof mktemp netstat perl ps readlink sort stat strings uniq"
+CMDLIST="diff file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl ps readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
-REQCMDS="awk cut date egrep grep head ls sed tail touch tr uname wc"
+REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr uname wc"
 
 # List of commands used to download files from the web. This list is 
 # used by the '--update' and '--versioncheck' options. Preferred commands
@@ -8947,10 +9510,11 @@ KNOWN_LANGS=en
 # A space-separated list of test names we recognise.
 KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     deleted_files packet_cap_apps apps rootkits known_rkts
-	     additional_rkts malware local_host network passwd
-	     possible_rkts possible_rkt_files possible_rkt_strings
+	     additional_rkts malware local_host network passwd_changes
+	     group_changes possible_rkts possible_rkt_files possible_rkt_strings
 	     system_commands shared_libs shared_libs_path running_procs
-	     hidden_procs trojan other_malware os_specific"
+	     hidden_procs trojan other_malware os_specific startup_malware
+	     startup_files group_accounts system_configs filesystem"
 
 # A space-separated list of test 'group names'. This list allows test
 # names to be grouped together. For example, 'system_commands' can include
@@ -8967,7 +9531,9 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 	       possible_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps
 	       malware:running_procs:hidden_procs:deleted_files
-	       local_host:passwd:other_malware"
+	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem
+	       startup_files:startup_malware
+	       group_accounts:passwd_changes:group_changes"
 
 # A comma-separated list of rootkits we check for.
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
@@ -9669,9 +10235,6 @@ else
 		display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
 	fi
 fi
-
-test $ALLOW_SSH_ROOT_USER -eq 1 && display --to LOG --type INFO CONFIG_SSH_ROOT
-test $ALLOW_SSH_PROT_V1 -eq 1 && display --to LOG --type INFO CONFIG_SSH_PROTV1
 
 test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
 test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
