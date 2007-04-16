@@ -51,21 +51,15 @@ AIX|OpenBSD|SunOS)
 	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'
-		E=""
 		ECHOOPT="--"
-		NEWECHOOPT="--"
 		MYSHELL=ksh
 	else
-		E="-e"
-		ECHOOPT=""
-		NEWECHOOPT="-e"
+		ECHOOPT="-e"
 		MYSHELL=bash
 	fi
 	;;
 *)
-	E="-e"
-	ECHOOPT=""
-	NEWECHOOPT="-e"
+	ECHOOPT="-e"
 
 
 	#
@@ -80,8 +74,7 @@ AIX|OpenBSD|SunOS)
 	if [ -z "${MYSHELL}" ]; then
 		MYSHELL=bash
 	elif [ "${MYSHELL}" = "dash" -o "${MYSHELL}" = "ash" ]; then
-		E=""
-		NEWECHOOPT=""
+		ECHOOPT=""
 	fi
 	;;
 esac
@@ -395,14 +388,14 @@ display() {
 			NLLOOP=`expr ${NLLOOP} - 1`
 		done
 
-		echo $NEWECHOOPT "${LINE1}"
+		echo $ECHOOPT "${LINE1}"
 	fi
 
 	if [ $WRITETOLOG -eq 1 ]; then
-		echo $NEWECHOOPT "${LOGLINE1}" >>${RKHLOGFILE}
+		echo $ECHOOPT "${LOGLINE1}" >>${RKHLOGFILE}
 
 		if [ $WARN_MSG -eq 1 ]; then
-			test $SHOWWARNINGSONLY -eq 1 && echo $NEWECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
+			test $SHOWWARNINGSONLY -eq 1 && echo $ECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
 
 			LINE1=1
 			OLDIFS="${IFS}"
@@ -413,14 +406,14 @@ display() {
 					LINE1=0
 					continue
 				else
-					test $SHOWWARNINGSONLY -eq 1 && echo $NEWECHOOPT "         ${LOGLINE1}"
-					echo $NEWECHOOPT "           ${LOGLINE1}" >>${RKHLOGFILE}
+					test $SHOWWARNINGSONLY -eq 1 && echo $ECHOOPT "         ${LOGLINE1}"
+					echo $ECHOOPT "           ${LOGLINE1}" >>${RKHLOGFILE}
 				fi
 			done
 
 			IFS="${OLDIFS}"
 		elif [ $SHOWWARNINGSONLY -eq 1 -a -n "`echo \"${LOGLINE1}\" | egrep '^\[([0-9][0-9]:){2}[0-9][0-9]\]         '`" ]; then
-			echo $NEWECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
+			echo $ECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
 		fi
 	fi
 
@@ -446,91 +439,6 @@ keypresspause() {
 	fi
 
 	return
-}
-
-
-# Logtext: add text to logfile
-logtext() {
-	test $NOLOG -eq 1 && return
-
-	# Add date/time to logfile
-	if [ "$1" = "--nodate" ]; then
-		:
-	elif [ "$1" = "--indent" ]; then
-		echo -n "           " >>${RKHLOGFILE}
-	else
-		echo -n "`date '+[%H:%M:%S] '`" >>${RKHLOGFILE}
-	fi
-
-	NE1="n"
-	[ "$1" = "-n" ] && NE1="y"
-	[ "$1" = "-e" ] && NE1="y"
-
-	if [ "$NE1" = "y" ]; then
-		if [ "$MYSHELL" = "ksh" ]; then
-			[ "$1" = "-n" ] &&  echo -n "$2" >>$RKHLOGFILE || echo $ECHOOPT $2 >>$RKHLOGFILE
-		else
-			echo $1 "$2" >>$RKHLOGFILE
-		fi
-	else
-		if [ "$1" = "--nodate" -o "$1" = "--indent" ]; then
-			echo $ECHOOPT "$2" >>$RKHLOGFILE
-		else
-			echo $ECHOOPT "$1" >>$RKHLOGFILE
-		fi
-	fi
-}
-
-
-# Displaytext: display text to STDOUT
-displaytext() {
-	DODISPLAY=0
-	FOUNDWARNING=0
-
-	FOUNDWARNING1=`echo $ECHOOPT $1 | egrep 'BAD|Warning|WARNING'`
-	FOUNDWARNING2=`echo $2 | egrep 'BAD|Warning|WARNING'`
-	FOUNDWARNING3=`echo $3 | egrep 'BAD|Warning|WARNING'`
-
-	if [ ! "${FOUNDWARNING1}" = "" -o ! "${FOUNDWARNING2}" = "" -o ! "${FOUNDWARNING3}" = "" ]; then
-		FOUNDWARNING=1
-		WARNING_COUNT=`expr ${WARNING_COUNT} + 1`
-	fi
-
-	[ $QUIET -eq 0 -o $FOUNDWARNING -eq 1 ] && DODISPLAY=1
-
-	# Small change below to cater for OpenBSd with ksh.
-	if [ "X$1" = "X-n" -o "X$1" = "X-e" ]; then
-		if [ $DODISPLAY -eq 1 ]; then
-			if [ -n "$PREVIOUSTEXT" ]; then
-				echo -n "${PREVIOUSTEXT}"
-				PREVIOUSTEXT=""
-			fi
-			if [ "$MYSHELL" = "ksh" ]; then
-				[ "$1" = "-n" ] && echo -n "$2" || echo $ECHOOPT "$2"
-			else
-				echo $ECHOOPT $1 "$2"
-			fi
-		else
-			[ "$1" = "-n" ] && PREVIOUSTEXT=`echo "$2" | sed -e 's/^ *//'`
-		fi
-	else
-		if [ $DODISPLAY -eq 1 ]; then
-			if [ -n "$PREVIOUSTEXT" ]; then
-				echo -n "${PREVIOUSTEXT}"
-				PREVIOUSTEXT=""
-			fi
-			echo $ECHOOPT "$1"
-		fi
-	fi
-}
-
-
-insertlayout() {
-	if [ ${CRONJOB} -eq 0 ]; then
-		LAYOUT="\033[${jump}C"
-	else
-		LAYOUT="  "
-	fi
 }
 
 
@@ -650,7 +558,7 @@ suckit_extra_checks() {
 
 	if [ $VERBOSE_LOGGING -eq 1 ]; then
 		if [ -z "${HIDDEN}" ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
+			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
 		else
 			display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
 		fi
@@ -3982,12 +3890,6 @@ do_system_check_initialisation() {
 	SNIFFER_FILES="${RKHROOTDIR}/usr/lib/libice.log"
 
 
-	HTTPDCONFS="${RKHROOTDIR}/usr/local/apache/conf/httpd.conf
-		    ${RKHROOTDIR}/usr/local/etc/apache/httpd.conf
-		    ${RKHROOTDIR}/etc/apache/httpd.conf
-		    ${RKHROOTDIR}/etc/httpd/conf/httpd.conf"
-
-
 	# Known bad Linux kernel modules
 	LKM_BADNAMES="adore.o
 		      cleaner.o
@@ -4105,7 +4007,7 @@ shared_libs_check() {
 	done
 
 	if [ -z "${VARFOUND}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_VAR
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_VAR
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_VAR
 		display --to LOG --type WARNING SHARED_LIBS_PRELOAD_VAR_FOUND "${VARFOUND}"
@@ -5714,7 +5616,7 @@ possible_rootkit_file_dir_checks() {
 	#
 
 	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_POSS_FILES_DIRS
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_POSS_FILES_DIRS
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_POSS_FILES_DIRS
 
@@ -5873,7 +5775,7 @@ possible_rootkit_string_checks() {
 	#
 
 	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_POSS_STRINGS
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_POSS_STRINGS
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_POSS_STRINGS
 
@@ -6061,7 +5963,7 @@ ${PROC} ${PID} ${FNAME}"
 			#
 
 			if [ $STATUS -eq 0 ]; then
-				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
+				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
 			else
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
 
@@ -6125,7 +6027,7 @@ ${PROC} ${PID} ${FNAME}"
 			fi
 
 			if [ -z "${FILENAME}" ]; then
-				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
+				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
 			else
 				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
 
@@ -6153,7 +6055,7 @@ ${PROC} ${PID} ${FNAME}"
 			HIDDEN_PROCS=`${UNHIDE_CMD} sys | grep '^F' | awk -F':' '{ print $2 }'`
 
 			if [ -z "${HIDDEN_PROCS}" ]; then
-				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
+				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 			else
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND "${HIDDEN_PROCS}"
@@ -6216,7 +6118,7 @@ ${PROC} ${PID} ${FNAME}"
 	#
 
 	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
 	else
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
 
@@ -6262,7 +6164,7 @@ ${PROC} ${PID} ${FNAME}"
 	#
 
 	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
 	else
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
 
@@ -6280,7 +6182,7 @@ ${PROC} ${PID} ${FNAME}"
 
 	if [ -f "${TRIPWIREFILE}" ]; then
 		if [ -z "`grep 'Tripwire segment-faulted !' ${TRIPWIREFILE}`" ]; then
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
 			display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND "${TRIPWIREFILE}" "Tripwire segment-faulted"
@@ -6327,7 +6229,7 @@ ${PROC} ${PID} ${FNAME}"
 	#
 
 	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
 	else
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
 
@@ -6385,11 +6287,11 @@ xinetd_include() {
 				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
 			fi
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
+			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
 			display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "$1" "xinetd"
 		fi
 	elif [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
+		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
 	fi
 
 
@@ -6601,7 +6503,7 @@ trojan_checks() {
 		#
 
 		if [ $FOUND -eq 0 ]; then
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_XINETD
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_XINETD
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_XINETD
 
@@ -6612,6 +6514,50 @@ trojan_checks() {
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_XINETD
 		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${RKHROOTDIR}${XINETD_CONF_PATH}"
+	fi
+
+
+	#
+	# Finally we check for an Apache backdoor module.
+	#
+
+	FOUND=0
+	FOUNDFILES=""
+
+	MOD_DIRS="${RKHROOTDIR}/etc/apache2/mods-enabled ${RKHROOTDIR}/etc/httpd/modules ${RKHROOTDIR}/usr/apache/libexec ${RKHROOTDIR}/usr/lib/modules ${RKHROOTDIR}/usr/local/apache/modules"
+
+	HTTPDDIRS="${RKHROOTDIR}/usr/local/apache/conf ${RKHROOTDIR}/usr/local/etc/apache ${RKHROOTDIR}/etc/apache ${RKHROOTDIR}/etc/httpd/conf"
+
+	for DIR in ${MOD_DIRS} ${HTTPDDIRS}; do
+		if [ -d "${DIR}" ]; then
+			FOUND=1
+
+			test -f "${DIR}/mod_rootme.so" && FOUNDFILES="${FOUNDFILES} ${DIR}/mod_rootme.so"
+			test -f "${DIR}/mod_rootme2.so" && FOUNDFILES="${FOUNDFILES} ${DIR}/mod_rootme2.so"
+
+			if [ -f "${DIR}/httpd.conf" ]; then
+				if [ -n "`egrep 'mod_rootme2?\.so' ${DIR}/httpd.conf`" ]; then
+					FOUNDFILES="${FOUNDFILES} ${DIR}/httpd.conf"
+				fi
+			fi
+		fi
+	done
+
+
+	#
+	# Now display the results.
+	#
+
+	if [ $FOUND -eq 0 ]; then
+		display --to LOG --type INFO ROOTKIT_TROJAN_APACHE_SKIPPED
+	elif [ -z "${FOUNDFILES}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_APACHE
+	else
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_APACHE
+
+		for FILE in ${FOUNDFILES}; do
+			display --to LOG --type WARNING ROOTKIT_TROJAN_APACHE_FOUND "${FILE}"
+		done
 	fi
 
 	return
@@ -6935,6 +6881,7 @@ do_network_port_checks() {
 	*BSD|Linux|AIX|SunOS|Darwin)
 		;;
 	*)
+		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "netstat command required"
 		return
 		;;
 	esac
@@ -7008,7 +6955,7 @@ do_network_port_checks() {
 		#
 
 		if [ -z "${FOUND}" ]; then
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result OK --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
 		else
 			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NETWORK_PORTS "${PROTO}" "${PORT}"
 			display --to LOG --type WARNING NETWORK_PORTS_FOUND "${PROTO}" "${PORT}" "${DESCRIPTION}"
@@ -7058,7 +7005,7 @@ do_network_interface_checks() {
 		#
 
 		if [ -z "${PROMISCSCAN1}" -a -z "${PROMISCSCAN2}" ]; then
-			display --to SCREEN+LOG --type PLAIN --color GREEN --result NOT_FOUND --log-indent 2 --screen-indent 4 NETWORK_PROMISC_CHECK
+			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 NETWORK_PROMISC_CHECK
 		else
 			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PROMISC_CHECK
 
@@ -7086,7 +7033,10 @@ do_network_interface_checks() {
 	# was disabled, or if the lsof command is not present.
 	#
 
-	test "${OPERATING_SYSTEM}" != "Linux" && return
+	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
+		display --to LOG --type INFO TEST_SKIPPED_OS "packet_cap_apps" "/proc/net/packet required"
+		return
+	fi
 
 	if ! `check_test packet_cap_apps`; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
@@ -7164,7 +7114,7 @@ ${NAME} ${PID}"
 	#
 
 	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --color GREEN --result NOT_FOUND --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
 
@@ -8289,7 +8239,6 @@ do_local_host_checks() {
 	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_LOCALHOST
 
 
-# jh - add check of OPERATING_SYSTEM - if check skipped then log something or allow check to be disabled.
 	#
 	# We start by performing checks on the startup files.
 	#
@@ -8330,245 +8279,199 @@ do_app_checks() {
 	# This function carries out a sequence of application checks.
 	#
 
-# jh - remove need for programs_good.dat; only warn user if a programs_bad entry is seen.
 	if ! `check_test apps`; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST apps
 		return
 	fi
 
 
-	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_APPS
+	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl --nl-after CHECK_APPS
+
+	#
+	# We loop through the applications and obtain the version number.
+	# This is then checked against the file of known bad versions.
+	# We build up a list of application names, the version number,
+	# and whether it is known to be bad or not. When this has all
+	# been done, we then display the results.
+	#
+	# The results line for each application is made up of percent (%)
+	# delimited fields. They are:
+	#
+	#   application%description%version%if known bad%whole version number
+	#
+	# A version number of '-1' means the application was not found.
+	#
+
+	APPS_COUNT=0
+	APP_RESULTS=""
+
+	APP_NAMES="exim:Exim MTA
+		   gpg:GnuPG
+		   httpd:Apache
+		   named:Bind DNS
+		   openssl:OpenSSL
+		   php:PHP
+		   procmail:Procmail MTA
+		   proftpd:ProFTPd
+		   sshd:OpenSSH"
+
+	APPS_TOTAL_COUNT=`echo "${APP_NAMES}" | wc -l | tr -d ' '`
 
 
+	IFS=$IFSNL
 
+	for APP in ${APP_NAMES}; do
+		APP=`echo "${APP}" | sed -e 's/^[ 	]*//'`
 
-	displaytext "* Application scan"
+		APPLICATION=`echo "${APP}" | cut -d: -f1`
+		APPLICATION_DESC=`echo "${APP}" | cut -d: -f2-`
 
-	FOUNDSTRING=0
-	SIZE=32
-	displaytext -n "   Checking Apache2 modules... "
-	jump=`expr ${defaultcolumn} - ${SIZE}`
+		IFS=$RKHIFS
+		APP_CMD_FOUND=`find_cmd ${APPLICATION}`
+		IFS=$IFSNL
 
-	if [ -d "${RKHROOTDIR}/etc/apache2/mods-enabled" ]; then
-		SEARCHSTRING=`ls ${RKHROOTDIR}/etc/apache2/mods-enabled/* | egrep 'mod_rootme2?\.so'`
-		logtext -n "Checking Apache2 modules in ${RKHROOTDIR}/etc/apache2/mods-enabled... "
-		if [ -n "${SEARCHSTRING}" ]; then
-			logtext --nodate "Warning! Possible bad module found."
-			FOUNDSTRING=1
-		else
-			logtext --nodate "OK"
+		if [ -z "${APP_CMD_FOUND}" ]; then
+			APP_RESULTS="${APP_RESULTS}
+${APPLICATION}%${APPLICATION_DESC}%-1"
+			continue
 		fi
 
-		if [ ${FOUNDSTRING} -eq 1 ]; then
-			insertlayout
-			displaytext $E "   ${LAYOUT}[ ${RED}BAD${NORMAL} ]"
-		else
-			insertlayout
-			displaytext $E "   ${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-		fi
-	else
-		insertlayout
-		displaytext $E "   ${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
-	fi
 
-	FOUNDSTRING=0
+		#
+		# Find out the version of the application.
+		#
 
-	SIZE=37
-	displaytext "   Checking Apache configuration... "
+		APPS_COUNT=`expr ${APPS_COUNT} + 1`
 
-	for I in ${HTTPDCONFS}; do
-		FILELENGTH=`echo ${I} | wc -c | tr -d ' '`
-		SIZE=4
-		jump=`expr ${defaultcolumn} - ${SIZE} - ${FILELENGTH}`
+		VERSION=""
+		WHOLE_VERSION=""
 
-		displaytext -n "     - ${I}"
-		if [ -f "${I}" ]; then
-			SEARCHSTRING=`egrep 'mod_rootme2?\.so' ${I}`
-			test -n "${SEARCHSTRING}" && FOUNDSTRING=1
+		case "${APPLICATION}" in
+		exim)
+			WHOLE_VERSION=`${APP_CMD_FOUND} -bV 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'Exim version' | awk '{ print $3 }'`
+			;;
+		gpg)
+			WHOLE_VERSION=`${APP_CMD_FOUND} --version --homedir / 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'GnuPG' | awk '{ print $3 }'`
+			;;
+		httpd)
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'Apache' | cut -d' ' -f3 | cut -d'/' -f2`
+			;;
+		named)
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'named' | grep -v '/' | awk '{ print $2 }'`
 
-			if [ ${FOUNDSTRING} -eq 1 ]; then
-				insertlayout
-				displaytext $E "   ${LAYOUT}[ ${RED}BAD${NORMAL} ]"
-			else
-				insertlayout
-				displaytext $E "   ${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
+			if [ -n "`echo \"${VERSION}\" | grep '-'`" ]; then
+				VERSION=`echo "${VERSION}" | cut -d'-' -f1`
 			fi
+
+			if [ -z "${VERSION}" ]; then
+				VERSION=`${APP_CMD_FOUND} -v | awk '{ print $2 }'`
+			fi
+			;;
+		openssl)
+			WHOLE_VERSION=`${APP_CMD_FOUND} version 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | head -n 1 | cut -d' ' -f2`
+			;;
+		php)
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | head -n 1 | awk '{ print $2 }' | cut -d'-' -f1`
+			;;
+		procmail)
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'procmail v' | awk '{ print $2 }' | tr -d 'v'`
+			;;
+		proftpd)
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | awk '{ print $4 }'`
+			;;
+		sshd)
+			WHOLE_VERSION=`${APP_CMD_FOUND} -t -d 2>&1`
+			VERSION=`echo "${WHOLE_VERSION}" | head -n 1 | awk '{ print $4 }' | cut -d'_' -f2`
+
+			if [ -n "`echo \"${VERSION}\" | grep '+'`" ]; then
+				VERSION=`echo "${VERSION}" | cut -d'+' -f1`
+			fi
+			;;
+		esac
+
+
+		VERSION=`echo "${VERSION}" | tr -d '\r'`
+		WHOLE_VERSION=`echo "${WHOLE_VERSION}" | tr -d '\r'`
+
+		if [ -z "${VERSION}" ]; then
+			WHOLE_VERSION=`echo "${WHOLE_VERSION}" | tr '\n' '%'`
+
+			APP_RESULTS="${APP_RESULTS}
+${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
+			continue
+		fi
+
+
+		#
+		# Now see if the application version is known to be bad.
+		#
+
+		RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\./\\\./g'`
+
+		if [ -n "`egrep \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" ${DB_PATH}/programs_bad.dat 2>&1`" ]; then
+			APPS_FAILED_COUNT=`expr ${APPS_FAILED_COUNT} + 1`
+
+			APP_RESULTS="${APP_RESULTS}
+${APPLICATION}%${APPLICATION_DESC}%${VERSION}%1"
 		else
-			insertlayout
-			displaytext $E "${LAYOUT}[ ${GREEN}Not found${NORMAL} ]"
+			APP_RESULTS="${APP_RESULTS}
+${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 		fi
 	done
 
-	logtext "---------------------- Application version check ----------------------"
+	IFS=$RKHIFS
 
-	if [ $APPS_CHECK_ENABLED -eq 1 ]; then
-		displaytext ""
-		displaytext "* Application version scan"
 
-		APPS_COUNT=0
+	#
+	# Now display the results.
+	#
 
-		#BINPATHS="/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/libexec"
+	if [ $APPS_COUNT -eq 0 ]; then
+		display --to SCREEN+LOG --type WARNING APPS_NONE_FOUND
+	else
+		IFS=$IFSNL
 
-		if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
-			SCANFILES="
-exim:Exim%%MTA:
-httpd:Apache:
-openssl:OpenSSL:
-php:PHP:
-procmail:Procmail%%MTA:
-proftpd:ProFTPd:
-sshd:OpenSSH:
-"
-		else
-			SCANFILES="
-exim:Exim%%MTA:
-gpg:GnuPG:
-httpd:Apache:
-named:Bind%%DNS:
-openssl:OpenSSL:
-php:PHP:
-procmail:Procmail%%MTA:
-proftpd:ProFTPd:
-sshd:OpenSSH:
-"
-		fi
+		for RKHTMPVAR in ${APP_RESULTS}; do
+			APPLICATION=`echo "${RKHTMPVAR}" | cut -d% -f1`
+			APPLICATION_DESC=`echo "${RKHTMPVAR}" | cut -d% -f2`
+			VERSION=`echo "${RKHTMPVAR}" | cut -d% -f3`
 
-		LINUX_KERNELS="
-vulnerable:%2.4.22%2.4.23%
-nonvulnerable:%2.4.24%
-"
+			if [ -z "${VERSION}" ]; then
+				WHOLE_VERSION=`echo "${RKHTMPVAR}" | cut -d% -f5- | tr '%' '\n'`
 
-		FOUND=0
-		FOUNDUNKNOWN=0
+				display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
 
-		APPS_TOTAL_COUNT=`echo "${SCANFILES}" | wc -l | tr -d ' '`
-		APPS_TOTAL_COUNT=`expr ${APPS_TOTAL_COUNT} - 2`
-
-		for J in ${SCANFILES}; do
-			APPLICATION=`echo ${J} | cut -d: -f1`
-			APPLICATIONNAME=`echo ${J} | cut -d: -f2`
-			VULNERABLE=`cat ${DB_PATH}/programs_bad.dat | cut -d: -f2`
-			NONVULNERABLE=`cat ${DB_PATH}/programs_good.dat | cut -d: -f2`
-			logtext "----------------------------------------------------------"
-			logtext "Scanning ${APPLICATIONNAME}..."
-
-			FILEFOUND=0
-			for I in ${BINPATHS}; do
-				if [ -f "${I}/${APPLICATION}" ]; then
-					FILEFOUND=1
-					VERSION=""
-
-					APPS_COUNT=`expr ${APPS_COUNT} + 1`
-
-					case "${APPLICATION}" in
-					exim)
-						VERSION=`${I}/exim -bV | grep 'Exim version' | awk '{ print $3 }'`
-						;;
-					gpg)
-						VERSION=`${I}/gpg --version --homedir / | grep 'GnuPG' | awk '{ print $3 }'`
-						;;
-					httpd)
-						VERSION=`${I}/httpd -v | grep 'Apache' | cut -d' ' -f3 | cut -d'/' -f2`
-						;;
-					named)
-						VERSION=`${I}/named -v | grep 'named' | grep -v '/' | awk '{ print $2 }'`
-						if [ ! "`echo ${VERSION} | grep '-'`" = "" ]; then
-							VERSION=`echo ${VERSION} | cut -d'-' -f1`
-						fi
-						TEST=`${I}/named -v | grep 'named'`
-						logtext "Debug: ${TEST}"
-						if [ "${VERSION}" = "" ]; then
-							VERSION=`${I}/named -v | awk '{ print $2 }'`
-						fi
-						;;
-					openssl)
-						VERSION=`${I}/openssl version | head -n 1 | cut -d' ' -f2`
-						;;
-					php)
-						# Strip off any additions (like Debian using version 4.3.10-8)
-						VERSION=`${I}/php -v | head -n 1 | awk '{ print $2 }' | cut -d'-' -f1`
-						;;
-					procmail)
-						VERSION=`${I}/procmail -v 2>&1  | grep 'procmail v' | awk '{ print $2 }' | tr -d 'v'`
-						;;
-					proftpd)
-						VERSION=`${I}/proftpd -v 2>&1 | awk '{ print $4 }'`
-						;;
-					sshd)
-						VERSION=`${I}/sshd -t -d 2>&1 | head -n 1 | awk '{ print $4 }' | cut -d'_' -f2`
-						if [ ! "`echo "${VERSION}" | grep '+'`" = "" ]; then
-							VERSION=`echo "${VERSION}" | cut -d'+' -f1`
-						fi
-						;;
-					*)
-						displaytext "Unknown"
-						VERSION="NA"
-						;;
-					esac
-
-					logtext "${I}/${APPLICATION} found"
-
-					VERSION=`echo ${VERSION} | tr -d '\r'`
-
-					if [ "${VERSION}" = "" ]; then
-						logtext "No version found of application ${APPLICATION}"
-						APPLICATIONNAME=`echo ${APPLICATIONNAME} | tr -s '%' ' '`
-						displaytext -n "   - ${APPLICATIONNAME} [unknown] "
-
-						JUMPCOL=`expr ${defaultcolumn} - 12`
-						SIZE=`echo \'${APPLICATIONNAME} [unknown]\' | wc -c | tr -d ' '`
-						jump=`expr ${JUMPCOL} - ${SIZE} + 11`
-						insertlayout
-						displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-					else
-						APPLICATIONNAME=`echo ${APPLICATIONNAME} | tr -s '%' ' '`
-						displaytext -n "   - ${APPLICATIONNAME} ${VERSION} "
-
-						JUMPCOL=`expr ${defaultcolumn} - 12`
-						SIZE=`echo \'${APPLICATIONNAME} ${VERSION}\' | wc -c | tr -d ' '`
-						jump=`expr ${JUMPCOL} - ${SIZE} + 11`
-						insertlayout
-
-						RE_VERSION=`echo "${VERSION}" | sed -e 's/\./\\\./g'`
-						ISVULNERABLE=`echo ${VULNERABLE} | grep "%${RE_VERSION}%"`
-						if [ "${ISVULNERABLE}" = "" ]; then
-							ISNONVULNERABLE=`echo ${NONVULNERABLE} | grep "%${RE_VERSION}%"`
-							if [ "${ISNONVULNERABLE}" = "" ]; then
-								logtext "No information available. Unknown version number"
-								displaytext $E "${LAYOUT}[ ${YELLOW}Unknown${NORMAL} ]"
-								FOUNDUNKNOWN=1
-							else
-								logtext "Version ${VERSION} is available in non-vulnerable group and seems to be OK!"
-								displaytext $E "${LAYOUT}[ ${GREEN}OK${NORMAL} ]"
-							fi
-						else
-							logtext "Version ${VERSION} seems to be vulnerable (if unpatched)!"
-							if [ ${USE_PATCHED_SOFTWARE} -eq 1 ]; then
-								displaytext $E "${LAYOUT}[ ${YELLOW}Old or patched version${NORMAL} ]"
-							else
-								displaytext $E "${LAYOUT}[ ${RED}Vulnerable${NORMAL} ]"
-							fi
-							FOUND=1
-							APPS_FAILED_COUNT=`expr ${APPS_FAILED_COUNT} + 1`
-						fi
-					fi
+				if [ -n "${WHOLE_VERSION}" ]; then
+					display --to LOG --type INFO APPS_CHECK_WHOLE_VERSION_USED "${APPLICATION}" "${WHOLE_VERSION}"
+				else
+					display --to LOG --type INFO APPS_CHECK_VERSION_UNKNOWN "${APPLICATION}"
 				fi
-			done
+			elif [ "${VERSION}" = "-1" ]; then
+				display --to LOG --type INFO APPS_NOT_FOUND "${APPLICATION}"
+			else
+				ISBAD=`echo "${RKHTMPVAR}" | cut -d% -f4`
 
-			if [ ${FILEFOUND} -eq 0 ]; then
-				logtext "Application not found"
+				if [ $ISBAD -eq 1 ]; then
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
+					display --to LOG --type WARNING APPS_CHECK_FOUND "${APPLICATION}" "${VERSION}"
+				else
+					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
+					display --to LOG --type INFO APPS_CHECK_VERSION_FOUND "${APPLICATION}" "${VERSION}"
+				fi
 			fi
 		done
 
-
-		displaytext ""
-		if [ $FOUNDUNKNOWN -eq 1 ]; then
-			displaytext "Your system contains some unknown version numbers. Please run Rootkit Hunter"
-			displaytext "with the --update parameter or contact us through the Rootkit Hunter mailing list"
-			displaytext "at rkhunter-users@lists.sourceforge.net"
-		fi
-
+		IFS=$RKHIFS
 	fi
+
 
 	display --to LOG --type INFO APPS_TOTAL_COUNT $APPS_COUNT $APPS_TOTAL_COUNT
 
@@ -8664,23 +8567,6 @@ display_check_summary() {
 	else
 		display --to SCREEN --type PLAIN --nl --nl-after SUMMARY_NO_LOGFILE
 	fi
-
-	return
-}
-
-
-display_warnings() {
-
-	echo "-----------------------------------------------------------------"
-	echo ""
-	echo "Found warnings:"
-	egrep 'Warning|WARNING|BAD|Bad|Vulnerable' $RKHLOGFILE
-	echo ""
-	echo "-----------------------------------------------------------------"
-	echo ""
-	echo "If you are unsure about the results above, please contact the"
-	echo "Rootkit Hunter team through the Rootkit Hunter mailing list"
-	echo "at rkhunter-users@lists.sourceforge.net"
 
 	return
 }
@@ -8862,8 +8748,6 @@ do_system_check() {
 			else
 				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_CHK_LOG "${RKHLOGFILE}"
 			fi
-
-			display_warnings
 
 			NOTTY=$OLD_NOTTY
 		fi
@@ -9334,7 +9218,7 @@ help() {
 #
 
 PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="1.2.9"
+PROGRAM_version="1.3.0"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2006, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
@@ -9486,12 +9370,6 @@ REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr
 WEBCMDLIST="wget curl elinks links lynx bget GET"
 
 HOST_NAME=""
-
-if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-	USE_PATCHED_SOFTWARE=1
-else
-	USE_PATCHED_SOFTWARE=0
-fi
 
 # This is the return code for the program actions - update, check, etc.
 # Its value may either be 0 (no error) or 1 (an error occurred).
@@ -10135,9 +10013,7 @@ IFS=$RKHIFS
 
 
 #
-# Sort out the logfile before we write to it. If we have no log file,
-# then record this. The 'logtext' function will still be called, but
-# will return straight away.
+# Sort out the logfile before we write to it.
 #
 
 if [ $NOLOG -eq 0 ]; then
@@ -10216,7 +10092,7 @@ display --to LOG --type INFO CONFIG_DBDIR "${DB_PATH}"
 
 display --to LOG --type INFO CONFIG_SCRIPTDIR "${SCRIPT_PATH}"
 
-display --to LOG --type INFO CONFIG_BINDIR "${BINPATHS}"
+display --to LOG --type INFO CONFIG_BINDIR "${SPACEDPATH} ${BINPATHS}"
 
 if [ -z "${RKHROOTDIR}" ]; then
 	display --to LOG --type INFO CONFIG_ROOTDIR "/"
@@ -10260,12 +10136,12 @@ done
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	if [ $PRELINKED -eq 1 ]; then
 		RKHTMPVAR="${PRELINK_CMD}"
-		test -n "${RUNCON_CMD}" && RKHTMPVAR=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
+		test -n "${RUNCON_CMD}" && RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^.* unconfined_t -- //'`
 
 		display --to LOG --type INFO FOUND_CMD 'prelink' "${RKHTMPVAR}"
 
 		if [ -n "${RUNCON_CMD}" ]; then
-			display --to LOG --type INFO FOUND_CMD 'runcon' "${RKHTMPVAR}"
+			display --to LOG --type INFO FOUND_CMD 'runcon' "${RUNCON_CMD}"
 		else
 			display --to LOG --type INFO NOT_FOUND_CMD 'runcon'
 		fi

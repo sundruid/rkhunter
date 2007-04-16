@@ -1,4 +1,4 @@
-Version:2007041101
+Version:2007041501
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -86,9 +86,9 @@ SYSLOG_ENABLED:Using syslog for some logging - facility/priority level is '$1'.
 SYSLOG_DISABLED:Disabling use of syslog at users request.
 SYSLOG_NO_LOGGER:Disabling use of syslog - unable to find 'logger' command.
 
-PRESSENTER:[Press <ENTER> to continue]
-
 NAME:$1
+PRESSENTER:[Press <ENTER> to continue]
+TEST_SKIPPED_OS:Test '$1' skipped due to O/S: $2
 
 SUMMARY_TITLE1:System checks summary
 SUMMARY_TITLE2:=====================
@@ -260,7 +260,7 @@ ROOTKIT_ADD_SUCKIT_LINK_NOCMD:Checking /sbin/init link count: no 'stat' command 
 ROOTKIT_ADD_SUCKIT_LINK_ERR:Checking /sbin/init link count: error from 'stat' command
 ROOTKIT_ADD_SUCKIT_LINK_FOUND:Checking /sbin/init link count: count is $1, it should be 1
 ROOTKIT_ADD_SUCKIT_EXT:Checking for hidden file extensions
-ROOTKIT_ADD_SUCKIT_EXT_FOUND:Checking for hidden file extensions: $1
+ROOTKIT_ADD_SUCKIT_EXT_FOUND:Checking for hidden file extensions: found: $1
 ROOTKIT_ADD_SUCKIT_SKDET:Running skdet command
 ROOTKIT_ADD_SUCKIT_SKDET_FOUND:Running skdet command: found: $1
 ROOTKIT_ADD_SUCKIT_SKDET_VER:Running skdet command: unknown version: $1
@@ -309,6 +309,9 @@ ROOTKIT_TROJAN_XINETD_INCLUDE:Found 'include $1' directive
 ROOTKIT_TROJAN_XINETD_INCLUDEDIR:Found 'includedir $1' directive
 ROOTKIT_TROJAN_XINETD_ENABLED_FOUND:Found enabled xinetd service: $1
 ROOTKIT_TROJAN_XINETD_WHITELIST:Service '$1' is $2 whitelisted.
+ROOTKIT_TROJAN_APACHE:Checking for Apache backdoor
+ROOTKIT_TROJAN_APACHE_SKIPPED:Apache backdoor check skipped: Apache modules and configuration directories not found.
+ROOTKIT_TROJAN_APACHE_FOUND:Apache backdoor module 'mod_rootme' found: $1
 
 ROOTKIT_OS_START:Performing $1 specific checks
 ROOTKIT_OS_SKIPPED:No specific tests available
@@ -332,7 +335,7 @@ ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING:The kernel module directory '$1' is missi
 
 CHECK_LOCALHOST:Checking the local host...
 STARTUP_FILES_START:Checking system startup files
-STARTUP_HOSTNAME:Checking for host name
+STARTUP_HOSTNAME:Checking for local host name
 STARTUP_NO_HOSTNAME:No host name found.
 STARTUP_LOCAL_RC_FILE:Checking for local startup file
 STARTUP_FOUND_LOCAL_RC_FILE:Found local startup file: $1
@@ -385,12 +388,12 @@ SYSTEM_CONFIGS_SYSLOG:Checking for running syslog daemon
 SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:The syslog daemon is not running.
 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:The syslog daemon is not running, but a metalog daemon has been found.
 SYSTEM_CONFIGS_SYSLOG_NO_FILE:The syslog daemon is running, but no configuration file can be found.
-SYSTEM_CONFIGS_SYSLOG_REMOTE:Checking if syslog allows remote logging
+SYSTEM_CONFIGS_SYSLOG_REMOTE:Checking if syslog remote logging is allowed
 SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog configuration file allows remote logging: $1
 SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter configuration option 'ALLOW_SYSLOG_REMOTE_LOGGING' has been enabled.
 
 FILESYSTEM_START:Checking filesystems
-FILESYSTEM_DEV_CHECK:Checking /dev for suspicious files
+FILESYSTEM_DEV_CHECK:Checking /dev for suspicious file types
 FILESYSTEM_DEV_CHECK_NO_DEV:/dev does not exist.
 FILESYSTEM_DEV_FILE_WL:File '$1' is whitelisted.
 FILESYSTEM_DEV_FILE_FOUND:Suspicious files found in ${1}:
@@ -400,7 +403,14 @@ FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories
 FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 
-CHECK_APPS:Checking applications
+CHECK_APPS:Checking known applications...
+APPS_NONE_FOUND:No known applications found - all checks skipped.
+APPS_NOT_FOUND:Application '$1' not found.
+APPS_CHECK:Checking version of $1
+APPS_CHECK_VERSION_UNKNOWN:Unable to obtain version number for '$1'.
+APPS_CHECK_VERSION_FOUND:Application '$1' version '$2' found.
+APPS_CHECK_WHOLE_VERSION_USED:Unable to obtain version number for '$1': version option gives: $2
+APPS_CHECK_FOUND:Application '$1', version '$2', is out of date, and possibly a security risk.
 APPS_TOTAL_COUNT:Applications checked: $1 out of $2
 
 CHECK_NETWORK:Checking the network...
@@ -409,7 +419,7 @@ NETWORK_PORTS_FILE_MISSING:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) is missing or empty.
 NETWORK_PORTS_FILE_NO_NETSTAT:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_NO_NETSTAT:Unable to find the 'netstat' command
-NETWORK_PORTS:Checking $1 port ${2}
+NETWORK_PORTS:Checking for $1 port ${2}
 NETWORK_PORTS_FOUND:Network $1 port $2 is being used. Possible rootkit: $3
 NETWORK_PORTS_FOUND:Run the 'netstat -an' command to check this.
 NETWORK_INTERFACE_START:Performing checks on the network interfaces

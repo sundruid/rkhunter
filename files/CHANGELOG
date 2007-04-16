@@ -209,6 +209,10 @@
    equivalent. There is now support for NetBSD.
  - Improved the hidden files and directories checks. Some directories are now
    searched more thoroughly, and checks against the file type are more robust.
+ - Apache backdoor test now looks in more places.
+ - The application version check no longer checks against known 'good'
+   versions. Only a file of bad versions is kept. The previous method was
+   impossible to maintain.
 
  Bugfixes:
  - Command-line options requiring an argument now work correctly under Solaris.
