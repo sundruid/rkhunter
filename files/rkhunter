@@ -2030,10 +2030,6 @@ get_hash_function() {
 
 		if [ -z "${HF}" ]; then
 			HF=`find_cmd sha1`
-
-			if [ "${HF}" = "/usr/bin/sha1" -a "${OPERATING_SYSTEM}" = "NetBSD" ]; then
-				HF="${HF} -n"
-			fi
 		fi
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
@@ -2059,10 +2055,6 @@ get_hash_function() {
 
 		if [ -z "${HF}" ]; then
 			HF=`find_cmd md5`
-
-			if [ "${OPERATING_SYSTEM}" = "NetBSD" -a "${HF}" = "/usr/bin/md5" ]; then
-				HF="${HF} -n"
-			fi
 		fi
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
@@ -2401,12 +2393,10 @@ rkh_dat_set_file_properties() {
 	else
 		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+		elif [ $BSDOS -eq 1 ]; then
+			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
 		else
-			if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
-				SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
-			else
-				SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
-			fi
+			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
 		fi
 	fi
 
@@ -2424,10 +2414,13 @@ rkh_dat_set_file_properties() {
 			fi
 		fi
 
-		if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
-			HSH_FLD_IDX=4
-		else
-			HSH_FLD_IDX=1
+
+		HSH_FLD_IDX=1
+
+		if [ $BSDOS -eq 1 ]; then
+			if [ -n "`echo \"${HCMD}\" | egrep '/(md5|sha1)$'`" ]; then
+				HSH_FLD_IDX=4
+			fi
 		fi
 	fi
 
@@ -4340,7 +4333,7 @@ file_properties_check() {
 		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
 		else
-			if [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+			if [ $BSDOS -eq 1 ]; then
 				SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
 			else
 				SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
@@ -4362,10 +4355,13 @@ file_properties_check() {
 			fi
 		fi
 
-		if [ "${OPERATING_SYSTEM}" = "OpenBSD" -a "${HCMD}" = "/bin/md5" ]; then
-			HSH_FLD_IDX=4
-		else
-			HSH_FLD_IDX=1
+
+		HSH_FLD_IDX=1
+
+		if [ $BSDOS -eq 1 ]; then
+			if [ -n "`echo \"${HCMD}\" | egrep '/(md5|sha1)$'`" ]; then
+				HSH_FLD_IDX=4
+			fi
 		fi
 	fi
 
@@ -6985,7 +6981,7 @@ do_network_interface_checks() {
 
 		if [ "${OPERATING_SYSTEM}" = "OpenBSD" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
 			PROMISCSCAN1=`${IFCONFIG_CMD} -a | grep -v 'pflog' | grep 'PROMISC'`
-		elif [ "${OPERATING_SYSTEM}" = "SunOS" -o "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+		elif [ $BSDOS -eq 1 -o "${OPERATING_SYSTEM}" = "SunOS" ]; then
 			PROMISCSCAN1=`${IFCONFIG_CMD} -a | grep 'PROMISC'`
 		else
 			PROMISCSCAN1=`${IFCONFIG_CMD} | grep 'PROMISC'`
@@ -7521,7 +7517,7 @@ do_group_accounts_check() {
 		SHADOW_FILE="${RKHROOTDIR}${SHADOW_FILE}"
 	elif [ -s "${RKHROOTDIR}/etc/shadow" ]; then
 		SHADOW_FILE="${RKHROOTDIR}/etc/shadow"
-	elif [ "${OPERATING_SYSTEM}" = "NetBSD" -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
+	elif [ $BSDOS -eq 1 -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
 		SHADOW_FILE="${RKHROOTDIR}/etc/master.passwd"
 	elif [ -s "${RKHROOTDIR}/etc/passwd" ]; then
 		#
@@ -9308,8 +9304,18 @@ ID_CMD="id"
 # Set if we don't want to wait for a keypress after each test.
 SKIP_KEY_PRESS=0
 
-# Is the Gentoo operating system?
+# Is this the Gentoo operating system?
 GENTOO=0
+
+# Is this a BSD operating system?
+case "${OPERATING_SYSTEM}" in
+*BSD)
+	BSDOS=1
+	;;
+*)
+	BSDOS=0
+	;;
+esac
 
 # These SSH options can only be set in the configuration file.
 ALLOW_SSH_PROT_V1=0

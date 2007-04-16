@@ -206,7 +206,7 @@
  - The checks on accounts and the password and shadow files, have been improved.
    The user can configure the pathname to the password and shadow files, as
    well as being able to whitelist accounts with no password or which are root
-   equivalent. There is now support for NetBSD.
+   equivalent. BSD support improved.
  - Improved the hidden files and directories checks. Some directories are now
    searched more thoroughly, and checks against the file type are more robust.
  - Apache backdoor test now looks in more places.

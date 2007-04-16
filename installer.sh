@@ -452,6 +452,7 @@ for DIR in ${RKHINST_DIRS}; do
 	else
 		echo $N "creating: "
 		mkdir -p ${DIR}; retValChk
+		chmod 0755 ${DIR}
 	fi
 done
 
@@ -563,9 +564,11 @@ RANDVAL=`date +%N%s%N`
 done
 
 # Strip root from fake root install.
-find "${PREFIX}" -type f | while read f; do 
-	grep -q "${PREFIX}" "${f}" && { echo $N " Striproot ${f}: "; sed -i "s|${STRIPROOT}||g" "${f}"; retValChk; }
-done
+if [ -n "${STRIPROOT}" ]; then
+	find "${PREFIX}" -type f | while read f; do 
+		grep -q "${PREFIX}" "${f}" && { echo $N " Striproot ${f}: "; sed -i "s|${STRIPROOT}||g" "${f}"; retValChk; }
+	done
+fi
 
 echo "Installation finished."
 
