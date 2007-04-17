@@ -6980,11 +6980,11 @@ do_network_interface_checks() {
 		PROMISCSCAN1=""; PROMISCSCAN2=""
 
 		if [ "${OPERATING_SYSTEM}" = "OpenBSD" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
-			PROMISCSCAN1=`${IFCONFIG_CMD} -a | grep -v 'pflog' | grep 'PROMISC'`
+			PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep -v 'pflog' | grep 'PROMISC'`
 		elif [ $BSDOS -eq 1 -o "${OPERATING_SYSTEM}" = "SunOS" ]; then
-			PROMISCSCAN1=`${IFCONFIG_CMD} -a | grep 'PROMISC'`
+			PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep 'PROMISC'`
 		else
-			PROMISCSCAN1=`${IFCONFIG_CMD} | grep 'PROMISC'`
+			PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | grep 'PROMISC'`
 		fi
 
 		if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
