@@ -8,17 +8,10 @@
  !! Important notices !!:
 
  - Dates in this file are formatted as DD/MM/YYYY (European format)
- - With the release of version 1.0.9, the installer has been changed
-   to make Rootkit Hunter less static. It CAN now use some different
-   paths than before (although it will install to the default location
-   when no additional options are given). To be sure you have a clean
-   install, delete the directory /usr/local/rkhunter, delete the file
-   /usr/local/etc/rkhunter.conf, delete the file /usr/local/bin/rkhunter
-   and reinstall the tool.
- - The rkhunter configuration file (default /usr/local/etc/rkhunter.conf)
-   will not be overwritten by default (when using the rkhunter installer).
+ - The rkhunter configuration file (default /etc/rkhunter.conf) will
+   not be overwritten when using the rkhunter installer.
    Be sure you compare your configuration file against the one delivered
-   in this package, to optimize this file for your machine.
+   in this package, in order to optimize this file for your machine.
 
 
  -- 
@@ -31,35 +24,37 @@
    This can specify the 'mail' command to use and the subject line.
  - The log file can be appended to. This can be set in the config file or
    by using the --append-log command line option.
- - A second colour set has been added for users using RKH with black
+ - A second colour set has been added for users using rkhunter with black
    characters on a white screen. The command-line option --cs2 will enable it.
  - Added special config file and command-line option, -x/-X, to detect if X
    is in use. If detected then second colour set will be used.
  - Added '--propupd' option. This allows a user to create the rkhunter.dat
    file. This file contains the O/S name, file hash values and other bits of
    information. If the file hash values change, perhaps due to new versions
-   of software, then the user simply runs RKH with the option again. If the
-   user has not run RKH with this option, then the file hash check is
+   of software, then the user simply runs rkhunter with the option again. If
+   the user has not run rkhunter with this option, then the file hash check is
    skipped. This option obsoletes the 'hashupd.sh' script previously
    recommended to users. If use of the '--propupd' option is suggested by
    the program, then the log file will contain a warning message to the
    user that they must ensure that the commands checked on their system must
    have been installed and verified as being genuine.
- - Added '--hash' option. This allows a user to select what hash function they
-   want to use for the file hash file check. By default SHA1 will be
-   used. This can be overridden via the command line, or in the configuration
-   file using the HASH_FUNC option. For prelinked systems, the function must
-   be either MD5 or SHA1.
+ - Added the HASH_FUNC option to the configuration file. This allows a user
+   to select the hash function command they want to use for the file hash
+   value check. By default SHA1 will be used. For prelinked systems, the
+   function must be either MD5 or SHA1.
+ - Added the HASH_FLD_IDX option to the configuration file. This specifies the
+   field of the HASH_FUNC command output which contains the hash value. A
+   default of 1 is used, except for *BSD systems where 4 will be used.
  - The files for the file hash checks are now 'looked for'. The code will
    search the command directories, and check the relevant files in all the
    directories. Additional commands and directories are used for Solaris,
    MAC OS X, NetBSD and FreeBSD systems. Overall more commands will be checked.
  - Added support for Ubuntu, and the 'dash' and 'ash' shells.
- - If the O/S name, architecture or prelinking status changes from one RKH
+ - If the O/S name, architecture or prelinking status changes from one rkhunter
    run to the next, then a warning message is written to the log file. The
    change may well cause the file hash checks to show false positives. (The
-   user should rerun RKH with the --propupd option.)
- - RKH will now check that certain commands are present before starting
+   user should rerun rkhunter with the --propupd option.)
+ - Rkhunter will now check that certain commands are present before starting
    any checks. This avoids spurious 'command not found' type messages
    suddenly appearing.
  - Added basic internationalization (i18n) functionality. The messages
@@ -131,7 +126,7 @@
    is only for non-prelinked systems. As before, in all cases, the hash
    is checked.
  - Improved the O/S detection mechanism. Rather than requiring users to send
-   us details, RKH actively looks at the 'release' file(s) to find the
+   us details, rkhunter actively looks at the 'release' file(s) to find the
    O/S name.
  - If the --propupd or --update options are used, as well as the system
    check option --check, then the update checks are performed before the
@@ -225,9 +220,9 @@
  - The file hash prelink test should now work even if SELinux objects to the
    prelink command. (This requires the 'runcon' command). When the '--propupd'
    option is used, any file for which a hash cannot be obtained is logged as
-   a warning. (Typically prelink needs to be run on the file.) RKH will still
-   work as before, but the file properties check may show that the hash value
-   has changed to or from a null value.
+   a warning. (Typically prelink needs to be run on the file.) rkhunter will
+   still work as before, but the file properties check may show that the hash
+   value has changed to or from a null value.
  - Corrected file attributes check - previously the immutable flag would never
    have been found.
  - Backdoor UDP port tests were not being done correctly. The TCP port tests

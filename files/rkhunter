@@ -1992,28 +1992,18 @@ get_if_prelinked() {
 get_hash_function() {
 
 	#
-	# First get the option from the command-line or the
-	# configuration file, and do a simple check on whether
-	# it is empty or a space.
+	# Get the option from the configuration file, and do a simple
+	# check on whether it is empty or a space.
 	#
 
+	HASH_FUNC=`grep '^HASH_FUNC=' ${CONFIGFILE} | tail -1`
+
 	if [ -n "${HASH_FUNC}" ]; then
-		HASH_FUNC=`echo "${HASH_FUNC}" | tr -s ' '`
+		HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/HASH_FUNC=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
 
-		if [ "${HASH_FUNC}" = " " ]; then
-			echo "Invalid --hash option - no command given."
+		if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = " " ]; then
+			echo "Invalid HASH_FUNC configuration option - no command specified."
 			exit 1
-		fi
-	else
-		HASH_FUNC=`grep '^HASH_FUNC=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${HASH_FUNC}" ]; then
-			HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/HASH_FUNC=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
-
-			if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = " " ]; then
-				echo "Invalid HASH_FUNC configuration option - no command specified."
-				exit 1
-			fi
 		fi
 	fi
 
@@ -2028,9 +2018,7 @@ get_hash_function() {
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "SHA1" ]; then
 		HF=`find_cmd sha1sum`
 
-		if [ -z "${HF}" ]; then
-			HF=`find_cmd sha1`
-		fi
+		test -z "${HF}" && HF=`find_cmd sha1`
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
 			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA1 2>&1 | grep 'Digest::SHA1 installed'`
@@ -2053,9 +2041,7 @@ get_hash_function() {
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "MD5" ]; then
 		HF=`find_cmd md5sum`
 
-		if [ -z "${HF}" ]; then
-			HF=`find_cmd md5`
-		fi
+		test -z "${HF}" && HF=`find_cmd md5`
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
 			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
@@ -2094,8 +2080,34 @@ get_hash_function() {
 				HASH_FUNC="${HF} ${HCMD}"
 			fi
 		else
-			echo "Invalid hash option - command '${HCMD}' is non-existent or not executable."
+			echo "Invalid HASH_FUNC configuration option - command '${HCMD}' is non-existent or not executable."
 			exit 1
+		fi
+	else
+		echo "Invalid HASH_FUNC configuration option - option not specified and no hash command or perl modules could be found."
+		exit 1
+	fi
+
+
+	#
+	# Now we get the hash field index. We will assume a field value
+	# of one, but this value must be configurable since we allow
+	# the user to specify the hash function to use.
+	#
+
+	RKHTMPVAR=`grep '^HASH_FLD_IDX=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${RKHTMPVAR}" ]; then
+		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/HASH_FLD_IDX=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${RKHTMPVAR}" -o "${RKHTMPVAR}" = " " ]; then
+			echo "Invalid HASH_FLD_IDX configuration option - no value specified."
+			exit 1
+		elif [ -z "`echo \"${RKHTMPVAR}\" | grep '^[1-9][0-9]*$'`" ]; then
+			echo "Invalid HASH_FLD_IDX configuration option: not a number: ${RKHTMPVAR}"
+			exit 1
+		else
+			HASH_FLD_IDX=${RKHTMPVAR}
 		fi
 	fi
 
@@ -2413,15 +2425,6 @@ rkh_dat_set_file_properties() {
 				HCMD="${PRELINK_CMD} --verify --sha"
 			fi
 		fi
-
-
-		HSH_FLD_IDX=1
-
-		if [ $BSDOS -eq 1 ]; then
-			if [ -n "`echo \"${HCMD}\" | egrep '/(md5|sha1)$'`" ]; then
-				HSH_FLD_IDX=4
-			fi
-		fi
 	fi
 
 
@@ -2441,7 +2444,7 @@ rkh_dat_set_file_properties() {
 			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
 			if [ -n "${HCMD}" ]; then
-				SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
+				SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 				if [ -z "${SYSHASH}" ]; then
 					NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
@@ -4354,15 +4357,6 @@ file_properties_check() {
 				HCMD="${PRELINK_CMD} --verify --sha"
 			fi
 		fi
-
-
-		HSH_FLD_IDX=1
-
-		if [ $BSDOS -eq 1 ]; then
-			if [ -n "`echo \"${HCMD}\" | egrep '/(md5|sha1)$'`" ]; then
-				HSH_FLD_IDX=4
-			fi
-		fi
 	fi
 
 	#
@@ -4448,7 +4442,7 @@ file_properties_check() {
 					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
 
 					if [ -n "${RKHHASH}" ]; then
-						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HSH_FLD_IDX`
+						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 						if [ "${RKHHASH}" != "${SYSHASH}" ]; then
 							RKHTMPVAR="hashchanged"
@@ -7597,9 +7591,13 @@ do_group_accounts_check() {
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD "diff"
+
+		cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
 	elif [ ! -f "${RKHTMPDIR}/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type WARNING PASSWD_CHANGES_NO_TMP
+
+		cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
 	else
 		DIFFS=`${DIFF_CMD} ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep '^[<>]'`
 
@@ -7660,9 +7658,13 @@ do_group_accounts_check() {
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD "diff"
+
+		cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
 	elif [ ! -f "${RKHTMPDIR}/group" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type WARNING GROUP_CHANGES_NO_TMP
+
+		cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
 	else
 		DIFFS=`${DIFF_CMD} ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group 2>/dev/null | grep '^[<>]'`
 
@@ -8535,7 +8537,7 @@ display_check_summary() {
 
 	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_APPS_SCAN
 
-	if [ $APPS_CHECK_ENABLED -eq 1 ]; then
+	if `check_test apps`; then
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_APPS_COUNT $APPS_COUNT
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_APPS_FAILED $APPS_FAILED_COUNT
 	else
@@ -9167,7 +9169,6 @@ help() {
 	echo "         --display-logfile             Display the logfile at the end"
 	echo "         --enable  <test>[,<test>...]  Enable specific tests"
 	echo "                                       (Default is to enable all tests)"
-	echo "         --hash                        Specify the hash function to use"
 	echo "     -h, --help                        Display this help menu, then exit"
 	echo " --lang, --language <language>         Specify the language to use"
 	echo "                                       (Default is English)"
@@ -9219,8 +9220,10 @@ PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2006, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
 Currently under active development by the ${PROGRAM_NAME} project team.
-To report bugs, updates, patches, comments and questions please go to:
+To report bugs, obtain updates, or provide patches or comments, please go to:
 http://rkhunter.sourceforge.net
+
+To ask questions about rkhunter, please use the rkhunter-users mailing list.
 
 ${PROGRAM_NAME} comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under the
@@ -9259,6 +9262,7 @@ NOMOW=0
 MAILONWARNING=""
 
 HASH_FUNC=""
+HASH_FLD_IDX=1
 PROP_DIR_LIST=""
 PROP_FILE_LIST=""
 PROP_FILE_LIST_COUNT=0
@@ -9292,9 +9296,6 @@ SHOWWARNINGSONLY=0
 HASH_CHECK_ENABLED=0
 SKIP_HASH_MSG=0
 
-# This will be set if the applications check is to be performed.
-APPS_CHECK_ENABLED=0
-
 # Users can reset this to a new root directory.
 RKHROOTDIR=""
 
@@ -9311,6 +9312,7 @@ GENTOO=0
 case "${OPERATING_SYSTEM}" in
 *BSD)
 	BSDOS=1
+	HASH_FLD_IDX=4
 	;;
 *)
 	BSDOS=0
@@ -9347,9 +9349,6 @@ WARNING_COUNT=0
 
 # Set if grsec is installed.
 GRSECINSTALLED=0
-
-# Default display column width
-defaultcolumn=60
 
 # Initialise default status.
 STATUS=0
@@ -9578,18 +9577,6 @@ while [ $# -ge 1 ]; do
 			CHECK=1
 			ENDIS_OPT=1
 			ENABLE_TESTS=$1
-			;;
-		esac
-		;;
-	--hash)
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			HASH_FUNC="$1"
 			;;
 		esac
 		;;
@@ -9833,6 +9820,7 @@ get_configfile_options
 
 if [ "${RKHLOGFILE}" = "/dev/null" ]; then
 	NOLOG=1
+	VERBOSE_LOGGING=0
 
 	if [ $SHOWWARNINGSONLY -eq 1 ]; then
 		echo "The logfile has been disabled - unable to report warnings."
@@ -9875,9 +9863,6 @@ if [ $CHECK -eq 1 ]; then
 	elif [ -f "${RKHROOTDIR}/proc/kallsyms" ]; then
 		KSYMS_FILE="${RKHROOTDIR}/proc/kallsyms"
 	fi
-
-
-	check_test apps && APPS_CHECK_ENABLED=1
 fi
 
 
@@ -10055,89 +10040,95 @@ HOST_NAME=`echo ${HOST_NAME} | cut -d'.' -f1`
 
 
 #
-# Write out various information messages to the logfile.
+# Write out various information messages to the logfile. The first
+# set of messages can be skipped if no logfile is to be created.
 #
 
 display --to SCREEN --type PLAIN VERSIONLINE "${PROGRAM_NAME}" "${PROGRAM_version}"
 
-if [ -n "${HOST_NAME}" ]; then
-	display --to LOG --type PLAIN VERSIONLINE2 "${PROGRAM_NAME}" "${PROGRAM_version}" ${HOST_NAME}
-else
-	display --to LOG --type PLAIN VERSIONLINE3 "${PROGRAM_NAME}" "${PROGRAM_version}"
-fi
+if [ $NOLOG -eq 0 ]; then
+	if [ -n "${HOST_NAME}" ]; then
+		display --to LOG --type PLAIN VERSIONLINE2 "${PROGRAM_NAME}" "${PROGRAM_version}" ${HOST_NAME}
+	else
+		display --to LOG --type PLAIN VERSIONLINE3 "${PROGRAM_NAME}" "${PROGRAM_version}"
+	fi
 
-display --to LOG --type INFO --nl RKH_STARTDATE "`date`"
+	display --to LOG --type INFO --nl RKH_STARTDATE "`date`"
 
-display --to LOG --type PLAIN --nl CONFIG_CHECK_START
+	display --to LOG --type PLAIN --nl CONFIG_CHECK_START
 
-display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
+	display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
 
-if [ -s "${DB_PATH}/rkhunter.dat" ]; then
-	RKHTMPVAR=`grep '^OS:' ${DB_PATH}/rkhunter.dat 2>/dev/null | sed -e 's/^OS://'`
+	if [ -s "${DB_PATH}/rkhunter.dat" ]; then
+		RKHTMPVAR=`grep '^OS:' ${DB_PATH}/rkhunter.dat 2>/dev/null | sed -e 's/^OS://'`
 
-	if [ -n "${RKHTMPVAR}" ]; then
-		display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${RKHTMPVAR}"
+		if [ -n "${RKHTMPVAR}" ]; then
+			display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${RKHTMPVAR}"
+		else
+			display --to LOG --type INFO UNAME "`uname -a`"
+		fi
 	else
 		display --to LOG --type INFO UNAME "`uname -a`"
 	fi
-else
-	display --to LOG --type INFO UNAME "`uname -a`"
-fi
 
-display --to LOG --type INFO CONFIG_CMDLINE "${CMD_LINE}"
+	display --to LOG --type INFO CONFIG_CMDLINE "${CMD_LINE}"
 
-display --to LOG --type INFO CONFIG_ENVSHELL ${SHELL} ${MYSHELL}
+	display --to LOG --type INFO CONFIG_ENVSHELL ${SHELL} ${MYSHELL}
 
-display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
+	display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
 
-display --to LOG --type INFO CONFIG_INSTALLDIR "${RKHINSTALLDIR}"
+	display --to LOG --type INFO CONFIG_INSTALLDIR "${RKHINSTALLDIR}"
 
-display --to LOG --type INFO CONFIG_LANGUAGE "${LANGUAGE}"
+	display --to LOG --type INFO CONFIG_LANGUAGE "${LANGUAGE}"
 
-display --to LOG --type INFO CONFIG_DBDIR "${DB_PATH}"
+	display --to LOG --type INFO CONFIG_DBDIR "${DB_PATH}"
 
-display --to LOG --type INFO CONFIG_SCRIPTDIR "${SCRIPT_PATH}"
+	display --to LOG --type INFO CONFIG_SCRIPTDIR "${SCRIPT_PATH}"
 
-display --to LOG --type INFO CONFIG_BINDIR "${SPACEDPATH} ${BINPATHS}"
+	display --to LOG --type INFO CONFIG_BINDIR "${SPACEDPATH} ${BINPATHS}"
 
-if [ -z "${RKHROOTDIR}" ]; then
-	display --to LOG --type INFO CONFIG_ROOTDIR "/"
-else
-	display --to LOG --type INFO CONFIG_ROOTDIR "${RKHROOTDIR}"
-fi
-
-display --to LOG --type INFO CONFIG_TMPDIR "${RKHTMPDIR}"
-
-if [ $NOMOW -eq 1 ]; then
-	display --to LOG --type INFO CONFIG_MOW_DISABLED
-else
-	if [ -z "${MAILONWARNING}" ]; then
-		display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
+	if [ -z "${RKHROOTDIR}" ]; then
+		display --to LOG --type INFO CONFIG_ROOTDIR "/"
 	else
-		display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
+		display --to LOG --type INFO CONFIG_ROOTDIR "${RKHROOTDIR}"
 	fi
+
+	display --to LOG --type INFO CONFIG_TMPDIR "${RKHTMPDIR}"
+
+	if [ $NOMOW -eq 1 ]; then
+		display --to LOG --type INFO CONFIG_MOW_DISABLED
+	else
+		if [ -z "${MAILONWARNING}" ]; then
+			display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
+		else
+			display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
+		fi
+	fi
+
+	test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
+	test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
+
+	for CMD in ${CMDLIST}; do
+		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD "${CMD}"
+		fi
+	done
+
+	for CMD in ${WEBCMDLIST}; do
+		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
+		fi
+	done
 fi
 
-test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
-test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
-
-for CMD in ${CMDLIST}; do
-	RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
-	RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
-	if [ -n "${RKHTMPVAR}" ]; then
-		display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
-	else
-		display --to LOG --type INFO NOT_FOUND_CMD "${CMD}"
-	fi
-done
-
-for CMD in ${WEBCMDLIST}; do
-	RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
-	RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
-	if [ -n "${RKHTMPVAR}" ]; then
-		display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
-	fi
-done
 
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	if [ $PRELINKED -eq 1 ]; then

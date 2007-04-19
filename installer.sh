@@ -28,6 +28,7 @@ APPVERSION="1.3.0"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
+RKHINST_LAYOUT=""
 USE_CVS=0
 STRIPROOT=""
 
@@ -84,11 +85,11 @@ esac
 
 showHelp() { # Show help / version
 	echo "${INSTALLER_NAME}"
-	echo "Usage: $0 <parameters>."
+	echo "Usage: $0 <parameters>"
 	echo ""
 	echo "Ordered valid parameters:"
 	echo "--help (-h)      : Show this help."
-	echo "--examples       : Show --layout examples."
+	echo "--examples       : Show layout examples."
 	echo "--layout <value> : Chose installation template (mandatory switch)."
 	echo "                   The templates are:"
         echo "                    - default: (FHS compliant),"
@@ -97,7 +98,6 @@ showHelp() { # Show help / version
 	echo "                    - oldschool: previous version file locations,"
 	echo "                    - custom: supply your own prefix,"
 	echo "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
-	echo "                    If no layout value is given the default layout is used."
 	echo "--striproot      : Strip path from custom layout (for package maintainers)."
 	echo "--install        : Install according to chosen layout."
 	echo "--show           : Show chosen layout."
@@ -143,15 +143,25 @@ case "$1" in
 				PREFIX=`echo "${RKHINST_LAYOUT}"|sed "s|custom_||g"`
 				case "${PREFIX}" in
 					.)
-						echo "Rewriting for local install."
+						if [ "$action" = "install" ]; then
+							echo "Standalone installation into ${PWD}/files"
+						fi
 						;;
 					.*|/.*)
 						echo "Bad prefix chosen, exiting."
 						exit 1
 						;;
+					*)
+						if [ "$action" = "install" ]; then
+							rkhtmpvar=`echo "${PATH}" | grep "${PREFIX}/bin"`
+							if [ -z "${rkhtmpvar}" ]; then
+								echo
+								echo "Note: Directory ${PREFIX}/bin is not in your PATH"
+								echo
+							fi
+						fi
+						;;
 				esac
-				echo "${PATH}" | grep -q "${PREFIX}/bin" || \
-				echo; echo "Please make sure you want PREFIX to be ${PREFIX}"; echo
 				;;
 			RPM)	if [ -n "${RPM_BUILD_ROOT}" ]; then
 					PREFIX="${RPM_BUILD_ROOT}/usr/local"
@@ -167,10 +177,12 @@ case "$1" in
 			RPM)
 				;;
 			*)
-				if [ ! -d "${PREFIX}" ]; then
-					echo "Bad prefix chosen (nonexistent dirname), exiting."
-					echo "\"mkdir -p ${PREFIX}\" first?"
-					exit 1
+				if [ "$action" = "install" ]; then
+					if [ ! -d "${PREFIX}" ]; then
+						echo "Bad prefix chosen (nonexistent dirname), exiting."
+						echo "\"mkdir -p ${PREFIX}\" first?"
+						exit 1
+					fi
 				fi
 				;;
 		esac
@@ -240,7 +252,7 @@ showTemplate() { # Take input from the "--installdir parameter"
 	case "$1" in
 		custom_.)
 			# Dump *everything* in the current dir.
-			echo "Rewrite on for local install."
+			echo "Standalone installation into ${PWD}/files"
 			;;
 		*)
 			selectTemplate "$1"
@@ -253,20 +265,12 @@ showTemplate() { # Take input from the "--installdir parameter"
 			echo "Databases:          ${RKHINST_DB_DIR}"
 			echo "Temporary files:    ${RKHINST_TMP_DIR}"
 			if [ -n "${STRIPROOT}" ]; then
-				echo; echo "Got STRIPROOT="${STRIPROOT}"."
+				echo; echo "Got STRIPROOT=\"${STRIPROOT}\""
 			fi
 			;;
 	esac
 		
 	exit 0
-}
-
-searchfile() {
-	if [ "${PATH}" = "" ]; then
-		PATH="${PATH}:/usr/bin:/usr/local/bin"
-	fi
-
-	#    PATH=`echo ${PATH} | tr ':' ' '`
 }
 
 retValChk() { 
@@ -419,13 +423,16 @@ if [ -e "${PREFIX}" ]; then
 					esac
 				done
 				cd ./files
+				PREFIX="${PWD}"
+				echo "LOGFILE=${PREFIX}/rkhunter.log" >> rkhunter.conf 
 				echo "TMPDIR=$PREFIX" >> rkhunter.conf 
 				echo "DBDIR=$PREFIX" >> rkhunter.conf 
 				echo "SCRIPTDIR=$PREFIX" >> rkhunter.conf 
 				echo "INSTALLDIR=$PREFIX" >> rkhunter.conf
 				sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" rkhunter > rkhunter.
 				mv -f rkhunter. rkhunter
-				echo "Finished install in PREFIX \"${PREFIX}\" (${PWD})."
+				chmod "${RKHINST_MODE_EX}" rkhunter
+				echo "Finished install in \"${PREFIX}\"."
 				exit 0
 			;;
 		esac
@@ -566,7 +573,7 @@ done
 # Strip root from fake root install.
 if [ -n "${STRIPROOT}" ]; then
 	find "${PREFIX}" -type f | while read f; do 
-		grep -q "${PREFIX}" "${f}" && { echo $N " Striproot ${f}: "; sed -i "s|${STRIPROOT}||g" "${f}"; retValChk; }
+		grep "${PREFIX}" "${f}" >/dev/null 2>&1 && { echo $N " Striproot ${f}: "; sed -i "s|${STRIPROOT}||g" "${f}"; retValChk; }
 	done
 fi
 
@@ -578,17 +585,6 @@ echo "Installation finished."
 doRemove()  {
 # Clean active window
 clear
-
-# Preflight checks
-echo "Checking system for: "
-
-echo $N " ${INSTALLER_NAME} files: "
-if [ -f ./files/rkhunter ]; then
-	echo "found. OK"
-else
-	echo "failed. Installer files not in $PWD/files. Exiting."
-	exit 1
-fi
 
 RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
 RKHINST_DIRS_POST="$VARDIR $SHAREDIR $PREFIX"
@@ -609,6 +605,13 @@ if [ -e "${PREFIX}" ]; then
 else
 	echo "does NOT exist, exiting."
 	#exit 1
+fi
+
+# Standalone removal involves just deleting the 'files' subdirectory.
+if [ "$PREFIX" = "." ]; then
+	rm -rf ./files 2>/dev/null
+	echo "Uninstallation complete."
+	return
 fi
 
 echo "Removing installation files:"
@@ -699,7 +702,8 @@ while [ $# -ge 1 ]; do
 				RKHINST_LAYOUT="$1"
 				;;
 			*)
-				RKHINST_LAYOUT="default"
+				echo "Unknown layout given, exiting."
+				exit 1
 				;;
 		esac
 		;;
@@ -708,11 +712,15 @@ while [ $# -ge 1 ]; do
 		if [ -n "$1" ]; then
 			STRIPROOT="$1"
 		else
-			echo "Striproot requested but no directoryname given, exiting."
+			echo "Striproot requested but no directory name given, exiting."
 			exit 1
 		fi
 		;;
 	--show|--remove|--install)
+		if [ -z "${RKHINST_LAYOUT}" ]; then
+			echo "No layout given. The '--layout' option must be specified first."
+			exit 1
+		fi
 		action=`echo "$1"|sed "s/-//g"`;
 		case "$action" in
 			show)	showTemplate $RKHINST_LAYOUT

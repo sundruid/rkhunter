@@ -26,36 +26,40 @@ The latest version of this FAQ can be found at the RKH web site.
 
    3.1) Rootkit Hunter tells me there is something wrong with
         my system. What do I do?
-   3.2) Rootkit Hunter tells me a lot of installed software is
-        'vulnerable'. What does that mean?
-   3.3) Rootkit Hunter tells me that I have vulnerable applications
+   3.2) Rootkit Hunter tells me that I have vulnerable applications
         installed. But I have fully patched my server! How is this
         possible?
-   3.4) How can I run Rootkit Hunter every day?
-   3.5) What is the meaning of the test names?
+   3.3) How can I automatically run Rootkit Hunter every day?
+   3.4) What is the meaning of the test names?
+   3.5) Can rkhunter handle filenames with spaces in them?
+   3.6) What does the following warning mean:
+          Determining OS... Warning: this operating system is not
+          fully supported!
+   3.7) I have just installed Rootkit Hunter, and I am already
+        getting warning messages. Why is that?
 
 
  4. ERROR AND WARNING MESSAGES
 
-   4.1) What does the warning "Determining OS... Warning: this
-        operating system is not fully supported!" mean?
-   4.2) Rootkit Hunter gives me an error message that some
-        binary could not be found. What do I do?
-   4.3) I get warnings from PHP, like:
-        PHP Warning: Function registration failed - duplicate name
-        - pg_update in Unknown on line 0. What does this mean?
-   4.4) I use prelinking, but after performing some updates, all,
-        or some, binaries are 'BAD' when running the MD5 hash check.
+   4.1) What does the following warning mean:
+          The file of stored file properties (rkhunter.dat) is empty,
+          and so must be created. To do this type in
+          'rkhunter --propupd'.
+   4.2) Rootkit Hunter skips some checks, and the logfile indicates
+        that certain commands are missing. What can I do?
+   4.3) I get warnings from PHP like:
+          PHP Warning: Function registration failed - duplicate name
+          - pg_update in Unknown on line 0. What does this mean?
+   4.4) After performing some updates, all, or some, binaries in the
+        file properties checks are marked with a 'Warning'.
         What can I do?
 
 
  5. UPDATING QUESTIONS
 
-   5.1) What's up with Rootkit Hunter? I haven't seen any
-        updates in *ages*!
-   5.2) Rootkit Hunter tells me that I have multiple versions
+   5.1) Rootkit Hunter tells me that I have multiple versions
         installed. How it this possible?
-   5.3) Can I be notified when a new release will be available?
+   5.2) Can I be notified when a new release will be available?
 
 
 ===========================================================
@@ -65,20 +69,20 @@ The latest version of this FAQ can be found at the RKH web site.
 
 1.1) What is Rootkit Hunter?
 
-     Rootkit Hunter (RKH) is an easy-to-use tool which checks
+A.   Rootkit Hunter (RKH) is an easy-to-use tool which checks
      computers running UNIX (clones) for the presence of rootkits
      and other unwanted tools.
 
 
 1.2) What are rootkits?
 
-     Most times they are self-hiding toolkits used by blackhats,
+A.   Most times they are self-hiding toolkits used by blackhats,
      crackers and scriptkiddies, to avoid the eye of the sysadmin.
 
 
 1.3) Can I help with the development of this project?
 
-     Yes, everyone can help in some way. For example:
+A.   Yes, everyone can help in some way. For example:
 
      Help your fellow Rootkit Hunter users on the rkhunter-users
      mailing list;
@@ -102,7 +106,7 @@ The latest version of this FAQ can be found at the RKH web site.
 
 1.4) I like your software! How can I thank you?
 
-     Simple - by contributing. See question 1.3 above.
+A.   Simple - by contributing. See question 1.3 above.
 
 
 ===========================================================
@@ -112,12 +116,12 @@ The latest version of this FAQ can be found at the RKH web site.
 
 2.1) How do I install Rootkit Hunter?
 
-     Instructions on installing RKH can be found in the README file.
+A.   Instructions on installing RKH can be found in the README file.
 
 
 2.2) How do I create a Rootkit Hunter RPM file?
 
-     The RKH source contains an rkhunter.spec file which will
+A.   The RKH source contains an rkhunter.spec file which will
      allow an RPM to be built. To build the RPM run the following
      command:
 
@@ -135,7 +139,7 @@ The latest version of this FAQ can be found at the RKH web site.
 3.1) Rootkit Hunter tells me there is something wrong with my
      system. What do I do?
 
-     Prior to any incident it is recommended that you have read
+A.   Prior to any incident it is recommended that you have read
      "Intruder Detection Checklist". This is available from
      http://www.cert.org/tech_tips/intruder_detection_checklist.html
      This document will tell you what to check, and makes it easier
@@ -146,54 +150,52 @@ The latest version of this FAQ can be found at the RKH web site.
      rkhunter-users mailing list, the Linux-oriented forum
      LinuxQuestions.org, or even IRC.
 
-     If just one check fails with RKH, then it is possible you have
+     If a file property check fails, then it is possible you have
      what is called a 'false positive'. Sometimes this will happen
      due to package updates, customised configurations or changed
-     binaries. If so, then please validate:
+     binaries. If so, then please check further:
 
-     Files:
-       If you run a file integrity checker, for example Aide,
-       Samhain, or tripwire, consult the results from running those
-       tools. Note they must be installed directly after the O/S
-       installation in order to be useful, and you must keep a copy
-       of the binary, configuration files and databases off-site.
-       Also note that running those tools, and Rootkit Hunter, is no
-       substitute for updating software when updates are released,
-       and proper host and network hardening.
+       1. If you run a file integrity checker, for example Aide,
+          Samhain, or tripwire, consult the results from running those
+          tools. Note they must be installed directly after the O/S
+          installation in order to be useful, and you must keep a copy
+          of the binary, configuration files and databases off-site.
+          Also note that running those tools, and Rootkit Hunter, is no
+          substitute for updating software when updates are released,
+          and proper host and network hardening.
 
-       If you don't run a file integrity checker you can possibly use
-       your distributions package management system if it is
-       configured to deal with verification.
+       2. If you don't run a file integrity checker you can possibly
+          use your distributions package management system if it is
+          configured to deal with verification.
 
-       Run 'strings <file>' and check the results for untrusted file
-       paths (for example, /dev/.hiddendir)
+       3. Run 'strings <file>' and check the results for untrusted file
+          paths (for example, /dev/.hiddendir).
 
-       Check recently updated binaries and their original source.
+       4. Check recently updated binaries and their original source.
 
-       Run 'file <file>' and compare the results with other files,
-       especially trusted binaries. If some binaries are statically
-       linked and others are all dynamic, then they could have been
-       trojaned.
+       5. Run 'file <file>' and compare the results with other files,
+          especially trusted binaries. If some binaries are statically
+          linked and others are all dynamic, then they could have been
+          trojaned.
 
-     Other warnings:
-       If you have a warning about another part of the checks, then
-       please email the rkhunter-users mailing list and tell us about
-       your system configuration:
-         the purpose of the server (for example, web server, intranet
-         fileserver, shell server);
-         the (aproximate) date of the incident and when you found out;
-         the running distribution name, release and kernel version;
-         whether any passwd/shadow data has changed;
-         any anomalies you find from reading the system, daemon, IDS
-         and firewall logs;
-         if all the installed software was recently updated;
-         what services are or where running at the time;
-         if you found setuid root files in directories for temporary
-         files;
-         any anomalies you find from reading user shell histories.
+     If you have a warning from another part of the checks, then
+     please email the rkhunter-users mailing list and tell us about
+     your system configuration:
+        the purpose of the server (for example, web server, intranet
+        fileserver, shell server);
+        the (aproximate) date of the incident and when you found out;
+        the running distribution name, release and kernel version;
+        whether any passwd/shadow file data has changed;
+        any anomalies you find from reading the system, daemon, IDS
+        and firewall logs;
+        if all the installed software was recently updated;
+        what services are or were running at the time;
+        if you found setuid root files in directories for temporary
+        files;
+        any anomalies you find from reading user shell histories.
 
-     If your system is infected with a rootkit, cleaning up is not
-     an option. Restoring is also not an option unless you are
+     If your system is infected with a rootkit, cleaning it up is
+     not an option. Restoring is also not an option unless you are
      skilled, and have autonomous and an independent means of
      verifying that the backup is clean, and does not contain
      misconfigured or stale software. Never trust a compromised
@@ -236,30 +238,22 @@ The latest version of this FAQ can be found at the RKH web site.
           vulnerable at the time of attack.
 
 
-3.2) Rootkit Hunter tells me a lot of installed software is
-     'vulnerable'. What does that mean?
+3.2) Rootkit Hunter tells me that I have an out-of-date or unsecure
+     application installed. But I have fully patched my server!
+     How is this possible?
 
-     It means that the software possibly contains software bugs
-     which make local or remote attacks possible. In the worst
-     case, a person with malicious intentions could gain full access
-     to your server.
-
-
-3.3) Rootkit Hunter tells me that I have vulnerable applications
-     installed. But I have fully patched my server! How is this
-     possible?
-
-     Some distributions, for example Red Hat and OpenBSD, do patch
+A.   Some distributions, for example Red Hat and OpenBSD, do patch
      old versions of software. However, Rootkit Hunter thinks it is
-     an old version, and so sees it as being vulnerable.
+     an old version, and so sees it as being unsecure.
 
-     If you wish you can skip the application check by using the
-     '--skip-application-check' command-line option.
+     If you wish you can skip the application version check by adding
+     the 'apps' test name to the DISABLE_TESTS option in your
+     rkhunter.conf file.
 
 
-3.4) How can I run Rootkit Hunter every day?
+3.3) How can I automatically run Rootkit Hunter every day?
 
-     You can create a cronjob script like this:
+A.   You can create a cronjob script like this:
 
           #!/bin/sh
 
@@ -275,13 +269,54 @@ The latest version of this FAQ can be found at the RKH web site.
      Alternatively, the rkhunter command can be added directly to
      your root crontab. For example:
 
-        30 5 * * * </path>/rkhunter -c --cronjob <more options>
+        30 5 * * * </path>/rkhunter --cronjob --rwo <more options>
 
-     Rootkit Hunter will now run at 5:30 (AM).
+     Rootkit Hunter will now run every day at 5:30 (AM).
 
 
-3.5) What is the meaning of the test names?
-jh - fill this in.
+3.4) What is the meaning of the test names?
+
+A.   See the README file for information about the test names.
+
+
+3.5) Can rkhunter handle filenames with spaces in them?
+
+A.   Generally no. Within the tests the space character is typically
+     used to delimit command output fields. Some tests will work, but
+     others will not.
+
+
+3.6) What does the following warning mean:
+
+       Determining OS... Warning: this operating system is not
+       fully supported!
+
+A.   This is a message from older versions of rkhunter. Upgrade to
+     a newer version.
+
+
+3.7) I have just installed Rootkit Hunter, and I am already
+     getting warning messages. Why is that?
+
+A.   The first run of rkhunter after an installation will give some
+     warning messages. One of the checks is that the file of hash
+     values for the file properties checks exists. This file won't
+     exist until rkhunter is run with the '--propupd' option. Two
+     other warning messages will relate to checks of changes to the
+     passwd and group files. To do this, rkhunter must use a copy of
+     the files. However, since no copies yet exist, warnings are
+     generated. These warnings will go once rkhunter is run again.
+     There is also a check to see if any commands have been replaced
+     by shell scripts. One of the commands is 'rkhunter' itself. To
+     avoid these warning messages you must whitelist the commands in
+     your rkhunter.conf file. Look in the configuration file and you
+     will find examples of this.
+
+     Once these changes have been made, then re-run rkhunter and no
+     warnings should appear. Obviously warning messages from other
+     checks indicate that something is wrong, and should be
+     investigated. The logfile will contain further information about
+     each warning message.
 
 
 ===========================================================
@@ -289,107 +324,90 @@ jh - fill this in.
 4. ERROR AND WARNING MESSAGES
 =============================
 
-4.1) What does the warning "Determining OS... Warning: this
-     operating system is not fully supported!" mean?
+4.1) What does the following warning mean:
 
-     It simply means that not all functions and checks can be
-     performed, because the system is 'unknown' to RKH.
+       The file of stored file properties (rkhunter.dat) is empty,
+       and so must be created. To do this type in
+       'rkhunter --propupd'.
 
-     If you want support for the O/S, then please open a
-     'Support request' in the RKH tracker system on the web site.
+A.   For rkhunter to perform file property checks, it must first
+     have a database file ('rkhunter.dat') containing the property
+     values for each file. It can then compare each files current
+     values against those stored in the database. Any difference
+     indicates that the file has changed. To create and/or update
+     the database file use the '--propupd' option.
 
-
-4.2) Rootkit Hunter gives me an error message that some binary
-     could not be found. What do I do?
-
-     Sometimes a binary cannot be found in the PATH variable.
-     Because Rootkit Hunter tries to run the binary by executing
-     it without a full pathname, the system will search its PATH.
-     If the binary couldn't be found, then an error will occur.
-
-     For example:
-
-       Checking loaded kernel modules... /usr/local/bin/rkhunter:
-       lsmod: command not found
-       [ Warning! (found difference in output) ]
-
-     To resolve this enter the command 'echo $PATH' and check that
-     your PATH settings are correct.
+     NOTE: An additional warning will be displayed stating that it
+           is the users responsibility to ensure that the files are
+           valid before using the '--propupd' option. That is, the
+           user must be sure that the files have not been compromised.
 
 
-4.3) I get warnings from PHP, like:
-     PHP Warning: Function registration failed - duplicate name
-     - pg_update in Unknown on line 0. What does this mean?
+4.2) Rootkit Hunter skips some checks, and the logfile indicates
+     that certain commands are missing. What can I do?
 
-     This is usually because you have updated the Apache version
+A.   You have a choice:
+
+       1) Install the relevant command. You may be able to do this
+          simply by running a package updater for your system (for
+          example, 'yum' under Fedora).
+
+       2) You may be able to disable the check by adding its test
+          name to your rkhunter.conf file. (See the README file
+          for more information about the test names.)
+
+       3) If you are sure that the relevant command is present on
+          your system, then rkhunter is having a problem locating
+          it. Check the logfile for the 'command directories' it
+          is using. If the directory containg the command isn't
+          listed, then set the command directories to use by using
+          the '--bindir' command-line option, or the BINDIR option
+          in the rkhunter.conf file.
+
+
+4.3) I get warnings from PHP like:
+
+        PHP Warning: Function registration failed - duplicate name
+        - pg_update in Unknown on line 0. What does this mean?
+
+A.   This is usually because you have updated the Apache version
      of PHP, but forgot to update/recompile the CLI (console
      version) of PHP. So recompile/update it and try again.
 
 
-4.4) I use prelinking, but after performing some updates, all, or
-     some, binaries are 'BAD' when running the MD5 hash check.
+4.4) After performing some updates, all, or some, binaries in the
+     file properties checks are marked with a 'Warning'.
      What can I do?
 
-     The first thing would be to verify that the update is the cause
-     of the reported 'BAD' files. Checking the system log files
-     should indicate what has been updated.
+A.   The first thing would be to verify that the update is the cause
+     of the warnings. Checking the system log files should indicate
+     what has been updated.
 
-     If the update is the cause, then it is most likely that the
-     prelinking database has become out of step with the rkhunter
-     local MD5 hash values. To correct this will require rebuilding
-     the prelinking database and the rkhunter local hash values.
-     Prelinking is used by the system to optimize the use of binary
-     files and libraries.
-
-     To correct this problem you will need to use a small utility,
-     called 'hashupd.sh', which is downloadable from the sourceforge
-     web site as part of rkhunter
-     (see http://sourceforge.net/project/showfiles.php?
-     group_id=155034). Download the utility, and make it executable.
-
-     On RedHat/Fedora, it is necessary to carry out the following
-     procedure:
-
-     1) If you are running SELinux then temporarily disable it by
-        typing in 'setenforce 0';
-        Note: If you are unsure whther you are running SELinux or
-        not, then type in 'sestatus'.
-        A line containing 'Current mode: enforcing' indicates that
-        you are running SELinux. If it says 'permissive', then you
-        are not currently running SELinux, and can ignore the steps
-        about SELinux.
-
-     2) Run the daily prelink update script - to do this type in
-        '/etc/cron.daily/prelink';
-
-     3) Run 'rkhunter --hashupd' to update your local hash values;
-
-     4) Run rkhunter;
-
-     5) If rkhunter still shows 'BAD' hash entries, then type in
-        'rm /etc/prelink.cache' and repeat the procedure from step 2.
-        Note: Step 2 may now take some time to complete.
-
-     6) Re-enable SELinux, if you disabled it, by typing in
-        'setenforce 1'. Hopefully rkhunter will now work without
-        any problems with hash values.
+     It is most likely that the stored rkhunter file property values
+     need to be recalculated. To do this use the RKH '--propupd'
+     option. However, the output of the RKH file hash value check
+     should only be seen as an indication that the file has changed.
+     Updating the stored hash values should be done only after proper
+     verification of the files using a file integrity checker or your
+     distributions package management tools.
 
      NOTES
      =====
-     1) For other Linux distributions you will need to determine if,
-        and how, prelinking takes place, and whether SELinux is
-        present or not. It is possible that the above sequence will
-        work for other distributions, but it is for the user to
-        check this.
+     1) If the logfile indicates that a files' hash value has changed
+        from some value to 'No hash value found', and your system
+        uses prelinking, then the file probably needs to be
+        specifically prelinked. This can usually be done by running
+        the 'prelink' command on the relevant file. Running RKH with
+        the '--propupd' option afterwards will indicate if there
+        are still any hash values missing. Check the logfile and
+        repeat the above process of prelinking the files.
 
-     2) If your system uses Libsafe and prelinking then errors can occur.
-        Disable preloading Libsafe in /etc/ld.so.preload. Prelink again
-        and run 'rkhunter --hashupd'.
+        RKH will try and determine if your system is using prelinking
+        or not. The logfile will contain the result of the check.
 
-     3) The output of the RKH hash tests should only be seen as indication,
-        and updating hashes on a regular basis should be done only after
-        proper verification using a file integrity checker or your 
-        distributions package management tools.
+     2) If your system uses Libsafe and prelinking, then errors can
+        occur. Disable preloading Libsafe in /etc/ld.so.preload.
+        Prelink again, and then run 'rkhunter --propupd'.
 
 
 ===========================================================
@@ -397,24 +415,10 @@ jh - fill this in.
 5. UPDATING QUESTIONS
 =====================
 
-5.1) What's up with Rootkit Hunter? I haven't seen any updates
-     in *ages*!
-
-     In the second quarter of 2006, the founder of Rootkit Hunter
-     found out the hard way that maintaining FOSS can be difficult
-     when real-life commitments overrule. 
-     Management of the project was taken over by unSpawn, and a
-     project group comprising of developers and testers was formed.
-     The Rootkit Hunter project team is committed to making sure
-     development continues. If you are interested in joining the
-     development team, then send an email message to 'unspawn at
-     users dot sourceforge dot net'.
-
-
-5.2) Rootkit Hunter tells me that I have multiple versions
+5.1) Rootkit Hunter tells me that I have multiple versions
      installed. How it this possible?
 
-     Usually you install a tool and upgrade it later. Sometimes
+A.   Usually you install a tool and upgrade it later. Sometimes
      if you use a 'non-official' updater or package manager
      (for example, from an external party, or a build from source
      using an installer like RPM/DEB/TGZ), the binaries may be
@@ -424,10 +428,10 @@ jh - fill this in.
      and remove them.
 
 
-5.3) Can I be notified when a new release will be available?
+5.2) Can I be notified when a new release will be available?
 
-     Yes, you can join the rkhunter-announce mailing list. This
-     is a low volume list. Details can be found on the RKH web site.
+A.   The '--versioncheck' option will indicate if a new version
+     is available.
 
 
 ===========================================================

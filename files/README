@@ -9,145 +9,154 @@ It is recommended that all users of RootKit Hunter (RKH) join the
 rkhunter-users mailing list. Subscribing to the list can be done via
 the RKH website at http://rkhunter.sourceforge.net
 
-Additionally there is a low-volume rkhunter-announce mailing list,
-which will contain announcements of new versions of RKH. Details of
-the list can be found at the RKH web site.
-
 A copy of the RKH FAQ is also available from the web site.
 
 
 ROOTKIT HUNTER REQUIREMENTS
 ===========================
 
-Please note RKH has some requirements.
+Please note RKH has some requirements:
 
-1) Perl. 
-   Some test RKH runs require Perl. Also for some default system
-   tools like stat, md5sum and sha1sum alternatives are supplied which
-   require Perl.
+1) Before RKH starts it will check that certain required commands
+   are present on the system. These are typical commands such as
+   'cat', 'sed', 'head', 'tail', etc. If a command is missing then
+   RKH will not run.
 
-2) A tool with which to download updates. 
+2) Some tests require commands such as stat, md5/md5sum or
+   sha1/sha1sum. If these are not present, then RKH has perl
+   scripts which will automatically be used instead. However, this
+   requires perl being present. If it is not, then the tests will
+   be skipped.
+
+3) A tool should be present with which to download file updates. 
    Currently wget, curl, (e)links, lynx and GET are supported. If your
    system does not allow the possibility to install one of these 
-   applications but does run Perl, you can get "bget" from 
+   applications, but does run perl, you can use "bget" available from 
    http://www.cpan.org/authors/id/E/EL/ELIJAH/. If you use another 
-   generic method of updating RKH please inform us.
+   generic method of updating RKH then please let us know.
 
-*) Single-purpose tools.
-   RKH does not depend on these but will use them if found because they
-   enhance RKH's detection capabilities:
+4) Some tests require single-purpose tools. RKH does not depend on
+   these, but it will use them if it finds them - they can enhance
+   RKH's detection capabilities. The tools are:
    - Skdet
-     tests for SucKIT, Adore, Adore-NG, UNFshit, UNFkmem and frontkey.
-     http://slider.decebal.org/code/skdet/
+       Tests for SucKIT, Adore, Adore-NG, UNFshit, UNFkmem and
+       frontkey.
+       http://slider.decebal.org/code/skdet/
    - Unhide
-     find hidden processes.
-     http://www.security-projects.com/?Unhide
+       Finds hidden processes.
+       http://www.security-projects.com/?Unhide
 
 
 ROOTKIT HUNTER INSTALLATION
 ===========================
 
-Unpacking the tar file should produce a single directory call
+Unpacking the tar file should produce a single directory called
 'rkhunter'. Within this directory is the installation script called
 'installer.sh'.
 
-To install RKH simply unpack the tarball and run the installation
-script:
+To perform a default installation of RKH simply unpack the tarball and,
+as root, run the installation script:
 
     tar zxf rkhunter-<version>.tar.gz
     cd rkhunter
-    ./installer.sh --install --layout
+    ./installer.sh --layout default --install
 
- - If no argument is given to the --layout switch, the default 
-   layout will be used.
-
- - RKH now supports custom layouts. To show the examples run:
+RKH installation supports custom layouts. To show some examples
+run:
 
     ./installer.sh --examples
 
- - To show where files are installed using layout "oldschool" run:
+As an another example, to install all files beneath /opt, run:
 
-    ./installer.sh --show --layout oldschool
+    ./installer.sh --layout custom /opt --install
 
- - To install all files beneath /opt, run:
+To show where files are installed using the "oldschool" layout
+run:
 
-    ./installer.sh --install --layout custom /opt
+    ./installer.sh --layout oldschool --show
 
- - The layout named "RPM" may not be chosen since it is used solely
-   for installing RKH using rpm.
+The layout named "RPM" may not be chosen since it is used solely
+for installing RKH using RPM.
 
 
 The default installation process will install a configuration file,
-called 'rkhunter.conf', into the '/usr/local/etc' directory or where
+called 'rkhunter.conf', into the '/etc' directory or where
 you chose using the --layout switch. Please edit the configuration 
 file according to your own system requirements. If the installer 
-encouters an existing rkhunter.conf the file will not be overwritten.
-Please inspect the new configuration file and copy over the changes.
+encounters an existing rkhunter.conf, it will not be overwritten.
+Please inspect the new configuration file and copy over any changes
+to the existing configuration file.
 
 The main RKH script will be installed into the '/usr/local/bin'
 directory or where you chose using the --layout switch. Man pages will 
-be installed into 'user/local/share/man', and other documentation will 
+be installed into '/usr/local/share/man', and other documentation will 
 be installed into the '/usr/local/share/doc/rkhunter' directory. RKH 
 data files, language support and a directory for temporary files will 
-be installed into '/var/lib/rkhunter'. All directories will be created 
+be installed into '/var/rkhunter'. All directories will be created 
 where necessary.
 
-To run RKH simply, as root, enter the following command:
+To run RKH, as root, simply enter the following command:
 
-    rkhunter -c
+    rkhunter --check
 
 By default, the log file '/var/log/rkhunter.log' will be created. It
 will contain the results of the checks made by RKH.
+
+To see what other options can be used with rkhunter, enter:
+
+    rkhunter --help
 
 
 STANDALONE INSTALLATION
 =======================
 
-It is possible to run RKH standalone, that is, without it being
-installed.
+It is possible to run RKH standalone, that is, with it all being
+installed into one directory.
 
 To do this unpack RKH as described above, and then install it using
 the following command:
 
-    ./installer.sh --install --layout custom .
+    ./installer.sh --layout custom . --install
 
 It is then necessary to change to the 'files' directory:
 
     cd files
 
-Within here will be a copy of the 'rkhunter.conf' configuration
+Within the directory will be a copy of the 'rkhunter.conf' configuration
 file. You can modify this file according to your requirements if you
 wish, but note the installer has already set the necessary variables.
 
 To run RKH, enter the following command:
 
-    ./rkhunter -c --configfile ./rkhunter.conf
-
-If you do not want a log file produced, then append the '--nolog'
-option to the above command.
+    ./rkhunter --configfile ./rkhunter.conf --check
 
 
 REMOVING AN INSTALLATION
 ========================
 
-RKH now supports deinstallation. Unpack the installation tarball and
-if you choose the default installation, run the --remove command:
+RKH supports uninstallation. To do this unpack the installation
+tarball, and then run the installer with the --remove option. If RKH
+was installed using a default installation, then run:
 
     tar zxf rkhunter-<version>.tar.gz
     cd rkhunter
-    ./installer.sh --remove
+    ./installer.sh --layout default --remove
 
-If you choose a layout, say /usr, while installing RKH, run:
+If you chose a different layout, for example '/usr', then run the
+installer using:
 
-    ./installer.sh --remove --layout /usr
+    ./installer.sh --layout /usr --remove
 
-Note the installer will not remove files that are installed using RPM
-(use "rpm" to remove the package) or when a custom layout is chosen.
-In the latter case if you choose for a custom layout "/opt" just run:
+Note: the installer will not remove files that were installed using RPM
+(use the "rpm" command to remove the package), or when a custom layout
+was chosen.
 
-    ./installer.sh --show --layout custom /opt
+In the latter case, if you chose a custom layout, for example '/opt',
+then run the installer to show where the files were installed:
 
-to see where the files are installed. Now you can manually remove them.
+    ./installer.sh --layout custom /opt --show
+
+You can then manually remove them.
 
 
 TEST NAMES
@@ -158,12 +167,12 @@ jh - fill this bit in!
 ROOTKIT HUNTER SUPPORT
 ======================
 
-When a problem is found with RKH it is recommended that users
-initially try and resolve the problem themselves. This can be done by
-first checking the FAQ file which is present in your installation if
-the distributed tarball is used as source. The FAQ will contain answers 
+If a problem is found with RKH, it is recommended that users initially
+try and resolve the problem themselves. This can be done by first
+checking the FAQ file, which is present in your installation if the
+distributed tarball is used as source. The FAQ will contain answers 
 to many common problems. The latest version of the FAQ can always be 
-found at RKH's project pages at SourceForge, in the "Documentation" 
+found at RKH's project pages on SourceForge, in the "Documentation" 
 section.
 
 If the problem has occurred directly after upgrading RKH, then please
@@ -172,8 +181,8 @@ made since the previous version of RKH, and may indicate why you are
 now experiencing a problem.
 
 Users should also check the rkhunter-users mailing list archives
-(available on the web site). The problem will be looked at by the RKH
-development team, and, where appropriate, a solution posted on the
+(available on the web site). The problem will be investigated by the
+RKH development team, and, where appropriate, a solution posted on the
 mailing list. Hence the mailing list archives may well contain a
 solution to the problem.
 
@@ -196,16 +205,4 @@ and version of RKH should always be included.
 If you are sure the problem is a bug, or want it considered as a
 support request, then please submit it directly into the tracker
 system.
-
-
-THE ROOTKIT HUNTER PROJECT TEAM
-===============================
-
-Current members of the team are:
-
-Gary Bak
-Jim Mcnamara
-Sibtay Abbas
-John Horne
-unSpawn
 

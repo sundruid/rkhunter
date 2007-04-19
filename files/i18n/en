@@ -1,4 +1,4 @@
-Version:2007041501
+Version:2007041802
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -76,8 +76,8 @@ NOT_FOUND_CMD:Unable to find the '$1' command
 SYS_NO_PRELINK:System is not using prelinking
 SYS_PRELINK_FUNC:System is using prelinking - using $1 ($2) for hash checks
 
-HASH_FUNC_PERL:Using the perl $1 module for the file properties hash checks
-HASH_FUNC:Using the '$1' command for the file properties hash checks
+HASH_FUNC_PERL:Using the perl $1 module for the file hash value checks
+HASH_FUNC:Using the '$1' command for the file hash value checks
 HASH_NO_FUNC:No hash function command found
 
 GRSECINSTALLED:Found GRSEC installed
@@ -334,7 +334,7 @@ ROOTKIT_OS_LINUX_LKMNAMES_FOUND:Known bad kernel module found in '$1': $2
 ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING:The kernel module directory '$1' is missing.
 
 CHECK_LOCALHOST:Checking the local host...
-STARTUP_FILES_START:Checking system startup files
+STARTUP_FILES_START:Performing system boot checks
 STARTUP_HOSTNAME:Checking for local host name
 STARTUP_NO_HOSTNAME:No host name found.
 STARTUP_LOCAL_RC_FILE:Checking for local startup file
@@ -345,7 +345,7 @@ STARTUP_CHECK_SYSTEM_RC:Checking system startup files for malware
 STARTUP_CHECK_SYSTEM_RC_FOUND:Found system startup directory: $1
 STARTUP_CHECK_SYSTEM_RC_NONE:No system startup files found.
 
-ACCOUNTS_START:Checking groups and accounts
+ACCOUNTS_START:Performing group and account checks
 ACCOUNTS_PWD_FILE_CHECK:Checking for passwd file
 ACCOUNTS_FOUND_PWD_FILE:Found password file: $1
 ACCOUNTS_NO_PWD_FILE:Password file $1 does not exist.
@@ -371,7 +371,7 @@ GROUP_CHANGES_REMOVED:Groups have been removed from the group file:
 HISTORY_CHECK:Checking root account shell history files
 HISTORY_CHECK_FOUND:Root account $1 shell history file is a symbolic link: $2
 
-SYSTEM_CONFIGS_START:Checking system configuration files
+SYSTEM_CONFIGS_START:Performing system configuration file checks
 SYSTEM_CONFIGS_FILE:Checking for $1 configuration file
 SYSTEM_CONFIGS_FILE_FOUND:Found $1 configuration file: $2
 SYSTEM_CONFIGS_SSH_ROOT:Checking if SSH root access is allowed
@@ -392,7 +392,7 @@ SYSTEM_CONFIGS_SYSLOG_REMOTE:Checking if syslog remote logging is allowed
 SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog configuration file allows remote logging: $1
 SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter configuration option 'ALLOW_SYSLOG_REMOTE_LOGGING' has been enabled.
 
-FILESYSTEM_START:Checking filesystems
+FILESYSTEM_START:Performing filesystem checks
 FILESYSTEM_DEV_CHECK:Checking /dev for suspicious file types
 FILESYSTEM_DEV_CHECK_NO_DEV:/dev does not exist.
 FILESYSTEM_DEV_FILE_WL:File '$1' is whitelisted.
@@ -403,7 +403,7 @@ FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories
 FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 
-CHECK_APPS:Checking known applications...
+CHECK_APPS:Checking application versions...
 APPS_NONE_FOUND:No known applications found - all checks skipped.
 APPS_NOT_FOUND:Application '$1' not found.
 APPS_CHECK:Checking version of $1
