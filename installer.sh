@@ -90,7 +90,7 @@ showHelp() { # Show help / version
 	echo "Ordered valid parameters:"
 	echo "--help (-h)      : Show this help."
 	echo "--examples       : Show layout examples."
-	echo "--layout <value> : Chose installation template (mandatory switch)."
+	echo "--layout <value> : Choose installation template (mandatory switch)."
 	echo "                   The templates are:"
         echo "                    - default: (FHS compliant),"
         echo "                    - /usr,"
@@ -125,7 +125,7 @@ showExamples() { # Show examples
 	echo "4. Remove files, layout /usr/local:"
 	echo "     installer.sh --layout /usr/local --remove"
 	echo ""
-	echo "Please note: this installer will not remove files when custom layout is chosen."
+	echo "Note: The installer will not remove files when a custom layout is chosen."
 
 	exit 1
 }
@@ -332,9 +332,6 @@ fi
 #################################################################################
 
 doInstall()  {
-# Clean active window
-clear
-
 # Preflight checks
 echo "Checking system for: "
 
@@ -360,7 +357,7 @@ else
 	exit 1
 fi
 
-echo " available file retrieval tools: "
+echo " Available file retrieval tools: "
 echo $N "  wget: "
 SEARCH=`which wget 2>/dev/null`
 if [ "${SEARCH}" = "" ]; then
@@ -583,9 +580,6 @@ echo "Installation finished."
 
 
 doRemove()  {
-# Clean active window
-clear
-
 RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
 RKHINST_DIRS_POST="$VARDIR $SHAREDIR $PREFIX"
 
@@ -638,7 +632,9 @@ for FILE in ${RKHINST_ETC_FILE}; do
 		echo $N " Removing ${RKHINST_ETC_DIR}/${FILE}: "
 		rm -f "${RKHINST_ETC_DIR}/${FILE}"; retValChk
 	fi
-	echo " Please remove any ${RKHINST_ETC_DIR}/${FILE}.* manually."
+	echo ""
+	echo "Please remove any ${RKHINST_ETC_DIR}/${FILE}.* files manually."
+	echo ""
 done
 
 # Helper scripts: remove dir
@@ -652,7 +648,7 @@ for DIR in ${RKHINST_DIRS}; do
 	case "${DIR}" in 
 		*/${APPNAME}|*/${APPNAME}-${APPVERSION}) 
 			if [ -d "${DIR}" ]; then
-				echo " Removing ${DIR}: "
+				echo $N " Removing ${DIR}: "
 				rm -rf "${DIR}"; retValChk
 			fi
 			;;
@@ -668,6 +664,7 @@ done
 
 # Could use patch for removing custom $VARDIR $SHAREDIR $PREFIX here.
 
+echo ""
 echo "Done removing files. Please double-check."
 
 } # end doRemove
@@ -725,10 +722,14 @@ while [ $# -ge 1 ]; do
 		case "$action" in
 			show)	showTemplate $RKHINST_LAYOUT
 				;;
-			remove)	selectTemplate $RKHINST_LAYOUT
+			remove)	# Clean active window
+				clear
+				selectTemplate $RKHINST_LAYOUT
 				doRemove
 				;;
-			install) selectTemplate $RKHINST_LAYOUT
+			install) # Clean active window
+				 clear
+				 selectTemplate $RKHINST_LAYOUT
 				 doInstall
 				 ;;
 			*)	echo "No action given, exiting."

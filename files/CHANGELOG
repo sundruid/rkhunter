@@ -10,8 +10,9 @@
  - Dates in this file are formatted as DD/MM/YYYY (European format)
  - The rkhunter configuration file (default /etc/rkhunter.conf) will
    not be overwritten when using the rkhunter installer.
-   Be sure you compare your configuration file against the one delivered
-   in this package, in order to optimize this file for your machine.
+   Be sure you compare your existing configuration file against the
+   one delivered in this package, in order to optimize the file for
+   your machine.
 
 
  -- 
@@ -99,6 +100,9 @@
    startup directory (/etc/rc.d) can now be specified in the rkhunter
    config file.
  - Files in /dev can now be whitelisted.
+ - Application version numbers can now be whitelisted. This caters for those
+   distributions that may patch a 'known bad' version, but without updating
+   the original version number.
 
  Changes:
  - Improved command-line and config file option checking.

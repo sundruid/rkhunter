@@ -5973,7 +5973,7 @@ ${PROC} ${PID} ${FNAME}"
 			IFS=$RKHIFS
 
 			for RKHTMPVAR in $WHITEPROC; do
-				display --to LOG --type INFO NETWORK_PACKET_CAP_WHITE "${RKHTMPVAR}"
+				display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${RKHTMPVAR}"
 			done
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
@@ -7124,7 +7124,7 @@ ${NAME} ${PID}"
 	fi
 
 	for NAME in $WHITEPROC; do
-		display --to LOG --type INFO NETWORK_PACKET_CAP_WHITE "${NAME}"
+		display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${NAME}"
 	done
 
 	return
@@ -7454,18 +7454,18 @@ do_group_accounts_check() {
 		# from the above list.
 		#
 
-		UID_WHITELIST=`grep '^UID0_ACCOUNTS=' ${CONFIGFILE} | tail -1`
+		UID0_WHITELIST=`grep '^UID0_ACCOUNTS=' ${CONFIGFILE} | tail -1`
 
-		if [ -n "${UID_WHITELIST}" ]; then
-			UID_WHITELIST=`echo "${UID_WHITELIST}" | sed -e 's/UID0_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
+		if [ -n "${UID0_WHITELIST}" ]; then
+			UID0_WHITELIST=`echo "${UID0_WHITELIST}" | sed -e 's/UID0_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
 		fi
 
-		UID_WHITELIST=" root ${UID_WHITELIST} "
+		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
 			RKHUSERID=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
 
-			if [ -z "`echo \"${UID_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
+			if [ -z "`echo \"${UID0_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
 				UID_LIST="${UID_LIST} ${RKHTMPVAR2}"
 			elif [ "${RKHTMPVAR2}" != "root" ]; then
 				display --to LOG --type INFO ACCOUNTS_UID0_WL "${RKHTMPVAR2}"
@@ -7535,13 +7535,13 @@ do_group_accounts_check() {
 		# We need to remove any whitelisted passwordless accounts.
 		#
 
-		UID_WHITELIST=`grep '^PWDLESS_ACCOUNTS=' ${CONFIGFILE} | tail -1`
+		PWD_WHITELIST=`grep '^PWDLESS_ACCOUNTS=' ${CONFIGFILE} | tail -1`
 
-		if [ -n "${UID_WHITELIST}" ]; then
-			UID_WHITELIST=`echo "${UID_WHITELIST}" | sed -e 's/PWDLESS_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
+		if [ -n "${PWD_WHITELIST}" ]; then
+			PWD_WHITELIST=`echo "${PWD_WHITELIST}" | sed -e 's/PWDLESS_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
 		fi
 
-		UID_WHITELIST=" ${UID_WHITELIST} "
+		PWD_WHITELIST=" ${PWD_WHITELIST} "
 
 		UID_LIST=""
 
@@ -7551,7 +7551,7 @@ do_group_accounts_check() {
 
 			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
 
-			if [ -z "`echo \"${UID_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
+			if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
 				UID_LIST="${UID_LIST} ${RKHTMPVAR}"
 			fi
 		done
@@ -8001,7 +8001,7 @@ do_dev_whitelist_check() {
 
 	test -z "${FNAME}" && return
 
-	FILE=`echo "${FNAME}" | cut -d' ' -f1 | sed -e "s/^${RKHROOTDIR}//"`
+	FILE=`echo "${FNAME}" | cut -d' ' -f1 | sed -e "s/^${RKHROOTDIR}//" | sed -e 's/:$//'`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FILE} \"`" ]; then
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"
@@ -8298,6 +8298,7 @@ do_app_checks() {
 	#   application%description%version%if known bad%whole version number
 	#
 	# A version number of '-1' means the application was not found.
+	# A 'known bad' number of '-1' means the application is whitelisted.
 	#
 
 	APPS_COUNT=0
@@ -8314,6 +8315,20 @@ do_app_checks() {
 		   sshd:OpenSSH"
 
 	APPS_TOTAL_COUNT=`echo "${APP_NAMES}" | wc -l | tr -d ' '`
+
+
+	#
+	# Get the list of whitelisted application versions.
+	#
+
+	APP_WHITELIST=""
+
+	RKHTMVAR=`grep '^APP_WHITELIST=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${RKHTMVAR}" ]; then
+		APP_WHITELIST=`echo "${RKHTMVAR}" | sed -e 's/APP_WHITELIST=//' | tr -d '"' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
+		APP_WHITELIST=" ${APP_WHITELIST} "
+	fi
 
 
 	IFS=$IFSNL
@@ -8359,7 +8374,7 @@ ${APPLICATION}%${APPLICATION_DESC}%-1"
 			;;
 		named)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | grep 'named' | grep -v '/' | awk '{ print $2 }'`
+			VERSION=`echo "${WHOLE_VERSION}" | egrep 'named|BIND' | grep -v '/' | awk '{ print $2 }'`
 
 			if [ -n "`echo \"${VERSION}\" | grep '-'`" ]; then
 				VERSION=`echo "${VERSION}" | cut -d'-' -f1`
@@ -8371,15 +8386,15 @@ ${APPLICATION}%${APPLICATION_DESC}%-1"
 			;;
 		openssl)
 			WHOLE_VERSION=`${APP_CMD_FOUND} version 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | head -n 1 | cut -d' ' -f2`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'OpenSSL' | cut -d' ' -f2`
 			;;
 		php)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | head -n 1 | awk '{ print $2 }' | cut -d'-' -f1`
+			VERSION=`echo "${WHOLE_VERSION}" | grep '^PHP ' | awk '{ print $2 }' | cut -d'-' -f1`
 			;;
 		procmail)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | grep 'procmail v' | awk '{ print $2 }' | tr -d 'v'`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'procmail v' | awk '{ print $2 }' | sed -e 's/^v//'`
 			;;
 		proftpd)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
@@ -8387,7 +8402,7 @@ ${APPLICATION}%${APPLICATION_DESC}%-1"
 			;;
 		sshd)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -t -d 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | head -n 1 | awk '{ print $4 }' | cut -d'_' -f2`
+			VERSION=`echo "${WHOLE_VERSION}" | grep "sshd version OpenSSH" | sed -e 's/^.*sshd version OpenSSH_//' | cut -d' ' -f1`
 
 			if [ -n "`echo \"${VERSION}\" | grep '+'`" ]; then
 				VERSION=`echo "${VERSION}" | cut -d'+' -f1`
@@ -8414,7 +8429,10 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 
 		RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\./\\\./g'`
 
-		if [ -n "`egrep \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" ${DB_PATH}/programs_bad.dat 2>&1`" ]; then
+		if [ -n "`echo \"${APP_WHITELIST}\" | grep \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
+			APP_RESULTS="${APP_RESULTS}
+${APPLICATION}%${APPLICATION_DESC}%${VERSION}%-1"
+		elif [ -n "`egrep \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" ${DB_PATH}/programs_bad.dat 2>&1`" ]; then
 			APPS_FAILED_COUNT=`expr ${APPS_FAILED_COUNT} + 1`
 
 			APP_RESULTS="${APP_RESULTS}
@@ -8457,7 +8475,10 @@ ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 			else
 				ISBAD=`echo "${RKHTMPVAR}" | cut -d% -f4`
 
-				if [ $ISBAD -eq 1 ]; then
+				if [ $ISBAD -eq -1 ]; then
+					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
+					display --to LOG --type INFO APPS_CHECK_VERSION_WL "${APPLICATION}" "${VERSION}"
+				elif [ $ISBAD -eq 1 ]; then
 					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
 					display --to LOG --type WARNING APPS_CHECK_FOUND "${APPLICATION}" "${VERSION}"
 				else
@@ -8885,18 +8906,18 @@ set_file_prop_dirs_files() {
 		PROP_DIR_LIST="${PROP_DIR_LIST} ${RKHROOTDIR}${DIR}"
 	done
 
-	PROP_FILE_LIST="adduser amd basename cat chattr checkproc chkconfig
-	    chmod chown chroot cron csh date depmod df dirname dmesg du echo
-	    ed egrep env fgrep file find grep groupadd groupdel groupmod
-	    groups grpck head id ifconfig ifdown ifstatus ifup inetd init
-	    insmod ip kallsyms kill killall ksyms kudzu last lastlog less
-	    locate logger login ls lsattr lsmod lynx md5 md5sum mlocate modinfo
-	    modload modprobe modstat modunload more mount netstat newgrp
-	    newsyslog nologin passwd ps pstree pwck rkhunter rmmod runlevel sh
-	    sha1 sha1sum size slocate sockstat sort stat strace strings su sudo
-	    sulogin sysctl syslogd systat tail tcpd test top touch uname
-	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
-	    whereis which who whoami xinetd"
+	PROP_FILE_LIST="adduser amd basename bash cat chattr checkproc
+	    chkconfig chmod chown chroot cron csh curl date depmod df
+	    dirname dmesg du echo ed egrep env fgrep file find grep groupadd
+	    groupdel groupmod groups grpck head id ifconfig ifdown ifstatus
+	    ifup inetd init insmod ip kallsyms kill killall ksyms kudzu last
+	    lastlog less locate logger login ls lsattr lsmod lynx md5 md5sum
+	    mlocate modinfo modload modprobe modstat modunload more mount
+	    netstat newgrp newsyslog nologin passwd ps pstree pwck rkhunter
+	    rmmod runlevel sh sha1 sha1sum size slocate sockstat sort stat
+	    strace strings su sudo sulogin sysctl syslogd systat tail tcpd
+	    test top touch uname useradd userdel usermod users vipw vmstat w
+	    watch wc wget whatis whereis which who whoami xinetd"
 
 
 	#
@@ -8922,9 +8943,6 @@ set_file_prop_dirs_files() {
 		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload"
 	fi
 
-
-	add_extra_dirs
-	PROP_DIR_LIST="${PROP_DIR_LIST}${EXTRA_DIRS}"
 
 	PROP_FILE_LIST_TOTAL=`echo ${PROP_FILE_LIST} | wc -w | tr -d ' '`
 
@@ -10164,6 +10182,8 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			display --to LOG --type INFO HASH_NO_FUNC
 		fi
 	fi
+
+	test -n "${HASH_FUNC}" && display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
 fi
 
 test $GRSECINSTALLED -eq 1 && display --to LOG --type INFO GRSECINSTALLED

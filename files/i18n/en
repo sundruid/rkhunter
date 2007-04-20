@@ -1,4 +1,4 @@
-Version:2007041802
+Version:2007042001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -79,6 +79,7 @@ SYS_PRELINK_FUNC:System is using prelinking - using $1 ($2) for hash checks
 HASH_FUNC_PERL:Using the perl $1 module for the file hash value checks
 HASH_FUNC:Using the '$1' command for the file hash value checks
 HASH_NO_FUNC:No hash function command found
+HASH_FIELD_INDEX:The hash function field index is set to $1
 
 GRSECINSTALLED:Found GRSEC installed
 
@@ -203,9 +204,9 @@ FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, 
 FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
 
 FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
-FILE_PROP_WL:File '$1' is whitelisted for the '$2' check
+FILE_PROP_WL:Found file '$1': it is whitelisted for the '$2' check.
 FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the rkhunter.dat file.
-FILE_PROP_HASH_WL_INVALID:The file '$1' whitelist hash value ($2) does not match the current hash value.
+FILE_PROP_HASH_WL_INVALID:Found file '$1': the whitelist hash value ($2) does not match the current hash value.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
@@ -308,7 +309,7 @@ ROOTKIT_TROJAN_XINETD_ENABLED:Checking '$1' for enabled services
 ROOTKIT_TROJAN_XINETD_INCLUDE:Found 'include $1' directive
 ROOTKIT_TROJAN_XINETD_INCLUDEDIR:Found 'includedir $1' directive
 ROOTKIT_TROJAN_XINETD_ENABLED_FOUND:Found enabled xinetd service: $1
-ROOTKIT_TROJAN_XINETD_WHITELIST:Service '$1' is $2 whitelisted.
+ROOTKIT_TROJAN_XINETD_WHITELIST:Found service '$1': it is $2 whitelisted.
 ROOTKIT_TROJAN_APACHE:Checking for Apache backdoor
 ROOTKIT_TROJAN_APACHE_SKIPPED:Apache backdoor check skipped: Apache modules and configuration directories not found.
 ROOTKIT_TROJAN_APACHE_FOUND:Apache backdoor module 'mod_rootme' found: $1
@@ -350,7 +351,7 @@ ACCOUNTS_PWD_FILE_CHECK:Checking for passwd file
 ACCOUNTS_FOUND_PWD_FILE:Found password file: $1
 ACCOUNTS_NO_PWD_FILE:Password file $1 does not exist.
 ACCOUNTS_UID0:Checking for root equivalent (UID 0) accounts
-ACCOUNTS_UID0_WL:Found whitelisted root equivalent account: $1
+ACCOUNTS_UID0_WL:Found root equivalent account '$1': it is whitelisted.
 ACCOUNTS_UID0_FOUND:Account '$1' is root equivalent (UID = 0)
 ACCOUNTS_SHADOW_FILE:Found shadow file: $1
 ACCOUNTS_PWDLESS:Checking for passwordless accounts
@@ -395,10 +396,10 @@ SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter configuration option 'ALLOW_SYSLOG
 FILESYSTEM_START:Performing filesystem checks
 FILESYSTEM_DEV_CHECK:Checking /dev for suspicious file types
 FILESYSTEM_DEV_CHECK_NO_DEV:/dev does not exist.
-FILESYSTEM_DEV_FILE_WL:File '$1' is whitelisted.
+FILESYSTEM_DEV_FILE_WL:Found file '$1': it is whitelisted.
 FILESYSTEM_DEV_FILE_FOUND:Suspicious files found in ${1}:
-FILESYSTEM_HIDDEN_DIR_WL:Hidden directory '$1' is whitelisted.
-FILESYSTEM_HIDDEN_FILE_WL:Hidden file '$1' is whitelisted.
+FILESYSTEM_HIDDEN_DIR_WL:Found hidden directory '$1': it is whitelisted.
+FILESYSTEM_HIDDEN_FILE_WL:Found hidden file '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories
 FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
@@ -409,6 +410,7 @@ APPS_NOT_FOUND:Application '$1' not found.
 APPS_CHECK:Checking version of $1
 APPS_CHECK_VERSION_UNKNOWN:Unable to obtain version number for '$1'.
 APPS_CHECK_VERSION_FOUND:Application '$1' version '$2' found.
+APPS_CHECK_VERSION_WL:Found application '$1' version '$2': this version is whitelisted.
 APPS_CHECK_WHOLE_VERSION_USED:Unable to obtain version number for '$1': version option gives: $2
 APPS_CHECK_FOUND:Application '$1', version '$2', is out of date, and possibly a security risk.
 APPS_TOTAL_COUNT:Applications checked: $1 out of $2
@@ -432,7 +434,7 @@ NETWORK_PROMISC_IF_2:'ip' command output: $1
 NETWORK_PACKET_CAP_CHECK:Checking for packet capturing applications
 NETWORK_PACKET_CAP_CHECK_NO_FILE:Packet capturing application check skipped - the '$1' file is missing.
 NETWORK_PACKET_CAP_FOUND:Process '$1' (PID $2) is listening on the network.
-NETWORK_PACKET_CAP_WHITE:Found process '$1' on whitelist.
+NETWORK_PACKET_CAP_WL:Found process '$1': it is whitelisted.
 
 SHARED_LIBS_START:Performing 'shared libraries' checks
 SHARED_LIBS_PRELOAD_VAR:Checking for preloading variables

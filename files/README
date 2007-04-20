@@ -149,14 +149,16 @@ installer using:
 
 Note: the installer will not remove files that were installed using RPM
 (use the "rpm" command to remove the package), or when a custom layout
-was chosen.
+was chosen. However, a standalone uninstallation, specified by using
+'--layout custom .', will remove the whole installation directory (the
+'files' sub-directory).
 
-In the latter case, if you chose a custom layout, for example '/opt',
-then run the installer to show where the files were installed:
+If you chose a custom layout, for example '/opt', then you can run the
+installer to show where the files were installed:
 
     ./installer.sh --layout custom /opt --show
 
-You can then manually remove them.
+You can then manually remove the files.
 
 
 TEST NAMES
