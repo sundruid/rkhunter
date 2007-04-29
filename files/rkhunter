@@ -3,7 +3,7 @@
 #
 # rkhunter -- Scan the system for rootkits and other known security issues.
 #
-# Copyright (c) 2003-2006, Michael Boelen ( michael AT rootkit DOT nl )
+# Copyright (c) 2003-2007, Michael Boelen ( michael AT rootkit DOT nl )
 #
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -313,7 +313,7 @@ display() {
 			LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
 
 			if [ -z "${LINE1}" ]; then
-				echo "Error: Invalid display - keyword cannot be found: Display line: ${DISPLAY_LINE}"
+				echo "Error: Invalid display - language keyword cannot be found: Display line: ${DISPLAY_LINE}"
 				return
 			fi
 		fi
@@ -816,7 +816,11 @@ check_commands() {
 	# We check for some commands used in the tests. If the command
 	# is found then a variable including the command name is set.
 	# These commands are not 'required', so nothing happens if the
-	# command is not found.
+	# command is not found. The commands can be defined in the
+	# configuration file, and a value of 'DISABLED' will cause a
+	# command to not exist. We have to handle the 'stat' command
+	# in a special way so that the perl module does not get used
+	# if the command is to be disabled.
 	#
 
 	for CMD in ${CMDLIST}; do
@@ -836,6 +840,8 @@ check_commands() {
 
 			if [ -z "${CFG_CMD}" -o "${CFG_CMD}" = " " ]; then
 				CFG_CMD=""
+			elif [ "${CFG_CMD}" = "DISABLED" ]; then
+				:
 			else
 				#
 				# check that the command is executable.
@@ -875,6 +881,31 @@ check_commands() {
 			STAT_CMD="${PERL_CMD} ${SCRIPT_PATH}/stat.pl"
 		fi
 	fi
+
+
+	#
+	# If the readlink command cannot be found, or it does not support
+	# the '-f' option, then we must use the supplied script.
+	#
+
+	if [ -z "${READLINK_CMD}" ]; then
+		READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
+	elif [ -n "`${READLINK_CMD} -f ${SCRIPT_PATH}/readlink.sh 2>&1 >/dev/null`" ]; then
+		READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
+	fi
+
+
+	#
+	# Finally we must remove all the DISABLED commands.
+	#
+
+	for CMD in ${CMDLIST}; do
+		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR="${RKHTMPVAR}_CMD"
+		RKHTMPVAR2=`eval echo "\\$${RKHTMPVAR}"`
+
+		test "${RKHTMPVAR2}" = "DISABLED" && eval ${RKHTMPVAR}=""
+	done
 
 	return
 }
@@ -1181,7 +1212,7 @@ add_extra_dirs() {
 		#
 
 		test -d /usr/foss && EXTRA_DIRS="${EXTRA_DIRS} /usr/foss/bin /usr/foss/sbin /usr/foss/libexec"
-	elif [ "${OPERATING_SYSTEM}" = "NetBSD" ]; then
+	elif [ $BSDOS -eq 1 ]; then
 		test -d /usr/pkg/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/bin"
 		test -d /usr/pkg/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/sbin"
 		test -d /usr/pkg/libexec && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/libexec"
@@ -1192,6 +1223,15 @@ add_extra_dirs() {
 
 		test -d /sw/bin && EXTRA_DIRS="${EXTRA_DIRS} /sw/bin"
 		test -d /sw/sbin && EXTRA_DIRS="${EXTRA_DIRS} /sw/sbin"
+	elif [ -f "/etc/GoboLinuxVersion" ]; then
+		#
+		# We have no other easy way of detecting GoboLinux.
+		# It has a peculiar filesystem layout, so we need to
+		# add in this little bit of support to help it work
+		# with RKH.
+		#
+
+		test -d "/System/Links/Executables" && EXTRA_DIRS="/System/Links/Executables"
 	fi
 
 
@@ -2010,9 +2050,9 @@ get_hash_function() {
 
 	#
 	# At this point we have either been given a hash function
-	# command, one of the reserved words 'SHA1' or 'MD5', or
-	# nothing. For the reserved words we must find the SHA1 or
-	# MD5 command or use the supplied perl scripts.
+	# command, one of the reserved words 'SHA1', 'MD5' or 'NONE',
+	# or nothing. For the SHA1 and MD5 reserved words we must
+	# find the SHA1 or MD5 command or use the supplied perl scripts.
 	#
 
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "SHA1" ]; then
@@ -2063,7 +2103,9 @@ get_hash_function() {
 	# installed correctly, should they be needed.
 	#
 
-	if [ -n "${HASH_FUNC}" ]; then
+	if [ "${HASH_FUNC}" = "NONE" ]; then
+		:
+	elif [ -n "${HASH_FUNC}" ]; then
 		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 		HF=`find_cmd ${HCMD}`
 
@@ -2110,6 +2152,85 @@ get_hash_function() {
 			HASH_FLD_IDX=${RKHTMPVAR}
 		fi
 	fi
+
+
+	#
+	# Finally we get the package manager to use for the file
+	# properties hash update. If a file is not owned as part
+	# of a package, the hash function defined above will be used.
+	#
+
+	if [ -n "${PKGMGR}" ]; then
+		PKGMGR=`echo "${PKGMGR}" | tr -s ' ' | tr '[a-z]' '[A-Z]'`
+
+		if [ -z "${PKGMGR}" -o "${PKGMGR}" = " " ]; then
+			echo "Invalid --pkgmgr option - no package manager given."
+			exit 1
+		fi
+	else
+		PKGMGR=`grep '^PKGMGR=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${PKGMGR}" ]; then
+			PKGMGR=`echo "${PKGMGR}" | sed -e 's/PKGMGR=//' | tr -d '"' | tr -s ' ' | tr '[a-z]' '[A-Z]'`
+
+			if [ -z "${PKGMGR}" -o "${PKGMGR}" = " " ]; then
+				echo "Invalid PKGMGR configuration option - no package manager specified."
+				exit 1
+			fi
+		fi
+	fi
+
+
+	#
+	# Now check that the package manager we have been given is valid.
+	#
+
+	case "${PKGMGR}" in
+	"")
+		;;
+	NONE)
+		;;
+	RPM)
+		RPM_CMD=`find_cmd rpm`
+
+		if [ -z "${RPM_CMD}" ]; then
+			echo "Unable to find 'rpm' command for package manager 'RPM'."
+			exit 1
+		fi
+		;;
+	DPKG)
+		DPKG_CMD=`find_cmd dpkg-query`
+
+		test -z "${DPKG_CMD}" && DPKG_CMD=`find_cmd dpkg`
+
+		if [ -z "${DPKG_CMD}" ]; then
+			echo "Unable to find 'dpkg-query' or 'dpkg' commands for package manager 'DPKG'."
+			exit 1
+		fi
+
+		if [ ! -d "/var/lib/dpkg/info" ]; then
+			echo "Unable to find package database directory (/var/lib/dpkg/info) for package manager 'DPKG'."
+			exit 1
+		fi
+		;;
+	BSD)
+		PKG_CMD=`find_cmd pkg_info`
+
+		if [ -z "${PKG_CMD}" ]; then
+			echo "Unable to find 'pkg_info' command for package manager 'BSD'."
+			exit 1
+		fi
+
+		if [ ! -d "/var/db/pkg" ]; then
+			echo "Unable to find package database directory (/var/db/pkg) for package manager 'BSD'."
+			exit 1
+		fi
+		;;
+	*)
+		echo "Invalid package manager given - ${PKGMGR}"
+		exit 1
+		;;
+	esac
 
 	return
 }
@@ -2167,11 +2288,11 @@ get_configfile_options() {
 
 	get_installdir_option
 
+	get_rootdir_option
+
 	get_bindir_option
 
 	get_logfile_option
-
-	get_rootdir_option
 
 	get_tmpdir_option
 
@@ -2182,6 +2303,7 @@ get_configfile_options() {
 	get_scriptdir_option
 
 	get_auto_x_option
+
 
 	#
 	# Now that we have processed BINDIR, we will recheck the
@@ -2202,6 +2324,15 @@ get_configfile_options() {
 	# Some options are only required when checking the system.
 	#
 
+	if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
+		#
+		# See if we are only to perform specific tests.
+		#
+
+		get_enable_option
+		get_disable_option
+	fi
+
 	if [ $CHECK -eq 1 ]; then
 		test $NOMOW -eq 0 && get_mailonwarn_option
 
@@ -2212,14 +2343,6 @@ get_configfile_options() {
 		get_syslog_option
 
 		get_scan_mode_dev_option
-
-
-		#
-		# See if we are only to perform specific tests.
-		#
-
-		get_enable_option
-		get_disable_option
 
 		check_test hashes && HASH_CHECK_ENABLED=1
 
@@ -2256,17 +2379,18 @@ rkh_dat_set_version() {
 	#
 	# This function calculates and writes out the 'Version:' value
 	# for the rkhunter.dat file. It looks for an old value, and adds
-	# one to it. If there is no value then simply start at one.
+	# one to it. If there is no value then simply start at zero.
 	#
 
 	TODAY=`date +%Y%m%d`
 
-	OLDVER=`grep -i '^Version:' ${RKHDAT_FILE} 2>/dev/null | tail -1 | cut -d: -f2`
+	OLDVER=`grep -i '^Version:' ${DB_PATH}/rkhunter.dat 2>/dev/null | tail -1 | cut -d: -f2`
 
 	if [ -n "${OLDVER}" ]; then
+		OLDDATE=`echo "${OLDVER}" | cut -c1-8`
 		OLDVER=`echo "${OLDVER}" | cut -c9-10`
 
-		if [ "${OLDVER}" = "99" ]; then
+		if [ "${OLDVER}" = "99" -o "${OLDDATE}" != "${TODAY}" ]; then
 			NEWVER="00"
 		else
 			NEWVER=`expr ${OLDVER} + 1`
@@ -2304,7 +2428,7 @@ rkh_dat_get_os_info() {
 
 	ARCH=`uname -m 2>/dev/null`
 
-	REL_FILES="${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
+	REL_FILES="${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/lunar.release ${RKHROOTDIR}/etc/ROCK-VERSION ${RKHROOTDIR}/etc/GoboLinuxVersion ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
 
 	for FNAME in ${REL_FILES}; do
 		if [ -f "${FNAME}" -a ! -h "${FNAME}" ]; then
@@ -2327,6 +2451,9 @@ rkh_dat_get_os_info() {
 				;;
 			${RKHROOTDIR}/etc/debian_version)
 				OSNAME="Debian `cat ${RELEASE}`"
+				;;
+			${RKHROOTDIR}/etc/GoboLinuxVersion)
+				OSNAME="GoboLinux `cat ${RELEASE}`"
 				;;
 			*)
 				OSNAME=`head -n 1 ${RELEASE} | tr -s ' '`
@@ -2351,7 +2478,16 @@ rkh_dat_get_os_info() {
 	done
 
 
-	test -z "${OSNAME}" && RELEASE=""
+	if [ -z "${OSNAME}" ]; then
+		RELEASE=""
+
+		if [ -d "${RKHROOTDIR}/var/smoothwall" ]; then
+			OSNAME="Smoothwall Linux"
+			RELEASE="${RKHROOTDIR}/var/smoothwall"
+		elif `which sorcery gaze >/dev/null 2>&1`; then
+			OSNAME="Source Mage Linux"
+		fi
+	fi
 
 	case "${OPERATING_SYSTEM}" in
 	SunOS)
@@ -2399,7 +2535,10 @@ rkh_dat_set_file_properties() {
 	display --to LOG --type PLAIN SET_FILE_PROP_START
 
 
-	if [ -z "${STAT_CMD}" ]; then
+	if ! `check_test attributes`; then
+		SCMD=""
+		FDATA=":::::"
+	elif [ -z "${STAT_CMD}" ]; then
 		SCMD=""
 		FDATA=":::::"
 	else
@@ -2412,12 +2551,20 @@ rkh_dat_set_file_properties() {
 		fi
 	fi
 
-	if [ -z "${HASH_FUNC}" ]; then
+
+	if ! `check_test hashes`; then
+		HCMD=""
+		SYSHASH=""
+	elif [ \( -z "${PKGMGR}" -o "${PKGMGR}" = "NONE" \) -a "${HASH_FUNC}" = "NONE" ]; then
 		HCMD=""
 		SYSHASH=""
 	else
-		if [ $PRELINKED -eq 0 ]; then
-			HCMD=$HASH_FUNC
+		if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" ]; then
+			RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
+		fi
+
+		if [ $PRELINKED -eq 0 -o "${HASH_FUNC}" = "NONE" ]; then
+			HCMD="${HASH_FUNC}"
 		else
 			if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
 				HCMD="${PRELINK_CMD} --verify --md5"
@@ -2433,30 +2580,74 @@ rkh_dat_set_file_properties() {
 	#
 
 	for DIR in ${PROP_DIR_LIST}; do
-		test ! -d "${DIR}" && continue
-
 		DIR_FILE_COUNT=0
 
 		for FNAME in ${PROP_FILE_LIST}; do
-			test ! -f "${DIR}/${FNAME}" -o -h "${DIR}/${FNAME}" && continue
+			test ! -f "${DIR}/${FNAME}" && continue
 
 			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
 			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
 			if [ -n "${HCMD}" ]; then
-				SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+				SYSHASH=""
+
+				if [ "${PKGMGR}" = "RPM" ]; then
+					FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+
+					SYSHASH=`${RPM_CMD} -qf --queryformat '[%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$" | cut -d: -f1`
+				elif [ "${PKGMGR}" = "DPKG" ]; then
+					FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+
+					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+
+					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+						FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
+						SYSHASH=`grep ' ${FILENAME}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+					fi
+				elif [ "${PKGMGR}" = "BSD" ]; then
+					#
+					# First see if the file is part of
+					# a known package.
+					#
+
+					FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+
+					RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+
+					if [ -n "${RKHTMPVAR}" ]; then
+						#
+						# Next strip of the '/usr/pkg'
+						# from the pathname, and then
+						# get the hash value.
+						#
+
+						FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+
+						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
+					fi
+				fi
+
+				if [ -z "${SYSHASH}" -a "${HCMD}" != "NONE" ]; then
+					SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+				fi
 
 				if [ -z "${SYSHASH}" ]; then
-					NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
+					if [ "${HCMD}" = "NONE" ]; then
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "${DIR}/${FNAME}"
+						fi
+					else
+						NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
 
-					display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${DIR}/${FNAME}"
+						display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${DIR}/${FNAME}"
 
-					RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1 | tr '\n' ':' | sed -e 's/:$//'`
+						RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1 | tr '\n' ':' | sed -e 's/:$//'`
 
-					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
 
-					if [ -n "`echo \"${RKHTMPVAR}\" | grep 'dependencies'`" ]; then
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
+						if [ -n "`echo \"${RKHTMPVAR}\" | grep 'dependencies'`" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
+						fi
 					fi
 				fi
 			fi
@@ -2550,6 +2741,22 @@ do_prop_update() {
 		echo "Prelinked:Yes" >>${RKHDAT_FILE}
 	fi
 
+	if ! `check_test hashes`; then
+		echo "Hash:Disabled" >>${RKHDAT_FILE}
+		echo "Pkgmgr:" >>${RKHDAT_FILE}
+	else
+		echo "Hash:${HASH_FUNC}" >>${RKHDAT_FILE}
+		echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_FILE}
+	fi
+
+	if ! `check_test attributes`; then
+		echo "Attributes:Disabled" >>${RKHDAT_FILE}
+	elif [ -z "${STAT_CMD}" ]; then
+		echo "Attributes:Nostat" >>${RKHDAT_FILE}
+	else
+		echo "Attributes:Stored" >>${RKHDAT_FILE}
+	fi
+
 
 	rkh_dat_set_file_properties
 
@@ -2566,7 +2773,7 @@ do_prop_update() {
 		RET_CODE=1
 		display --to SCREEN+LOG --type WARNING PROPUPD_ERROR $RKHTMPVAR
 	else
-		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE
+		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
 
 	chmod 600 ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
@@ -4127,12 +4334,13 @@ file_properties_check() {
 	done
 
 	#
-	# The immutable-bit test is only applicable to Linux systems.
-	# We need to disable the test, but not have it logged as if
-	# the user had disabled it (that would be confusing).
+	# The immutable-bit test is only applicable to Linux and
+	# *BSD systems. We need to disable the test, but not have
+	# it logged as if the user had disabled it (that would be
+	# confusing).
 	#
 
-	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
+	if [ $BSDOS -eq 0 -a "${OPERATING_SYSTEM}" != "Linux" ]; then
 		test $SKIP_IMMUT -eq 0 && SKIP_IMMUT_OS=1
 		SKIP_IMMUT=1
 	fi
@@ -4179,6 +4387,7 @@ file_properties_check() {
 	#
 
 	RKHTMPVAR=""
+	HASH_CHK_TMP=""
 
 	if [ $SKIP_ATTR -eq 0 -a -z "${STAT_CMD}" ]; then
 		SKIP_ATTR=1
@@ -4186,7 +4395,27 @@ file_properties_check() {
 	fi
 
 	if [ $SKIP_HASH -eq 0 ]; then
-		if [ -z "${HASH_FUNC}" ]; then
+		FOUND=0
+
+		if [ -z "${OLD_HASHUPD_FUNC}" -o "${OLD_HASHUPD_FUNC}" = "HASH" ]; then
+			HASH_CHK_TMP="${OLD_HASH_FUNC}"
+		else
+			HASH_CHK_TMP="${OLD_HASHUPD_FUNC}"
+		fi
+
+		case "${HASH_CHK_TMP}" in
+		RPM|DPKG|BSD)
+			test -z "`echo \"${HASH_FUNC}\" | grep -i 'md5'`" && FOUND=1
+			;;
+		NONE)
+			FOUND=1
+			;;
+		*)
+			test "${HASH_FUNC}" != "${OLD_HASH_FUNC}" && FOUND=1
+			;;
+		esac
+
+		if [ $FOUND -eq 1 ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} hash"
 		fi
@@ -4209,7 +4438,7 @@ file_properties_check() {
 		fi
 	fi
 
-	if [ $SKIP_IMMUT -eq 0 -a -z "${LSATTR_CMD}" ]; then
+	if [ $SKIP_IMMUT -eq 0 -a $BSDOS -eq 0 -a -z "${LSATTR_CMD}" ]; then
 		SKIP_IMMUT=1
 		RKHTMPVAR="${RKHTMPVAR} immutable"
 	fi
@@ -4284,7 +4513,7 @@ file_properties_check() {
 
 				case "${TEST_RESULT}" in
 				hash)
-					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_FUNC
+					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_FUNC "${HASH_FUNC}" "${OLD_HASH_FUNC}"
 					;;
 				prelink)
 					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_PRELINK
@@ -4401,7 +4630,7 @@ file_properties_check() {
 			# appeared or disappeared on the system.
 			#
 
-			if [ -f "${DIR}/${FNAME}" -a ! -h "${DIR}/${FNAME}" ]; then
+			if [ -f "${DIR}/${FNAME}" ]; then
 				FILE_EXISTS=1
 				PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 			else
@@ -4614,11 +4843,17 @@ file_properties_check() {
 					# We check the file permissions here
 					# to see if the 'other' permission
 					# contains a 'w'. The check is
-					# against the octal value.
+					# against the octal value. Files which
+					# are links are ignored.
 					#
 
 					SYSPERM=`echo ${FDATA} | cut -d: -f2`
-					RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
+
+					if [ -h "${DIR}/${FNAME}" ]; then
+						RKHTMPVAR=""
+					else
+						RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
+					fi
 
 					if [ -n "${RKHTMPVAR}" ]; then
 						for WHITELISTFILE in ${WRITEWHITELIST}; do
@@ -4647,7 +4882,11 @@ file_properties_check() {
 			#
 
 			if [ $SKIP_IMMUT -eq 0 ]; then
-				RKHTMPVAR=`${LSATTR_CMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+				if [ $BSDOS -eq 0 ]; then
+					RKHTMPVAR=`${LSATTR_CMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+				else
+					RKHTMPVAR=`ls -lno ${DIR}/${FNAME} 2>/dev/null | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+				fi
 
 
 				#
@@ -5369,9 +5608,11 @@ rootkit_file_dir_checks() {
 
 		if [ -n "${FIND_CMD}" ]; then
 			for DIR in ${BINPATHS}; do
+				test ! -d "${RKHROOTDIR}${DIR}" && continue
+
 				FOUNDINDIR="NOT_FOUND"
 
-				for FNAME in `${FIND_CMD} "${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
+				for FNAME in `${FIND_CMD} "${RKHROOTDIR}${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
 					if `grep -i 'sinar' ${FNAME} >/dev/null 2>&1`; then
 						FOUND=1
 						FOUNDINDIR="FOUND"
@@ -5380,7 +5621,7 @@ rootkit_file_dir_checks() {
 				done
 
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result "${FOUNDINDIR}" --log-indent 2 ROOTKIT_FILES_DIRS_SINAR_DIR "${DIR}"
+					display --to LOG --type PLAIN --result "${FOUNDINDIR}" --log-indent 2 ROOTKIT_FILES_DIRS_SINAR_DIR "${RKHROOTDIR}${DIR}"
 				fi
 			done
 
@@ -5838,7 +6079,7 @@ malware_checks() {
 
 	if `check_test deleted_files`; then
 		if [ -n "${LSOF_CMD}" ]; then
-			STATUS=0
+			FOUND=0
 			WHITEPROC=""; BLACKPROC=""
 
 			DELE_FILES=`${LSOF_CMD} -n -l -w | grep '(dele' | head -n 1`
@@ -5887,9 +6128,9 @@ malware_checks() {
 						RKHTMPVAR=""
 
 						if [ $SOL_PROC -eq 1 ]; then
-							RKHTMPVAR=`${READLINK_CMD} /proc/${PID}/path/a.out | awk '{ print $1 }'`
-						elif [ "${OPERATING_SYSTEM}" != "SunOS" -o -h /proc/${PID}/exe ]; then
-							RKHTMPVAR=`${READLINK_CMD} /proc/${PID}/exe | awk '{ print $1 }'`
+							test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
+						elif [ "${OPERATING_SYSTEM}" != "SunOS" -o -h "/proc/${PID}/exe" ]; then
+							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
 						fi
 
 						test -n "${RKHTMPVAR}" && PROC="${RKHTMPVAR}"
@@ -5933,7 +6174,7 @@ malware_checks() {
 							WHITEPROC="${WHITEPROC} ${PROC}"
 						fi
 					else
-						STATUS=1
+						FOUND=1
 						BLACKPROC="${BLACKPROC}
 ${PROC} ${PID} ${FNAME}"
 					fi
@@ -5952,7 +6193,7 @@ ${PROC} ${PID} ${FNAME}"
 			# Now display the results.
 			#
 
-			if [ $STATUS -eq 0 ]; then
+			if [ $FOUND -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
 			else
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
@@ -6011,9 +6252,9 @@ ${PROC} ${PID} ${FNAME}"
 			#
 
 			if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | ${SORT_CMD} | ${UNIQ_CMD} | egrep "/(${SUSP_FILES})$"`
+				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | ${SORT_CMD} | ${UNIQ_CMD} | egrep "/(${SUSP_FILES})\$"`
 			else
-				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | "/(${SUSP_FILES})$"`
+				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})\$"`
 			fi
 
 			if [ -z "${FILENAME}" ]; then
@@ -7031,9 +7272,9 @@ do_network_interface_checks() {
 	if ! `check_test packet_cap_apps`; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
 		return
-	elif [ ! -f "${RKHROOTDIR}/proc/net/packet" ]; then
+	elif [ ! -f "/proc/net/packet" ]; then
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
-		display --to LOG --type WARNING NETWORK_PACKET_CAP_CHECK_NO_FILE "${RKHROOTDIR}/proc/net/packet"
+		display --to LOG --type WARNING NETWORK_PACKET_CAP_CHECK_NO_FILE "/proc/net/packet"
 		return
 	elif [ -z "${LSOF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
@@ -7049,7 +7290,7 @@ do_network_interface_checks() {
 	FOUND=0
 	WHITEPROC=""; BLACKPROC=""
 
-	LIBPCAPRES=`egrep -v '^sk|888e' ${RKHROOTDIR}/proc/net/packet | head -n 1`
+	LIBPCAPRES=`egrep -v '^sk|888e' /proc/net/packet | head -n 1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
 		#
@@ -7061,7 +7302,7 @@ do_network_interface_checks() {
 
 		INODE_LIST=""
 
-		for INODE in `egrep -v '^sk|888e' ${RKHROOTDIR}/proc/net/packet | awk '{ print $9 }'`; do
+		for INODE in `egrep -v '^sk|888e' /proc/net/packet | awk '{ print $9 }'`; do
 			INODE_LIST="${INODE_LIST}|$INODE"
 		done
 
@@ -7070,12 +7311,16 @@ do_network_interface_checks() {
 
 
 		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](${INODE_LIST})[ 	]" | awk '{ print $2 }'`; do
-			if [ -n "${READLINK_CMD}" ]; then
-				NAME=`${READLINK_CMD} -f ${RKHROOTDIR}/proc/$PID/exe`
-			else
-				NAME=`grep '^Name:.' ${RKHROOTDIR}/proc/$PID/status | sed -e 's/^Name:.//'`
+			NAME=""
+
+			if [ -n "${READLINK_CMD}" -a -h "/proc/$PID/exe" ]; then
+				NAME=`${READLINK_CMD} -f /proc/$PID/exe`
+			elif [ -f "/proc/$PID/status" ]; then
+				NAME=`grep '^Name:.' /proc/$PID/status | sed -e 's/^Name:.//'`
 			fi
 
+
+			test -z "${NAME}" && continue
 
 			AMATCH=1
 
@@ -8879,7 +9124,6 @@ check_os_info() {
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_ARCH_CHANGE2 "${OLD_ARCH}" "${ARCH}"
 	fi
 
-
 	if [ $FOUND -eq 1 ]; then
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG1
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG2
@@ -8899,11 +9143,39 @@ set_file_prop_dirs_files() {
 	# and the list of files we look for, in order to perform
 	# the file properties checks.
 	#
+	# Any non-existent files are simply left in for the checks
+	# to skip over. However, any symbolic links are expanded and
+	# the result of the link is added to the list. This avoids
+	# any attempt to simply replace a link, and avoid it being
+	# detected by the file hash value check.
+	#
+	# We also check to see if any of the directories are links.
+	# If it is then we add the link target directory.
+	#
 
 	PROP_DIR_LIST=""
 
 	for DIR in ${BINPATHS}; do
-		PROP_DIR_LIST="${PROP_DIR_LIST} ${RKHROOTDIR}${DIR}"
+		if [ -d "${RKHROOTDIR}${DIR}" ]; then
+			LINKDIR="${RKHROOTDIR}${DIR}"
+
+			if [ -n "${READLINK_CMD}" -a -h "${LINKDIR}" ]; then
+				LINKDIR=`${READLINK_CMD} -f ${LINKDIR}`
+
+				#
+				# If the link target directory does not start
+				# with the RKHROOTDIR, then prepend it.
+				#
+
+				if [ -z "`echo \"${LINKDIR}\" | grep \"^${RKHROOTDIR}/\"`" ]; then
+					LINKDIR="${RKHROOTDIR}${LINKDIR}"
+				fi
+			fi
+
+			if [ -z "`echo \"${PROP_DIR_LIST}\" | egrep \"(^| )${LINKDIR}( |$)\"`" ]; then
+				PROP_DIR_LIST="${PROP_DIR_LIST} ${LINKDIR}"
+			fi
+		fi
 	done
 
 	PROP_FILE_LIST="adduser amd basename bash cat chattr checkproc
@@ -8921,21 +9193,10 @@ set_file_prop_dirs_files() {
 
 
 	#
-	# Under SunOS /bin is a link to /usr/bin, so there is no need
-	# to look in it. Also add in some extra commands to check.
+	# We add in some extra commands to check depending on the O/S.
 	#
 
 	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-		if [ -h ${RKHROOTDIR}/bin ]; then
-			B=""
-
-			for DIR in ${PROP_DIR_LIST}; do
-				test "${DIR}" != "${RKHROOTDIR}/bin" && B="${B} ${DIR}"
-			done
-
-			PROP_DIR_LIST=`echo ${B} | sed -e 's/^ *//'`
-		fi
-
 		PROP_FILE_LIST="${PROP_FILE_LIST} gbasename gcat gchmod gchown
 		    gdate gdirname gecho gfind gfile ggroups ghead gid glocate
 		    gmd5sum gsize gtail gtest gtouch guname gusers truss"
@@ -8943,6 +9204,70 @@ set_file_prop_dirs_files() {
 		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload"
 	fi
 
+
+	#
+	# Now loop through the file list and look for symbolic links.
+	# If a link is found, then add on the file and directory that
+	# the link points to.
+	#
+
+	if [ -n "${READLINK_CMD}" ]; then
+		EXTRA_DIRS=""
+		EXTRA_FILES=""
+
+		for DIR in ${PROP_DIR_LIST}; do
+			for FNAME in ${PROP_FILE_LIST}; do
+				if [ -h "${DIR}/${FNAME}" ]; then
+					RKHTMPVAR=`${READLINK_CMD} -f ${DIR}/${FNAME}`
+
+					test ! -f "${RKHTMPVAR}" && continue
+
+					#
+					# Get the link target directory name.
+					#
+
+					LINKDIR=`echo "${RKHTMPVAR}" | sed -e 's:/[^/]*$::'`
+
+					#
+					# We need to see if the target directory
+					# starts with the RKHROOTDIR. If it
+					# does not, then we prepend it.
+					#
+
+					if [ -z "`echo \"${LINKDIR}\" | grep \"^${RKHROOTDIR}/\"`" ]; then
+						LINKDIR="${RKHROOTDIR}${LINKDIR}"
+					fi
+
+					#
+					# Now see if we already have the directory listed.
+					# If not, then we add it on.
+					#
+
+					if [ -z "`echo \"${PROP_DIR_LIST} ${EXTRA_DIRS}\" | egrep \"(^| )${LINKDIR}( |$)\"`" ]; then
+						EXTRA_DIRS="${EXTRA_DIRS} ${LINKDIR}"
+					fi
+
+
+					#
+					# Now get the link target file name.
+					#
+
+					LINKFNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/\([^/]*\)$:\1:'`
+
+					#
+					# And finally check if we already have it listed.
+					#
+
+					if [ -z "`echo \"${PROP_FILE_LIST} ${EXTRA_FILES}\" | egrep \"(^| )${LINKFNAME}( |$)\"`" ]; then
+						EXTRA_FILES="${EXTRA_FILES} ${LINKFNAME}"
+					fi
+				fi
+			done
+		done
+
+		test -n "${EXTRA_DIRS}" && PROP_DIR_LIST="${PROP_DIR_LIST} ${EXTRA_DIRS}"
+		test -n "${EXTRA_FILES}" && PROP_FILE_LIST="${PROP_FILE_LIST} ${EXTRA_FILES}"
+	fi
 
 	PROP_FILE_LIST_TOTAL=`echo ${PROP_FILE_LIST} | wc -w | tr -d ' '`
 
@@ -9166,14 +9491,13 @@ help() {
 	#
 
 	echo ""
-	echo "Usage: rkhunter (--check | --cronjob | --update | --propupd |"
-	echo "                 --versioncheck | --version | --help) [option]..."
+	echo "Usage: rkhunter {--check | --cronjob | --update | --propupd |"
+	echo "                 --versioncheck | --version | --help} [option]..."
 	echo ""
 
 	echo "Current options are:"
 	echo "         --append-log                  Append to the logfile, do not overwrite"
-	echo "         --bindir <bindir>...          Use specified command directory"
-	echo "                                       command directories"
+	echo "         --bindir <bindir>...          Use specified command directories"
 	echo "     -c, --check                       Check the local system"
 	echo "  --cs2, --color-set2                  Use second color set for output"
 	echo "         --configfile <file>           Use specified configuration file"
@@ -9200,10 +9524,13 @@ help() {
 	echo "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
 	echo "   --ns, --nosummary                   Do not show the summary of check results"
 	echo " --novl, --no-verbose-logging          No verbose logging"
+	echo "         --pkgmgr [RPM|DPKG|BSD|NONE]  Use specified package manager to obtain"
+	echo "                                       file hash values. (Default is NONE)"
 	echo "         --propupd                     Update the file properties database"
 	echo "     -q, --quiet                       Quiet mode (no output at all)"
 	echo "  --rwo, --report-warnings-only        Show only warnings"
-	echo "     -r, --rootdir <rootdir>           Use <rootdir> instead of '/'"
+	echo "     -r, --rootdir <rootdir>           Use <rootdir> as the root directory"
+	echo "                                       (default is '/')"
 	echo "   --sk, --skip-keypress               Don't wait for a keypress after each test"
 	echo "         --summary                     Show the summary of system check results"
 	echo "                                       (This is the default)"
@@ -9214,7 +9541,8 @@ help() {
 	echo "   --vl, --verbose-logging             Use verbose logging (on by default)"
 	echo "     -V, --version                     Display the version number, then exit"
 	echo "         --versioncheck                Check for latest version of program"
-	echo "  -x/-X                                Do/Do not automatically detect if X is in use"
+	echo "     -x, --autox                       Automatically detect if X is in use"
+	echo "     -X, --no-autox                    Do not automatically detect if X is in use"
 	echo ""
 
 	return
@@ -9235,7 +9563,7 @@ help() {
 PROGRAM_NAME="Rootkit Hunter"
 PROGRAM_version="1.3.0"
 PROGRAM_copyright_owner="Michael Boelen"
-PROGRAM_copyright="Copyright (c) 2003-2006, ${PROGRAM_copyright_owner}"
+PROGRAM_copyright="Copyright (c) 2003-2007, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
 Currently under active development by the ${PROGRAM_NAME} project team.
 To report bugs, obtain updates, or provide patches or comments, please go to:
@@ -9280,6 +9608,10 @@ NOMOW=0
 MAILONWARNING=""
 
 HASH_FUNC=""
+OLD_HASH_FUNC=""
+PKGMGR=""
+OLD_PKGMGR=""
+OLD_ATTRUPD=""
 HASH_FLD_IDX=1
 PROP_DIR_LIST=""
 PROP_FILE_LIST=""
@@ -9310,7 +9642,7 @@ QUIET=0
 # Set to only show warnings.
 SHOWWARNINGSONLY=0
 
-# This will be set if the file properties check is to be performed.
+# This will be set if the file properties hash value check is to be performed.
 HASH_CHECK_ENABLED=0
 SKIP_HASH_MSG=0
 
@@ -9368,9 +9700,6 @@ WARNING_COUNT=0
 # Set if grsec is installed.
 GRSECINSTALLED=0
 
-# Initialise default status.
-STATUS=0
-
 # Ksyms or kallsyms file used in some checks.
 KSYMS_FILE=""
 
@@ -9382,7 +9711,7 @@ SPACEDPATH=`echo ${PATH} | tr ':' ' ' 2>/dev/null`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="diff file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl ps readlink sort stat strings uniq"
+CMDLIST="diff file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl ps pwd readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr uname wc"
@@ -9511,6 +9840,8 @@ fi
 #
 
 while [ $# -ge 1 ]; do
+	FOUND=0
+
 	case "$1" in
 	--append-log | --appendlog)
 		APPEND_LOG=1
@@ -9525,8 +9856,14 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			BINPATHS="$1"
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No command directories specified."
+			exit 1
+		fi
 		;;
 	-c | --check | --checkall)
 		CHECK=1
@@ -9540,8 +9877,14 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			CONFIGFILE="$1"
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No configuration file specified."
+			exit 1
+		fi
 		;;
 	--cronjob)
 		CHECK=1
@@ -9561,8 +9904,14 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			DB_PATH="$1"
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No database directory specified."
+			exit 1
+		fi
 		;;
 	--debug)
 		SKIP_KEY_PRESS=1
@@ -9578,11 +9927,16 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
-			CHECK=1
 			ENDIS_OPT=1
 			DISABLE_TESTS=$1
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No tests specified to disable."
+			exit 1
+		fi
 		;;
 	--enable)
 		case "$2" in
@@ -9592,11 +9946,16 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
-			CHECK=1
 			ENDIS_OPT=1
 			ENABLE_TESTS=$1
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No tests specified to enable."
+			exit 1
+		fi
 		;;
 	-h | --help)
 		help
@@ -9625,8 +9984,14 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			LANGUAGE="$1"
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No language specified."
+			exit 1
+		fi
 		;;
 	--list)
 		case "$2" in
@@ -9672,6 +10037,24 @@ while [ $# -ge 1 ]; do
 		SHOW_SUMMARY=0
 		SHOW_SUMMARY_OPT=1
 		;;
+	--pkgmgr)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			PKGMGR=$1
+			FOUND=1
+			;;
+		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No package manager specified."
+			exit 1
+		fi
+		;;
 	--propupd | --prop-update | --propupdate | --properties-update | --hashupd)
 		PROP_UPDATE=1
 		;;
@@ -9691,8 +10074,14 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			RKHROOTDIR="$1"
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No root directory specified."
+			exit 1
+		fi
 		;;
 	-sk | --sk | --skip-keypress | --skipkeypress)
 		SKIP_KEY_PRESS=1
@@ -9712,8 +10101,14 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			USE_SYSLOG="$1"
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No syslog level specified."
+			exit 1
+		fi
 		;;
 	--tmpdir)
 		case "$2" in
@@ -9724,8 +10119,14 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			RKHTMPDIR="$1"
+			FOUND=1
 			;;
 		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No temporary directory specified."
+			exit 1
+		fi
 		;;
 	--update)
 		UPDATE=1
@@ -9741,11 +10142,11 @@ while [ $# -ge 1 ]; do
 	--versioncheck)
 		VERSIONCHECK=1
 		;;
-	-x)
+	-x | --autox)
 		AUTO_X_OPT=1
 		AUTO_X_DTCT=1
 		;;
-	-X)
+	-X | --no-autox)
 		AUTO_X_OPT=1
 		AUTO_X_DTCT=0
 		;;
@@ -9775,6 +10176,17 @@ fi
 
 
 #
+# We need to see if we are to run a check before we get to the
+# configuration file processing. Basically if either of the
+# --enable or --disable options are used, and this is not a
+# property update run, then we will do a check. For update runs
+# only the 'hashes' or 'attributes' tests are likely to be named.
+#
+
+test $ENDIS_OPT -eq 1 -a $PROP_UPDATE -eq 0 && CHECK=1
+
+
+#
 # Before going too much further we need to ensure that some basic
 # commands are present on the system. We cannot do this using
 # the BINDIR option because that requires processing the configuration
@@ -9797,6 +10209,10 @@ check_required_commands "${SPACEDPATH} ${DFLT_BINPATHS}"
 #
 # Now we check for the configuration file, and then check the various
 # options within it.
+#
+# NOTE: Do not change the format of the following 'if' statement.
+# The installer script will directly modify it when performing a
+# standalone installation.
 #
 
 if [ -z "${CONFIGFILE}" ]; then
@@ -9897,13 +10313,26 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	#
 
 	set_file_prop_dirs_files
+
+
+	#
+	# We need to record the previously used
+	# hash function and package manager.
+	#
+
+	OLD_HASH_FUNC=`grep '^Hash:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+
+	OLD_PKGMGR=`grep '^Pkgmgr:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
+
+	OLD_ATTRUPD=`grep '^Attributes:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
 fi
 
 
-if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 ]; then
+if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a \( -z "${PKGMGR}" -o "${PKGMGR}" = "NONE" \) -a "${HASH_FUNC}" != "NONE" ]; then
 	#
-	# For a hash update on a prelinked system, we must
-	# have a valid hash function to use.
+	# For a hash update on a prelinked system, we must have
+	# a valid hash function to use. The package managers use
+	# MD5 by default.
 	#
 
 	RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
@@ -10145,8 +10574,15 @@ if [ $NOLOG -eq 0 ]; then
 			display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
 		fi
 	done
+
+	test $GRSECINSTALLED -eq 1 && display --to LOG --type INFO GRSECINSTALLED
 fi
 
+if [ $HASH_CHECK_ENABLED -eq 1 -a "${HASH_FUNC}" = "NONE" ]; then
+	HASH_CHECK_ENABLED=0
+	DISABLE_TESTS="${DISABLE_TESTS} hashes"
+	display --to LOG --type INFO HASH_FUNC_DISABLED
+fi
 
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	if [ $PRELINKED -eq 1 ]; then
@@ -10162,7 +10598,9 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 
 		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
-		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+		if [ "${HASH_FUNC}" = "NONE" ]; then
+			display --to LOG --type INFO SYS_PRELINK_FUNC_NONE
+		elif [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
 			SKIP_HASH_MSG=2
 		elif [ -n "`echo ${RKHTMPVAR} | grep -i 'sha1'`" ]; then
 			display --to LOG --type INFO SYS_PRELINK_FUNC 'SHA1' "${HASH_FUNC}"
@@ -10172,26 +10610,91 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	else
 		display --to LOG --type INFO SYS_NO_PRELINK
 
-		if [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
+		if [ "${HASH_FUNC}" = "NONE" ]; then
+			display --to LOG --type INFO HASH_FUNC_NONE
+		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
 			display --to LOG --type INFO HASH_FUNC_PERL 'SHA1'
 		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
 			display --to LOG --type INFO HASH_FUNC_PERL 'MD5'
-		elif [ -n "${HASH_FUNC}" ]; then
-			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
 		else
-			display --to LOG --type INFO HASH_NO_FUNC
+			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
 		fi
 	fi
 
-	test -n "${HASH_FUNC}" && display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
+	if [ "${OLD_HASH_FUNC}" = "Disabled" ]; then
+		display --to LOG --type INFO HASH_FUNC_OLD_DISABLED
+	else
+		display --to LOG --type INFO HASH_FUNC_OLD "${OLD_HASH_FUNC}"
+	fi
+
+	if [ -z "${OLD_PKGMGR}" ]; then
+		display --to LOG --type INFO HASH_PKGMGR_OLD_UNSET
+	elif [ "${OLD_PKGMGR}" = "NONE" ]; then
+		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}" ""
+	else
+		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}" "(MD5)"
+	fi
+
+	if [ "${HASH_FUNC}" != "NONE" ]; then
+		display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
+	fi
+
+	if [ $PROP_UPDATE -eq 1 ]; then
+		if ! `check_test hashes`; then
+			display --to LOG --type INFO HASHUPD_DISABLED
+		elif [ -z "${PKGMGR}" ]; then
+			display --to LOG --type INFO HASHUPD_PKGMGR_NOT_SPEC "${HASH_FUNC}"
+		elif [ "${PKGMGR}" = "NONE" ]; then
+			display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
+		else
+			display --to LOG --type INFO HASHUPD_PKGMGR "${PKGMGR}"
+
+			if [ "${PKGMGR}" = "RPM" ]; then
+				display --to LOG --type INFO FOUND_CMD "rpm" "${RPM_CMD}"
+			elif [ "${PKGMGR}" = "DPKG" ]; then
+				if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
+					display --to LOG --type INFO FOUND_CMD "dpkg-query" "${DPKG_CMD}"
+				else
+					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
+				fi
+			elif [ "${PKGMGR}" = "BSD" ]; then
+				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
+			fi
+		fi
+	fi
 fi
 
-test $GRSECINSTALLED -eq 1 && display --to LOG --type INFO GRSECINSTALLED
+RKHTMPVAR=0
+test $CHECK -eq 1 && `check_test attributes` && RKHTMPVAR=1
 
-if [ $CHECK -eq 1 ]; then
+if [ $RKHTMPVAR -eq 1 ]; then
+	if [ "${OLD_ATTRUPD}" = "Disabled" ]; then
+		display --to LOG --type INFO ATTRUPD_OLD_DISABLED
+	elif [ "${OLD_ATTRUPD}" = "Nostat" ]; then
+		display --to LOG --type INFO ATTRUPD_OLD_NOSTAT
+	else
+		display --to LOG --type INFO ATTRUPD_OLD_OK
+	fi
+fi
+
+if [ $PROP_UPDATE -eq 1 ]; then
+	if ! `check_test attributes`; then
+		display --to LOG --type INFO ATTRUPD_DISABLED
+	elif [ -z "${STAT_CMD}" ]; then
+		display --to LOG --type INFO ATTRUPD_NOSTAT
+	else
+		display --to LOG --type INFO ATTRUPD_OK
+	fi
+fi
+
+if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	display --to LOG --type INFO ENABLED_TESTS "${ENABLE_TESTS}"
 	display --to LOG --type INFO DISABLED_TESTS "${DISABLE_TESTS}"
 
+	test $VERBOSE_LOGGING -eq 0 && display --to LOG --type INFO CONFIG_NO_VL
+fi
+
+if [ $CHECK -eq 1 ]; then
 	if [ -n "${KSYMS_FILE}" ]; then
 		display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"
 	else
@@ -10199,8 +10702,6 @@ if [ $CHECK -eq 1 ]; then
 	fi
 
 	test $SHOW_SUMMARY -eq 0 && display --to LOG --type INFO CONFIG_NO_SHOW_SUMMARY
-
-	test $VERBOSE_LOGGING -eq 0 && display --to LOG --type INFO CONFIG_NO_VL
 
 
 	#
@@ -10231,10 +10732,10 @@ if [ $CHECK -eq 1 ]; then
 	# later on.
 	#
 
-	if [ $HASH_CHECK_ENABLED -eq 1 ]; then
+	if `check_test properties`; then
 		if [ -f "${DB_PATH}/rkhunter.dat" -a -s "${DB_PATH}/rkhunter.dat" ]; then
 			#
-			# We perform a simple check of some of the stored
+			# We perform a simple check on some of the stored
 			# O/S information, and compare it to the current
 			# info. Basically we are just seeing if the system
 			# has changed at all because it could affect the

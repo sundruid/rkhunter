@@ -33,16 +33,21 @@
    file. This file contains the O/S name, file hash values and other bits of
    information. If the file hash values change, perhaps due to new versions
    of software, then the user simply runs rkhunter with the option again. If
-   the user has not run rkhunter with this option, then the file hash check is
-   skipped. This option obsoletes the 'hashupd.sh' script previously
+   the user has not run rkhunter with this option, then the file properties
+   checks are skipped. This option obsoletes the 'hashupd.sh' script previously
    recommended to users. If use of the '--propupd' option is suggested by
    the program, then the log file will contain a warning message to the
    user that they must ensure that the commands checked on their system must
-   have been installed and verified as being genuine.
+   have been installed and verified as being genuine. The file properties
+   check consists of two main parts - the file attributes (permissions, uid
+   etc), and the hash value. Both are stored in rkhunter.dat. Either part, or
+   both, can be disabled using the '--disable' option.
  - Added the HASH_FUNC option to the configuration file. This allows a user
    to select the hash function command they want to use for the file hash
-   value check. By default SHA1 will be used. For prelinked systems, the
-   function must be either MD5 or SHA1.
+   value check and the properties update. By default SHA1 will be used. For
+   prelinked systems, the function must be either MD5 or SHA1. A value of
+   NONE can be used to disable the hash check or to stop the hash values
+   being recorded in the rkhunter.dat file.
  - Added the HASH_FLD_IDX option to the configuration file. This specifies the
    field of the HASH_FUNC command output which contains the hash value. A
    default of 1 is used, except for *BSD systems where 4 will be used.
@@ -118,6 +123,8 @@
    directories for Solaris users.
  - Expanded the command PATH used to include the /usr/pkg directory for
    NetBSD users.
+ - Expanded the command PATH used to include the /System/Links/Executables
+   directory for GoboLinux users.
  - Versioncheck now checks the versions numerically.
  - The MD5WHITELIST configuration file option has changed name to HASHWHITELIST.
  - The '--checkall' option has been changed to '--check'. The old option is
@@ -131,7 +138,8 @@
    is checked.
  - Improved the O/S detection mechanism. Rather than requiring users to send
    us details, rkhunter actively looks at the 'release' file(s) to find the
-   O/S name.
+   O/S name. Included support for some lesser-known Linuxes - GoboLinux,
+   Lunar Linux, Rock Linux, and Source Mage Linux.
  - If the --propupd or --update options are used, as well as the system
    check option --check, then the update checks are performed before the
    system is checked. Previously the update occurred after the system was
@@ -153,8 +161,8 @@
    It cannot be set to /etc either because files will be deleted from there.
  - Removed the '--scan-knownbad-files' option. This test was considered to
    be obsolete.
- - Removed the '--disable-md5-check' option. This is now the 'known_good_hash'
-   test name, and can be disabled by the '--disable' option.
+ - Removed the '--disable-md5-check' option. This is now the 'hashes' test
+   name, and can be disabled by the '--disable' option.
  - Removed the '--allow-ssh-root-user' option from the command-line. This
    can still be set/unset in the configuration file. This option must now
    be set to the value of the 'PermitRootLogin' option in the SSH config
@@ -193,7 +201,7 @@
    supposed to be scripts can be whitelisted in the configuration file.
  - File permissions check improved to check if 'other' has the 'w' bit set.
    Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
-   check into the file hash check.
+   into the file properties checks.
  - The '--report-mode' option has been removed. It was not seen as being
    useful, and combinations of the other options will provide the same, if
    not better, reporting.
@@ -212,6 +220,7 @@
  - The application version check no longer checks against known 'good'
    versions. Only a file of bad versions is kept. The previous method was
    impossible to maintain.
+ - Enabled the immutable test for *BSD systems.
 
  Bugfixes:
  - Command-line options requiring an argument now work correctly under Solaris.
@@ -222,9 +231,9 @@
    were using ROOTDIR pathnames in grep/strings checks when they shouldn't
    have been. This has also been corrected.
  - The file hash prelink test should now work even if SELinux objects to the
-   prelink command. (This requires the 'runcon' command). When the '--propupd'
+   prelink command (provided the 'runcon' command exists). When the '--propupd'
    option is used, any file for which a hash cannot be obtained is logged as
-   a warning. (Typically prelink needs to be run on the file.) rkhunter will
+   a warning. (Typically prelink needs to be run on the file.) Rkhunter will
    still work as before, but the file properties check may show that the hash
    value has changed to or from a null value.
  - Corrected file attributes check - previously the immutable flag would never

@@ -1,4 +1,4 @@
-Version:2007042001
+Version:2007042901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -73,13 +73,31 @@ CONFIG_SOL10_INETD:Using Solaris 10 and later inetd mechanism
 FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
 
-SYS_NO_PRELINK:System is not using prelinking
-SYS_PRELINK_FUNC:System is using prelinking - using $1 ($2) for hash checks
+SYS_PRELINK_FUNC:System is using prelinking: using $1 ($2) for hash checks
+SYS_PRELINK_FUNC_NONE:System is using prelinking: hash checks disabled: NONE specified
 
+SYS_NO_PRELINK:System is not using prelinking
 HASH_FUNC_PERL:Using the perl $1 module for the file hash value checks
 HASH_FUNC:Using the '$1' command for the file hash value checks
-HASH_NO_FUNC:No hash function command found
+HASH_FUNC_NONE:Hash checks disabled: NONE specified
+HASH_FUNC_DISABLED:Hash function set to 'NONE': automatically disabling file hash checks
+HASH_FUNC_OLD:Stored hash values used hash function '$1'
+HASH_FUNC_OLD_DISABLED:Previous hash function was disabled: no hash values were stored
+HASH_PKGMGR_OLD:Stored hash values used package manager '$1' $2
+HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a packet manager
 HASH_FIELD_INDEX:The hash function field index is set to $1
+
+HASHUPD_DISABLED:Hash checks disabled: current file hash values will not be stored
+HASHUPD_PKGMGR:Using package manager '$1' to update the file hash values
+HASHUPD_PKGMGR_NONE:Package manager 'NONE' specified: using hash function '$1'
+HASHUPD_PKGMGR_NOT_SPEC:No file hash update package manager specified: using hash function '$1'
+
+ATTRUPD_DISABLED:File attribute checks disabled: current file attributes will not be stored
+ATTRUPD_NOSTAT:File attribute checks disabled: no 'stat' command found: current file attributes will not be stored
+ATTRUPD_OK:Current file attributes will be stored
+ATTRUPD_OLD_DISABLED:Previous file attributes were disabled: no file attributes were stored
+ATTRUPD_OLD_NOSTAT:Previous file attributes were disabled: no 'stat' command found: no file attributes were stored
+ATTRUPD_OLD_OK:Previous file attributes were stored
 
 GRSECINSTALLED:Found GRSEC installed
 
@@ -159,7 +177,7 @@ PROPUPD_REL_FILE:Found release file: $1
 PROPUPD_NO_REL_FILE:Unable to find a release file: LS output shows:
 PROPUPD_OSNAME_FOUND:Found O/S name: $1
 PROPUPD_ERROR:Error installing new rkhunter.dat file. Code $1
-PROPUPD_NEW_DAT_FILE:New rkhunter.dat file installed
+PROPUPD_NEW_DAT_FILE:New rkhunter.dat file installed in '$1'
 PROPUPD_WARN:WARNING! It is the users responsibility to ensure that when the '--propupd' option
 PROPUPD_WARN:is used, all the files on their system are known to be genuine, and installed from a
 PROPUPD_WARN:reliable source. The rkhunter '--check' option will compare the current file properties
@@ -193,7 +211,7 @@ FILE_PROP_CMDS:Checking for prerequisites
 FILE_PROP_IMMUT_OS:Skipping all immutable-bit checks. This check is only available for Linux systems.
 FILE_PROP_SKIP_ATTR:Unable to find 'stat' command - all file attribute checks will be skipped.
 FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:
-FILE_PROP_SKIP_HASH_FUNC:Unable to find a hash function command.
+FILE_PROP_SKIP_HASH_FUNC:Current hash function ($1) incompatible with function used for stored values ($2).
 FILE_PROP_SKIP_HASH_PRELINK:Unable to find 'prelink' command.
 FILE_PROP_SKIP_HASH_SHA1:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
 FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe was found, which can cause errors. If possible, disable libsafe and then run the prelink command. Finally, recreate the hash values using 'rkhunter --propupd'.
@@ -209,6 +227,7 @@ FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present i
 FILE_PROP_HASH_WL_INVALID:Found file '$1': the whitelist hash value ($2) does not match the current hash value.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
+FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
 FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.

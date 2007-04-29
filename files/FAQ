@@ -299,24 +299,33 @@ A.   This is a message from older versions of rkhunter. Upgrade to
      getting warning messages. Why is that?
 
 A.   The first run of rkhunter after an installation will give some
-     warning messages. One of the checks is that the file of hash
-     values for the file properties checks exists. This file won't
-     exist until rkhunter is run with the '--propupd' option. Two
-     other warning messages will relate to checks of changes to the
-     passwd and group files. To do this, rkhunter must use a copy of
-     the files. However, since no copies yet exist, warnings are
-     generated. These warnings will go once rkhunter is run again.
-     There is also a check to see if any commands have been replaced
-     by shell scripts. One of the commands is 'rkhunter' itself. To
-     avoid these warning messages you must whitelist the commands in
-     your rkhunter.conf file. Look in the configuration file and you
-     will find examples of this.
+     warning messages. One of the checks is that the file of file
+     properties (called 'rkhunter.dat') for the file properties
+     checks exists. This file won't exist until rkhunter is run with
+     the '--propupd' option. Two other warning messages will relate
+     to checks of changes to the passwd and group files. To do this,
+     rkhunter must use a copy of the files. However, since no copies
+     yet exist, warnings are generated. These warnings will disappear
+     once rkhunter is run again. There is also a check to see if any
+     commands have been replaced by shell scripts. One of the commands
+     is 'rkhunter' itself. To avoid these warning messages you must
+     whitelist the commands in your rkhunter.conf file. Look in the
+     configuration file and you will find examples of this.
 
      Once these changes have been made, then re-run rkhunter and no
      warnings should appear. Obviously warning messages from other
      checks indicate that something is wrong, and should be
      investigated. The logfile will contain further information about
      each warning message.
+
+     NOTE: When using the '--propupd' option it is the users
+           responsibility to ensure that the files on their system are
+           genuine. Rootkit Hunter can only inform the user of a change
+           to the files, not whether they are the original files or not.
+           Although Rootkit Hunter can use a package manager for some
+           systems, it must be remembered that the package manager itself
+           uses files stored on the system. Those files may have been
+           tampered with.
 
 
 ===========================================================
@@ -430,8 +439,11 @@ A.   Usually you install a tool and upgrade it later. Sometimes
 
 5.2) Can I be notified when a new release will be available?
 
-A.   The '--versioncheck' option will indicate if a new version
-     is available.
+A.   Yes, you can join the rkhunter-announce mailing list. This is
+     a low volume list. Details can be found on the RKH web site.
+
+     Additionally, the '--versioncheck' option of rkhunter itself
+     will indicate if a new version is available.
 
 
 ===========================================================

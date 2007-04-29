@@ -90,12 +90,12 @@ to the existing configuration file.
 The main RKH script will be installed into the '/usr/local/bin'
 directory or where you chose using the --layout switch. Man pages will 
 be installed into '/usr/local/share/man', and other documentation will 
-be installed into the '/usr/local/share/doc/rkhunter' directory. RKH 
-data files, language support and a directory for temporary files will 
-be installed into '/var/rkhunter'. All directories will be created 
+be installed into the '/usr/local/share/doc' directory. RKH data files,
+language support, and a directory for temporary files will be
+installed into '/var/rkhunter'. All directories will be created 
 where necessary.
 
-To run RKH, as root, simply enter the following command:
+To run RKH, as root simply enter the following command:
 
     rkhunter --check
 
@@ -105,6 +105,11 @@ will contain the results of the checks made by RKH.
 To see what other options can be used with rkhunter, enter:
 
     rkhunter --help
+
+
+NOTE: The first run of 'rkhunter' after installation is likely to
+      give some warning messages. Please see the FAQ file for more
+      details about this.
 
 
 STANDALONE INSTALLATION
@@ -126,9 +131,9 @@ Within the directory will be a copy of the 'rkhunter.conf' configuration
 file. You can modify this file according to your requirements if you
 wish, but note the installer has already set the necessary variables.
 
-To run RKH, enter the following command:
+To run RKH, as root simply enter the following command:
 
-    ./rkhunter --configfile ./rkhunter.conf --check
+    ./rkhunter --check
 
 
 REMOVING AN INSTALLATION
