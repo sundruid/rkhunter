@@ -463,3 +463,7 @@ SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1
 SHARED_LIBS_PATH:Checking LD_LIBRARY_PATH variable
 SHARED_LIBS_PATH_BAD:The LD_LIBRARY_PATH environment variable influences binaries: $1
 
+SUSPSCAN_START:Performing suspscan.
+SUSPSCAN_INSPECT:Please inspect: '$1' (score: $2).
+SUSPSCAN_END:Suspscan finished.
+

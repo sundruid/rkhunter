@@ -148,7 +148,8 @@ A.   Prior to any incident it is recommended that you have read
      If you are unsure as to whether your system is compromised,
      you can get a second opinion from sources such as the
      rkhunter-users mailing list, the Linux-oriented forum
-     LinuxQuestions.org, or even IRC.
+     LinuxQuestions.org, or even IRC. Please note you need to 
+     subscribe before posting to the rkhunter-users mailing list.
 
      If a file property check fails, then it is possible you have
      what is called a 'false positive'. Sometimes this will happen
@@ -179,8 +180,8 @@ A.   Prior to any incident it is recommended that you have read
           trojaned.
 
      If you have a warning from another part of the checks, then
-     please email the rkhunter-users mailing list and tell us about
-     your system configuration:
+     please subscribe first and then email the rkhunter-users mailing list
+     and tell us about your system configuration:
         the purpose of the server (for example, web server, intranet
         fileserver, shell server);
         the (aproximate) date of the incident and when you found out;
