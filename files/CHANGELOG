@@ -201,7 +201,7 @@
    supposed to be scripts can be whitelisted in the configuration file.
  - File permissions check improved to check if 'other' has the 'w' bit set.
    Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
-   into the file properties checks.
+   into the file properties checks. Soft links are ignored.
  - The '--report-mode' option has been removed. It was not seen as being
    useful, and combinations of the other options will provide the same, if
    not better, reporting.
@@ -221,6 +221,12 @@
    versions. Only a file of bad versions is kept. The previous method was
    impossible to maintain.
  - Enabled the immutable test for *BSD systems.
+ - Soft (symbolic) links for files and directories are now handled correctly.
+   Previously the link was dealt with, but not what it pointed to. Soft links
+   are dealt with when using the '--propupd' command, and when running the
+   file properties checks. For those systems with no 'readlink' command (e.g.
+   Solaris), or those in which readlink does not understand the '-f' option
+   (e.g. NetBSD), a shell script is now provided to support this.
 
  Bugfixes:
  - Command-line options requiring an argument now work correctly under Solaris.

@@ -12,7 +12,7 @@
 
 INSTALLER_NAME="Rootkit Hunter installer"
 INSTALLER_VERSION="1.2.6"
-INSTALLER_COPYRIGHT="Copyright 2003-2005, Michael Boelen"
+INSTALLER_COPYRIGHT="Copyright 2003-2007, Michael Boelen"
 INSTALLER_LICENSE="
 
 Under active development by the Rootkit Hunter project team. For reporting
@@ -234,7 +234,7 @@ RKHINST_LANG_DIR="${RKHINST_DB_DIR}/i18n"
 
 RKHINST_ETC_FILE="${APPNAME}.conf"
 RKHINST_BIN_FILES="${APPNAME}"
-RKHINST_SCRIPT_FILES="check_modules.pl check_update.sh check_port.pl filehashmd5.pl filehashsha1.pl showfiles.pl stat.pl"
+RKHINST_SCRIPT_FILES="check_modules.pl check_update.sh check_port.pl filehashmd5.pl filehashsha1.pl showfiles.pl stat.pl readlink.sh"
 RKHINST_DB_FILES="backdoorports.dat mirrors.dat os.dat programs_bad.dat programs_good.dat defaulthashes.dat md5blacklist.dat"
 RKHINST_DOC_FILES="ACKNOWLEDGMENTS CHANGELOG FAQ LICENSE README WISHLIST"
 RKHINST_MAN_FILES="development/${APPNAME}.8"
