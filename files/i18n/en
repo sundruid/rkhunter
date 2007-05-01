@@ -1,4 +1,4 @@
-Version:2007042901
+Version:2007050101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -463,7 +463,23 @@ SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1
 SHARED_LIBS_PATH:Checking LD_LIBRARY_PATH variable
 SHARED_LIBS_PATH_BAD:The LD_LIBRARY_PATH environment variable influences binaries: $1
 
-SUSPSCAN_START:Performing suspscan.
-SUSPSCAN_INSPECT:Please inspect: '$1' (score: $2).
-SUSPSCAN_END:Suspscan finished.
+SUSPSCAN_CHECK:Checking for files with suspicious contents
+SUSPSCAN_DIR_NOT_EXIST:The directory '$1' does not exist.
+SUSPSCAN_INSPECT:File '$1' (test score: $2) contains some suspicious content and should be checked.
+SUSPSCAN_START:Performing check of files with suspicious contents
+SUSPSCAN_DIRS:Directories to check are: $1
+SUSPSCAN_NO_DIRS:No directories specified: using defaults ($1)
+SUSPSCAN_TEMP:Temporary directory to use: $1
+SUSPSCAN_NO_TEMP:No temporary directory specified: using default ($1)
+SUSPSCAN_TEMP_NOT_EXIST:The suspscan temporary directory does not exist: $1
+SUSPSCAN_TEMP_NO_WRITE:The suspscan temporary directory is not writeable: $1
+SUSPSCAN_SIZE:Maximum file size to check (in bytes): $1
+SUSPSCAN_NO_SIZE:No maximum file size specified: using default ($1)
+SUSPSCAN_SIZE_INVALID:The suspscan maximum file size is invalid: $1
+SUSPSCAN_THRESH:Score threshold is set to: $1
+SUSPSCAN_NO_THRESH:No score threshold specified: using default ($1)
+SUSPSCAN_THRESH_INVALID:The suspscan score threshold is invalid: $1
+SUSPSCAN_DIR_CHECK:Checking directory: $1
+SUSPSCAN_DIR_CHECK_NO_FILES:No suitable files found to check.
+SUSPSCAN_FILE_CHECK:File checked: Name: $1    Size: $2    Type: $3    Score: $4
 

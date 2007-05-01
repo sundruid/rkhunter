@@ -841,7 +841,7 @@ check_commands() {
 			if [ -z "${CFG_CMD}" -o "${CFG_CMD}" = " " ]; then
 				CFG_CMD=""
 			elif [ "${CFG_CMD}" = "DISABLED" ]; then
-				:
+				eval ${RKHTMPVAR}=\"${CFG_CMD}\"
 			else
 				#
 				# check that the command is executable.
@@ -885,7 +885,7 @@ check_commands() {
 
 	#
 	# If the readlink command cannot be found, or it does not support
-	# the '-f' option, then we must use the supplied script.
+	# the '-f' option, then we must use the supplied shell script.
 	#
 
 	if [ -z "${READLINK_CMD}" ]; then
@@ -904,7 +904,7 @@ check_commands() {
 		RKHTMPVAR="${RKHTMPVAR}_CMD"
 		RKHTMPVAR2=`eval echo "\\$${RKHTMPVAR}"`
 
-		test "${RKHTMPVAR2}" = "DISABLED" && eval ${RKHTMPVAR}=""
+		test "${RKHTMPVAR2}" = "DISABLED" && eval ${RKHTMPVAR}=\"\"
 	done
 
 	return
@@ -4912,7 +4912,7 @@ file_properties_check() {
 			#
 
 			if [ $SKIP_SCRIPT -eq 0 ]; then
-				SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | egrep -i ' script( |$)'`
+				SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
 
 
 				#
@@ -5077,102 +5077,264 @@ file_properties_check() {
 }
 
 
-suspscan() { 
+suspscan() {
 
-# Purpose: scan directory for files with suspicious contents
-# suspscan hogs CPU and I/O. It should NOT BE ENABLED BY DEFAULT!
-# Args: directoryname(s) from rkhunter.conf
-#
-# CAVEATS
-# - We should use a relatively fast tempdir for this like /dev/shm
-# - We should check for availability of and writability of tempdir
-#
-# TODO
-# - Guard against running on legitmate (system) dirs
-# - Check binary dependencies?
-# - Alert and break off on: DAC rights, Filetype, Filesize, UPX / archives?
-#
-# Other
-# - Get dirs from rkhunter.conf setting
-# - Allow custom multipliers and relations
-# - Take terms from sources like ClamAV, Mod_security and Snort rules
-# - Do not rely on or incorporate region specific language stuff, think {cn,tw,id,ru,es,br,it,ro}
-# - Exclude OSes?
-# - Check config defaults. If one is missing, don't run.
+	#
+	# Purpose: scan directory for files with suspicious contents
+	# suspscan hogs CPU and I/O. It should NOT BE ENABLED BY DEFAULT!
+	# Args: directoryname(s) from rkhunter.conf
+	#
+	# CAVEATS
+	# - We should use a relatively fast tempdir for this like /dev/shm
+	# - We should check for availability of and writability of tempdir
+	#
+	# TODO
+	# - Guard against running on legitmate (system) dirs
+	# - Check binary dependencies?
+	# - Alert and break off on: DAC rights, Filetype, Filesize, UPX / archives?
+	#
+	# Other
+	# - Get dirs from rkhunter.conf setting
+	# - Allow custom multipliers and relations
+	# - Take terms from sources like ClamAV, Mod_security and Snort rules
+	# - Do not rely on or incorporate region specific language stuff, think {cn,tw,id,ru,es,br,it,ro}
+	# - Exclude OSes?
+	# - Check config defaults. If one is missing, don't run.
 
-	# Dirs to scan
+
+	#
+	# We can only run this on Linux for the moment.
+	#
+
+	test "${OPERATING_SYSTEM}" != "Linux" && return
+
+
+	if ! `check_test suspscan`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST suspscan
+		return
+	fi
+
+	display --to LOG --type PLAIN --log-indent 2 --nl SUSPSCAN_START
+
+
+	#
+	# First check that we have the commands we need.
+	#
+
+	if [ -z "${FILE_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type INFO NOT_FOUND_CMD "file"
+		return
+	elif [ -z "${STAT_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type INFO NOT_FOUND_CMD "stat"
+		return
+	elif [ -z "${STRINGS_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type INFO NOT_FOUND_CMD "strings"
+		return
+	fi
+
+	#
+	# Get the directories to scan.
+	#
+
 	SUSPSCAN_DIRS=`grep "^SUSPSCAN_DIRS=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}' | tr ':' ' '`
-	# Tempdir. Should be a /dev/shm type.
+
+	if [ -z "${SUSPSCAN_DIRS}" ]; then
+		SUSPSCAN_DIRS="/tmp /var/tmp"
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_DIRS "${SUSPSCAN_DIRS}"
+	else
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIRS "${SUSPSCAN_DIRS}"
+	fi
+
+	#
+	# Get the tempdir. Should be a /dev/shm type.
+	#
+
 	SUSPSCAN_TEMP=`grep "^SUSPSCAN_TEMP=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}'`
-	# Max filesize to handle, say 1024000.
+
+	if [ -z "${SUSPSCAN_TEMP}" ]; then
+		SUSPSCAN_TEMP="/dev/shm"
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_TEMP "${SUSPSCAN_TEMP}"
+	else
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_TEMP "${SUSPSCAN_TEMP}"
+	fi
+
+	if [ ! -d "${SUSPSCAN_TEMP}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type WARNING SUSPSCAN_TEMP_NOT_EXIST "${SUSPSCAN_TEMP}"
+		return
+	elif [ ! -w "${SUSPSCAN_TEMP}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type WARNING SUSPSCAN_TEMP_NO_WRITE "${SUSPSCAN_TEMP}"
+		return
+	fi
+
+	#
+	# Get the max filesize to handle, say 1024000.
+	#
+
 	SUSPSCAN_MAXSIZE=`grep "^SUSPSCAN_MAXSIZE=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}'`
-	# Score threshold, 600 seems sensible.
+
+	if [ -z "${SUSPSCAN_MAXSIZE}" ]; then
+		SUSPSCAN_MAXSIZE=1024000
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_SIZE "${SUSPSCAN_MAXSIZE}"
+	elif [ -z "`echo \"${SUSPSCAN_MAXSIZE}\" | grep '^[1-9][0-9]*$'`" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type WARNING SUSPSCAN_SIZE_INVALID "${SUSPSCAN_MAXSIZE}"
+		return
+	else
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_SIZE "${SUSPSCAN_MAXSIZE}"
+	fi
+
+	#
+	# Get the score threshold, 600 seems sensible.
+	#
+
 	SUSPSCAN_THRESH=`grep "^SUSPSCAN_THRESH=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}'`
 
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SUSPSCAN_START
+	if [ -z "${SUSPSCAN_THRESH}" ]; then
+		SUSPSCAN_THRESH=600
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_THRESH "${SUSPSCAN_THRESH}"
+	elif [ -z "`echo \"${SUSPSCAN_THRESH}\" | grep '^[1-9][0-9]*$'`" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type WARNING SUSPSCAN_THRESH_INVALID "${SUSPSCAN_THRESH}"
+		return
+	else
+		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_THRESH "${SUSPSCAN_THRESH}"
+	fi
+
+
+	#
+	# Start the test.
+	#
+
+	FOUND=0
+	FOUNDDIRS=""
 
 	for SUSPSCAN_DIR in $SUSPSCAN_DIRS ; do
-	if [ -d "${SUSPSCAN_DIR}" ]; then
-		$FIND_CMD "${SUSPSCAN_DIR}" -not -type d | while read SUSPSCAN_ITEM; do
-			SUSPSCAN_TYPE=`$STAT_CMD -c %F "${SUSPSCAN_ITEM}"`
-			SUSPSCAN_SIZE=`$STAT_CMD -c %s "${SUSPSCAN_ITEM}"`
-			if [ -s "${SUSPSCAN_ITEM}" -a $SUSPSCAN_SIZE -le $SUSPSCAN_MAXSIZE -a "$SUSPSCAN_TYPE" = "Regular File" ]; then
-				$FILE_CMD "${SUSPSCAN_ITEM}" | egrep -i '(execu|shell|libr)' >/dev/null
-				if [ $? -eq 0 ]; then
-					$STRINGS_CMD -n 10 "${SUSPSCAN_ITEM}" 2>&1 > "${SUSPSCAN_TEMP}/${suspscan}.$$.strings"
-					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0
-					# Too short, need extended regex or influence relation only on these: dcc irc bot ban chan
-					# False positives: memory
-					# The list below should be broken out to a .dat file or rkhunter.conf.
-					for SUSPSCAN_STRING in a:0x..,.0x.., a:add?  a:asm a:%:bh a:decb a:decl a:disasm a:%e[bp,di,sp] a:%e[cx,si] a:%e?x a:%hi a:inc[b,l] a:jmp a:jmpcode ajuda a:jump a:%?l a:mov?  a:nasm a:ndisasm a:nopsize a:notb a:offset a:opcode a:p[op,ush] a:reassembl a:ret a:ro[r,l]b a:sub?  a:xor d:bonk d:flood d:jolt d:kuang d:land d:nuke d:saihyousen d:tear d:teardrop f:abort f:access f:AF_INET f:atoi@ f:buf[fe,si] f:call f:changeown f:exec.* f:fopen@ f:fread f:free f:fscanf f:loop f:lseek f:malloc f:memcpy f:memset f:mmap f:putenv f:static.char.*= f:str[len,cat] f:'system(' i:botz i:bounc i:dalnet i:dc\.pl i:eggbot i:eggshell i:invite i:irc\.  i:iroffer i:nick i:pbsync i:psybnc i:vhost i:xdcc n:bind n:connect n:'connect(' n:'gethostbyname(' n:'getprotobyname(' n:ident n:inet n:'inet_aton(' n:IO::Socket n:listen n:network n:packet n:relay n:remote n:resolv n:rhost n:sendfile n:server n:setsockopt n:'(?sock' n:sockaddr n:'sockaddr_in(' n:sock[ad,et,fd] n:'socket(' n:'socket@' n:socketcall n:socklen n:'sockopen(' s:?0x[a-z0-9]\{2\}.* s:backdoor s:/bin/sh s:chmod s:chown s:keylog s:logcleaner s:login s:password s:/ptmx s:/pty s:setgid s:setreuid s:setuid s:shellcode s:tmp/sh s:/tty s:\"/\x[a-z0-9]\{2\}.* t:'0^wN' t:0wn3d t:0wned t:advantag t:advisory t:affect t:allocation t:anony t:arbitr t:attack t:authenti t:bogus t:brute t:buscar t:comando t:crypt t:decode t:destinat t:destruct t:device t:/dev/kmem t:/dev/mem t:disclosure t:discover t:distrib t:downloader t:elf-init t:elflbl t:endian t:enem t:evasion t:exception t:exclusiv t:existant t:exploit t:fake t:fatal t:fixed t:fragment t:fuckin t:group t:h[a4]x[oO0]r t:hardcod t:harvest t:heap t:hexdump t:hidden t:hide t:host t:hostile t:hotfix t:infect t:info t:init t:inject t:kernel t:kill t:leak t:'log(' t:mech t:modif[yi] t:mprotect t:nvalid t:overwrit t:pages t:patch t:payload t:philar\.pl t:pointer t:priv[a8] t:process t:procur t:publi[cs] t:purpose t:registered t:risk t:r.nin t:sapphire t:scam t:segment t:sent t:shell.php t:signed t:sniff t:spawn t:spoof t:stealth t:succes t:suficiente t:terminate t:transact t:transpar t:udp.pl t:victim t:violat t:vma t:vuln t:worm t:wreck v:aleph v:OpticFiber x:apache x:mambo x:openssl x:samba x:sshd x:wwwadmin ; do
-					# Searchterm with class
-					case "${SUSPSCAN_STRING}" in
-						[a-z]:*) # I mean: term=${s//*:}
-							 # Class as in asm, text, networking, IRC
-							 SUSPSCAN_CLASS=`echo "${SUSPSCAN_STRING}"|awk -F':' '{print $1}'`
-							 SUSPSCAN_TERM=`echo "${SUSPSCAN_STRING}"|awk -F':' '{print $2}'`
-							 ;;
-					esac
-					# Searchterm with multiplier
-					case "${SUSPSCAN_STRING}" in
-						*+[0-9]*) # I mean: term="${s%%+*}";
-							  SUSPSCAN_TERM=`echo "${SUSPSCAN_STRING}"|awk -F'+' '{print $1}'`
-							  SUSPSCAN_MULTIPLIER=`echo "${SUSPSCAN_STRING}"|awk -F'+' '{print $2}'`
-							  ;;
-					esac
-					grep -i "${SUSPSCAN_STRING}" "${SUSPSCAN_TEMP}/${suspscan}.$$.strings"|head -1
+		if [ -d "${SUSPSCAN_DIR}" ]; then
+			FOUND=0
+
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIR_CHECK "${SUSPSCAN_DIR}"
+			fi
+
+# jh			$FIND_CMD "${SUSPSCAN_DIR}" ! -type d | while read SUSPSCAN_ITEM; do
+			for SUSPSCAN_ITEM in `$FIND_CMD "${SUSPSCAN_DIR}" ! -type d`; do
+				SUSPSCAN_TYPE=`$STAT_CMD -c %F "${SUSPSCAN_ITEM}" | tr '[A-Z]' '[a-z]'`
+				SUSPSCAN_SIZE=`$STAT_CMD -c %s "${SUSPSCAN_ITEM}"`
+
+				if [ -s "${SUSPSCAN_ITEM}" -a $SUSPSCAN_SIZE -le $SUSPSCAN_MAXSIZE -a "$SUSPSCAN_TYPE" = "regular file" ]; then
+					$FILE_CMD "${SUSPSCAN_ITEM}" | cat -v | cut -d' ' -f2- | egrep -i 'execu|shell|libr' >/dev/null
 					if [ $? -eq 0 ]; then
-					# Use hitlist to find relationship with other terms and influence multiplier. Examples:
-					# {opcode,jmpcode} + {disclosure,privat,kernel}
-					# {bin/sh,tmp/sh} + {setuid,setgid,drop}
-					# irc + {server,nick,iroffer,?dcc}
-					# This implies the "more serious" terms need to be moved to the front of the table.
-					# We could also prefix a category along the lines of a: (asm) e: (exploit) to help classification: e:jmp+100 e:%e[cx,si]+100
-					SUSPSCAN_HITS="$SUSPSCAN_NUM ${SUSPSCAN_HITS}";
-						if [ -n "$SUSPSCAN_MULTIPLIER" ]; then
-							SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + ${SUSPSCAN_MULTIPLIER}` 
-							unset SUSPSCAN_MULTIPLIER
-						else
-							SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + 1`
+						FOUND=1
+						SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0
+
+						$STRINGS_CMD -n 10 "${SUSPSCAN_ITEM}" >"${SUSPSCAN_TEMP}/suspscan.$$.strings" 2>&1
+
+						# Too short, need extended regex or influence relation only on these: dcc irc bot ban chan
+						# False positives: memory
+						# The list below should be broken out to a .dat file or rkhunter.conf.
+
+						for SUSPSCAN_STRING in a:0x..,.0x.., a:add?  a:asm a:%:bh a:decb a:decl a:disasm a:%e[bp,di,sp] a:%e[cx,si] a:%e?x a:%hi a:inc[b,l] a:jmp a:jmpcode ajuda a:jump a:%?l a:mov?  a:nasm a:ndisasm a:nopsize a:notb a:offset a:opcode a:p[op,ush] a:reassembl a:ret a:ro[r,l]b a:sub?  a:xor d:bonk d:flood d:jolt d:kuang d:land d:nuke d:saihyousen d:tear d:teardrop f:abort f:access f:AF_INET f:atoi@ f:buf[fe,si] f:call f:changeown f:exec.* f:fopen@ f:fread f:free f:fscanf f:loop f:lseek f:malloc f:memcpy f:memset f:mmap f:putenv f:static.char.*= f:str[len,cat] f:'system(' i:botz i:bounc i:dalnet i:dc\.pl i:eggbot i:eggshell i:invite i:irc\.  i:iroffer i:nick i:pbsync i:psybnc i:vhost i:xdcc n:bind n:connect n:'connect(' n:'gethostbyname(' n:'getprotobyname(' n:ident n:inet n:'inet_aton(' n:IO::Socket n:listen n:network n:packet n:relay n:remote n:resolv n:rhost n:sendfile n:server n:setsockopt n:'(?sock' n:sockaddr n:'sockaddr_in(' n:sock[ad,et,fd] n:'socket(' n:'socket@' n:socketcall n:socklen n:'sockopen(' s:?0x[a-z0-9]\{2\}.* s:backdoor s:/bin/sh s:chmod s:chown s:keylog s:logcleaner s:login s:password s:/ptmx s:/pty s:setgid s:setreuid s:setuid s:shellcode s:tmp/sh s:/tty s:\"/\x[a-z0-9]\{2\}.* t:'0^wN' t:0wn3d t:0wned t:advantag t:advisory t:affect t:allocation t:anony t:arbitr t:attack t:authenti t:bogus t:brute t:buscar t:comando t:crypt t:decode t:destinat t:destruct t:device t:/dev/kmem t:/dev/mem t:disclosure t:discover t:distrib t:downloader t:elf-init t:elflbl t:endian t:enem t:evasion t:exception t:exclusiv t:existant t:exploit t:fake t:fatal t:fixed t:fragment t:fuckin t:group t:h[a4]x[oO0]r t:hardcod t:harvest t:heap t:hexdump t:hidden t:hide t:host t:hostile t:hotfix t:infect t:info t:init t:inject t:kernel t:kill t:leak t:'log(' t:mech t:modif[yi] t:mprotect t:nvalid t:overwrit t:pages t:patch t:payload t:philar\.pl t:pointer t:priv[a8] t:process t:procur t:publi[cs] t:purpose t:registered t:risk t:r.nin t:sapphire t:scam t:segment t:sent t:shell.php t:signed t:sniff t:spawn t:spoof t:stealth t:succes t:suficiente t:terminate t:transact t:transpar t:udp.pl t:victim t:violat t:vma t:vuln t:worm t:wreck v:aleph v:OpticFiber x:apache x:mambo x:openssl x:samba x:sshd x:wwwadmin ; do
+							#
+							# Searchterm with class
+							#
+
+							case "${SUSPSCAN_STRING}" in
+							[a-z]:*) # I mean: term=${s//*:}
+								 # Class as in asm, text, networking, IRC
+								 SUSPSCAN_CLASS=`echo "${SUSPSCAN_STRING}"|awk -F':' '{print $1}'`
+								 SUSPSCAN_TERM=`echo "${SUSPSCAN_STRING}"|awk -F':' '{print $2}'`
+								 ;;
+							esac
+
+							#
+							# Searchterm with multiplier
+							#
+
+							case "${SUSPSCAN_STRING}" in
+							*+[0-9]*) # I mean: term="${s%%+*}";
+								  SUSPSCAN_TERM=`echo "${SUSPSCAN_STRING}"|awk -F'+' '{print $1}'`
+								  SUSPSCAN_MULTIPLIER=`echo "${SUSPSCAN_STRING}"|awk -F'+' '{print $2}'`
+								  ;;
+							esac
+
+							grep -i "${SUSPSCAN_STRING}" "${SUSPSCAN_TEMP}/suspscan.$$.strings" | head -n 1 >/dev/null
+							if [ $? -eq 0 ]; then
+								#
+								# Use hitlist to find relationship with other terms and influence multiplier. Examples:
+								# {opcode,jmpcode} + {disclosure,privat,kernel}
+								# {bin/sh,tmp/sh} + {setuid,setgid,drop}
+								# irc + {server,nick,iroffer,?dcc}
+								# This implies the "more serious" terms need to be moved to the front of the table.
+								# We could also prefix a category along the lines of:
+								# a: (asm) e: (exploit) to help classification: e:jmp+100 e:%e[cx,si]+100
+								#
+
+								SUSPSCAN_HITS="$SUSPSCAN_NUM ${SUSPSCAN_HITS}"
+
+								if [ -n "$SUSPSCAN_MULTIPLIER" ]; then
+									SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + ${SUSPSCAN_MULTIPLIER}` 
+									unset SUSPSCAN_MULTIPLIER
+								else
+									SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + 1`
+								fi
+							fi
+
+							SUSPSCAN_NUM=`expr ${SUSPSCAN_NUM} + 1`
+						done
+
+						if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
+							FOUNDDIRS="${FOUNDDIRS}
+$SUSPSCAN_SCORE ${SUSPSCAN_ITEM}"
 						fi
-					fi
-					SUSPSCAN_NUM=`expr ${SUSPSCAN_NUM} + 1`
-					done
-				if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
-					display --to LOG --type PLAIN --result WARNING --color RED --log-indent 9 SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" $SUSPSCAN_SCORE
-				fi
-				unset SUSPSCAN_TERM
-				rm -f "${SUSPSCAN_TEMP}/${suspscan}.$$.strings"
-				fi # test stringscan 
-			fi # test reg file
-		done # find dir
+
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SIZE" "${SUSPSCAN_TYPE}" "$SUSPSCAN_SCORE"
+						fi
+
+						unset SUSPSCAN_TERM
+						rm -f "${SUSPSCAN_TEMP}/suspscan.$$.strings" >/dev/null 2>&1
+					fi # test stringscan 
+				fi # test reg file
+			done # find dir
+
+			if [ $VERBOSE_LOGGING -eq 1 -a $FOUND -eq 0 ]; then
+				display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_DIR_CHECK_NO_FILES
+			fi
+		else
+			display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIR_NOT_EXIST "${SUSPSCAN_DIR}"
 		fi # test dir exists
 	done # outer loop dirs
-display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SUSPSCAN_END
-# End of suspscan
 
 
+	#
+	# Now display the results.
+	#
+
+	if [ -z "${FOUNDDIRS}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
+	else
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+
+		IFS=$IFSNL
+
+		for RKHTMPVAR in ${FOUNDDIRS}; do
+			SUSPSCAN_SCORE=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+			SUSPSCAN_ITEM=`echo "${RKHTMPVAR}" | cut -d' ' -f2-`
+
+			display --to LOG --type WARNING SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" $SUSPSCAN_SCORE
+		done
+
+		IFS=$RKHIFS
+	fi
+
+	return
 }
+
 
 do_system_commands_checks() {
 
@@ -6158,13 +6320,6 @@ additional_rootkit_checks() {
 
 
 malware_checks() {
-        # 
-        # Next we run suspscan.
-        # 
-
-        if `check_test suspscan`; then
-                suspscan
-        fi
 
 	#
 	# This function performs malware checks.
@@ -6177,6 +6332,7 @@ malware_checks() {
 
 
 	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_MALWARE_START
+
 
 	#
 	# First we check for processes using deleted files.
@@ -6403,6 +6559,13 @@ ${PROC} ${PID} ${FNAME}"
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_procs
 	fi
+
+
+	# 
+	# Next we run the check for suspicious file contents.
+	# 
+
+	suspscan
 
 
 	#
@@ -9864,7 +10027,7 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:shared_libs_path:immutable:attributes
 	       properties:hashes:scripts:immutable:attributes
 	       shared_libs:shared_libs_path
-	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojan:other_malware:os_specific
+	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojan:other_malware:os_specific:suspscan
 	       additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings
 	       possible_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps

@@ -109,13 +109,13 @@
    distributions that may patch a 'known bad' version, but without updating
    the original version number.
  - Added 'suspscan' to malware tests. Suspscan attempts to scan files in 
-   directories containing temporary files for signs of malicious activity and
-   could be of use on (publicly accessable) webservers running for instance 
+   directories containing temporary files for signs of malicious activity, and
+   could be of use on (publicly accessable) web servers running for instance 
    PHP-based applications. Please note that in it's current state suspscan is 
-   prone to reporting false positives and is CPU and I/O intensive to boot.
+   prone to reporting false positives, and is CPU and I/O intensive to boot.
    Therefore suspscan is disabled by default. Please do not enable suspscan
    unless you have good reasons to use it. Review the settings in the configu-
-   ration file and test before deploying it on production servers. 
+   ration file, and test before deploying it on production servers. 
 
  Changes:
  - Improved command-line and config file option checking.
