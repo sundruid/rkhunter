@@ -1,4 +1,4 @@
-Version:2007050101
+Version:2007050201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -481,5 +481,5 @@ SUSPSCAN_NO_THRESH:No score threshold specified: using default ($1)
 SUSPSCAN_THRESH_INVALID:The suspscan score threshold is invalid: $1
 SUSPSCAN_DIR_CHECK:Checking directory: $1
 SUSPSCAN_DIR_CHECK_NO_FILES:No suitable files found to check.
-SUSPSCAN_FILE_CHECK:File checked: Name: $1    Size: $2    Type: $3    Score: $4
+SUSPSCAN_FILE_CHECK:File checked: Name: $1    Score: $2
 
