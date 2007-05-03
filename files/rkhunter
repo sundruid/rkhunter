@@ -5252,7 +5252,7 @@ suspscan() {
 							  ;;
 						esac
 
-						grep -i "${SUSPSCAN_TERM}" ${FILENAME} | head -n 1 >/dev/null
+						grep -i "${SUSPSCAN_TERM}" ${FILENAME} >/dev/null 2>&1
 						if [ $? -eq 0 ]; then
 							#
 							# Use hitlist to find relationship with other terms and influence multiplier. Examples:
