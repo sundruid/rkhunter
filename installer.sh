@@ -519,7 +519,7 @@ for FILE in ${RKHINST_BIN_FILES}; do
 			cp -f ./files/"${FILE}" "${RKHINST_BIN_DIR}/${FILE}"; retValChk
 			;;
 		*)	
-			sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" ./files/"${FILE}" > "${RKHINST_BIN_DIR}/${FILE}"; retValChk
+			sed -e "s|-f /etc/rkhunter.conf|-f $RKHINST_ETC_DIR/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$RKHINST_ETC_DIR|g" ./files/"${FILE}" > "${RKHINST_BIN_DIR}/${FILE}"; retValChk
 			;;
 	esac
 	chmod "${RKHINST_MODE_EX}" "${RKHINST_BIN_DIR}/${FILE}"
