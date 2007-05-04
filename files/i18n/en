@@ -1,4 +1,4 @@
-Version:2007050201
+Version:2007050401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -73,24 +73,34 @@ CONFIG_SOL10_INETD:Using Solaris 10 and later inetd mechanism
 FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
 
-SYS_PRELINK_FUNC:System is using prelinking: using $1 ($2) for hash checks
-SYS_PRELINK_FUNC_NONE:System is using prelinking: hash checks disabled: NONE specified
-
+SYS_PRELINK:System is using prelinking
 SYS_NO_PRELINK:System is not using prelinking
-HASH_FUNC_PERL:Using the perl $1 module for the file hash value checks
-HASH_FUNC:Using the '$1' command for the file hash value checks
-HASH_FUNC_NONE:Hash checks disabled: NONE specified
+HASH_FUNC_PRELINK:Using prelink command (with $1) for file hash checks
+
+HASH_FUNC_PERL:Using the perl $1 module for the file hash checks
+HASH_FUNC:Using the '$1' command for the file hash checks
+HASH_FUNC_NONE:File hash checks disabled: NONE specified
 HASH_FUNC_DISABLED:Hash function set to 'NONE': automatically disabling file hash checks
 HASH_FUNC_OLD:Stored hash values used hash function '$1'
 HASH_FUNC_OLD_DISABLED:Previous hash function was disabled: no hash values were stored
-HASH_PKGMGR_OLD:Stored hash values used package manager '$1' $2
+HASH_PKGMGR_OLD:Stored hash values used package manager '$1'
+HASH_PKGMGR_OLD_NONMD5:Stored hash values used package manager '$1' (md5 function)
 HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a packet manager
+
+HASH_PKGMGR:Using package manager '$1' to check the file hash values
+HASH_PKGMGR_NOT_SPEC:No file hash package manager specified: using hash function '$1'
+HASH_PKGMGR_NOT_SPEC_PRELINKED:No file hash package manager specified: using prelink command with '$1'
+
 HASH_FIELD_INDEX:The hash function field index is set to $1
 
 HASHUPD_DISABLED:Hash checks disabled: current file hash values will not be stored
 HASHUPD_PKGMGR:Using package manager '$1' to update the file hash values
 HASHUPD_PKGMGR_NONE:Package manager 'NONE' specified: using hash function '$1'
+HASHUPD_PKGMGR_NONE_PRELINKED:Package manager 'NONE' specified: using prelink command with '$1'
 HASHUPD_PKGMGR_NOT_SPEC:No file hash update package manager specified: using hash function '$1'
+HASHUPD_PKGMGR_NOT_SPEC_PRELINKED:No file hash update package manager specified: using prelink command with '$1'
+HASHUPD_PKGMGR_MD5:Using MD5 hash function command '$1' as the package manager
+HASHUPD_PKGMGR_MD5_PRELINK:Using prelink command (with $1) as the package manager
 
 ATTRUPD_DISABLED:File attribute checks disabled: current file attributes will not be stored
 ATTRUPD_NOSTAT:File attribute checks disabled: no 'stat' command found: current file attributes will not be stored
@@ -461,7 +471,7 @@ SHARED_LIBS_PRELOAD_VAR_FOUND:Found library preload variable(s): $1
 SHARED_LIBS_PRELOAD_FILE:Checking for preload file
 SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1
 SHARED_LIBS_PATH:Checking LD_LIBRARY_PATH variable
-SHARED_LIBS_PATH_BAD:The LD_LIBRARY_PATH environment variable influences binaries: $1
+SHARED_LIBS_PATH_BAD:The LD_LIBRARY_PATH environment variable is set and can influence binaries: set to: $1
 
 SUSPSCAN_CHECK:Checking for files with suspicious contents
 SUSPSCAN_DIR_NOT_EXIST:The directory '$1' does not exist.

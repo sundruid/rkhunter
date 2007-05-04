@@ -2029,6 +2029,30 @@ get_if_prelinked() {
 }
 
 
+get_md5_hash_function() {
+
+	#
+	# This is a short function to try and locate
+	# an MD5 hash function command.
+	#
+
+	HFUNC=`find_cmd md5sum`
+
+	test -z "${HFUNC}" && HFUNC=`find_cmd md5`
+
+	if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
+		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
+
+		test -n "${MOD_INSTALLED}" && echo "${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
+	else
+		echo "${HFUNC}"
+		MD5_CMD="${HFUNC}"
+	fi
+
+	return
+}
+
+
 get_hash_function() {
 
 	#
@@ -2056,20 +2080,25 @@ get_hash_function() {
 	#
 
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "SHA1" ]; then
-		HF=`find_cmd sha1sum`
-
-		test -z "${HF}" && HF=`find_cmd sha1`
-
-		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA1 2>&1 | grep 'Digest::SHA1 installed'`
-
-			if [ -n "${MOD_INSTALLED}" ]; then
-				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha1.pl"
-			else
-				HASH_FUNC=""
-			fi
+		if [ $PRELINKED -eq 1 ]; then
+			PRELINK_HASH="SHA1"
+			HASH_FUNC="${PRELINK_CMD} --verify --sha"
 		else
-			HASH_FUNC=$HF
+			HF=`find_cmd sha1sum`
+
+			test -z "${HF}" && HF=`find_cmd sha1`
+
+			if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA1 2>&1 | grep 'Digest::SHA1 installed'`
+
+				if [ -n "${MOD_INSTALLED}" ]; then
+					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha1.pl"
+				else
+					HASH_FUNC=""
+				fi
+			else
+				HASH_FUNC=$HF
+			fi
 		fi
 	fi
 
@@ -2079,20 +2108,11 @@ get_hash_function() {
 	#
 
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "MD5" ]; then
-		HF=`find_cmd md5sum`
-
-		test -z "${HF}" && HF=`find_cmd md5`
-
-		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
-
-			if [ -n "${MOD_INSTALLED}" ]; then
-				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
-			else
-				HASH_FUNC=""
-			fi
+		if [ $PRELINKED -eq 1 ]; then
+			PRELINK_HASH="MD5"
+			HASH_FUNC="${PRELINK_CMD} --verify --md5"
 		else
-			HASH_FUNC=$HF
+			HASH_FUNC=`get_md5_hash_function`
 		fi
 	fi
 
@@ -2223,6 +2243,19 @@ get_hash_function() {
 
 		if [ ! -d "/var/db/pkg" ]; then
 			echo "Unable to find package database directory (/var/db/pkg) for package manager 'BSD'."
+			exit 1
+		fi
+		;;
+	MD5)
+		if [ $PRELINKED -eq 1 ]; then
+			PKGMGR_PRELINK_HASH="MD5"
+			PKGMGR_MD5_HASH="${PRELINK_CMD} --verify --md5"
+		else
+			PKGMGR_MD5_HASH=`get_md5_hash_function`
+		fi
+
+		if [ -z "${PKGMGR_MD5_HASH}" ]; then
+			echo "Unable to find an MD5 hash function command for package manager 'MD5'."
 			exit 1
 		fi
 		;;
@@ -2559,17 +2592,19 @@ rkh_dat_set_file_properties() {
 		HCMD=""
 		SYSHASH=""
 	else
-		if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" ]; then
+		if [ -n "${PKGMGR}" ]; then
 			RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
 		fi
 
 		if [ $PRELINKED -eq 0 -o "${HASH_FUNC}" = "NONE" ]; then
 			HCMD="${HASH_FUNC}"
 		else
-			if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
+			if [ "${PRELINK_HASH}" = "MD5" ]; then
 				HCMD="${PRELINK_CMD} --verify --md5"
-			else
+			elif [ "${PRELINK_HASH}" = "SHA1" ]; then
 				HCMD="${PRELINK_CMD} --verify --sha"
+			else
+				HCMD="${HASH_FUNC}"
 			fi
 		fi
 	fi
@@ -2625,6 +2660,8 @@ rkh_dat_set_file_properties() {
 
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
 					fi
+				elif [ "${PKGMGR}" = "MD5" ]; then
+					SYSHASH=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 				fi
 
 				if [ -z "${SYSHASH}" -a "${HCMD}" != "NONE" ]; then
@@ -2745,7 +2782,12 @@ do_prop_update() {
 		echo "Hash:Disabled" >>${RKHDAT_FILE}
 		echo "Pkgmgr:" >>${RKHDAT_FILE}
 	else
-		echo "Hash:${HASH_FUNC}" >>${RKHDAT_FILE}
+		if [ -n "${PRELINK_HASH}" ]; then
+			echo "Hash:${PRELINK_HASH}" >>${RKHDAT_FILE}
+		else
+			echo "Hash:${HASH_FUNC}" >>${RKHDAT_FILE}
+		fi
+
 		echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_FILE}
 	fi
 
@@ -4240,13 +4282,22 @@ shared_libs_check() {
 		if [ -n "${LDD_CMD}" ]; then
 			if [ -n "${LD_LIBRARY_PATH}" ]; then
 				LD_LIBR_FAILED=0
+				RKHTMPVAR_BIN=""
 				LD_LIBRARY_PATH_SAVED="${LD_LIBRARY_PATH}"
+
+				if [ -z "${MD5_CMD}" ]; then
+					MD5_CMD=`find_cmd md5sum`
+					test -z "${MD5_CMD}" && MD5_CMD=`find_cmd md5`
+				fi
 
 				LS_CMD=`find_cmd ls`
 
-				RKHTMPVAR_BIN="${FIND_CMD} ${PS_CMD}
-					${STRINGS_CMD} ${MD5_CMD} {LS_CMD}
-					${STAT_CMD}"
+				for RKHTMPVAR in FIND PS STRINGS MD5 LS STAT; do
+					RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
+					RKHTMPVAR=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+
+					RKHTMPVAR_BIN="${RKHTMPVAR_BIN} ${RKHTMPVAR}"
+				done
 
 				for RKHTMPVAR in ${RKHTMPVAR_BIN}; do
 					LD_LIBRARY_PATH="${LD_LIBRARY_PATH_SAVED}"
@@ -4278,7 +4329,7 @@ shared_libs_check() {
 				if [ $LD_LIBR_FAILED -eq 0 ]; then
 					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PATH
 				else
-					display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PATH
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PATH
 					display --to LOG --type WARNING SHARED_LIBS_PATH_BAD "${LD_LIBRARY_PATH}"
 				fi
 			else
@@ -4578,7 +4629,7 @@ file_properties_check() {
 		SYSHASH=""
 	else
 		if [ $PRELINKED -eq 0 ]; then
-			HCMD=$HASH_FUNC
+			HCMD="${HASH_FUNC}"
 		else
 			if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
 				HCMD="${PRELINK_CMD} --verify --md5"
@@ -9781,8 +9832,8 @@ help() {
 	echo "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
 	echo "   --ns, --nosummary                   Do not show the summary of check results"
 	echo " --novl, --no-verbose-logging          No verbose logging"
-	echo "         --pkgmgr [RPM|DPKG|BSD|NONE]  Use specified package manager to obtain"
-	echo "                                       file hash values. (Default is NONE)"
+	echo "         --pkgmgr [RPM|DPKG|BSD|MD5|   Use specified package manager to obtain or"
+	echo "                   NONE]               verify file hash values. (default is NONE)"
 	echo "         --propupd                     Update the file properties database"
 	echo "     -q, --quiet                       Quiet mode (no output at all)"
 	echo "  --rwo, --report-warnings-only        Show only warnings"
@@ -9880,6 +9931,10 @@ PROP_FILE_LIST_TOTAL=0
 
 PRELINKED=0
 PRELINK_CMD=""
+PRELINK_HASH=""
+PKGMGR_MD5_HASH=""
+PKGMGR_PRELINK_HASH=""
+MD5_CMD=""
 
 UPDATE=0
 PROP_UPDATE=0
@@ -10580,11 +10635,13 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	# hash function and package manager.
 	#
 
-	OLD_HASH_FUNC=`grep '^Hash:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+	if [ -f "${DB_PATH}/rkhunter.dat" ]; then
+		OLD_HASH_FUNC=`grep '^Hash:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
 
-	OLD_PKGMGR=`grep '^Pkgmgr:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
+		OLD_PKGMGR=`grep '^Pkgmgr:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
 
-	OLD_ATTRUPD=`grep '^Attributes:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
+		OLD_ATTRUPD=`grep '^Attributes:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
+	fi
 fi
 
 
@@ -10592,14 +10649,16 @@ if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a \( -z "${PKGMGR}" -o "${PKGMGR}" 
 	#
 	# For a hash update on a prelinked system, we must have
 	# a valid hash function to use. The package managers use
-	# MD5 by default.
+	# an md5 hash function by default.
 	#
 
-	RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+	if [ -z "${PRELINK_HASH}" ]; then
+		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 
-	if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
-		echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
-		exit 1
+		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+			echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+			exit 1
+		fi
 	fi
 fi
 
@@ -10681,7 +10740,7 @@ fi
 # First we set whether we should be displaying anything on the
 # screen or not.
 #
-if [ $CRONJOB -eq 1 -o $QUIET -eq 1 -o ! -t 1 ]; then
+if [ $CRONJOB -eq 1 -o $QUIET -eq 1 -o ! -t 0 ]; then
 	NOTTY=1
 fi
 
@@ -10846,6 +10905,8 @@ fi
 
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	if [ $PRELINKED -eq 1 ]; then
+		display --to LOG --type INFO SYS_PRELINK
+
 		RKHTMPVAR="${PRELINK_CMD}"
 		test -n "${RUNCON_CMD}" && RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^.* unconfined_t -- //'`
 
@@ -10857,15 +10918,14 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			display --to LOG --type INFO NOT_FOUND_CMD 'runcon'
 		fi
 
-		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 		if [ "${HASH_FUNC}" = "NONE" ]; then
-			display --to LOG --type INFO SYS_PRELINK_FUNC_NONE
-		elif [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+			display --to LOG --type INFO HASH_FUNC_NONE
+		elif [ -n "${PRELINK_HASH}" ]; then
+			display --to LOG --type INFO HASH_FUNC_PRELINK "${PRELINK_HASH}"
+		elif [ -z "`echo \"${HASH_FUNC}\" | egrep -i 'sha1|md5'`" ]; then
 			SKIP_HASH_MSG=2
-		elif [ -n "`echo ${RKHTMPVAR} | grep -i 'sha1'`" ]; then
-			display --to LOG --type INFO SYS_PRELINK_FUNC 'SHA1' "${HASH_FUNC}"
 		else
-			display --to LOG --type INFO SYS_PRELINK_FUNC 'MD5' "${HASH_FUNC}"
+			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
 		fi
 	else
 		display --to LOG --type INFO SYS_NO_PRELINK
@@ -10889,24 +10949,38 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 
 	if [ -z "${OLD_PKGMGR}" ]; then
 		display --to LOG --type INFO HASH_PKGMGR_OLD_UNSET
-	elif [ "${OLD_PKGMGR}" = "NONE" ]; then
-		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}" ""
+	elif [ "${OLD_PKGMGR}" = "NONE" -o "${OLD_PKGMGR}" = "MD5" ]; then
+		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}"
 	else
-		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}" "(MD5)"
+		display --to LOG --type INFO HASH_PKGMGR_OLD_NONMD5 "${OLD_PKGMGR}"
 	fi
 
-	if [ "${HASH_FUNC}" != "NONE" ]; then
-		display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
-	fi
+	display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
 
 	if [ $PROP_UPDATE -eq 1 ]; then
 		if ! `check_test hashes`; then
 			display --to LOG --type INFO HASHUPD_DISABLED
 		elif [ -z "${PKGMGR}" ]; then
-			display --to LOG --type INFO HASHUPD_PKGMGR_NOT_SPEC "${HASH_FUNC}"
+			if [ $PRELINKED -eq 1 ]; then
+				if [ -n "${PRELINK_HASH}" ]; then
+					display --to LOG --type INFO HASHUPD_PKGMGR_NOT_SPEC_PRELINKED "${PRELINK_HASH}"
+				else
+					display --to LOG --type INFO HASHUPD_PKGMGR_NOT_SPEC "${HASH_FUNC}"
+				fi
+			else
+				display --to LOG --type INFO HASHUPD_PKGMGR_NOT_SPEC "${HASH_FUNC}"
+			fi
 		elif [ "${PKGMGR}" = "NONE" ]; then
-			display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
-		else
+			if [ $PRELINKED -eq 1 ]; then
+				if [ -n "${PRELINK_HASH}" ]; then
+					display --to LOG --type INFO HASHUPD_PKGMGR_NONE_PRELINKED "${PRELINK_HASH}"
+				else
+					display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
+				fi
+			else
+				display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
+			fi
+		elif [ -n "${PKGMGR}" ]; then
 			display --to LOG --type INFO HASHUPD_PKGMGR "${PKGMGR}"
 
 			if [ "${PKGMGR}" = "RPM" ]; then
@@ -10919,6 +10993,64 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				fi
 			elif [ "${PKGMGR}" = "BSD" ]; then
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
+			elif [ "${PKGMGR}" = "MD5" ]; then
+				if [ $PRELINKED -eq 1 ]; then
+					if [ -n "${PKGMGR_PRELINK_HASH}" ]; then
+						display --to LOG --type INFO HASHUPD_PKGMGR_MD5_PRELINK "${PKGMGR_PRELINK_HASH}"
+					else
+						display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+					fi
+				else
+					display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				fi
+			fi
+		fi
+	fi
+
+	if [ $HASH_CHECK_ENABLED -eq 1 ]; then
+		if [ -z "${PKGMGR}" ]; then
+			if [ $PRELINKED -eq 1 ]; then
+				if [ -n "${PRELINK_HASH}" ]; then
+					display --to LOG --type INFO HASH_PKGMGR_NOT_SPEC_PRELINKED "${PRELINK_HASH}"
+				else
+					display --to LOG --type INFO HASH_PKGMGR_NOT_SPEC "${HASH_FUNC}"
+				fi
+			else
+				display --to LOG --type INFO HASH_PKGMGR_NOT_SPEC "${HASH_FUNC}"
+			fi
+		elif [ "${PKGMGR}" = "NONE" ]; then
+			if [ $PRELINKED -eq 1 ]; then
+				if [ -n "${PRELINK_HASH}" ]; then
+					display --to LOG --type INFO HASHUPD_PKGMGR_NONE_PRELINKED "${PRELINK_HASH}"
+				else
+					display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
+				fi
+			else
+				display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
+			fi
+		elif [ -n "${PKGMGR}" ]; then
+			display --to LOG --type INFO HASH_PKGMGR "${PKGMGR}"
+
+			if [ "${PKGMGR}" = "RPM" ]; then
+				display --to LOG --type INFO FOUND_CMD "rpm" "${RPM_CMD}"
+			elif [ "${PKGMGR}" = "DPKG" ]; then
+				if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
+					display --to LOG --type INFO FOUND_CMD "dpkg-query" "${DPKG_CMD}"
+				else
+					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
+				fi
+			elif [ "${PKGMGR}" = "BSD" ]; then
+				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
+			elif [ "${PKGMGR}" = "MD5" ]; then
+				if [ $PRELINKED -eq 1 ]; then
+					if [ -n "${PKGMGR_PRELINK_HASH}" ]; then
+						display --to LOG --type INFO HASHUPD_PKGMGR_MD5_PRELINK "${PKGMGR_PRELINK_HASH}"
+					else
+						display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+					fi
+				else
+					display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				fi
 			fi
 		fi
 	fi
