@@ -4500,8 +4500,6 @@ file_properties_check() {
 
 	RKHTMPVAR=""
 
-	test -z "`echo \"${PKGMGR}\" | egrep 'RPM|DPKG|BSD'`" && USE_PKGMGR_VERIFY=0
-
 	if [ $SKIP_ATTR -eq 0 -a -z "${STAT_CMD}" ]; then
 		SKIP_ATTR=1
 		RKHTMPVAR="${RKHTMPVAR} attr"
@@ -4741,6 +4739,8 @@ file_properties_check() {
 	# perform the tests on each one.
 	#
 
+	VERIFIED_PKG_LIST=""
+
 	for DIR in ${PROP_DIR_LIST}; do
 		for FNAME in ${PROP_FILE_LIST}; do
 			TEST_RESULT=""
@@ -4809,31 +4809,63 @@ file_properties_check() {
 				#
 
 				if [ "${PKGMGR}" = "RPM" ]; then
-					PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>/dev/null`
+					if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+						#
+						# First we get the package name for the file being tested.
+						#
 
-					if [ $? -ne 0 ]; then
-						RKH_USE_PKGMGR_VERIFY=0
-					else
-						PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | cut -d' ' -f1`
+						PKG_NAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+
+						if [ $? -eq 0 ]; then
+							#
+							# Okay we have a package name. Is it in the list
+							# of packages we have already tested as verified?
+							#
+							# If multiple versions of the same package
+							# have been installed, we use the last one.
+							#
+
+							PKG_NAME=`echo "${PKG_NAME}" | tail -1`
+
+							if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKG_NAME} \"`" ]; then
+								#
+								# No, it isn't. So we verify the package and either
+								# add it to the list if it verifies okay, or get the
+								# verification result for the file.
+								#
+
+								PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>/dev/null`
+
+								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+									VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKG_NAME} "
+								else
+									PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
+								fi
+							fi
+						else
+							RKH_USE_PKGMGR_VERIFY=0
+						fi
 					fi
 
 
-					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+					if [ $RKH_USE_PKGMGR_VERIFY -eq 0 ]; then
+						RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 
-					if [ $? -eq 0 ]; then
-						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
-						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
+						if [ $? -eq 0 ]; then
+							FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
+							FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
 
-						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
-						RKHUID=`${ID_CMD} -u ${RKHUID} 2>/dev/null`
+							RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+							RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
 
-						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
-						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
+							RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+							RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
 
-						FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
-						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHDTM}:"
+							FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
+							FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHDTM}:"
+						fi
 					fi
 				fi
 
