@@ -42,12 +42,13 @@
    check consists of two main parts - the file attributes (permissions, uid
    etc), and the hash value. Both are stored in rkhunter.dat. Either part, or
    both, can be disabled using the '--disable' option.
- - Added the HASH_FUNC option to the configuration file. This allows a user
-   to select the hash function command they want to use for the file hash
-   value check and the properties update. By default SHA1 will be used. For
-   prelinked systems, the function must be either MD5 or SHA1. A value of
-   NONE can be used to disable the hash check or to stop the hash values
-   being recorded in the rkhunter.dat file.
+ - Added the '--hash' command-line option, and the HASH_FUNC option to the
+   configuration file. This allows a user to select the hash function command
+   they want to use for the file hash value check and the properties update.
+   By default SHA1 will be used, or MD5 if SHA1 cannot be found. For prelinked
+   systems the function must be either MD5 or SHA1. A value of NONE can be used
+   to disable the hash check or to stop the hash values being recorded in the
+   rkhunter.dat file.
  - Added the HASH_FLD_IDX option to the configuration file. This specifies the
    field of the HASH_FUNC command output which contains the hash value. A
    default of 1 is used, except for *BSD systems where 4 will be used.
@@ -142,7 +143,7 @@
    file if the --propupd option is used.
  - The previous 'known good' hash check now also checks the files inode, uid,
    gid, permissions and modification date/time, for any changes. The latter
-   is only for non-prelinked systems. As before, in all cases, the hash
+   is only for non-prelinked systems. As before, in all cases, the file hash
    is checked.
  - Improved the O/S detection mechanism. Rather than requiring users to send
    us details, rkhunter actively looks at the 'release' file(s) to find the
@@ -247,7 +248,7 @@
  - The file hash prelink test should now work even if SELinux objects to the
    prelink command (provided the 'runcon' command exists). When the '--propupd'
    option is used, any file for which a hash cannot be obtained is logged as
-   a warning. (Typically prelink needs to be run on the file.) Rkhunter will
+   a warning. (Typically prelink may need to be run on the file.) Rkhunter will
    still work as before, but the file properties check may show that the hash
    value has changed to or from a null value.
  - Corrected file attributes check - previously the immutable flag would never

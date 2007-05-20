@@ -2060,14 +2060,27 @@ get_hash_function() {
 	# check on whether it is empty or a space.
 	#
 
-	HASH_FUNC=`grep '^HASH_FUNC=' ${CONFIGFILE} | tail -1`
-
 	if [ -n "${HASH_FUNC}" ]; then
-		HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/HASH_FUNC=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
+		HASH_FUNC=`echo "${HASH_FUNC}" | tr -s ' '`
+
+		if [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|NONE)$'`" ]; then
+			HASH_FUNC=`echo "${HASH_FUNC}" | tr '[a-z]' '[A-Z]'`
+		fi
 
 		if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = " " ]; then
-			echo "Invalid HASH_FUNC configuration option - no command specified."
+			echo "Invalid --hash option - no hash function given."
 			exit 1
+		fi
+	else
+		HASH_FUNC=`grep '^HASH_FUNC=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${HASH_FUNC}" ]; then
+			HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/HASH_FUNC=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
+
+			if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = " " ]; then
+				echo "Invalid HASH_FUNC configuration option - no command specified."
+				exit 1
+			fi
 		fi
 	fi
 
@@ -2175,9 +2188,10 @@ get_hash_function() {
 
 
 	#
-	# Finally we get the package manager to use for the file
-	# properties hash update. If a file is not owned as part
-	# of a package, the hash function defined above will be used.
+	# Next we get the package manager to use for the file
+	# properties hash check and update. If a file is not owned
+	# as part of a package, the hash function defined above
+	# will be used instead.
 	#
 
 	if [ -n "${PKGMGR}" ]; then
@@ -2232,6 +2246,15 @@ get_hash_function() {
 			echo "Unable to find package database directory (/var/lib/dpkg/info) for package manager 'DPKG'."
 			exit 1
 		fi
+
+		if [ $CHECK -eq 1 ]; then
+			PKGMGR_MD5_HASH=`get_md5_hash_function`
+
+			if [ -z "${PKGMGR_MD5_HASH}" ]; then
+				echo "Unable to find an MD5 hash function command to assist package manager 'DPKG'."
+				exit 1
+			fi
+		fi
 		;;
 	BSD)
 		PKG_CMD=`find_cmd pkg_info`
@@ -2244,6 +2267,15 @@ get_hash_function() {
 		if [ ! -d "/var/db/pkg" ]; then
 			echo "Unable to find package database directory (/var/db/pkg) for package manager 'BSD'."
 			exit 1
+		fi
+
+		if [ $CHECK -eq 1 ]; then
+			PKGMGR_MD5_HASH=`get_md5_hash_function`
+
+			if [ -z "${PKGMGR_MD5_HASH}" ]; then
+				echo "Unable to find an MD5 hash function command to assist package manager 'BSD'."
+				exit 1
+			fi
 		fi
 		;;
 	MD5)
@@ -2264,6 +2296,31 @@ get_hash_function() {
 		exit 1
 		;;
 	esac
+
+
+	#
+	# Finally, we get the option as to whether we use the result
+	# of the package manager verification or not. This option
+	# is only effective if we have defined a package manager.
+	#
+
+	if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" -a "${PKGMGR}" != "MD5" ]; then
+		USE_PKGMGR_VERIFY=`grep '^USE_PKGMGR_VERIFY=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${USE_PKGMGR_VERIFY}" ]; then
+			USE_PKGMGR_VERIFY=`echo "${USE_PKGMGR_VERIFY}" | sed -e 's/USE_PKGMGR_VERIFY=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${USE_PKGMGR_VERIFY}" -o "${USE_PKGMGR_VERIFY}" = " " ]; then
+				echo "Invalid USE_PKGMGR_VERIFY configuration option - no value specified."
+				exit 1
+			elif [ "${USE_PKGMGR_VERIFY}" != "0" -a "${USE_PKGMGR_VERIFY}" != "1" ]; then
+				echo "Invalid USE_PKGMGR_VERIFY configuration option: ${USE_PKGMGR_VERIFY}"
+				exit 1
+			fi
+		else
+			USE_PKGMGR_VERIFY=0
+		fi
+	fi
 
 	return
 }
@@ -2378,6 +2435,7 @@ get_configfile_options() {
 		get_scan_mode_dev_option
 
 		check_test hashes && HASH_CHECK_ENABLED=1
+		check_test attributes && HASH_CHECK_ENABLED=1
 
 		check_test trojan && get_xinetd_option
 	fi
@@ -2592,10 +2650,6 @@ rkh_dat_set_file_properties() {
 		HCMD=""
 		SYSHASH=""
 	else
-		if [ -n "${PKGMGR}" ]; then
-			RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
-		fi
-
 		if [ $PRELINKED -eq 0 -o "${HASH_FUNC}" = "NONE" ]; then
 			HCMD="${HASH_FUNC}"
 		else
@@ -2608,6 +2662,8 @@ rkh_dat_set_file_properties() {
 			fi
 		fi
 	fi
+
+	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
 
 
 	#
@@ -2623,6 +2679,7 @@ rkh_dat_set_file_properties() {
 			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
 			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
+# jhxx
 			if [ -n "${HCMD}" ]; then
 				SYSHASH=""
 
@@ -2689,11 +2746,15 @@ rkh_dat_set_file_properties() {
 				fi
 			fi
 
+
 			if [ -n "${SCMD}" ]; then
 				FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
 			fi
 
-			echo "File:${DIR}/${FNAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
+
+			FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+
+			echo "File:${FILENAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
 		done
 
 		display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $DIR_FILE_COUNT "${DIR}"
@@ -4438,7 +4499,8 @@ file_properties_check() {
 	#
 
 	RKHTMPVAR=""
-	HASH_CHK_TMP=""
+
+	test -z "`echo \"${PKGMGR}\" | egrep 'RPM|DPKG|BSD'`" && USE_PKGMGR_VERIFY=0
 
 	if [ $SKIP_ATTR -eq 0 -a -z "${STAT_CMD}" ]; then
 		SKIP_ATTR=1
@@ -4446,29 +4508,37 @@ file_properties_check() {
 	fi
 
 	if [ $SKIP_HASH -eq 0 ]; then
-		FOUND=0
-
-		if [ -z "${OLD_HASHUPD_FUNC}" -o "${OLD_HASHUPD_FUNC}" = "HASH" ]; then
-			HASH_CHK_TMP="${OLD_HASH_FUNC}"
-		else
-			HASH_CHK_TMP="${OLD_HASHUPD_FUNC}"
-		fi
-
-		case "${HASH_CHK_TMP}" in
-		RPM|DPKG|BSD)
-			test -z "`echo \"${HASH_FUNC}\" | grep -i 'md5'`" && FOUND=1
-			;;
-		NONE)
-			FOUND=1
-			;;
-		*)
-			test "${HASH_FUNC}" != "${OLD_HASH_FUNC}" && FOUND=1
-			;;
-		esac
-
-		if [ $FOUND -eq 1 ]; then
+		if [ -s "${DB_PATH}/rkhunter.dat" -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) -a \( "${OLD_PKGMGR}" = "NONE" -o -z "${OLD_PKGMGR}" \) ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} hash"
+
+			if [ -n "${PRELINK_HASH}" ]; then
+				HASH_FUNC_ERR="prelink with ${PRELINK_HASH}"
+			else
+				HASH_FUNC_ERR="${HASH_FUNC}"
+			fi
+
+			if [ -z "${OLD_HASH_FUNC}" ]; then
+				OLD_HASH_FUNC_ERR="Unset"
+			else
+				if [ "${OLD_HASH_FUNC}" = "MD5" -o "${OLD_HASH_FUNC}" = "SHA1" ]; then
+					OLD_HASH_FUNC_ERR="prelink with ${OLD_HASH_FUNC}"
+				else
+					OLD_HASH_FUNC_ERR="${OLD_HASH_FUNC}"
+				fi
+			fi
+
+			if [ -z "${PKGMGR}" ]; then
+				PKGMGR_ERR="Unset"
+			else
+				PKGMGR_ERR="${PKGMGR}"
+			fi
+
+			if [ -z "${OLD_PKGMGR}" ]; then
+				OLD_PKGMGR_ERR="Unset"
+			else
+				OLD_PKGMGR_ERR="${OLD_PKGMGR}"
+			fi
 		fi
 
 		if [ $PRELINKED -eq 1 ]; then
@@ -4564,7 +4634,7 @@ file_properties_check() {
 
 				case "${TEST_RESULT}" in
 				hash)
-					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_FUNC "${HASH_FUNC}" "${OLD_HASH_FUNC}"
+					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_FUNC "${HASH_FUNC_ERR}" "${PKGMGR_ERR}" "${OLD_HASH_FUNC_ERR}" "${OLD_PKGMGR_ERR}"
 					;;
 				prelink)
 					display --to LOG --type PLAIN --log-indent 13 FILE_PROP_SKIP_HASH_PRELINK
@@ -4611,7 +4681,6 @@ file_properties_check() {
 
 	if [ $SKIP_ATTR -eq 1 ]; then
 		SCMD=""
-		FDATA=""
 	else
 		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
@@ -4631,13 +4700,17 @@ file_properties_check() {
 		if [ $PRELINKED -eq 0 ]; then
 			HCMD="${HASH_FUNC}"
 		else
-			if [ -n "`echo ${HASH_FUNC} | grep 'md5'`" ]; then
+			if [ "${PRELINK_HASH}" = "MD5" ]; then
 				HCMD="${PRELINK_CMD} --verify --md5"
-			else
+			elif [ "${PRELINK_HASH}" = "SHA1" ]; then
 				HCMD="${PRELINK_CMD} --verify --sha"
+			else
+				HCMD="${HASH_FUNC}"
 			fi
 		fi
 	fi
+
+	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
 
 	#
 	# Set up some whitelist variables. There is no point
@@ -4689,7 +4762,15 @@ file_properties_check() {
 			fi
 
 			if [ $USE_DAT_FILE -eq 1 ]; then
-				RKHLINE=`grep "^File:${DIR}/${FNAME}:" ${DB_PATH}/rkhunter.dat`
+				#
+				# When checking the filename against the rkhunter.dat
+				# file, we must use the real filename and not one with
+				# the root directory.
+				#
+
+				FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+
+				RKHLINE=`grep "^File:${FILENAME}:" ${DB_PATH}/rkhunter.dat`
 
 				if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
 					TEST_RESULT="${TEST_RESULT} norkhline"
@@ -4713,18 +4794,122 @@ file_properties_check() {
 
 
 			if [ $USE_DAT_FILE -eq 1 -a -n "${RKHLINE}" ]; then
+				FDATA=""
+				RPM_QUERY_RESULT=""
+				PKGMGR_VERIFY_RESULT=""
+				RKH_USE_PKGMGR_VERIFY=$USE_PKGMGR_VERIFY
+
+
+				#
+				# Because the RPM package manager can verify most
+				# of the tests we are doing, we obtain the verified
+				# data now. The other package managers, at present,
+				# only provide the MD5 checksum. As such we simply
+				# handle them within that test.
+				#
+
+				if [ "${PKGMGR}" = "RPM" ]; then
+					PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>/dev/null`
+
+					if [ $? -ne 0 ]; then
+						RKH_USE_PKGMGR_VERIFY=0
+					else
+						PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | cut -d' ' -f1`
+					fi
+
+
+					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+
+					if [ $? -eq 0 ]; then
+						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
+						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
+
+						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+						RKHUID=`${ID_CMD} -u ${RKHUID} 2>/dev/null`
+
+						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
+
+						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+
+						FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
+						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHDTM}:"
+					fi
+				fi
+
+
 				#
 				# Do the file hash value check.
 				#
 
 				if [ $SKIP_HASH -eq 0 ]; then
 					RKHTMPVAR=""
+					PKGMGR_TEST_OK=0
+
 					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
 
 					if [ -n "${RKHHASH}" ]; then
-						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+						SYSHASH=""
 
-						if [ "${RKHHASH}" != "${SYSHASH}" ]; then
+						if [ "${PKGMGR}" = "RPM" ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+									PKGMGR_TEST_OK=1
+								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
+									PKGMGR_TEST_OK=1
+								fi
+							fi
+
+							SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
+						elif [ "${PKGMGR}" = "DPKG" ]; then
+							PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+
+							if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+								FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
+								SYSHASH=`grep ' ${FILENAME}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+									test "${RKHTMPVAR2}" = "${SYSHASH}" && PKGMGR_TEST_OK=1
+								fi
+							fi
+						elif [ "${PKGMGR}" = "BSD" ]; then
+							#
+							# First see if the file is part of
+							# a known package.
+							#
+
+							RKHTMPVAR2=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+
+							if [ -n "${RKHTMPVAR2}" ]; then
+								#
+								# Next strip of the '/usr/pkg'
+								# from the pathname, and then
+								# get the hash value.
+								#
+
+								FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+
+								SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR2} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
+
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+									test "${RKHTMPVAR2}" = "${SYSHASH}" && PKGMGR_TEST_OK=1
+								fi
+							fi
+						elif [ "${PKGMGR}" = "MD5" ]; then
+							SYSHASH=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+						fi
+
+						if [ -z "${SYSHASH}" -a "${HCMD}" != "NONE" ]; then
+							SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+						fi
+
+						if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+							test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:hashchanged"
+						elif [ "${RKHHASH}" != "${SYSHASH}" ]; then
 							RKHTMPVAR="hashchanged"
 						fi
 					else
@@ -4741,7 +4926,7 @@ file_properties_check() {
 							WL_FILE=`echo ${WHITELISTFILE} | cut -d: -f1`
 							WL_HASH=`echo ${WHITELISTFILE} | cut -d: -f2`
 
-							if [ "${WL_FILE}" = "${DIR}/${FNAME}" ]; then
+							if [ "${RKHROOTDIR}${WL_FILE}" = "${DIR}/${FNAME}" ]; then
 								if [ "${WL_HASH}" = "${RKHHASH}" ]; then
 									RKHTMPVAR=""
 									WHITELIST_RESULT="${WHITELIST_RESULT} hash"
@@ -4769,8 +4954,9 @@ file_properties_check() {
 				#
 
 				if [ $SKIP_ATTR -eq 0 ]; then
-					RKHTMPVAR=""
 					WL_FILE=""
+					RKHTMPVAR=""
+					PKGMGR_TEST_OK=0
 
 					#
 					# We check to see if the file is whitelisted here,
@@ -4779,14 +4965,14 @@ file_properties_check() {
 					#
 
 					for WHITELISTFILE in ${ATTRWHITELIST}; do
-						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
 							WL_FILE="whitelisted"
 							WHITELIST_RESULT="${WHITELIST_RESULT} attr"
 							break
 						fi
 					done
 
-					FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+					test -z "${FDATA}" && FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
 
 					if [ -z "${WL_FILE}" -a -n "${FDATA}" ]; then
 						#
@@ -4794,12 +4980,25 @@ file_properties_check() {
 						#
 
 						RKHTMPVAR=""
+						PKGMGR_TEST_OK=0
+
+						if [ "${PKGMGR}" = "RPM" ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+									PKGMGR_TEST_OK=1
+								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'M'`" ]; then
+									PKGMGR_TEST_OK=1
+								fi
+							fi
+						fi
 
 						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
-						SYSPERM=`echo ${FDATA} | cut -d: -f2`
+						SYSPERM=`echo "${FDATA}" | cut -d: -f2`
 
 						if [ -n "${RKHPERM}" ]; then
-							if [ "${RKHPERM}" != "${SYSPERM}" ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:permchanged"
+							elif [ "${RKHPERM}" != "${SYSPERM}" ]; then
 								RKHTMPVAR="permchanged"
 							fi
 						else
@@ -4814,11 +5013,25 @@ file_properties_check() {
 						#
 
 						RKHTMPVAR=""
+						PKGMGR_TEST_OK=0
+
+						if [ "${PKGMGR}" = "RPM" ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+									PKGMGR_TEST_OK=1
+								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'U'`" ]; then
+									PKGMGR_TEST_OK=1
+								fi
+							fi
+						fi
+
 						RKHUID=`echo ${RKHLINE} | cut -d: -f6`
 						SYSUID=`echo ${FDATA} | cut -d: -f3`
 
 						if [ -n "${RKHUID}" ]; then
-							if [ "${RKHUID}" != "${SYSUID}" ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:uidchanged"
+							elif [ "${RKHUID}" != "${SYSUID}" ]; then
 								RKHTMPVAR="uidchanged"
 							fi
 						else
@@ -4833,11 +5046,25 @@ file_properties_check() {
 						#
 
 						RKHTMPVAR=""
+						PKGMGR_TEST_OK=0
+
+						if [ "${PKGMGR}" = "RPM" ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+									PKGMGR_TEST_OK=1
+								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'G'`" ]; then
+									PKGMGR_TEST_OK=1
+								fi
+							fi
+						fi
+
 						RKHGID=`echo ${RKHLINE} | cut -d: -f7`
 						SYSGID=`echo ${FDATA} | cut -d: -f4`
 
 						if [ -n "${RKHGID}" ]; then
-							if [ "${RKHGID}" != "${SYSGID}" ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:gidchanged"
+							elif [ "${RKHGID}" != "${SYSGID}" ]; then
 								RKHTMPVAR="gidchanged"
 							fi
 						else
@@ -4853,6 +5080,7 @@ file_properties_check() {
 							#
 
 							RKHTMPVAR=""
+
 							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
 							SYSINODE=`echo ${FDATA} | cut -d: -f1`
 
@@ -4872,11 +5100,25 @@ file_properties_check() {
 							#
 
 							RKHTMPVAR=""
+							PKGMGR_TEST_OK=0
+
+							if [ "${PKGMGR}" = "RPM" ]; then
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+										PKGMGR_TEST_OK=1
+									elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'T'`" ]; then
+										PKGMGR_TEST_OK=1
+									fi
+								fi
+							fi
+
 							RKHDTM=`echo ${RKHLINE} | cut -d: -f8`
 							SYSDTM=`echo ${FDATA} | cut -d: -f5`
 
 							if [ -n "${RKHDTM}" ]; then
-								if [ "${RKHDTM}" != "${SYSDTM}" ]; then
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:dtmchanged"
+								elif [ "${RKHDTM}" != "${SYSDTM}" ]; then
 									RKHTMPVAR="dtmchanged"
 								fi
 							else
@@ -4908,7 +5150,7 @@ file_properties_check() {
 
 					if [ -n "${RKHTMPVAR}" ]; then
 						for WHITELISTFILE in ${WRITEWHITELIST}; do
-							if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+							if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
 								RKHTMPVAR=""
 								WHITELIST_RESULT="${WHITELIST_RESULT} write"
 								break
@@ -4946,7 +5188,7 @@ file_properties_check() {
 
 				if [ -n "${RKHTMPVAR}" ]; then
 					for WHITELISTFILE in ${IMMUTWHITELIST}; do
-						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
 							RKHTMPVAR=""
 							WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
 							break
@@ -4972,7 +5214,7 @@ file_properties_check() {
 
 				if [ -n "${SYSSCRIPT}" ]; then
 					for WHITELISTFILE in ${SCRIPTWHITELIST}; do
-						if [ "${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
 							SYSSCRIPT=""
 							WHITELIST_RESULT="${WHITELIST_RESULT} file"
 							break
@@ -4996,6 +5238,7 @@ file_properties_check() {
 				PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
 				RKHTMPVAR2=0
+				RKHTMPVAR3=0
 				for RKHTMPVAR in ${TEST_RESULT}; do
 					case "${RKHTMPVAR}" in
 					hashchanged|permchanged|uidchanged|gidchanged|inodechanged|dtmchanged)
@@ -5053,6 +5296,33 @@ file_properties_check() {
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM}"
 							;;
 						esac
+						;;
+					verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged)
+						if [ $RKHTMPVAR3 -eq 0 ]; then
+							RKHTMPVAR3=1
+							display --to LOG --type WARNING FILE_PROP_VRFY
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${DIR}/${FNAME}"
+						fi
+
+						case "${RKHTMPVAR}" in
+						verify:hashchanged)
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
+							;;
+						permchanged)
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_PERM
+							;;
+						uidchanged)
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_UID
+							;;
+						gidchanged)
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_GID
+							;;
+						esac
+						;;
+					verify:dtmchanged)
+						display --to LOG --type WARNING FILE_PROP_VRFY
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${DIR}/${FNAME}"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM
 						;;
 					norkhline)
 						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "${DIR}/${FNAME}"
@@ -5255,7 +5525,9 @@ suspscan() {
 
 	rm -f ${SUSPSCAN_TEMP}/suspscan.$$.strings >/dev/null 2>&1
 
-	for SUSPSCAN_DIR in $SUSPSCAN_DIRS ; do
+	for DIR in ${SUSPSCAN_DIRS}; do
+		SUSPSCAN_DIR="${RKHROOTDIR}${DIR}"
+
 		if [ -d "${SUSPSCAN_DIR}" ]; then
 			FOUND=0
 
@@ -5263,11 +5535,57 @@ suspscan() {
 				display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIR_CHECK "${SUSPSCAN_DIR}"
 			fi
 
-			for SUSPSCAN_ITEM in `$FIND_CMD "${SUSPSCAN_DIR}" -type f -a ! -type l -a -size -${SUSPSCAN_MAXSIZE}c`; do
-				test ! -s "${SUSPSCAN_ITEM}" && continue
+			for SUSPSCAN_ITEM in `$FIND_CMD "${SUSPSCAN_DIR}" -type f -o -type l`; do
+				#
+				# If the file is a link, then find
+				# what it points to.
+				#
 
-				$FILE_CMD "${SUSPSCAN_ITEM}" | cat -v | cut -d' ' -f2- | egrep -i 'execu|shell|libr' >/dev/null
-				if [ $? -eq 0 ]; then
+				if [ -h "${SUSPSCAN_ITEM}" ]; then
+					if [ -n "${READLINK_CMD}" ]; then
+						RKHTMPVAR="${SUSPSCAN_ITEM}"
+
+						SUSPSCAN_ITEM=`${READLINK_CMD} -f ${RKHTMPVAR}`
+
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_LINK_CHANGE "${RKHTMPVAR}" "${SUSPSCAN_ITEM}"
+						fi
+					else
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_LINK "${SUSPSCAN_ITEM}"
+						fi
+
+						continue
+					fi
+				fi
+
+
+				#
+				# Next check the size of the file.
+				#
+
+				if [ ! -s "${SUSPSCAN_ITEM}" ]; then
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_EMPTY "${SUSPSCAN_ITEM}"
+					fi
+
+					continue
+				elif [ -z "`${FIND_CMD} ${SUSPSCAN_ITEM} -size -${SUSPSCAN_MAXSIZE}c 2>/dev/null`" ]; then
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_SIZE "${SUSPSCAN_ITEM}"
+					fi
+
+					continue
+				fi
+
+
+				#
+				# Finally, test the file type.
+				#
+
+				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" | cat -v | cut -d' ' -f2-`
+
+				if [ -n "`echo \"${FTYPE}\" | egrep -i 'execu|shell|libr'`" ]; then
 					FOUND=1
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0
 
@@ -5339,7 +5657,9 @@ $SUSPSCAN_SCORE ${SUSPSCAN_ITEM}"
 
 					unset SUSPSCAN_TERM
 					rm -f ${FILENAME} >/dev/null 2>&1
-				fi # test stringscan 
+				elif [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_TYPE "${FTYPE}" "${SUSPSCAN_ITEM}"
+				fi # test file type
 			done # find dir
 
 			if [ $VERBOSE_LOGGING -eq 1 -a $FOUND -eq 0 ]; then
@@ -8187,14 +8507,17 @@ do_group_accounts_check() {
 
 				IFS=$RKHIFS
 			fi
+
+			#
+			# Finally, move the current copy of the passwd file out
+			# of the way, and take a new copy of the passwd file.
+			# This allows the user to look back to see what the
+			# last changes were, even if RKH is run again.
+			#
+
+			mv -f ${RKHTMPDIR}/passwd ${RKHTMPDIR}/passwd.old >/dev/null 2>&1
+			cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
 		fi
-
-
-		#
-		# Finally, take a new copy of the passwd file.
-		#
-
-		cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
 	fi
 
 
@@ -8254,14 +8577,17 @@ do_group_accounts_check() {
 
 				IFS=$RKHIFS
 			fi
+
+			#
+			# Finally, move the current copy of the group file out
+			# of the way, and take a new copy of the group file.
+			# This allows the user to look back to see what the
+			# last changes were, even if RKH is run again.
+			#
+
+			mv -f ${RKHTMPDIR}/group ${RKHTMPDIR}/group.old >/dev/null 2>&1
+			cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
 		fi
-
-
-		#
-		# Finally, take a new copy of the group file.
-		#
-
-		cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
 	fi
 
 
@@ -9819,26 +10145,28 @@ help() {
 	echo "         --display-logfile             Display the logfile at the end"
 	echo "         --enable  <test>[,<test>...]  Enable specific tests"
 	echo "                                       (Default is to enable all tests)"
+	echo "         --hash {MD5|SHA1|NONE|        Use specified file hash function"
+	echo "                 <command>}            (Default is SHA1)"
 	echo "     -h, --help                        Display this help menu, then exit"
 	echo " --lang, --language <language>         Specify the language to use"
 	echo "                                       (Default is English)"
 	echo "         --list [tests | languages |   List the available test names or"
 	echo "                 rootkits]             languages, or checked for rootkits."
 	echo "     -l, --logfile [logfile]           Write to a logfile"
-	echo "                                       (default is $DFLT_LOGFILE)"
+	echo "                                       (Default is $DFLT_LOGFILE)"
 	echo "         --noappend-log                Do not append to the logfile, overwrite it"
 	echo "         --nocolors                    Use black and white output"
 	echo "         --nolog                       Do not write to a logfile"
 	echo "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
 	echo "   --ns, --nosummary                   Do not show the summary of check results"
 	echo " --novl, --no-verbose-logging          No verbose logging"
-	echo "         --pkgmgr [RPM|DPKG|BSD|MD5|   Use specified package manager to obtain or"
-	echo "                   NONE]               verify file hash values. (default is NONE)"
+	echo "         --pkgmgr {RPM|DPKG|BSD|MD5|   Use specified package manager to obtain or"
+	echo "                   NONE}               verify file hash values. (Default is NONE)"
 	echo "         --propupd                     Update the file properties database"
 	echo "     -q, --quiet                       Quiet mode (no output at all)"
 	echo "  --rwo, --report-warnings-only        Show only warnings"
 	echo "     -r, --rootdir <rootdir>           Use <rootdir> as the root directory"
-	echo "                                       (default is '/')"
+	echo "                                       (Default is '/')"
 	echo "   --sk, --skip-keypress               Don't wait for a keypress after each test"
 	echo "         --summary                     Show the summary of system check results"
 	echo "                                       (This is the default)"
@@ -9924,6 +10252,7 @@ PKGMGR=""
 OLD_PKGMGR=""
 OLD_ATTRUPD=""
 HASH_FLD_IDX=1
+USE_PKGMGR_VERIFY=0
 PROP_DIR_LIST=""
 PROP_FILE_LIST=""
 PROP_FILE_LIST_COUNT=0
@@ -9957,7 +10286,8 @@ QUIET=0
 # Set to only show warnings.
 SHOWWARNINGSONLY=0
 
-# This will be set if the file properties hash value check is to be performed.
+# This will be set if the file properties hash value check
+# or the file attributes check is to be performed.
 HASH_CHECK_ENABLED=0
 SKIP_HASH_MSG=0
 
@@ -10269,6 +10599,24 @@ while [ $# -ge 1 ]; do
 
 		if [ $FOUND -eq 0 ]; then
 			echo "No tests specified to enable."
+			exit 1
+		fi
+		;;
+	--hash)
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			HASH_FUNC="$1"
+			FOUND=1
+			;;
+		esac
+
+		if [ $FOUND -eq 0 ]; then
+			echo "No hash function specified."
 			exit 1
 		fi
 		;;
@@ -10740,9 +11088,7 @@ fi
 # First we set whether we should be displaying anything on the
 # screen or not.
 #
-if [ $CRONJOB -eq 1 -o $QUIET -eq 1 -o ! -t 0 ]; then
-	NOTTY=1
-fi
+test $CRONJOB -eq 1 -o $QUIET -eq 1 && NOTTY=1
 
 #
 # Next we get the message types and results from the language file,
@@ -10897,13 +11243,13 @@ if [ $NOLOG -eq 0 ]; then
 	test $GRSECINSTALLED -eq 1 && display --to LOG --type INFO GRSECINSTALLED
 fi
 
-if [ $HASH_CHECK_ENABLED -eq 1 -a "${HASH_FUNC}" = "NONE" ]; then
-	HASH_CHECK_ENABLED=0
-	DISABLE_TESTS="${DISABLE_TESTS} hashes"
-	display --to LOG --type INFO HASH_FUNC_DISABLED
-fi
-
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
+	if [ "${HASH_FUNC}" = "NONE" ]; then
+		HASH_CHECK_ENABLED=0
+		DISABLE_TESTS="${DISABLE_TESTS} hashes"
+		display --to LOG --type INFO HASH_FUNC_DISABLED
+	fi
+
 	if [ $PRELINKED -eq 1 ]; then
 		display --to LOG --type INFO SYS_PRELINK
 
@@ -10919,7 +11265,11 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 
 		if [ "${HASH_FUNC}" = "NONE" ]; then
-			display --to LOG --type INFO HASH_FUNC_NONE
+			if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" ]; then
+				display --to LOG --type INFO HASH_FUNC_NONE_PKGMGR
+			else
+				display --to LOG --type INFO HASH_FUNC_NONE
+			fi
 		elif [ -n "${PRELINK_HASH}" ]; then
 			display --to LOG --type INFO HASH_FUNC_PRELINK "${PRELINK_HASH}"
 		elif [ -z "`echo \"${HASH_FUNC}\" | egrep -i 'sha1|md5'`" ]; then
@@ -10931,7 +11281,11 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		display --to LOG --type INFO SYS_NO_PRELINK
 
 		if [ "${HASH_FUNC}" = "NONE" ]; then
-			display --to LOG --type INFO HASH_FUNC_NONE
+			if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" ]; then
+				display --to LOG --type INFO HASH_FUNC_NONE_PKGMGR
+			else
+				display --to LOG --type INFO HASH_FUNC_NONE
+			fi
 		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
 			display --to LOG --type INFO HASH_FUNC_PERL 'SHA1'
 		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
@@ -11039,8 +11393,12 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				else
 					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
 				fi
+
+				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 			elif [ "${PKGMGR}" = "BSD" ]; then
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
+
+				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 			elif [ "${PKGMGR}" = "MD5" ]; then
 				if [ $PRELINKED -eq 1 ]; then
 					if [ -n "${PKGMGR_PRELINK_HASH}" ]; then
@@ -11050,6 +11408,14 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 					fi
 				else
 					display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				fi
+			fi
+
+			if [ "${PKGMGR}" != "NONE" ]; then
+				if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
+					display --to LOG --type INFO HASH_PKGMGR_USE_VRFY
+				else
+					display --to LOG --type INFO HASH_PKGMGR_NO_USE_VRFY
 				fi
 			fi
 		fi

@@ -1,4 +1,4 @@
-Version:2007050401
+Version:2007052001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -80,6 +80,7 @@ HASH_FUNC_PRELINK:Using prelink command (with $1) for file hash checks
 HASH_FUNC_PERL:Using the perl $1 module for the file hash checks
 HASH_FUNC:Using the '$1' command for the file hash checks
 HASH_FUNC_NONE:File hash checks disabled: NONE specified
+HASH_FUNC_NONE_PKGMGR:File hash function NONE specified: only package manager will be used
 HASH_FUNC_DISABLED:Hash function set to 'NONE': automatically disabling file hash checks
 HASH_FUNC_OLD:Stored hash values used hash function '$1'
 HASH_FUNC_OLD_DISABLED:Previous hash function was disabled: no hash values were stored
@@ -87,9 +88,12 @@ HASH_PKGMGR_OLD:Stored hash values used package manager '$1'
 HASH_PKGMGR_OLD_NONMD5:Stored hash values used package manager '$1' (md5 function)
 HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a packet manager
 
-HASH_PKGMGR:Using package manager '$1' to check the file hash values
-HASH_PKGMGR_NOT_SPEC:No file hash package manager specified: using hash function '$1'
-HASH_PKGMGR_NOT_SPEC_PRELINKED:No file hash package manager specified: using prelink command with '$1'
+HASH_PKGMGR:Using package manager '$1' for package verification
+HASH_PKGMGR_MD5:Using MD5 hash function command '$1' to assist package verification
+HASH_PKGMGR_NOT_SPEC:No package manager for verification specified: using hash function '$1'
+HASH_PKGMGR_NOT_SPEC_PRELINKED:No package manager for verification specified: using prelink command with '$1'
+HASH_PKGMGR_USE_VRFY:Package manager verification will be used for file property test results
+HASH_PKGMGR_NO_USE_VRFY:Package manager verification will not be used for file property test results
 
 HASH_FIELD_INDEX:The hash function field index is set to $1
 
@@ -221,7 +225,7 @@ FILE_PROP_CMDS:Checking for prerequisites
 FILE_PROP_IMMUT_OS:Skipping all immutable-bit checks. This check is only available for Linux systems.
 FILE_PROP_SKIP_ATTR:Unable to find 'stat' command - all file attribute checks will be skipped.
 FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:
-FILE_PROP_SKIP_HASH_FUNC:Current hash function ($1) incompatible with function used for stored values ($2).
+FILE_PROP_SKIP_HASH_FUNC:The current hash function ($1) or package manager ($2) is incompatible with the hash function ($3) or package manager ($4) used to store the values.
 FILE_PROP_SKIP_HASH_PRELINK:Unable to find 'prelink' command.
 FILE_PROP_SKIP_HASH_SHA1:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
 FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe was found, which can cause errors. If possible, disable libsafe and then run the prelink command. Finally, recreate the hash values using 'rkhunter --propupd'.
@@ -266,6 +270,13 @@ FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
 FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file '$1'
 FILE_PROP_IMMUT:File '$1' has the immutable-bit set.
 FILE_PROP_SCRIPT:The command '$1' has been replaced by a script: $2
+
+FILE_PROP_VRFY:Package manager verification has failed:
+FILE_PROP_VRFY_HASH:The file hash value has changed
+FILE_PROP_VRFY_PERM:The file permissions have changed
+FILE_PROP_VRFY_UID:The files owner has changed
+FILE_PROP_VRFY_GID:The files group has changed
+FILE_PROP_VRFY_DTM:The files modification time has changed
 
 CHECK_ROOTKITS:Checking for rootkits...
 ROOTKIT_FILES_DIRS_START:Performing check of known rootkit files and directories
@@ -492,4 +503,9 @@ SUSPSCAN_THRESH_INVALID:The suspscan score threshold is invalid: $1
 SUSPSCAN_DIR_CHECK:Checking directory: $1
 SUSPSCAN_DIR_CHECK_NO_FILES:No suitable files found to check.
 SUSPSCAN_FILE_CHECK:File checked: Name: $1    Score: $2
+SUSPSCAN_FILE_SKIPPED_EMPTY:File ignored: empty: $1
+SUSPSCAN_FILE_SKIPPED_LINK:File ignored: symbolic link: $1
+SUSPSCAN_FILE_SKIPPED_TYPE:File ignored: wrong type: $1: $2
+SUSPSCAN_FILE_SKIPPED_SIZE:File ignored: too big: $1
+SUSPSCAN_FILE_LINK_CHANGE:Symbolic link found: $1 -> $2
 
