@@ -1,4 +1,4 @@
-Version:2007052001
+Version:2007052401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -204,6 +204,7 @@ DISABLED_TESTS:Disabled tests are: $1
 KSYMS_FOUND:Found ksym file '$1'
 KSYMS_MISSING:All ksyms and kallsyms checks will be skipped - neither file is present on the system.
 
+STARTING_TEST:Starting test name '$1'
 USER_DISABLED_TEST:Test '$1' disabled at users request.
 
 CHECK_START:Starting system checks...
@@ -313,7 +314,6 @@ ROOTKIT_POSS_FILES_DIR_FOUND:Found directory '$1'. Possible rootkit: $2
 
 ROOTKIT_POSS_STRINGS:Checking for possible rootkit strings
 ROOTKIT_POSS_STRINGS_LOG:Performing check for possible rootkit strings
-ROOTKIT_POSS_STRINGS_RCFILE:Found system startup file '$1'
 ROOTKIT_POSS_STRINGS_FOUND:Found string '$1' in file '$2'. Possible rootkit: $3
 
 ROOTKIT_MALWARE_START:Performing malware checks
@@ -378,10 +378,10 @@ CHECK_LOCALHOST:Checking the local host...
 STARTUP_FILES_START:Performing system boot checks
 STARTUP_HOSTNAME:Checking for local host name
 STARTUP_NO_HOSTNAME:No host name found.
-STARTUP_LOCAL_RC_FILE:Checking for local startup file
+STARTUP_LOCAL_RC_FILE:Checking for local startup files
 STARTUP_FOUND_LOCAL_RC_FILE:Found local startup file: $1
-STARTUP_NO_LOCAL_RC_FILE:No local startup file found.
-STARTUP_CHECK_LOCAL_RC:Checking local startup file for malware
+STARTUP_NO_LOCAL_RC_FILE:No local startup files found.
+STARTUP_CHECK_LOCAL_RC:Checking local startup files for malware
 STARTUP_CHECK_SYSTEM_RC:Checking system startup files for malware
 STARTUP_CHECK_SYSTEM_RC_FOUND:Found system startup directory: $1
 STARTUP_CHECK_SYSTEM_RC_NONE:No system startup files found.

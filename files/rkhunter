@@ -2365,6 +2365,73 @@ get_scan_mode_dev_option() {
 }
 
 
+get_rc_options() {
+
+	#
+	# This function gets some of the system startup 'rc'
+	# files and directories from the configuration file.
+	# There are no defaults.
+	#
+
+	RC_FILE=`grep '^LOCAL_RC_PATH=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${RC_FILE}" ]; then
+		RC_FILE=`echo "${RC_FILE}" | sed -e 's/LOCAL_RC_PATH=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${RC_FILE}" -o "${RC_FILE}" = " " ]; then
+			echo "Invalid LOCAL_RC_PATH configuration option - no pathname specified."
+			exit 1
+		fi
+
+		#
+		# Now check that the given option is useable.
+		#
+
+		for RKHTMPVAR in ${RC_FILE}; do
+			if [ ! -f "${RKHROOTDIR}${RKHTMPVAR}" ]; then
+				echo "Local system startup file does not exist: ${RKHROOTDIR}${RKHTMPVAR}"
+				exit 1
+			elif [ -h "${RKHROOTDIR}${RKHTMPVAR}" ]; then
+				echo "Local system startup file is a symbolic link: ${RKHROOTDIR}${RKHTMPVAR}"
+				exit 1
+			elif [ ! -r "${RKHROOTDIR}${RKHTMPVAR}" ]; then
+				echo "Local system startup file is not readable: ${RKHROOTDIR}${RKHTMPVAR}"
+				exit 1
+			fi
+		done
+	fi
+
+
+	RC_DIR=`grep '^RC_DIR=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${RC_DIR}" ]; then
+		RC_DIR=`echo "${RC_DIR}" | sed -e 's/RC_DIR=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${RC_DIR}" -o "${RC_DIR}" = " " ]; then
+			echo "Invalid RC_DIR configuration option - no directory specified."
+			exit 1
+		fi
+
+		#
+		# Now check that the given option is useable.
+		#
+
+		if [ ! -d "${RKHROOTDIR}${RC_DIR}" ]; then
+			echo "Local system startup directory does not exist: ${RKHROOTDIR}${RC_DIR}"
+			exit 1
+		elif [ -h "${RKHROOTDIR}${RC_DIR}" ]; then
+			echo "Local system startup directory is a symbolic link: ${RKHROOTDIR}${RC_DIR}"
+			exit 1
+		elif [ ! -r "${RKHROOTDIR}${RC_DIR}" ]; then
+			echo "Local system startup directory is not readable: ${RKHROOTDIR}${RC_DIR}"
+			exit 1
+		fi
+	fi
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
@@ -2433,6 +2500,8 @@ get_configfile_options() {
 		get_syslog_option
 
 		get_scan_mode_dev_option
+
+		get_rc_options
 
 		check_test hashes && HASH_CHECK_ENABLED=1
 		check_test attributes && HASH_CHECK_ENABLED=1
@@ -2628,10 +2697,8 @@ rkh_dat_set_file_properties() {
 
 	if ! `check_test attributes`; then
 		SCMD=""
-		FDATA=":::::"
 	elif [ -z "${STAT_CMD}" ]; then
 		SCMD=""
-		FDATA=":::::"
 	else
 		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
@@ -2676,33 +2743,73 @@ rkh_dat_set_file_properties() {
 		for FNAME in ${PROP_FILE_LIST}; do
 			test ! -f "${DIR}/${FNAME}" && continue
 
+			FDATA=""
+			RPM_QUERY_RESULT=""
+			RKH_USE_PKGMGR=0
+
+			FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+
 			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
 			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
-# jhxx
+			if [ "${PKGMGR}" = "RPM" ]; then
+				#
+				# First see if the file belongs to a package.
+				#
+
+				PKGNAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+
+				if [ $? -eq 0 ]; then
+					#
+					# Okay we have a package name.
+					#
+					# If multiple versions of the same package
+					# have been installed, we use the last one.
+					#
+
+					RKH_USE_PKGMGR=1
+
+					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+
+					if [ $? -eq 0 ]; then
+						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
+
+						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
+						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
+
+						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+						RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
+
+						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
+
+						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+
+						FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
+						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHDTM}:"
+					fi
+				fi
+			fi
+
+
 			if [ -n "${HCMD}" ]; then
 				SYSHASH=""
 
 				if [ "${PKGMGR}" = "RPM" ]; then
-					FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
-
-					SYSHASH=`${RPM_CMD} -qf --queryformat '[%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$" | cut -d: -f1`
+					test $RKH_USE_PKGMGR -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
 				elif [ "${PKGMGR}" = "DPKG" ]; then
-					FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
-
 					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-						FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
-						SYSHASH=`grep ' ${FILENAME}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+						RKH_USE_PKGMGR=1
+						FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
+						SYSHASH=`grep ' ${FILNAM}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
 					fi
 				elif [ "${PKGMGR}" = "BSD" ]; then
 					#
 					# First see if the file is part of
 					# a known package.
 					#
-
-					FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
 
 					RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
 
@@ -2713,34 +2820,37 @@ rkh_dat_set_file_properties() {
 						# get the hash value.
 						#
 
-						FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
-
-						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
+						RKH_USE_PKGMGR=1
+						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 					fi
 				elif [ "${PKGMGR}" = "MD5" ]; then
+					RKH_USE_PKGMGR=1
 					SYSHASH=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 				fi
 
-				if [ -z "${SYSHASH}" -a "${HCMD}" != "NONE" ]; then
-					SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
-				fi
+				if [ $RKH_USE_PKGMGR -eq 0 ]; then
+					if [ "${HCMD}" != "NONE" ]; then
+						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+					fi
 
-				if [ -z "${SYSHASH}" ]; then
-					if [ "${HCMD}" = "NONE" ]; then
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "${DIR}/${FNAME}"
-						fi
-					else
-						NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
+					if [ -z "${SYSHASH}" ]; then
+						if [ "${HCMD}" = "NONE" ]; then
+							if [ $VERBOSE_LOGGING -eq 1 ]; then
+								display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "${DIR}/${FNAME}"
+							fi
+						else
+							NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
 
-						display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${DIR}/${FNAME}"
+							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${DIR}/${FNAME}"
 
-						RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1 | tr '\n' ':' | sed -e 's/:$//'`
+							RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1 | tr '\n' ':' | sed -e 's/:$//'`
 
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
 
-						if [ -n "`echo \"${RKHTMPVAR}\" | grep 'dependencies'`" ]; then
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
+							if [ -n "`echo \"${RKHTMPVAR}\" | grep 'dependencies'`" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
+							fi
 						fi
 					fi
 				fi
@@ -2748,11 +2858,10 @@ rkh_dat_set_file_properties() {
 
 
 			if [ -n "${SCMD}" ]; then
-				FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+				test -z "${FDATA}" && FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+			else
+				FDATA=":::::"
 			fi
-
-
-			FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
 
 			echo "File:${FILENAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
 		done
@@ -4187,6 +4296,17 @@ do_system_check_initialisation() {
 			 hydra.restore:THC-Hydra (password capture)"
 
 
+	# System startup file pathnames
+	RCLOCATIONS="/etc/rc.local
+		     /etc/rc.d/rc.local
+		     /usr/local/etc/rc.local
+		     /usr/local/etc/rc.d/rc.local
+		     /etc/conf.d/local.start
+		     /etc/init.d/boot.local
+		     /etc/rc.d/rc.sysinit
+		     /etc/inittab"
+
+
 	# Integrity tests
 	STRINGS_INTEGRITY="${BOBKIT_FILES} ${BOBKIT_DIRS} ${CINIK_FILES}
 			   ${CINIK_DIRS} ${DICA_FILES} ${FREEBSD_RK_FILES}
@@ -4216,13 +4336,13 @@ strings_check() {
 	# the command has been modified to hide information.
 	#
 
-	if ! `check_test strings`; then
+	if `check_test strings`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STRINGS_CHECK_START
+		display --to LOG --type INFO STARTING_TEST strings
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST strings
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STRINGS_CHECK_START
 
 
 	#
@@ -4290,12 +4410,13 @@ shared_libs_check() {
 	# AVAYA Labs "stack overflow protection" uses libsafe.
 	#
 
-	if ! `check_test shared_libs`; then
+	if `check_test shared_libs`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SHARED_LIBS_START
+		display --to LOG --type INFO STARTING_TEST shared_libs
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs
 		return
 	fi
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SHARED_LIBS_START
 
 
 	#
@@ -4340,6 +4461,8 @@ shared_libs_check() {
 	#
 
 	if `check_test shared_libs_path`; then
+		display --to LOG --type INFO STARTING_TEST shared_libs_path
+
 		if [ -n "${LDD_CMD}" ]; then
 			if [ -n "${LD_LIBRARY_PATH}" ]; then
 				LD_LIBR_FAILED=0
@@ -4463,10 +4586,10 @@ file_properties_check() {
 	elif [ $SKIP_ATTR -eq 1 -a $SKIP_HASH -eq 1 -a $SKIP_IMMUT -eq 1 -a $SKIP_SCRIPT -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
 		return
+	else
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILE_PROP_START
+		display --to LOG --type INFO STARTING_TEST properties
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILE_PROP_START
 
 
 	#
@@ -4505,8 +4628,15 @@ file_properties_check() {
 		RKHTMPVAR="${RKHTMPVAR} attr"
 	fi
 
+	if [ -n "${OLD_PKGMGR}" -a "${OLD_PKGMGR}" != "NONE" ]; then
+		REAL_OLD_PKGMGR=1
+	else
+		REAL_OLD_PKGMGR=0
+	fi
+
 	if [ $SKIP_HASH -eq 0 ]; then
-		if [ -s "${DB_PATH}/rkhunter.dat" -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) -a \( "${OLD_PKGMGR}" = "NONE" -o -z "${OLD_PKGMGR}" \) ]; then
+		# Not sure about this one...!
+		if [ $REAL_OLD_PKGMGR -eq 0 -a -s "${DB_PATH}/rkhunter.dat" -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} hash"
 
@@ -4797,6 +4927,8 @@ file_properties_check() {
 				FDATA=""
 				RPM_QUERY_RESULT=""
 				PKGMGR_VERIFY_RESULT=""
+
+				RKH_USE_PKGMGR=0
 				RKH_USE_PKGMGR_VERIFY=$USE_PKGMGR_VERIFY
 
 
@@ -4809,49 +4941,54 @@ file_properties_check() {
 				#
 
 				if [ "${PKGMGR}" = "RPM" ]; then
-					if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+					#
+					# First we get the package name for the file being tested.
+					#
+
+					PKGNAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+
+					if [ $? -eq 0 ]; then
 						#
-						# First we get the package name for the file being tested.
+						# Okay we have a package name. Is it in the list
+						# of packages we have already tested as verified?
+						#
+						# If multiple versions of the same package
+						# have been installed, we use the last one.
 						#
 
-						PKG_NAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+						RKH_USE_PKGMGR=1
 
-						if [ $? -eq 0 ]; then
-							#
-							# Okay we have a package name. Is it in the list
-							# of packages we have already tested as verified?
-							#
-							# If multiple versions of the same package
-							# have been installed, we use the last one.
-							#
+						if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+							PKGNAME=`echo "${PKGNAME}" | tail -1`
 
-							PKG_NAME=`echo "${PKG_NAME}" | tail -1`
-
-							if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKG_NAME} \"`" ]; then
+							if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
 								#
-								# No, it isn't. So we verify the package and either
-								# add it to the list if it verifies okay, or get the
-								# verification result for the file.
+								# No, it isn't in the list. So we verify the package
+								# and either add it to the list if it verifies okay,
+								# or get the verification result for the file.
 								#
 
 								PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>/dev/null`
 
 								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-									VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKG_NAME} "
+									VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
 								else
 									PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
 								fi
 							fi
-						else
-							RKH_USE_PKGMGR_VERIFY=0
 						fi
-					fi
 
 
-					if [ $RKH_USE_PKGMGR_VERIFY -eq 0 ]; then
+						#
+						# Now dig out the rest of the information about this file
+						# from the package manager database.
+						#
+
 						RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 
 						if [ $? -eq 0 ]; then
+							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
+
 							FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
 							FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
 
@@ -4866,6 +5003,8 @@ file_properties_check() {
 							FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
 							FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHDTM}:"
 						fi
+					else
+						RKH_USE_PKGMGR_VERIFY=0
 					fi
 				fi
 
@@ -4880,23 +5019,31 @@ file_properties_check() {
 
 					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
 
-					if [ -n "${RKHHASH}" ]; then
+					#
+					# Package managers may genuinely return a null
+					# hash value, so we have to allow for that.
+					#
+
+					if [ $REAL_OLD_PKGMGR -eq 1 -o -n "${RKHHASH}" ]; then
 						SYSHASH=""
 
 						if [ "${PKGMGR}" = "RPM" ]; then
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-									PKGMGR_TEST_OK=1
-								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
-									PKGMGR_TEST_OK=1
+							if [ $RKH_USE_PKGMGR -eq 1 ]; then
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+										PKGMGR_TEST_OK=1
+									elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
+										PKGMGR_TEST_OK=1
+									fi
+								else
+									SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
 								fi
 							fi
-
-							SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
 						elif [ "${PKGMGR}" = "DPKG" ]; then
 							PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
 							if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+								RKH_USE_PKGMGR=1
 								FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
 								SYSHASH=`grep ' ${FILENAME}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
 
@@ -4912,18 +5059,18 @@ file_properties_check() {
 							# a known package.
 							#
 
-							RKHTMPVAR2=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+							PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
 
-							if [ -n "${RKHTMPVAR2}" ]; then
+							if [ -n "${PKGNAME}" ]; then
 								#
 								# Next strip of the '/usr/pkg'
 								# from the pathname, and then
 								# get the hash value.
 								#
 
+								RKH_USE_PKGMGR=1
 								FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
-
-								SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR2} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
+								SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
 
 								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
 									RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
@@ -4932,15 +5079,24 @@ file_properties_check() {
 								fi
 							fi
 						elif [ "${PKGMGR}" = "MD5" ]; then
+							RKH_USE_PKGMGR=1
 							SYSHASH=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								test "${RKHHASH}" = "${SYSHASH}" && PKGMGR_TEST_OK=1
+							fi
 						fi
 
-						if [ -z "${SYSHASH}" -a "${HCMD}" != "NONE" ]; then
+						if [ $RKH_USE_PKGMGR -eq 0 -a "${HCMD}" != "NONE" ]; then
 							SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 						fi
 
-						if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-							test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:hashchanged"
+						if [ $RKH_USE_PKGMGR -eq 1 ]; then
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:hashchanged"
+							elif [ "${RKHHASH}" != "${SYSHASH}" ]; then
+								RKHTMPVAR="hashchanged"
+							fi
 						elif [ "${RKHHASH}" != "${SYSHASH}" ]; then
 							RKHTMPVAR="hashchanged"
 						fi
@@ -5013,8 +5169,11 @@ file_properties_check() {
 
 						RKHTMPVAR=""
 						PKGMGR_TEST_OK=0
+						RKH_USE_PKGMGR=0
 
 						if [ "${PKGMGR}" = "RPM" ]; then
+							RKH_USE_PKGMGR=1
+
 							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
 								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 									PKGMGR_TEST_OK=1
@@ -5028,8 +5187,12 @@ file_properties_check() {
 						SYSPERM=`echo "${FDATA}" | cut -d: -f2`
 
 						if [ -n "${RKHPERM}" ]; then
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:permchanged"
+							if [ $RKH_USE_PKGMGR -eq 1 ]; then
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:permchanged"
+								elif [ "${RKHPERM}" != "${SYSPERM}" ]; then
+									RKHTMPVAR="permchanged"
+								fi
 							elif [ "${RKHPERM}" != "${SYSPERM}" ]; then
 								RKHTMPVAR="permchanged"
 							fi
@@ -5046,8 +5209,11 @@ file_properties_check() {
 
 						RKHTMPVAR=""
 						PKGMGR_TEST_OK=0
+						RKH_USE_PKGMGR=0
 
 						if [ "${PKGMGR}" = "RPM" ]; then
+							RKH_USE_PKGMGR=1
+
 							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
 								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 									PKGMGR_TEST_OK=1
@@ -5061,8 +5227,12 @@ file_properties_check() {
 						SYSUID=`echo ${FDATA} | cut -d: -f3`
 
 						if [ -n "${RKHUID}" ]; then
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:uidchanged"
+							if [ $RKH_USE_PKGMGR -eq 1 ]; then
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:uidchanged"
+								elif [ "${RKHUID}" != "${SYSUID}" ]; then
+									RKHTMPVAR="uidchanged"
+								fi
 							elif [ "${RKHUID}" != "${SYSUID}" ]; then
 								RKHTMPVAR="uidchanged"
 							fi
@@ -5079,8 +5249,11 @@ file_properties_check() {
 
 						RKHTMPVAR=""
 						PKGMGR_TEST_OK=0
+						RKH_USE_PKGMGR=0
 
 						if [ "${PKGMGR}" = "RPM" ]; then
+							RKH_USE_PKGMGR=1
+
 							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
 								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 									PKGMGR_TEST_OK=1
@@ -5094,8 +5267,12 @@ file_properties_check() {
 						SYSGID=`echo ${FDATA} | cut -d: -f4`
 
 						if [ -n "${RKHGID}" ]; then
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:gidchanged"
+							if [ $RKH_USE_PKGMGR -eq 1 ]; then
+								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:gidchanged"
+								elif [ "${RKHGID}" != "${SYSGID}" ]; then
+									RKHTMPVAR="gidchanged"
+								fi
 							elif [ "${RKHGID}" != "${SYSGID}" ]; then
 								RKHTMPVAR="gidchanged"
 							fi
@@ -5133,8 +5310,11 @@ file_properties_check() {
 
 							RKHTMPVAR=""
 							PKGMGR_TEST_OK=0
+							RKH_USE_PKGMGR=0
 
 							if [ "${PKGMGR}" = "RPM" ]; then
+								RKH_USE_PKGMGR=1
+
 								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
 									if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 										PKGMGR_TEST_OK=1
@@ -5148,8 +5328,12 @@ file_properties_check() {
 							SYSDTM=`echo ${FDATA} | cut -d: -f5`
 
 							if [ -n "${RKHDTM}" ]; then
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:dtmchanged"
+								if [ $RKH_USE_PKGMGR -eq 1 ]; then
+									if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+										test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:dtmchanged"
+									elif [ "${RKHDTM}" != "${SYSDTM}" ]; then
+										RKHTMPVAR="dtmchanged"
+									fi
 								elif [ "${RKHDTM}" != "${SYSDTM}" ]; then
 									RKHTMPVAR="dtmchanged"
 								fi
@@ -5454,12 +5638,13 @@ suspscan() {
 	# - Exclude OSes?
 	# - Check config defaults. If one is missing, don't run.
 
-	if ! `check_test suspscan`; then
+	if `check_test suspscan`; then
+		display --to LOG --type PLAIN --log-indent 2 --nl SUSPSCAN_START
+		display --to LOG --type INFO STARTING_TEST suspscan
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST suspscan
 		return
 	fi
-
-	display --to LOG --type PLAIN --log-indent 2 --nl SUSPSCAN_START
 
 
 	#
@@ -5736,13 +5921,13 @@ do_system_commands_checks() {
 	# check, library checks and the file properties checks.
 	#
 
-	if ! `check_test system_commands`; then
+	if `check_test system_commands`; then
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_SYS_COMMANDS
+		display --to LOG --type INFO STARTING_TEST system_commands
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_commands
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_SYS_COMMANDS
 
 
 	strings_check
@@ -5764,13 +5949,13 @@ rootkit_file_dir_checks() {
 	# files and directories.
 	#
 
-	if ! `check_test known_rkts`; then
+	if `check_test known_rkts`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_FILES_DIRS_START
+		display --to LOG --type INFO STARTING_TEST known_rkts
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST known_rkts
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_FILES_DIRS_START
 
 
 	# 55808 Trojan - Variant A
@@ -6436,14 +6621,15 @@ possible_rootkit_file_dir_checks() {
 	# files and directories.
 	#
 
-	if ! `check_test possible_rkt_files`; then
+	if `check_test possible_rkt_files`; then
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_POSS_FILES_DIRS_LOG
+		fi
+
+		display --to LOG --type INFO STARTING_TEST possible_rkt_files
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_files
 		return
-	fi
-
-
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_POSS_FILES_DIRS_LOG
 	fi
 
 	FOUND=0
@@ -6542,14 +6728,15 @@ possible_rootkit_string_checks() {
 	# strings in files.
 	#
 
-	if ! `check_test possible_rkt_strings`; then
+	if `check_test possible_rkt_strings`; then
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_POSS_STRINGS_LOG
+		fi
+
+		display --to LOG --type INFO STARTING_TEST possible_rkt_strings
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_strings
 		return
-	fi
-
-
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_POSS_STRINGS_LOG
 	fi
 
 	#
@@ -6564,20 +6751,31 @@ possible_rootkit_string_checks() {
 
 
 	#
-	# Set and check that the RCFILE is okay.
+	# Set and check that the local system 'rc' file is okay.
 	#
 
-	if [ "${OPERATING_SYSTEM}" = "AIX" ]; then
-		RCFILE="${RKHROOTDIR}/etc/inittab"
+	RC_PATHS=""
+
+	if [ -n "${RC_FILE}" ]; then
+		FILENAMES="${RC_FILE}"
 	else
-		RCFILE="${RKHROOTDIR}/etc/rc.d/rc.sysinit"
+		FILENAMES="${RCLOCATIONS}"
 	fi
 
-	if [ -f "${RCFILE}" ]; then
-		display --to LOG --type INFO ROOTKIT_POSS_STRINGS_RCFILE "${RCFILE}"
+	for FNAME in ${FILENAMES}; do
+		if [ -f "${RKHROOTDIR}${FNAME}" -a ! -h "${RKHROOTDIR}${FNAME}" ]; then
+			RC_PATHS="${RC_PATHS}
+${RKHROOTDIR}${FNAME}"
+		fi
+	done
+
+	if [ -n "${RC_PATHS}" ]; then
+		for FNAME in ${RC_PATHS}; do
+			display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
+		done
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_POSS_STRINGS
-		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${RCFILE}"
+		display --to LOG --type PLAIN --log-indent 9 STARTUP_CHECK_SYSTEM_RC_NONE
 		return
 	fi
 
@@ -6599,12 +6797,14 @@ possible_rootkit_string_checks() {
 		if [ "${FILE}" = "rcfile" ]; then
 			FOUNDFILE=1
 
-			FOUNDSTRING=`${STRINGS_CMD} ${RCFILE} | grep "${STRING}"`
+			for FNAME in ${RC_PATHS}; do
+				FOUNDSTRING=`${STRINGS_CMD} ${FNAME} | grep "${STRING}"`
 
-			if [ -n "${FOUNDSTRING}" ]; then
-				FOUND=1
-				FOUNDSTRINGS="${FOUNDSTRINGS}%${RCFILE}:${FILESTRING}:${INFO}"
-			fi
+				if [ -n "${FOUNDSTRING}" ]; then
+					FOUND=1
+					FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${FILESTRING}:${INFO}"
+				fi
+			done
 		else
 			#
 			# We cannot use the 'find_cmd' function here because we
@@ -6665,10 +6865,11 @@ possible_rootkit_string_checks() {
 
 		for RKHTMPVAR in ${FOUNDSTRINGS}; do
 			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
-			FILESTRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
-			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
 
 			test -z "${FILE}" && continue
+
+			FILESTRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
+			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
 
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
@@ -6690,13 +6891,13 @@ additional_rootkit_checks() {
 	# These include checks for possible rootkits.
 	#
 
-	if ! `check_test additional_rkts`; then
+	if `check_test additional_rkts`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_ADD_START
+		display --to LOG --type INFO STARTING_TEST additional_rkts
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST additional_rkts
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_ADD_START
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 		suckit_extra_checks
@@ -6717,13 +6918,13 @@ malware_checks() {
 	# This function performs malware checks.
 	#
 
-	if ! `check_test malware`; then
+	if `check_test malware`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_MALWARE_START
+		display --to LOG --type INFO STARTING_TEST malware
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST malware
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_MALWARE_START
 
 
 	#
@@ -6731,6 +6932,8 @@ malware_checks() {
 	#
 
 	if `check_test deleted_files`; then
+		display --to LOG --type INFO STARTING_TEST deleted_files
+
 		if [ -n "${LSOF_CMD}" ]; then
 			FOUND=0
 			WHITEPROC=""; BLACKPROC=""
@@ -6884,6 +7087,8 @@ ${PROC} ${PID} ${FNAME}"
 	#
 
 	if `check_test running_procs`; then
+		display --to LOG --type INFO STARTING_TEST running_procs
+
 		if [ -n "${LSOF_CMD}" ]; then
 			SUSP_FILES=""
 			IFS=$IFSNL
@@ -6933,6 +7138,8 @@ ${PROC} ${PID} ${FNAME}"
 	#
 
 	if `check_test hidden_procs`; then
+		display --to LOG --type INFO STARTING_TEST hidden_procs
+
 		UNHIDE_CMD=`find_cmd unhide`
 
 		if [ -n "${UNHIDE_CMD}" ]; then
@@ -6967,7 +7174,13 @@ ${PROC} ${PID} ${FNAME}"
 	# as a test name, and only proceed if it is enabled.
 	#
 
-	if ! `check_test other_malware`; then
+	if `check_test other_malware`; then
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR_LOG
+		fi
+
+		display --to LOG --type INFO STARTING_TEST other_malware
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST other_malware
 		return
 	fi
@@ -6980,15 +7193,7 @@ ${PROC} ${PID} ${FNAME}"
 	FOUND=0
 	FOUNDFILES=""
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR_LOG
-	fi
-
-	IFS=$IFSNL
-
 	for FILE in ${LOGIN_BACKDOOR_FILES}; do
-		FILE=`echo "${FILE}" | sed -e 's/^[ 	]*//'`
-
 		if [ -e "${FILE}" ]; then
 			FOUND=1
 			FOUNDFILES="${FOUNDFILES} ${FILE}"
@@ -7000,8 +7205,6 @@ ${PROC} ${PID} ${FNAME}"
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FILE}"
 		fi
 	done
-
-	IFS=$RKHIFS
 
 
 	#
@@ -7030,11 +7233,7 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR_LOG
 	fi
 
-	IFS=$IFSNL
-
 	for DIR in ${SUSPICIOUS_DIRS}; do
-		DIR=`echo "${DIR}" | sed -e 's/^[ 	]*//'`
-
 		if [ -d "${DIR}" ]; then
 			FOUND=1
 			FOUNDDIRS="${FOUNDDIRS} ${DIR}"
@@ -7046,8 +7245,6 @@ ${PROC} ${PID} ${FNAME}"
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${DIR}"
 		fi
 	done
-
-	IFS=$RKHIFS
 
 
 	#
@@ -7095,11 +7292,7 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_SNIFFER_LOG
 	fi
 
-	IFS=$IFSNL
-
 	for FNAME in ${SNIFFER_FILES}; do
-		FNAME=`echo "${FNAME}" | sed -e 's/^[ 	]*//'`
-
 		if [ -f "${FNAME}" ]; then
 			FOUND=1
 			FOUNDFILES="${FOUNDFILES} ${FNAME}"
@@ -7111,8 +7304,6 @@ ${PROC} ${PID} ${FNAME}"
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FNAME}"
 		fi
 	done
-
-	IFS=$RKHIFS
 
 
 	#
@@ -7294,6 +7485,8 @@ trojan_checks() {
 	fi
 
 	display --to "${RKHTMPVAR}" --type PLAIN --nl --screen-indent 2 ROOTKIT_TROJAN_START
+
+	display --to LOG --type INFO STARTING_TEST trojan
 
 
 	#
@@ -7701,6 +7894,7 @@ os_specific_checks() {
 	case "${OPERATING_SYSTEM}" in
 	*BSD)
 		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to LOG --type INFO STARTING_TEST os_specific
 
 		bsd_specific_checks
 
@@ -7708,11 +7902,13 @@ os_specific_checks() {
 		;;
 	Linux)
 		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to LOG --type INFO STARTING_TEST os_specific
 
 		linux_specific_checks
 		;;
 	*)
 		display --to LOG --type PLAIN --nl ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to LOG --type INFO STARTING_TEST os_specific
 
 		display --to LOG --type INFO ROOTKIT_OS_SKIPPED
 		;;
@@ -7730,13 +7926,13 @@ do_rootkit_checks() {
 	# possible rootkit checks, and checks for malware.
 	#
 
-	if ! `check_test rootkits`; then
+	if `check_test rootkits`; then
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_ROOTKITS
+		display --to LOG --type INFO STARTING_TEST rootkits
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST rootkits
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_ROOTKITS
 
 
 	rootkit_file_dir_checks
@@ -7925,14 +8121,18 @@ do_network_interface_checks() {
 	#
 
 	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
-		display --to LOG --type INFO TEST_SKIPPED_OS "packet_cap_apps" "/proc/net/packet required"
+		display --to LOG --type INFO TEST_SKIPPED_OS 'packet_cap_apps' '/proc/net/packet required'
 		return
 	fi
 
-	if ! `check_test packet_cap_apps`; then
+	if `check_test packet_cap_apps`; then
+		display --to LOG --type INFO STARTING_TEST packet_cap_apps
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
 		return
-	elif [ ! -f "/proc/net/packet" ]; then
+	fi
+
+	if [ ! -f "/proc/net/packet" ]; then
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
 		display --to LOG --type WARNING NETWORK_PACKET_CAP_CHECK_NO_FILE "/proc/net/packet"
 		return
@@ -8043,13 +8243,13 @@ do_network_checks() {
 	# of port checks, and some interface checks.
 	#
 
-	if ! `check_test network`; then
+	if `check_test network`; then
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_NETWORK
+		display --to LOG --type INFO STARTING_TEST network
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST network
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_NETWORK
 
 
 	do_network_port_checks
@@ -8068,13 +8268,13 @@ do_system_startup_file_checks() {
 	# This function carries out checks on the system startup files.
 	#
 
-	if ! `check_test startup_files`; then
+	if `check_test startup_files`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STARTUP_FILES_START
+		display --to LOG --type INFO STARTING_TEST startup_files
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_files
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STARTUP_FILES_START
 
 	#
 	# First we check that the local host name has been set.
@@ -8089,38 +8289,44 @@ do_system_startup_file_checks() {
 
 
 	#
+	# Check that the startup file malware checks are to be done.
+	#
+
+	if `check_test startup_malware`; then
+		display --to LOG --type INFO STARTING_TEST startup_malware
+	else
+		display --to LOG --type INFO USER_DISABLED_TEST startup_malware
+		return
+	fi
+
+
+	#
 	# Next, check that a local startup file exists. This will be some
 	# sort of 'rc' file. We check if the user has set a pathname in
 	# the config file, and use that or the default list.
 	#
 
-	RC_FILE=""
+	RC_PATHS=""
 
-	FNAME=`grep '^LOCAL_RC_PATH=' ${CONFIGFILE} | tail -1`
-
-	if [ -n "${FNAME}" ]; then
-		FNAME=`echo "${FNAME}" | sed -e 's/LOCAL_RC_PATH=//' | tr -d '"' | tr -s ' '`
-
-		test "${FNAME}" = " " && FNAME=""
-	fi
-
-	if [ -n "${FNAME}" ]; then
-		RCLOCATIONS="${RKHROOTDIR}${FNAME}"
+	if [ -n "${RC_FILE}" ]; then
+		FILENAMES="${RC_FILE}"
 	else
-		RCLOCATIONS="${RKHROOTDIR}/etc/rc.local ${RKHROOTDIR}/etc/rc.d/rc.local ${RKHROOTDIR}/usr/local/etc/rc.local ${RKHROOTDIR}/usr/local/etc/rc.d/rc.local ${RKHROOTDIR}/etc/conf.d/local.start ${RKHROOTDIR}/etc/init.d/boot.local"
+		FILENAMES="${RCLOCATIONS}"
 	fi
 
-
-	for FILE in ${RCLOCATIONS}; do
-		if [ -f "${FILE}" -a ! -h "${FILE}" ]; then
-			RC_FILE="${FILE}"
-			break
+	for FNAME in ${FILENAMES}; do
+		if [ -f "${RKHROOTDIR}${FNAME}" -a ! -h "${RKHROOTDIR}${FNAME}" ]; then
+			RC_PATHS="${RC_PATHS}
+${RKHROOTDIR}${FNAME}"
 		fi
 	done
 
-	if [ -n "${RC_FILE}" ]; then
+	if [ -n "${RC_PATHS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
-		display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${RC_FILE}"
+
+		for FNAME in ${RC_PATHS}; do
+			display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
+		done
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
 		display --to LOG --type WARNING STARTUP_NO_LOCAL_RC_FILE
@@ -8131,27 +8337,27 @@ do_system_startup_file_checks() {
 	# Next we check all the startup files for any suspicious
 	# strings in them.
 	#
-	# First check the local startup file.
+	# First check the local startup files.
 	#
 
-	if ! `check_test startup_malware`; then
-		display --to LOG --type INFO USER_DISABLED_TEST startup_malware
-	elif [ -n "${RC_FILE}" ]; then
+	if [ -n "${RC_PATHS}" ]; then
 		FOUND=0
 		FOUNDSTRINGS=""
 
 		IFS=$IFSNL
 
-		for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
-			RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-			STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
-			STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
-			INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
+		for FNAME in ${RC_PATHS}; do
+			for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
+				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
+				STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
+				STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
+				INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
-			if [ -n "`grep "${STRING}" ${RC_FILE} | grep -v '^#'`" ]; then
-				FOUND=1
-				FOUNDSTRINGS="${FOUNDSTRINGS}%${STR}:${INFO}"
-			fi
+				if [ -n "`grep "${STRING}" ${FNAME} | grep -v '^#'`" ]; then
+					FOUND=1
+					FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${STR}:${INFO}"
+				fi
+			done
 		done
 
 		IFS=$RKHIFS
@@ -8169,13 +8375,14 @@ do_system_startup_file_checks() {
 			IFS="%"
 
 			for RKHTMPVAR in ${FOUNDSTRINGS}; do
-				STRING=`echo "${RKHTMPVAR}" | cut -d: -f1`
+				STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
 				test -z "${STRING}" && continue
 
-				INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
+				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
+				INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
 
-				display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${RC_FILE}" "${INFO}"
+				display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FNAME}" "${INFO}"
 			done
 
 			IFS=$RKHIFS
@@ -8192,35 +8399,23 @@ do_system_startup_file_checks() {
 	# specified in the config file.
 	#
 
-	if ! `check_test startup_malware`; then
-		# The above check will have displayed a log message that
-		# this test has been disabled.
-		:
-	elif [ -n "${FIND_CMD}" ]; then
-		RC_DIR=""
-
-		DIR=`grep '^RC_DIR=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${DIR}" ]; then
-			DIR=`echo "${DIR}" | sed -e 's/RC_DIR=//' | tr -d '"' | tr -s ' '`
-
-			test "${DIR}" = " " && DIR=""
-		fi
-
-		if [ -n "${DIR}" -a -d "${RKHROOTDIR}${DIR}" ]; then
-			RC_DIR="${RKHROOTDIR}${DIR}"
-		elif [ -d "${RKHROOTDIR}/etc/rc.d" ]; then
-			RC_DIR="${RKHROOTDIR}/etc/rc.d"
-		elif [ -d "${RKHROOTDIR}/etc/init.d" ]; then
-			RC_DIR="${RKHROOTDIR}/etc/init.d"
-		fi
-
+	if [ -n "${FIND_CMD}" ]; then
+		DIR=""
 
 		if [ -n "${RC_DIR}" ]; then
+			DIR="${RKHROOTDIR}${RC_DIR}"
+		elif [ -d "${RKHROOTDIR}/etc/rc.d" ]; then
+			DIR="${RKHROOTDIR}/etc/rc.d"
+		elif [ -d "${RKHROOTDIR}/etc/init.d" ]; then
+			DIR="${RKHROOTDIR}/etc/init.d"
+		fi
+
+
+		if [ -n "${DIR}" ]; then
 			FOUND=0
 			FOUNDSTRINGS=""
 
-			display --to LOG --type INFO STARTUP_CHECK_SYSTEM_RC_FOUND "${RC_DIR}"
+			display --to LOG --type INFO STARTUP_CHECK_SYSTEM_RC_FOUND "${DIR}"
 
 
 			#
@@ -8246,9 +8441,7 @@ do_system_startup_file_checks() {
 			RCSTRINGS=`echo "${RCSTRINGS}" | sed -e 's/^ //'`
 
 
-			for FILE in `${FIND_CMD} ${RC_DIR} -type f`; do
-				test -h "${FILE}" && continue
-
+			for FILE in `${FIND_CMD} ${DIR} -type f -a ! -type l`; do
 				for STRING in ${RCSTRINGS}; do
 					if [ -n "`grep "${STRING}" ${FILE} | grep -v '^#'`" ]; then
 						FOUND=1
@@ -8322,13 +8515,13 @@ do_group_accounts_check() {
 	# /etc/group files.
 	#
 
-	if ! `check_test group_accounts`; then
+	if `check_test group_accounts`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ACCOUNTS_START
+		display --to LOG --type INFO STARTING_TEST group_accounts
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST group_accounts
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ACCOUNTS_START
 
 	#
 	# First check that /etc/passwd exists.
@@ -8488,8 +8681,16 @@ do_group_accounts_check() {
 
 	DIFF_CMD=`find_cmd diff`
 
-	if ! `check_test passwd_changes`; then
+	if `check_test passwd_changes`; then
+		RKHTMPVAR=0
+		display --to LOG --type INFO STARTING_TEST passwd_changes
+	else
+		RKHTMPVAR=1
 		display --to LOG --type INFO USER_DISABLED_TEST passwd_changes
+	fi
+
+	if [ $RKHTMPVAR -eq 1 ]; then
+		:
 	elif [ ! -f "${RKHROOTDIR}/etc/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
@@ -8558,8 +8759,16 @@ do_group_accounts_check() {
 	# file since rkhunter was last run.
 	#
 
-	if ! `check_test group_changes`; then
+	if `check_test group_changes`; then
+		RKHTMPVAR=0
+		display --to LOG --type INFO STARTING_TEST group_changes
+	else
+		RKHTMPVAR=1
 		display --to LOG --type INFO USER_DISABLED_TEST group_changes
+	fi
+
+	if [ $RKHTMPVAR -eq 1 ]; then
+		:
 	elif [ ! -f "${RKHROOTDIR}/etc/group" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE "${RKHROOTDIR}/etc/group"
@@ -8695,13 +8904,13 @@ do_system_config_files_check() {
 	# and syslog configurations.
 	#
 
-	if ! `check_test system_configs`; then
+	if `check_test system_configs`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SYSTEM_CONFIGS_START
+		display --to LOG --type INFO STARTING_TEST system_configs
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SYSTEM_CONFIGS_START
 
 	#
 	# First find out where the SSH configuration file is located.
@@ -8932,13 +9141,13 @@ do_filesystem_check() {
 	# for suspicious files.
 	#
 
-	if ! `check_test filesystem`; then
+	if `check_test filesystem`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILESYSTEM_START
+		display --to LOG --type INFO STARTING_TEST filesystem
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST filesystem
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILESYSTEM_START
 
 
 	if [ ! -d "${RKHROOTDIR}/dev" ]; then
@@ -9139,13 +9348,13 @@ do_local_host_checks() {
 	# host.
 	#
 
-	if ! `check_test local_host`; then
+	if `check_test local_host`; then
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_LOCALHOST
+		display --to LOG --type INFO STARTING_TEST local_host
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST local_host
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_LOCALHOST
 
 
 	#
@@ -9188,13 +9397,13 @@ do_app_checks() {
 	# This function carries out a sequence of application checks.
 	#
 
-	if ! `check_test apps`; then
+	if `check_test apps`; then
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl --nl-after CHECK_APPS
+		display --to LOG --type INFO STARTING_TEST apps
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST apps
 		return
 	fi
-
-
-	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl --nl-after CHECK_APPS
 
 	#
 	# We loop through the applications and obtain the version number.
@@ -9944,9 +10153,9 @@ set_file_prop_dirs_files() {
 check_test() {
 
 	#
-	# This function will test if a given test name is enabled
-	# or not. It returns 0 if the test is to be executed, and
-	# 1 if it is not.
+	# This function will check whether a given test name should
+	# be run or not. It returns 0 if the test is to be run,
+	# and 1 if it is not.
 	#
 
 	if [ "${ENABLE_TESTS}" = "all" -o -n "`echo \"${ENABLE_TESTS}\" | egrep \"(^| )${1}( |$)\"`" ]; then
@@ -10484,6 +10693,10 @@ RKHIFS="
 IFSNL="
 "
 IFS=$RKHIFS
+
+# No defaults set for the'rc' local system startup files and directory.
+RC_DIR=""
+RC_FILE=""
 
 # Set a default for the inetd configuration file.
 INETD_CONF_PATH="/etc/inetd.conf"
