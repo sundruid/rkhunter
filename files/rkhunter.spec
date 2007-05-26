@@ -28,6 +28,7 @@ Epoch: %{epoch}
 License: GPL
 Group: Applications/System
 Source0: %{name}-%{version}.tar.gz
+BuildArch: noarch
 Requires: filesystem, bash, grep, findutils, net-tools, coreutils, e2fsprogs, modutils, procps, binutils, wget, perl
 Provides: %{name}
 URL: http://rkhunter.sourceforge.net/
