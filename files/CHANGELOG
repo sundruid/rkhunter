@@ -116,7 +116,18 @@
    prone to reporting false positives, and is CPU and I/O intensive to boot.
    Therefore suspscan is disabled by default. Please do not enable suspscan
    unless you have good reasons to use it. Review the settings in the configu-
-   ration file, and test before deploying it on production servers. 
+   ration file, and test before deploying it on production servers.
+ - Added the command-line option '--pkgmgr', and the configuration file option
+   PKGMGR. These provide support for package managers when using the
+   '--propupd' and '--check' options. Currently supported package managers are
+   'RPM' for RedHat/RPM-based systems, 'DPKG' for Debian-based systems, and
+   'BSD' for *BSD systems. Additionally 'MD5' can be used to specify that an
+   md5 command must be used, or 'NONE' to indicate that no package manager is
+   to be used. Default is 'NONE'. See the README file for more details.
+ - Added the configuration file option USE_PKGMGR_VERIFY. This tells RKH to use
+   the package manager database information to verify if the file has changed
+   or not. If this option is specified then the data in rkhunter.dat is not
+   used for the file properties checks. See the README file for more details.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -229,7 +240,7 @@
  - The application version check no longer checks against known 'good'
    versions. Only a file of bad versions is kept. The previous method was
    impossible to maintain.
- - Enabled the immutable test for *BSD systems.
+ - Enabled the immutable file test for *BSD systems.
  - Soft (symbolic) links for files and directories are now handled correctly.
    Previously the link was dealt with, but not what it pointed to. Soft links
    are dealt with when using the '--propupd' command, and when running the

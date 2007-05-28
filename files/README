@@ -2,7 +2,7 @@
 THE ROOTKIT HUNTER PROJECT
 ==========================
 
-Copyright (c) 2003-2006, Michael Boelen
+Copyright (c) 2003-2007, Michael Boelen
 See the LICENSE file for conditions of use and distribution.
 
 It is recommended that all users of RootKit Hunter (RKH) join the
@@ -22,11 +22,13 @@ Please note RKH has some requirements:
    'cat', 'sed', 'head', 'tail', etc. If a command is missing then
    RKH will not run.
 
-2) Some tests require commands such as stat, md5/md5sum or
+2) Some tests require commands such as stat, readlink, md5/md5sum,
    sha1/sha1sum. If these are not present, then RKH has perl
    scripts which will automatically be used instead. However, this
    requires perl being present. If it is not, then the tests will
-   be skipped.
+   be skipped. Readlink is provided as a script itself, and does
+   not use perl. Other tests will use other commands. If the relevant
+   command is not found on the system, then the test will be skipped.
 
 3) A tool should be present with which to download file updates. 
    Currently wget, curl, (e)links, lynx and GET are supported. If your
@@ -45,6 +47,7 @@ Please note RKH has some requirements:
    - Unhide
        Finds hidden processes.
        http://www.security-projects.com/?Unhide
+   If the relevant tool is not found, then the test is skipped.
 
 
 ROOTKIT HUNTER INSTALLATION
@@ -166,10 +169,157 @@ installer to show where the files were installed:
 You can then manually remove the files.
 
 
-TEST NAMES
-==========
-jh - fill this bit in!
-jh - add a bit about package managers.
+USING TEST NAMES
+================
+
+Within RKH some of the tests have been given names. There are two types of
+test names - specific test names and grouped test names. A specific test name
+generally refers to one specific test within RKH. A grouped test name refers
+to a set, or group, of related tests. Within a group name there are usually
+one or more specific test names.
+
+To see the current list of test names use the 'rkhunter --list tests' command.
+The grouped names list will show the specific names that are within the group.
+
+So, for example, the file properties check has the grouped name of 'properties'.
+However, within that test the file hash value test is known as 'hashes'.
+Similarly, the file attributes check, which checks the file permissions, uid
+and gid values, and so on, is known as the 'attributes' test. Note that while
+it is possible to tell RKH to run the file properties check, but ignore the
+file hash value test, it is not possible to tell RKH to run the file attributes
+but to ignore the file permissions checks. RKH has no specific name for the
+file permissions test, and so it cannot be specifically enabled or disabled.
+
+RKH can be told to enable or disable one or more of the tests by using the
+'--enable' and '--disable' command-line options. Alternatively, the RKH
+configuration file options 'ENABLE_TESTS' and 'DISABLE_TESTS' can be used.
+Note, however, that if either command-line option is used then the
+configuration file options, for both enabled and disabled tests, are ignored.
+The program defaults if no options are used at all are to enable all tests and
+to disable no tests. For this purpose the enable options can use the special
+test name 'all', and the disable options can use the name 'none'. To specify
+more than one test name, specify them as a comma-separated list. For example:
+
+    rkhunter --enable "rootkits,hashes"
+
+Note that in the above example no disabled test list was specified. As such, it
+will default to the program default value - '--disable none'. If multiple use
+of the options are given on the command-line, then the last values seen will
+be used.
+
+The supplied RKH configuration file will have some tests already disabled.
+These are generally CPU and/or I/O intensive tests, or ones which may be prone
+to giving false-positive results. They can, of course, be enabled by editing
+the DISABLE_TESTS list. To run the tests from the command line, either user
+the '--enable' command-line option with the specified test name, or use
+either '--enable all' or '--disable none'.
+
+If only one test name, other than 'all' or 'none', is used on the command line,
+then RKH will assume the '--check' and '--skip-keypress' options. So, for
+example, to run all the rootkit tests just use:
+
+    rkhunter --enable rootkits
+
+Similarly, to run all the tests except the rootkit tests, then use:
+
+    rkhunter --disable rootkits
+
+In this example RKH will assume the enabled test list of '--enable all'. In the
+previous example, '--disable none' will have been assumed.
+
+If a combination of enabled and disabled tests are specified, then RKH will
+disable a test if it is specified in the enable list. So, for example:
+
+    rkhunter --enable "rootkits,deleted_files" --disable malware
+
+In this example the 'malware' test is disabled because it is part of the
+'rootkits' test. The fact that the 'deleted_files' test is specified to be
+run is ignored, because that is part of the 'malware' test. RKH will always
+look to see what tests to disable first. It will then run any enabled tests
+that are left.
+
+By default RKH will log what tests names have been enabled and disabled.
+Additionally it will log each test name that it is about to execute. When
+initially run RKH may skip some tests due to missing commands or files. It is
+usually possible to omit these tests by including them in the DISABLE_TESTS
+list in the configuration file. The test name associated with these tests can
+be found by looking in the log file.
+
+It should be noted that not all the tests have been given names. As such some
+test names may execute more tests than expected. For example:
+
+    rkhunter --enable group_changes
+
+The 'group_changes' test name refers to the check to see if the /etc/group file
+has been modified. However, running the above command will also cause several
+tests on the /etc/passwd file to be executed. This is because those tests are
+part of the 'local_host' grouped test name, as is the 'group_changes' test,
+but those other tests have no specific names. As such, RKH will start the
+'local_host' tests, executing some of the /etc/passwd file tests and then the
+'group_changes' test, but ignoring any other tests within 'local_host' which
+do have specific names (for example, 'filesystem' and 'passwd_changes').
+
+
+USING PACKAGE MANAGERS
+======================
+
+The RKH file properties check, by default, performs a check of various current
+file properties against those that it has previously stored in the
+'rkhunter.dat' file. This way RKH can warn the user if a file has changed. The
+file properties include items such as the files hash value, file permissions,
+uid/gid, inode number and so on. The properties are obtained and stored in the
+rkhunter.dat file when RKH is run with the '--propupd' option.
+
+Typically the file properties are obtained using commands such as 'stat',
+'file', 'md5sum' and 'prelink'. However, it is also possible to specify that
+RKH should get whatever values it can by using a package manager. This can be
+done by using the '--pkgmgr' command-line option, or the 'PKGMGR' configuration
+file option. When a package manager is specified, during the file properties
+check the values from the package manager are compared against those in the
+rkhunter.dat file.
+
+The currently available package managers are 'RPM' for RedHat/RPM-based
+systems, 'DPKG' for Debian-based systems, and 'BSD' for *BSD systems. It is
+also possible to specify 'MD5' which forces RKH to use an MD5 hash function
+command, or 'NONE' to indicate not to use a package manager. The program
+default is 'NONE'.
+
+Any file which is not part of a package is treated as before, that is, the
+HASH_FUNC configuration file option, or the '--hash' command-line option will
+be used.
+
+If the MD5 package manager is used, then all files are considered part of a
+package and an MD5 hash value will be calculated for them all.
+
+
+USING PACKAGE MANAGER VERIFICATION
+==================================
+
+As mentioned above, during the file properties check, and when using a package
+manager, the property value from the package manager is compared against the
+previously stored value in the rkhunter.dat file. However, if a file, which is
+part of a package, is automatically updated by the system, then RKH will show
+that the file has changed.
+
+To avoid this problem it is possible to set the 'USE_PKGMGR_VERIFY' option in
+the configuration file. This option tells RKH to re-calculate the files current
+property value, again using commands such as 'stat', 'md5sum' etc, and compare
+that value against the package manager value. Hence the value stored in the
+rkhunter.dat file is not used. This, in effect, compares the package manager
+values against the current file values, and for updated files RKH should show
+that the file has not changed.
+
+It should be noted that all the package managers provide an MD5 hash value for
+a file. However, the 'RPM' package manager can provide other file property
+values as well, such as the file permissions, uid/gid, modification time and so
+on. During verification all of these values will be used, rather than the ones
+stored in the rkhunter.dat file.
+
+It should also be noted that the 'DPKG', 'BSD' and 'MD5' package manager
+options only provide the files MD5 hash value. As such, during verification,
+all the other current file properties will be re-calculated as before, and
+compared against the values in the rkhunter.dat file. Hence, only the 'RPM'
+package manager offers any real benefit in using package manager verification.
 
 
 ROOTKIT HUNTER SUPPORT

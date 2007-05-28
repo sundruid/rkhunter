@@ -260,7 +260,7 @@ A.   You can create a cronjob script like this:
 
           ( /usr/local/bin/rkhunter --versioncheck
             /usr/local/bin/rkhunter --update
-            /usr/local/bin/rkhunter --cronjob --report-warnings-only
+            /usr/local/bin/rkhunter --cronjob --rwo --nomow
           ) | /bin/mail -s 'rkhunter Daily Run' root
 
      For Linux systems, if the script is saved in the
@@ -270,7 +270,7 @@ A.   You can create a cronjob script like this:
      Alternatively, the rkhunter command can be added directly to
      your root crontab. For example:
 
-        30 5 * * * </path>/rkhunter --cronjob --rwo <more options>
+        30 5 * * * </path>/rkhunter --cronjob --rwo --nomow <more options>
 
      Rootkit Hunter will now run every day at 5:30 (AM).
 
@@ -360,7 +360,7 @@ A.   You have a choice:
 
        1) Install the relevant command. You may be able to do this
           simply by running a package updater for your system (for
-          example, 'yum' under Fedora).
+          example, 'yum' or 'apt-get').
 
        2) You may be able to disable the check by adding its test
           name to your rkhunter.conf file. (See the README file
@@ -369,10 +369,10 @@ A.   You have a choice:
        3) If you are sure that the relevant command is present on
           your system, then rkhunter is having a problem locating
           it. Check the logfile for the 'command directories' it
-          is using. If the directory containg the command isn't
-          listed, then set the command directories to use by using
-          the '--bindir' command-line option, or the BINDIR option
-          in the rkhunter.conf file.
+          is using. If the directory containing the command isn't
+          listed, then you can set the command directories to use
+          by using the '--bindir' command-line option, or the BINDIR
+          option in the rkhunter.conf file.
 
 
 4.3) I get warnings from PHP like:
@@ -400,6 +400,14 @@ A.   The first thing would be to verify that the update is the cause
      Updating the stored hash values should be done only after proper
      verification of the files using a file integrity checker or your
      distributions package management tools.
+
+     Alteratively, you can use the '--pkgmgr' command-line option, or
+     the PKGMGR option in the configuration file, to tell RKH to obtain
+     its file properties information from the package manager database.
+     If the USE_PKGMGR_VERIFY configuration file option is also used,
+     then RKH will use the result of the package manager verification
+     rather than the values stored in the rkhunter.dat file. See the
+     README file for more information about the package manager options.
 
      NOTES
      =====

@@ -1,5 +1,5 @@
 OS id:OS Description:Location of md5:Local binary dir:
-000:version:2007052402:
+000:version:2007052601:
 100:Red Hat Linux release 7.2 (Enigma):/usr/bin/md5sum:/bin:
 101:Red Hat Linux release 7.1 (Seawolf):/usr/bin/md5sum:/bin:
 102:Debian testing/unstable (i386):/usr/bin/md5sum:/bin:
@@ -206,6 +206,7 @@ OS id:OS Description:Location of md5:Local binary dir:
 738:Red Hat Enterprise Linux WS release 4 (Nahant Update 5):/usr/bin/md5sum:/bin:
 739:Red Hat Enterprise Linux Client release 5 (Tikanga):/usr/bin/md5sum:/bin:
 739:Red Hat Enterprise Linux Server release 5 (Tikanga):/usr/bin/md5sum:/bin:
+740:CentOS release 5 (Final):/usr/bin/md5sum:/bin:
 800:Ipcop 1.4.11:/usr/bin/md5sum:/bin:
 801:CentOS release 3.8 (Final):/usr/bin/md5sum:/bin:
 802:Slackware 11.0.0:/bin/md5sum:/bin:

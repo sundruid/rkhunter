@@ -2402,13 +2402,13 @@ get_rc_options() {
 	fi
 
 
-	RC_DIR=`grep '^RC_DIR=' ${CONFIGFILE} | tail -1`
+	RC_DIR=`grep '^SYSTEM_RC_DIR=' ${CONFIGFILE} | tail -1`
 
 	if [ -n "${RC_DIR}" ]; then
-		RC_DIR=`echo "${RC_DIR}" | sed -e 's/RC_DIR=//' | tr -d '"' | tr -s ' '`
+		RC_DIR=`echo "${RC_DIR}" | sed -e 's/SYSTEM_RC_DIR=//' | tr -d '"' | tr -s ' '`
 
 		if [ -z "${RC_DIR}" -o "${RC_DIR}" = " " ]; then
-			echo "Invalid RC_DIR configuration option - no directory specified."
+			echo "Invalid SYSTEM_RC_DIR configuration option - no directory specified."
 			exit 1
 		fi
 
@@ -2506,7 +2506,7 @@ get_configfile_options() {
 		check_test hashes && HASH_CHECK_ENABLED=1
 		check_test attributes && HASH_CHECK_ENABLED=1
 
-		check_test trojan && get_xinetd_option
+		check_test trojans && get_xinetd_option
 	fi
 
 
@@ -6770,9 +6770,11 @@ ${RKHROOTDIR}${FNAME}"
 	done
 
 	if [ -n "${RC_PATHS}" ]; then
-		for FNAME in ${RC_PATHS}; do
-			display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
-		done
+		if [ -z "${RC_FILE}" ]; then
+			for FNAME in ${RC_PATHS}; do
+				display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
+			done
+		fi
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_POSS_STRINGS
 		display --to LOG --type PLAIN --log-indent 9 STARTUP_CHECK_SYSTEM_RC_NONE
@@ -7456,8 +7458,8 @@ trojan_checks() {
 	# This function performs some trojan specific checks.
 	#
 
-	if ! `check_test trojan`; then
-		display --to LOG --type INFO --nl USER_DISABLED_TEST trojan
+	if ! `check_test trojans`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST trojans
 		return
 	fi
 
@@ -7486,7 +7488,7 @@ trojan_checks() {
 
 	display --to "${RKHTMPVAR}" --type PLAIN --nl --screen-indent 2 ROOTKIT_TROJAN_START
 
-	display --to LOG --type INFO STARTING_TEST trojan
+	display --to LOG --type INFO STARTING_TEST trojans
 
 
 	#
@@ -8322,11 +8324,13 @@ ${RKHROOTDIR}${FNAME}"
 	done
 
 	if [ -n "${RC_PATHS}" ]; then
-		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
+		if [ -z "${RC_FILE}" ]; then
+			for FNAME in ${RC_PATHS}; do
+				display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
+			done
+		fi
 
-		for FNAME in ${RC_PATHS}; do
-			display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
-		done
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
 		display --to LOG --type WARNING STARTUP_NO_LOCAL_RC_FILE
@@ -8415,7 +8419,7 @@ ${RKHROOTDIR}${FNAME}"
 			FOUND=0
 			FOUNDSTRINGS=""
 
-			display --to LOG --type INFO STARTUP_CHECK_SYSTEM_RC_FOUND "${DIR}"
+			test -z "${RC_DIR}" && display --to LOG --type INFO STARTUP_CHECK_SYSTEM_RC_FOUND "${DIR}"
 
 
 			#
@@ -10273,9 +10277,6 @@ display_tests() {
 		echo "    ${GROUP_NAME} => ${TEST_NAMES}"
 	done
 
-	echo ""
-	echo "Please see the README file for a brief description of the test names."
-
 	return
 }
 
@@ -10405,7 +10406,7 @@ help() {
 	echo "                   NONE}               verify file hash values. (Default is NONE)"
 	echo "         --propupd                     Update the file properties database"
 	echo "     -q, --quiet                       Quiet mode (no output at all)"
-	echo "  --rwo, --report-warnings-only        Show only warnings"
+	echo "  --rwo, --report-warnings-only        Show only warning messages"
 	echo "     -r, --rootdir <rootdir>           Use <rootdir> as the root directory"
 	echo "                                       (Default is '/')"
 	echo "   --sk, --skip-keypress               Don't wait for a keypress after each test"
@@ -10629,7 +10630,7 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     additional_rkts malware local_host network passwd_changes
 	     group_changes possible_rkts possible_rkt_files possible_rkt_strings
 	     system_commands shared_libs shared_libs_path running_procs
-	     hidden_procs trojan other_malware os_specific startup_malware
+	     hidden_procs trojans other_malware os_specific startup_malware
 	     startup_files group_accounts system_configs filesystem suspscan"
 
 # A space-separated list of test 'group names'. This list allows test
@@ -10642,7 +10643,7 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:shared_libs_path:immutable:attributes
 	       properties:hashes:scripts:immutable:attributes
 	       shared_libs:shared_libs_path
-	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojan:other_malware:os_specific:suspscan
+	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:other_malware:os_specific:suspscan
 	       additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings
 	       possible_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps
@@ -11698,6 +11699,10 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 fi
 
 if [ $CHECK -eq 1 ]; then
+	test -n "${RC_FILE}" && display --to LOG --type INFO CONFIG_LOCAL_RC_FILE "${RKHROOTDIR}${RC_FILE}"
+
+	test -n "${RC_DIR}" && display --to LOG --type INFO CONFIG_LOCAL_RC_DIR "${RKHROOTDIR}${RC_DIR}"
+
 	if [ -n "${KSYMS_FILE}" ]; then
 		display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"
 	else

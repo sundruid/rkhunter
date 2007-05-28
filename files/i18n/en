@@ -1,4 +1,4 @@
-Version:2007052401
+Version:2007052601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -69,6 +69,8 @@ CONFIG_SCAN_MODE_DEV:SCAN_MODE_DEV set to '$1'
 CONFIG_NO_VL:Disabling verbose logging at users request
 CONFIG_XINETD_PATH:Using $1 configuration file '$2'
 CONFIG_SOL10_INETD:Using Solaris 10 and later inetd mechanism
+CONFIG_LOCAL_RC_DIR:Using system startup directory: $1
+CONFIG_LOCAL_RC_FILE:Using local startup file(s): $1
 
 FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
