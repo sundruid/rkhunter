@@ -237,7 +237,7 @@ RKHINST_BIN_FILES="${APPNAME}"
 RKHINST_SCRIPT_FILES="check_modules.pl check_update.sh check_port.pl filehashmd5.pl filehashsha1.pl showfiles.pl stat.pl readlink.sh"
 RKHINST_DB_FILES="backdoorports.dat mirrors.dat os.dat programs_bad.dat programs_good.dat defaulthashes.dat md5blacklist.dat"
 RKHINST_DOC_FILES="ACKNOWLEDGMENTS CHANGELOG FAQ LICENSE README WISHLIST"
-RKHINST_MAN_FILES="development/${APPNAME}.8"
+RKHINST_MAN_FILES="${APPNAME}.8"
 
 }
 
@@ -493,8 +493,8 @@ for FILE in ${RKHINST_SCRIPT_FILES} ${RKHINST_DB_FILES} ${RKHINST_MAN_FILES}; do
 				chmod "${RKHINST_MODE_RW}" "${RKHINST_DB_DIR}/${FILE}"
 				;;
 		*.8)		echo $N " Installing ${FILE}: "
-				cp -f ./files/"${FILE}" "${RKHINST_MAN_DIR}/`basename ${FILE}`"; retValChk
-				chmod "${RKHINST_MODE_RW}" "${RKHINST_MAN_DIR}/`basename ${FILE}`"
+				cp -f ./files/"${FILE}" "${RKHINST_MAN_DIR}"; retValChk
+				chmod "${RKHINST_MODE_RW}" "${RKHINST_MAN_DIR}/${FILE}"
 				;;
 		esac
 done
@@ -612,9 +612,9 @@ echo "Removing installation files:"
 
 # Man page
 for FILE in ${RKHINST_MAN_FILES}; do
-	if [ -f "${RKHINST_MAN_DIR}/`basename ${FILE}`" ]; then
+	if [ -f "${RKHINST_MAN_DIR}/${FILE}" ]; then
 		echo $N " Removing ${FILE}: "
-		rm -f "${RKHINST_MAN_DIR}/`basename ${FILE}`"; retValChk
+		rm -f "${RKHINST_MAN_DIR}/${FILE}"; retValChk
 	fi
 done
 
