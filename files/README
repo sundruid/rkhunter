@@ -214,8 +214,11 @@ the DISABLE_TESTS list. To run the tests from the command line, either user
 the '--enable' command-line option with the specified test name, or use
 either '--enable all' or '--disable none'.
 
-If only one test name, other than 'all' or 'none', is used on the command line,
-then RKH will assume the '--check' and '--skip-keypress' options. So, for
+If either of the '--enable' or '--disable' command-line options is used, and
+the '--propupd' option is not given, then '--check' is assumed.
+
+If the '--enable' option is used and only one test name, other than 'all',
+is given, then the '--skip-keypress' option is assumed as well. So, for
 example, to run all the rootkit tests just use:
 
     rkhunter --enable rootkits
@@ -320,6 +323,12 @@ options only provide the files MD5 hash value. As such, during verification,
 all the other current file properties will be re-calculated as before, and
 compared against the values in the rkhunter.dat file. Hence, only the 'RPM'
 package manager offers any real benefit in using package manager verification.
+
+NOTE: It is possible for a package manager database to become maliciously
+corrupted. To that extent the use of the package manager options with RKH
+does not provide any increase in security. However, it may result in less
+false-positive warnings of files which have changed. As always RKH can only
+report on changes, but not on what has caused the change.
 
 
 ROOTKIT HUNTER SUPPORT
