@@ -3467,7 +3467,7 @@ do_versioncheck() {
 	#
 	# It will set the return code in some instances:
 	#       0 - (implied) no error, no new version available
-	#	1 - a download error occurred
+	#	1 - a download (of the version number) error occurred
 	#	2 - no error occurred, but a new version is available
 	#
 

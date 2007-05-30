@@ -16,7 +16,7 @@ listening applications.
 
 \fBrkhunter\fP has been written to be as generic as possible, and so should run
 on most Linux and UNIX systems. It is provided with some support scripts should
-certain commands be missing from the system, some of these are perl scripts.
+certain commands be missing from the system, and some of these are perl scripts.
 \fBrkhunter\fP does require certain commands to be present for it to be able
 to execute. Additionally, some tests require specific commands, but if these
 are not present then the test will be skipped. \fBrkhunter\fP needs to be run
@@ -31,8 +31,8 @@ If no command option is given, then \fB\-\-help\fP is assumed.
 .PP
 .IP "\fB\-c, \-\-check\fP"
 This command option tells \fBrkhunter\fP to perform various checks on the local
-system. The result of each test will displayed on stdout. If anything
-suspicious is found then a warning will be displayed. A log file of the tests
+system. The result of each test will be displayed on stdout. If anything
+suspicious is found, then a warning will be displayed. A log file of the tests
 and the results will be automatically produced.
 
 It is suggested that this command option is run regularly in order to ensure
@@ -42,8 +42,8 @@ that the system has not been compromised.
 
 .IP \fB\-\-update\fP
 This command option causes \fBrkhunter\fP to check if there is a later version
-of any of its text data files. A web download command, for example \fBwget\fP or
-\fBlynx\fP, must be present on the system when using this option.
+of any of its text data files. A command\-line web browser, for example
+\fBwget\fP or \fBlynx\fP, must be present on the system when using this option.
 
 It is suggested that this command option is run regularly in order to ensure
 that the data files are kept up to date.
@@ -63,25 +63,26 @@ with the current values.
 
 \fIWARNING:\fP It is the users responsibility to ensure that the files on the
 system are genuine and from a reliable source. \fBrkhunter\fP can only report
-if a file has changed, not on what has caused the change. Hence, if a file has
-changed, and the \fB\-\-propupd\fP command option is used, then \fBrkhunter\fP
-will assume that the file is genuine.
+if a file has changed, but not on what has caused the change. Hence, if a file
+has changed, and the \fB\-\-propupd\fP command option is used, then
+\fBrkhunter\fP will assume that the file is genuine.
 
 .IP
 
 .IP \fB\-\-versioncheck\fP
 This command option causes \fBrkhunter\fP to check if there is a later version
-of the program. A web download command must be present on the system when using
-this option.
+of the program. A command\-line web browser must be present on the system when
+using this option.
 
 An exit code of zero for this command option means that no new version was
-available. An exit code of one means that a download error occurred, and a code
-of two means that no error occurred but a new version is available.
+available. An exit code of one means that an error occurred downloading the
+latest version number, and a code of two means that no error occurred but a
+new version is available.
 
 .IP
 
 .IP "\fB\-V, \-\-version\fP"
-This command option causes \fBrkhunter\fP to displays its version number, and
+This command option causes \fBrkhunter\fP to display its version number, and
 then exit.
 
 .IP
@@ -95,17 +96,17 @@ This command option displays the help screen menu.
 .SH OPTIONS
 \fBrkhunter\fP uses a configuration file, named \fIrkhunter.conf\fP, for many of
 its configuration options. However, some options can also be specified on the
-command\-line, and these will override the configuration file options. Each of
-the configuration file options is well documented within the file itself. The
-following are the command\-line options. The defaults mentioned are the program
-defaults, unless explicitly mentioned as the configuration file default.
+command\-line, and these will override the configuration file options. The
+configuration file options are well documented within the file itself. The
+following are the command\-line options. The defaults mentioned here are the
+program defaults, unless explicitly stated as the configuration file default.
 
 .PP
 
 .IP \fB\-\-appendlog\fP
-By default a log file will be created when \fBrkhunter\fP runs. This option
-tells \fBrkhunter\fP to append to the, possibly existing, log file. The default
-is not to append to the log file, but to create a new one.
+By default a new log file will be created when \fBrkhunter\fP runs. This option
+tells \fBrkhunter\fP to append to the existing log file. If the log file does
+not exist, then it will be created.
 
 .IP "\fB\-\-bindir <directory>...\fP"
 This option tells \fBrkhunter\fP which directories to look in to find the
@@ -161,26 +162,26 @@ Read the README file for more information about test names. By default all
 tests are enabled.
 
 .IP "\fB\-\-hash {MD5|SHA1|NONE|<command>}\fP"
-Both the file properties check and the \fB\-\-propupd\fP option will use a hash
-function to determine a files current hash value. This option tells
-\fBrkhunter\fP which hash function to use. The \fBMD5\fP and \fBSHA1\fP
+Both the file properties check and the \fB\-\-propupd\fP command option will
+use a hash function to determine a files current hash value. This option tells
+\fBrkhunter\fP which hash function to use. The \fIMD5\fP and \fISHA1\fP
 options, in uppercase, will look for the relevant command, and if not found
-a perl support script will be used to provide the function. Alternatively a
-specific \fB<command>\fP may be specified. A value of \fBNONE\fP can be used
+a perl support script will be used to provide the function. Alternatively, a
+specific \fIcommand\fP may be specified. A value of \fINONE\fP can be used
 to indicate that the hash values should not be obtained or used as part of the
-file properties check. The default is \fBSHA1\fP, or \fBMD5\fP is no SHA1
+file properties check. The default is \fISHA1\fP, or \fIMD5\fP if no SHA1
 command can be found.
 
 .IP "\fB\-\-lang, \-\-language <language>\fP"
 This option specifies which language to use for the displayed tests and results.
 The currently supported languages can be seen by the \fB\-\-list\fP option. The
-default is \fBen\fP (English).
+default is \fIen\fP (English).
 
 .IP "\fB\-\-list [tests|languages|rootkits]\fP"
 This option will list some of the supported capabilities of the program. The
-\fBtests\fP option lists the currently available test names (see the README
-file for more details about test names). The \fBlanguages\fP option lists the
-currently supported languages, and the \fBrootkits\fP option lists the rootkits
+\fItests\fP option lists the currently available test names (see the README
+file for more details about test names). The \fIlanguages\fP option lists the
+currently available languages, and the \fIrootkits\fP option lists the rootkits
 that \fBrkhunter\fP will search for. If no specific option is given, then all
 the lists are displayed.
 
@@ -188,19 +189,19 @@ the lists are displayed.
 By default \fBrkhunter\fP will write out a log file. The default location of
 the file is \fI/var/log/rkhunter.log\fP. However, this location can be changed
 by using this option. If \fI/dev/null\fP is specified as the log file, then no
-log file will be written. If no specific \fBfile\fP is given, then the default
+log file will be written. If no specific \fIfile\fP is given, then the default
 will be used. By default \fBrkhunter\fP will create a new log file each time
 it is run. Any previously existing logfile is moved out of the way, and has
 \fI.old\fP appended to it.
 
 .IP \fB\-\-noappend\-log\fP
 This option reverts \fBrkhunter\fP to its default behaviour of creating a new
-log file each time it runs.
+log file rather than appending to it.
 
 .IP \fB\-\-nocolors\fP
-This option causes the results of each test to not be displayed in a specific
+This option causes the result of each test to not be displayed in a specific
 color. The default color, usually the reverse of the background color, will be
-used.
+used (typically this is just black and white).
 
 .IP \fB\-\-nolog\fP
 This option tells \fBrkhunter\fP not to write anything to a log file.
@@ -215,8 +216,9 @@ through to the \fImail\fP command. The configuration file default is not to
 email a message to the user.
 
 .IP "\fB\-\-ns, \-\-nosummary\fP"
-When the \fB\-\-check\fP command is used, by default a short summary of results
-is displayed at the end. This option prevents the summary from being displayed.
+When the \fB\-\-check\fP command option is used, by default a short summary of
+results is displayed at the end. This option prevents the summary from being
+displayed.
 
 .IP "\fB\-\-novl, \-\-no\-verbose\-logging\fP"
 During some tests \fBrkhunter\fP will log a lot of information. Use of this
@@ -237,7 +239,7 @@ when only the exit code is going to be checked. Other options may be used with
 this one, to force only specific items to be displayed.
 
 .IP "\fB\-\-rwo, \-\-report\-warnings\-only\fP"
-As the option says, only warning messages will be displayed. This can be
+This option causes only warning messages to be displayed. This can be
 useful when \fBrkhunter\fP is run via cron. Other options may be used to
 force other items of information to be displayed.
 
@@ -249,9 +251,9 @@ directories may need to be set as well. There is no default.
 
 .IP "\fB\-\-sk, \-\-skip\-keypress\fP"
 When the \fB\-\-check\fP command option is used, after certain sections of
-tests, the user will be prompted to press \fIreturn\fP in order to continue.
-This option disables that feature, and \fBrkhunter\fP will run until all the
-tests have completed.
+tests, the user will be prompted to press the \fIreturn\fP key in order to
+continue. This option disables that feature, and \fBrkhunter\fP will run until
+all the tests have completed.
 
 .IP \fB\-\-summary\fP
 This option will cause the summary of test results to be displayed. This is
@@ -263,7 +265,7 @@ start and finish times to be logged to syslog. The default is not to log
 anything to syslog, but if the option is used, then the default level
 is \fIauthpriv.notice\fP.
 
-.IP \fB\-\-tmpdir <directory>\fP
+.IP "\fB\-\-tmpdir <directory>\fP"
 The installation process will automatically configure where temporary files are
 to be created. However, if necessary, this option can be used to specify a
 different directory. The directory must not be a symbolic link, and must be
@@ -283,7 +285,7 @@ automatically be used (see the \fB\-\-color\-set2\fP option). This allows
 present, so the default color set should be used), and on a users terminal
 (where X is in use, so the second color set should be used). In both cases
 \fBrkhunter\fP will use the correct color set. The configuration file default
-is to detect for X.
+is to try and detect X.
 
 .IP "\fB\-X, \-\-no\-autox\fP"
 This option prevents \fBrkhunter\fP from automatically detecting if the X
@@ -294,7 +296,7 @@ Window system is being used. See the \fB\-\-autox\fP option.
 /etc/rkhunter.conf
 
 .SH SEE ALSO
-See the supplied CHANGELOG file for recent changes.
+See the CHANGELOG file for recent changes.
 .br
 The README file has information about installing \fBrkhunter\fP, as well as
 specific sections on test names and package managers.
@@ -303,9 +305,10 @@ The FAQ file should also answer some questions.
 
 .SH LICENSING
 RootKit Hunter is licensed under the GPL, copyright Michael Boelen.
+See the LICENSE file for details of GPL licensing.
 
 .SH CONTACT INFORMATION
 RootKit Hunter is under active development by the RootKit Hunter 
 project team. For reporting bugs, updates, patches, comments and 
-questions, please see http://rkhunter.sourceforge.net/
+questions, please go to http://rkhunter.sourceforge.net/
 .fi
