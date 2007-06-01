@@ -443,7 +443,8 @@ esac # end Check PREFIX
 
 echo "Checking installation directories:"
 
-for DIR in ${RKHINST_DIRS}; do
+umask 022
+for DIR in ${RKHINST_DIRS} ${LIBDIR} ${VARDIR}; do
 	echo $N $ECHOOPT " Directory ${DIR}: "
 	if [ -d "${DIR}" ]; then
 		echo $N "exists, and is "
@@ -456,9 +457,9 @@ for DIR in ${RKHINST_DIRS}; do
 	else
 		echo $N "creating: "
 		mkdir -p ${DIR}; retValChk
-		chmod 0755 ${DIR}
 	fi
 done
+umask 027
 
 for DIR in ${RKHINST_DIRS_EXCEP}; do
 	echo $N $ECHOOPT " Directory ${DIR}: "
