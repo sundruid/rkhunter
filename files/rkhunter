@@ -964,6 +964,13 @@ get_language_option() {
 	fi
 
 	#
+	# If no language has been set, then use English.
+	#
+
+	test -z "${LANGUAGE}" && LANGUAGE="en"
+
+
+	#
 	# Now check that the language is available.
 	#
 
@@ -973,6 +980,10 @@ get_language_option() {
 	elif [ ! -f "${DB_PATH}/i18n/${LANGUAGE}" ]; then
 		echo "The language specified is not available: ${LANGUAGE}"
 		echo "Use the '--list languages' option to see the list of available languages."
+		exit 1
+	elif [ ! -f "${DB_PATH}/i18n/en" ]; then
+		echo "The English language file must be present: ${DB_PATH}/i18n/en"
+		echo "If it has been deleted, then you will need to run 'rkhunter --update'."
 		exit 1
 	fi
 
@@ -10617,10 +10628,11 @@ HOST_NAME=""
 # indicate that an update occurred.
 RET_CODE=0
 
-# Set the default language to English.
-LANGUAGE=en
+# Initially there is no language, this will be set later.
+LANGUAGE=""
 
 # A space-separated list of languages we recognise.
+# jh - need to sort this out so that new langs are automatically detected.
 KNOWN_LANGS=en
 
 # A space-separated list of test names we recognise.
@@ -11349,7 +11361,7 @@ for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
 
 	if [ "${LANGUAGE}" != "en" ]; then
 		RKHTMPVAR=`grep "^${TYPE}:" ${DB_PATH}/i18n/${LANGUAGE} 2>/dev/null`
-		test -n "${RKHTMPVAR}" && LINE=$RKHTMPVAR
+		test -n "${RKHTMPVAR}" && LINE="${RKHTMPVAR}"
 	fi
 
 	RKHTMPVAR=`echo "${LINE}" | cut -d: -f2-`
