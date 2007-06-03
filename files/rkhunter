@@ -156,8 +156,10 @@ display() {
 			TYPE=`eval echo "\\$MSG_TYPE_$2"`
 
 			if [ -z "${TYPE}" -a "$2" != "PLAIN" ]; then
-				echo "Error: Invalid display type: $2   Display line: ${DISPLAY_LINE}"
-				return
+				if [ $RKHLANGUPDT -eq 0 ]; then
+					echo "Error: Invalid display type: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
 			fi
 
 			test "$2" = "WARNING" && WARN_MSG=1
@@ -168,8 +170,10 @@ display() {
 			RESULT=`eval echo "\\$MSG_RESULT_$2"`
 
 			if [ -z "${RESULT}" ]; then
-				echo "Error: Invalid display result: $2   Display line: ${DISPLAY_LINE}"
-				return
+				if [ $RKHLANGUPDT -eq 0 ]; then
+					echo "Error: Invalid display result: $2   Display line: ${DISPLAY_LINE}"
+					return
+				fi
 			fi
 
 			shift
@@ -977,14 +981,30 @@ get_language_option() {
 	if [ ! -d "${DB_PATH}/i18n" ]; then
 		echo "The internationalisation directory does not exist: ${DB_PATH}/i18n"
 		exit 1
-	elif [ ! -f "${DB_PATH}/i18n/${LANGUAGE}" ]; then
-		echo "The language specified is not available: ${LANGUAGE}"
-		echo "Use the '--list languages' option to see the list of available languages."
-		exit 1
-	elif [ ! -f "${DB_PATH}/i18n/en" ]; then
-		echo "The English language file must be present: ${DB_PATH}/i18n/en"
-		echo "If it has been deleted, then you will need to run 'rkhunter --update'."
-		exit 1
+	fi
+
+	#
+	# If we are using the '--update' option, then the language files
+	# will be installed if they are missing. As such, we cannot check
+	# them here.
+	#
+
+	if [ ! -s "${DB_PATH}/i18n/${LANGUAGE}" ]; then
+		if [ $UPDATE_ONLY -eq 1 ]; then
+			RKHLANGUPDT=1
+		else
+			echo "The language specified is not available: ${LANGUAGE}"
+			echo "Use the '--list languages' option to see the list of available languages."
+			exit 1
+		fi
+	elif [ ! -s "${DB_PATH}/i18n/en" ]; then
+		if [ $UPDATE_ONLY -eq 1 ]; then
+			RKHLANGUPDT=1
+		else
+			echo "The English language file must be present: ${DB_PATH}/i18n/en"
+			echo "If it has been deleted, then you will need to run 'rkhunter --update' with no other options."
+			exit 1
+		fi
 	fi
 
 	return
@@ -2999,7 +3019,7 @@ do_prop_update() {
 		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
 
-	chmod 600 ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
+	chmod 640 ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
 
 	rm -f ${RKHDAT_FILE} >/dev/null 2>&1
 
@@ -3274,18 +3294,18 @@ do_i18n_update() {
 			LANGFILE=`echo "${FNAME}" | cut -d: -f1`
 			LATEST_VERS=`echo "${FNAME}" | cut -d: -f2`
 
-			PROG_VERS=0
-
-			if [ -f "${DB_PATH}/i18n/${LANGFILE}" -a -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
-				PROG_VERS=`head -n 1 ${DB_PATH}/i18n/${LANGFILE} | egrep -i '^version:[0-9]{10}$' | sed -e 's/[vV]ersion://'`
+			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
+				PROG_VERS=`egrep '^[Vv]ersion:[0-9]{10}$' ${DB_PATH}/i18n/${LANGFILE} | tail -1 | cut -d: -f2`
 
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
 					display --to LOG --type INFO UPDATE_FILE_NO_VERS "${DB_PATH}/i18n/${LANGFILE}"
 				fi
 			else
+				PROG_VERS=0
+
 				touch ${DB_PATH}/i18n/${LANGFILE} >/dev/null 2>&1
-				chmod 600 ${DB_PATH}/i18n/${LANGFILE} >/dev/null 2>&1
+				chmod 640 ${DB_PATH}/i18n/${LANGFILE} >/dev/null 2>&1
 
 				display --to LOG --type INFO UPDATE_FILE_MISSING "${DB_PATH}/i18n/${LANGFILE}"
 			fi
@@ -3375,19 +3395,20 @@ do_update() {
 	MIRROR=""
 
 	for UPDFILE in mirrors.dat programs_bad.dat backdoorports.dat; do
-		PROG_VERS=0
 		LATEST_VERS=0
 
-		if [ -f "${DB_PATH}/${UPDFILE}" -a -s "${DB_PATH}/${UPDFILE}" ]; then
-			PROG_VERS=`head -n 1 ${DB_PATH}/${UPDFILE} | egrep -i '^version:[0-9]{10}$' | sed -e 's/[vV]ersion://'`
+		if [ -s "${DB_PATH}/${UPDFILE}" ]; then
+			PROG_VERS=`egrep '^[Vv]ersion:[0-9]{10}$' ${DB_PATH}/${UPDFILE} | tail -1 | cut -d: -f2`
 
 			if [ -z "${PROG_VERS}" ]; then
 				PROG_VERS=0
 				display --to LOG --type INFO UPDATE_FILE_NO_VERS "${UPDFILE}"
 			fi
 		else
+			PROG_VERS=0
+
 			touch ${DB_PATH}/${UPDFILE} >/dev/null 2>&1
-			chmod 600 ${DB_PATH}/${UPDFILE} >/dev/null 2>&1
+			chmod 640 ${DB_PATH}/${UPDFILE} >/dev/null 2>&1
 
 			display --to LOG --type INFO UPDATE_FILE_MISSING "${UPDFILE}"
 		fi
@@ -3410,7 +3431,7 @@ do_update() {
 		#
 
 		if [ $? -eq 0 ]; then
-			LATEST_VERS=`head -n 1 ${RKHUPD_FILE} | egrep -i '^version:[0-9]{10}$' | sed -e 's/[vV]ersion://'`
+			LATEST_VERS=`egrep '^[Vv]ersion:[0-9]{10}$' ${RKHUPD_FILE} | tail -1 | cut -d: -f2`
 
 			test -z "${LATEST_VERS}" && LATEST_VERS=0
 
@@ -7999,7 +8020,7 @@ do_network_port_checks() {
 
 	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_PORTS_START
 
-	if [ ! -f "${DB_PATH}/backdoorports.dat" -o ! -s "${DB_PATH}/backdoorports.dat" ]; then
+	if [ ! -s "${DB_PATH}/backdoorports.dat" ]; then
 		display --to SCREEN+LOG --type WARNING --screen-indent 4 NETWORK_PORTS_FILE_MISSING
 		return
 	elif [ -z "${NETSTAT_CMD}" ]; then
@@ -9420,6 +9441,17 @@ do_app_checks() {
 		return
 	fi
 
+
+	#
+	# First we check that our apps data file is present.
+	#
+
+	if [ ! -s "${DB_PATH}/programs_bad.dat" ]; then
+		display --to SCREEN+LOG --type WARNING --screen-indent 2 APPS_DAT_MISSING
+		return
+	fi
+
+
 	#
 	# We loop through the applications and obtain the version number.
 	# This is then checked against the file of known bad versions.
@@ -10194,20 +10226,13 @@ display_tests() {
 
 	KNOWN_TESTS="all none ${KNOWN_TESTS}"
 
-	#
-	# We have to look for the sort command because
-	# it won't have been set yet.
-	#
-
-	SORT_CMD=`find_cmd sort`
-
 	if [ -n "${SORT_CMD}" ]; then
 		KNOWN_TESTS=`echo "${KNOWN_TESTS}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
 		GROUPED_TESTS=`echo "${GROUPED_TESTS}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
 	fi
 
 
-	echo "Available test names:"
+	display --to SCREEN --type PLAIN --nl LIST_TESTS
 
 	while test -n "${KNOWN_TESTS}"; do
 		STR=`echo ${KNOWN_TESTS} | cut -d' ' -f1-6`
@@ -10219,8 +10244,7 @@ display_tests() {
 	done
 
 
-	echo ""
-	echo "Grouped test names:"
+	display --to SCREEN --type PLAIN --nl LIST_GROUPED_TESTS
 
 	#
 	# Sort out the maximum group name length, so we can do some
@@ -10299,30 +10323,20 @@ display_languages() {
 	# languages in a basic format of 10 per line.
 	#
 
-	TITLE=1
-
-	#
-	# We have to look for the sort command because
-	# it won't have been set yet.
-	#
-
-	SORT_CMD=`find_cmd sort`
+	KNOWN_LANGS=`ls -1 ${DB_PATH}/i18n 2>/dev/null`
 
 	if [ -n "${SORT_CMD}" ]; then
-		KNOWN_LANGS=`echo "${KNOWN_LANGS}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
+		KNOWN_LANGS=`echo "${KNOWN_LANGS}" | ${SORT_CMD}`
 	fi
 
+
+	display --to SCREEN --type PLAIN --nl LIST_LANGS
 
 	while test -n "${KNOWN_LANGS}"; do
 		STR=`echo ${KNOWN_LANGS} | cut -d' ' -f1-10`
 		KNOWN_LANGS=`echo ${KNOWN_LANGS} | cut -d' ' -f11-`
 
-		if [ $TITLE -eq 1 ]; then
-			TITLE=0
-			echo "Available languages: ${STR}"
-		else
-			echo "                                ${STR}"
-		fi
+		echo "    ${STR}"
 
 		test "${STR}" = "${KNOWN_LANGS}" && KNOWN_LANGS=""
 	done
@@ -10338,13 +10352,6 @@ display_rootkits() {
 	# names which rkhunter will check for.
 	#
 
-	#
-	# We have to look for the sort command because
-	# it won't have been set yet.
-	#
-
-	SORT_CMD=`find_cmd sort`
-
 	if [ -n "${SORT_CMD}" ]; then
 		KNOWN_ROOTKITS=`echo " ${KNOWN_ROOTKITS}" | tr ',' '\n' | ${SORT_CMD} | tr '\n' ','`
 	fi
@@ -10352,7 +10359,7 @@ display_rootkits() {
 	KNOWN_ROOTKITS=`echo "${KNOWN_ROOTKITS}" | sed -e 's/,$//' | sed -e 's/^,*//'`
 
 
-	echo "Rootkits checked for:"
+	display --to SCREEN --type PLAIN --nl LIST_RTKTS
 
 	while test -n "${KNOWN_ROOTKITS}"; do
 		STR=`echo ${KNOWN_ROOTKITS} | cut -d',' -f1-6`
@@ -10379,18 +10386,19 @@ help() {
 
 	echo ""
 	echo "Usage: rkhunter {--check | --update | --propupd | --versioncheck |"
+	echo "                 --list [tests | languages | rootkits] |"
 	echo "                 --version | --help} [options]"
 	echo ""
 
 	echo "Current options are:"
 	echo "         --append-log                  Append to the logfile, do not overwrite"
-	echo "         --bindir <directory>...       Use specified command directories"
+	echo "         --bindir <directory>...       Use the specified command directories"
 	echo "     -c, --check                       Check the local system"
-	echo "  --cs2, --color-set2                  Use second color set for output"
-	echo "         --configfile <file>           Use specified configuration file"
+	echo "  --cs2, --color-set2                  Use the second color set for output"
+	echo "         --configfile <file>           Use the specified configuration file"
 	echo "         --cronjob                     Run as a cron job"
 	echo "                                       (implies -c, --sk and --nocolors options)"
-	echo "         --dbdir <directory>           Use specified database directory"
+	echo "         --dbdir <directory>           Use the specified database directory"
 	echo "         --debug                       Debug mode"
 	echo "                                       (Do not use unless asked to do so)"
 	echo "         --disable <test>[,<test>...]  Disable specific tests"
@@ -10398,13 +10406,13 @@ help() {
 	echo "         --display-logfile             Display the logfile at the end"
 	echo "         --enable  <test>[,<test>...]  Enable specific tests"
 	echo "                                       (Default is to enable all tests)"
-	echo "         --hash {MD5|SHA1|NONE|        Use specified file hash function"
+	echo "         --hash {MD5 | SHA1 | NONE |   Use the specified file hash function"
 	echo "                 <command>}            (Default is SHA1)"
 	echo "     -h, --help                        Display this help menu, then exit"
 	echo " --lang, --language <language>         Specify the language to use"
 	echo "                                       (Default is English)"
-	echo "         --list [tests | languages |   List the available test names or"
-	echo "                 rootkits]             languages, or checked for rootkits."
+	echo "         --list [tests | languages |   List the available test names, languages,"
+	echo "                 rootkits]             or checked for rootkits, then exit"
 	echo "     -l, --logfile [file]              Write to a logfile"
 	echo "                                       (Default is $DFLT_LOGFILE)"
 	echo "         --noappend-log                Do not append to the logfile, overwrite it"
@@ -10413,18 +10421,18 @@ help() {
 	echo "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
 	echo "   --ns, --nosummary                   Do not show the summary of check results"
 	echo " --novl, --no-verbose-logging          No verbose logging"
-	echo "         --pkgmgr {RPM|DPKG|BSD|MD5|   Use specified package manager to obtain or"
-	echo "                   NONE}               verify file hash values. (Default is NONE)"
+	echo "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain or"
+	echo "                   MD5 | NONE}         verify file hash values. (Default is NONE)"
 	echo "         --propupd                     Update the file properties database"
 	echo "     -q, --quiet                       Quiet mode (no output at all)"
 	echo "  --rwo, --report-warnings-only        Show only warning messages"
-	echo "     -r, --rootdir <directory>         Use <directory> as the root directory"
+	echo "     -r, --rootdir <directory>         Use the specified root directory"
 	echo "   --sk, --skip-keypress               Don't wait for a keypress after each test"
 	echo "         --summary                     Show the summary of system check results"
 	echo "                                       (This is the default)"
-	echo "         --syslog [facility.priority]  Log check start and finish times to syslog"
+	echo "         --syslog [facility.priority]  Log the check start and finish times to syslog"
 	echo "                                       (Default level is $SYSLOG_DFLT_PRIO)"
-	echo "         --tmpdir <directory>          Use specified temporary directory"
+	echo "         --tmpdir <directory>          Use the specified temporary directory"
 	echo "         --update                      Check for updates to database files"
 	echo "   --vl, --verbose-logging             Use verbose logging (on by default)"
 	echo "     -V, --version                     Display the version number, then exit"
@@ -10631,10 +10639,6 @@ RET_CODE=0
 # Initially there is no language, this will be set later.
 LANGUAGE=""
 
-# A space-separated list of languages we recognise.
-# jh - need to sort this out so that new langs are automatically detected.
-KNOWN_LANGS=en
-
 # A space-separated list of test names we recognise.
 KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     deleted_files packet_cap_apps apps rootkits known_rkts
@@ -10681,8 +10685,11 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient 
 ENABLE_TESTS=""
 DISABLE_TESTS=""
 
-# See if the command-line options --enable or --disable have been used.
+# Set if the command-line options --enable or --disable have been used.
 ENDIS_OPT=0
+
+# Set if the --list option has been used.
+LIST_OPT=""
 
 # Space-filled line used for the display function.
 BLANK_LINE="                                                              "
@@ -10717,6 +10724,12 @@ INETDALLOWEDSVCS=""
 # Set a default for the xinetd configuration file.
 XINETD_CONF_PATH="/etc/xinetd.conf"
 XINETDALLOWEDSVCS=""
+
+# Set if only the '--update' option is used.
+UPDATE_ONLY=0
+
+# Set if UPDATE_ONLY is set, and some language files are missing.
+RKHLANGUPDT=0
 
 
 ######################################################################
@@ -10915,27 +10928,29 @@ while [ $# -ge 1 ]; do
 		;;
 	--list)
 		case "$2" in
-		test|tests|check|checks)
-			display_tests
+		test | tests | check | checks)
+			shift
+			LIST_OPT="${LIST_OPT} tests "
 			;;
-		lang|langs|language|languages)
-			display_languages
+		lang | langs | language | languages)
+			shift
+			LIST_OPT="${LIST_OPT} languages "
 			;;
-		rootkit|rootkits)
-			display_rootkits
+		rootkit | rootkits)
+			shift
+			LIST_OPT="${LIST_OPT} rootkits "
 			;;
 		"")
-			display_tests
-			echo ""
-			display_languages
-			echo ""
-			display_rootkits
+			LIST_OPT="${LIST_OPT} tests languages rootkits "
+			;;
+		-*)
+			LIST_OPT="${LIST_OPT} tests languages rootkits "
 			;;
 		*)
 			echo "Invalid --list option specified: $2"
+			exit 1
 			;;
 		esac
-		exit 0
 		;;
 	--noappend-log | --no-append-log | --noappendlog)
 		APPEND_LOG=0
@@ -11107,6 +11122,13 @@ test $ENDIS_OPT -eq 1 -a $PROP_UPDATE -eq 0 && CHECK=1
 
 
 #
+# See if only the '--update' option has been used.
+#
+
+test $UPDATE -eq 1 -a $CHECK -eq 0 -a $PROP_UPDATE -eq 0 -a $VERSIONCHECK -eq 0 && UPDATE_ONLY=1
+
+
+#
 # Before going too much further we need to ensure that some basic
 # commands are present on the system. We cannot do this using
 # the BINDIR option because that requires processing the configuration
@@ -11131,8 +11153,7 @@ check_required_commands "${SPACEDPATH} ${DFLT_BINPATHS}"
 # options within it.
 #
 # NOTE: Do not change the format of the following 'if' statement.
-# The installer script will directly modify it when performing a
-# standalone installation.
+# The installer script will modify it directly during installation.
 #
 
 if [ -z "${CONFIGFILE}" ]; then
@@ -11167,7 +11188,41 @@ get_configfile_options
 # also set up some final variables based on the combination of options
 # we have been given.
 #
-# First, if the logfile has been disabled, then we cannot let the
+
+#
+# First we process the '--list' option if it has been given.
+#
+
+if [ -n "${LIST_OPT}" ]; then
+	for RKHTMPVAR in ${LIST_OPT}; do
+		if [ "${RKHTMPVAR}" = "tests" ]; then
+			display_tests
+		elif [ "${RKHTMPVAR}" = "languages" ]; then
+			display_languages
+		else
+			display_rootkits
+		fi
+	done
+
+	exit 0
+fi
+
+
+#
+# Next we must see if we are doing an update only, and if there were
+# some language file problems. If so, then we must not log or display
+# anything.
+#
+
+if [ $RKHLANGUPDT -eq 1 ]; then
+	QUIET=1
+	COLORS=0
+	RKHLOGFILE="/dev/null"
+fi
+
+
+#
+# If the logfile has been disabled, then we cannot let the
 # program run when certain options are used. If we did, the user
 # would see no output and might assume that all was well.
 #
@@ -11752,7 +11807,7 @@ if [ $CHECK -eq 1 ]; then
 	#
 
 	if `check_test properties`; then
-		if [ -f "${DB_PATH}/rkhunter.dat" -a -s "${DB_PATH}/rkhunter.dat" ]; then
+		if [ -s "${DB_PATH}/rkhunter.dat" ]; then
 			#
 			# We perform a simple check on some of the stored
 			# O/S information, and compare it to the current

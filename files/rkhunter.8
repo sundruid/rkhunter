@@ -5,6 +5,7 @@
 rkhunter \- RootKit Hunter
 .SH SYNOPSIS
 \fBrkhunter\fP {--check | --update | --propupd | --versioncheck |
+          --list [tests | languages | rootkits]
           --version | --help} [options]
 
 .SH DESCRIPTION
@@ -81,6 +82,16 @@ new version is available.
 
 .IP
 
+.IP "\fB\-\-list [tests | languages | rootkits]\fP"
+This command option will list some of the supported capabilities of the
+program, and then exit. The \fItests\fP option lists the currently available
+test names (see the README file for more details about test names). The
+\fIlanguages\fP option lists the currently available languages, and the
+\fIrootkits\fP option lists the rootkits that \fBrkhunter\fP will search for.
+If no specific option is given, then all the lists are displayed.
+
+.IP
+
 .IP "\fB\-V, \-\-version\fP"
 This command option causes \fBrkhunter\fP to display its version number, and
 then exit.
@@ -89,7 +100,7 @@ then exit.
 
 .IP "\fB\-h, \-\-help\fP"
 .br
-This command option displays the help screen menu.
+This command option displays the help screen menu, and then exits.
 
 .IP
 
@@ -161,7 +172,7 @@ option is used, and \fB\-\-propupd\fP is not specified, then the
 Read the README file for more information about test names. By default all
 tests are enabled.
 
-.IP "\fB\-\-hash {MD5|SHA1|NONE|<command>}\fP"
+.IP "\fB\-\-hash {MD5 | SHA1 | NONE | <command>}\fP"
 Both the file properties check and the \fB\-\-propupd\fP command option will
 use a hash function to determine a files current hash value. This option tells
 \fBrkhunter\fP which hash function to use. The \fIMD5\fP and \fISHA1\fP
@@ -174,19 +185,11 @@ command can be found.
 
 .IP "\fB\-\-lang, \-\-language <language>\fP"
 This option specifies which language to use for the displayed tests and results.
-The currently supported languages can be seen by the \fB\-\-list\fP option. The
-default is \fIen\fP (English). If a message to be displayed cannot be found in
-the language file, then the English version will be used. As such, the English
-language file must always be present. The \fB\-\-update\fP option will update
-the language files when new versions are available.
-
-.IP "\fB\-\-list [tests|languages|rootkits]\fP"
-This option will list some of the supported capabilities of the program. The
-\fItests\fP option lists the currently available test names (see the README
-file for more details about test names). The \fIlanguages\fP option lists the
-currently available languages, and the \fIrootkits\fP option lists the rootkits
-that \fBrkhunter\fP will search for. If no specific option is given, then all
-the lists are displayed.
+The currently supported languages can be seen by the \fB\-\-list\fP command
+option. The default is \fIen\fP (English). If a message to be displayed cannot
+be found in the language file, then the English version will be used. As such,
+the English language file must always be present. The \fB\-\-update\fP command
+option will update the language files when new versions are available.
 
 .IP "\fB\-l, \-\-logfile [file]\fP"
 By default \fBrkhunter\fP will write out a log file. The default location of
@@ -229,7 +232,7 @@ option reduces the amount of logging, and so can improve the performance of
 \fBrkhunter\fP. However, the log file will contain less information should any
 warnings occur. By default verbose logging is enabled.
 
-.IP "\fB\-\-pkgmgr {RPM|DPKG|BSD|MD5|NONE}\fP"
+.IP "\fB\-\-pkgmgr {RPM | DPKG | BSD | MD5 | NONE}\fP"
 This option is used during the file properties check or when the
 \fB\-\-propupd\fP command option is given. It tells \fBrkhunter\fP that the
 current file hash values should be obtained from the relevant package manager.

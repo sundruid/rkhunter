@@ -1,4 +1,4 @@
-Version:2007052601
+Version:2007060301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -448,6 +448,9 @@ FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 
 CHECK_APPS:Checking application versions...
 APPS_NONE_FOUND:No known applications found - all checks skipped.
+APPS_DAT_MISSING:All application version checks skipped.
+APPS_DAT_MISSING:The file of unsecure application versions (programs_bad.dat) is missing or empty.
+APPS_DAT_MISSING:If it has been deleted, then you will need to run 'rkhunter --update'.
 APPS_NOT_FOUND:Application '$1' not found.
 APPS_CHECK:Checking version of $1
 APPS_CHECK_VERSION_UNKNOWN:Unable to obtain version number for '$1'.
@@ -461,6 +464,7 @@ CHECK_NETWORK:Checking the network...
 NETWORK_PORTS_START:Performing check for backdoor ports
 NETWORK_PORTS_FILE_MISSING:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) is missing or empty.
+NETWORK_PORTS_FILE_MISSING:If it has been deleted, then you will need to run 'rkhunter --update'.
 NETWORK_PORTS_FILE_NO_NETSTAT:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_NO_NETSTAT:Unable to find the 'netstat' command
 NETWORK_PORTS:Checking for $1 port ${2}
@@ -511,3 +515,7 @@ SUSPSCAN_FILE_SKIPPED_TYPE:File ignored: wrong type: $1: $2
 SUSPSCAN_FILE_SKIPPED_SIZE:File ignored: too big: $1
 SUSPSCAN_FILE_LINK_CHANGE:Symbolic link found: $1 -> $2
 
+LIST_TESTS:Available test names:
+LIST_GROUPED_TESTS:Grouped test names:
+LIST_LANGS:Available languages:
+LIST_RTKTS:Rootkits checked for:
