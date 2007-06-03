@@ -2575,7 +2575,7 @@ rkh_dat_set_version() {
 
 	TODAY=`date +%Y%m%d`
 
-	OLDVER=`grep -i '^Version:' ${DB_PATH}/rkhunter.dat 2>/dev/null | tail -1 | cut -d: -f2`
+	OLDVER=`egrep '^[Vv]ersion:' ${DB_PATH}/rkhunter.dat 2>/dev/null | tail -1 | cut -d: -f2`
 
 	if [ -n "${OLDVER}" ]; then
 		OLDDATE=`echo "${OLDVER}" | cut -c1-8`
@@ -2627,7 +2627,7 @@ rkh_dat_get_os_info() {
 
 			case "${RELEASE}" in
 			${RKHROOTDIR}/etc/lsb-release)
-				OSNAME=`cat ${RELEASE} | grep '^DISTRIB_DESCRIPTION=' | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
+				OSNAME=`grep '^DISTRIB_DESCRIPTION=' ${RELEASE} | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
 				;;
 			${RKHROOTDIR}/etc/gentoo-release)
 				GENTOO=1
@@ -3065,7 +3065,7 @@ get_next_mirror() {
 	# option is used.
 	#
 
-	MIRRORSVERSION=`egrep -i '^version:[0-9]{10}$' ${DB_PATH}/mirrors.dat | tail -1`
+	MIRRORSVERSION=`egrep '^[Vv]ersion:[0-9]{10}$' ${DB_PATH}/mirrors.dat | tail -1`
 
 	if [ -z "${MIRRORSVERSION}" ]; then
 		display --to LOG --type INFO MIRRORS_NO_VERSION "${DB_PATH}/mirrors.dat"
@@ -3226,7 +3226,7 @@ download_file() {
 				# version number as the first line in them.
 				#
 
-				if [ -z "`head -n 1 ${OUTPUT_FILE} | egrep -i '^version:[0-9]{10}$'`" ]; then
+				if [ -z "`egrep '^[Vv]ersion:[0-9]{10}$' ${OUTPUT_FILE} | tail -1`" ]; then
 					DNLOADERR=1
 				fi
 			fi
@@ -3531,15 +3531,13 @@ do_versioncheck() {
 
 
 	#
-	# To get the URL to use we must process this as a configuration
-	# file option.
+	# The URL for the latest version is static. There is no need
+	# for a user to change it or to distribute new versions from
+	# anywhere other than SourceForge. Besides which it would
+	# mess up the download stats :-)
 	#
 
-	URL=`grep '^LATESTVERSION=' ${CONFIGFILE} | tail -1 | sed -e 's/LATESTVERSION=//' | tr -d '"' | tr -s ' '`
-
-	if [ -z "`echo \"${URL}\" | grep '^/'`" ]; then
-		URL="/rkhunter_latest.dat"
-	fi
+	URL="/rkhunter_latest.dat"
 
 
 	#
@@ -8036,7 +8034,7 @@ do_network_port_checks() {
 	IFS=$IFSNL
 
 	for LINE in `cat ${DB_PATH}/backdoorports.dat`; do
-		if [ -n "`echo \"${LINE}\" | egrep -i '^#|version'`" ]; then
+		if [ -n "`echo \"${LINE}\" | egrep '^(#|[Vv]ersion:)'`" ]; then
 			continue
 		elif [ -z "${LINE}" ]; then
 			continue
