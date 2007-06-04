@@ -293,7 +293,7 @@ display() {
 	if [ $WRITETOTTY -eq 0 -a $WRITETOLOG -eq 0 ]; then
 		echo "Error: Invalid display destination: Display line: ${DISPLAY_LINE}"
 		return
-	elif [ $WRITETOTTY -eq 1 -a -n "${RESULT}" -a -z "${COLOR}" ]; then
+	elif [ $WRITETOTTY -eq 1 -a $COLORS -eq 1 -a -n "${RESULT}" -a -z "${COLOR}" ]; then
 		echo "Error: Invalid display - no color given: Display line: ${DISPLAY_LINE}"
 		return
 	fi
