@@ -88,12 +88,12 @@ fi
 %attr(750,root,root) %{_libdir}/%{name}/scripts/*.sh
 %attr(644,root,root) %{_prefix}/share/man/man8/%{name}.8
 %attr(750,root,root) %{docdir}
-%attr(750,root,root) %dir %{_var}/%{name}
-%attr(750,root,root) %dir %{_var}/%{name}/db
-%attr(640,root,root) %verify(not mtime) %{_var}/%{name}/db/*.dat
-%attr(750,root,root) %dir %{_var}/%{name}/db/i18n
-%attr(640,root,root) %{_var}/%{name}/db/i18n/*
-%attr(750,root,root) %dir %{_var}/%{name}/tmp
+%attr(750,root,root) %dir %{_var}/lib/%{name}
+%attr(750,root,root) %dir %{_var}/lib/%{name}/db
+%attr(640,root,root) %verify(not mtime) %{_var}/lib/%{name}/db/*.dat
+%attr(750,root,root) %dir %{_var}/lib/%{name}/db/i18n
+%attr(640,root,root) %{_var}/lib/%{name}/db/i18n/*
+%attr(750,root,root) %dir %{_var}/lib/%{name}/tmp
 %{_sysconfdir}/cron.daily/01-rkhunter
 
 

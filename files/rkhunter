@@ -5782,7 +5782,7 @@ suspscan() {
 				display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIR_CHECK "${SUSPSCAN_DIR}"
 			fi
 
-			for SUSPSCAN_ITEM in `$FIND_CMD "${SUSPSCAN_DIR}" -type f -o -type l`; do
+			$FIND_CMD "${SUSPSCAN_DIR}" -type f -o -type l | while read SUSPSCAN_ITEM; do
 				#
 				# If the file is a link, then find
 				# what it points to.
@@ -5817,7 +5817,7 @@ suspscan() {
 					fi
 
 					continue
-				elif [ -z "`${FIND_CMD} ${SUSPSCAN_ITEM} -size -${SUSPSCAN_MAXSIZE}c 2>/dev/null`" ]; then
+				elif [ -z "`${FIND_CMD} "${SUSPSCAN_ITEM}" -size -${SUSPSCAN_MAXSIZE}c 2>/dev/null`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
 						display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_SIZE "${SUSPSCAN_ITEM}"
 					fi
@@ -5830,9 +5830,9 @@ suspscan() {
 				# Finally, test the file type.
 				#
 
-				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" | cat -v | cut -d' ' -f2-`
-
-				if [ -n "`echo \"${FTYPE}\" | egrep -i 'execu|shell|libr'`" ]; then
+				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1| cat -v | cut -d' ' -f2-`
+				#text	
+				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|shell|libr|data|obj'`" ]; then
 					FOUND=1
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0
 
@@ -5842,7 +5842,13 @@ suspscan() {
 					# False positives: memory
 					# The list below should be broken out to a .dat file or rkhunter.conf.
 
-					for SUSPSCAN_STRING in a:0x..,.0x.., a:add? a:asm a:%:bh a:decb a:decl a:disasm a:%e[bp,di,sp] a:%e[cx,si] a:%e?x a:%hi a:inc[b,l] a:jmp a:jmpcode ajuda a:jump a:%?l a:mov? a:nasm a:ndisasm a:nopsize a:notb a:offset a:opcode a:p[op,ush] a:reassembl a:ret a:ro[r,l]b a:sub? a:xor d:bonk d:flood d:jolt d:kuang d:land d:nuke d:saihyousen d:tear d:teardrop f:abort f:access f:AF_INET f:atoi@ f:buf[fe,si] f:call f:changeown f:exec.* f:fopen@ f:fread f:free f:fscanf f:loop f:lseek f:malloc f:memcpy f:memset f:mmap f:putenv f:static.char.*= f:str[len,cat] f:'system(' i:botz i:bounc i:dalnet i:dc\.pl i:eggbot i:eggshell i:invite i:irc\. i:iroffer i:nick i:pbsync i:psybnc i:vhost i:xdcc n:bind n:connect n:'connect(' n:'gethostbyname(' n:'getprotobyname(' n:ident n:inet n:'inet_aton(' n:IO::Socket n:listen n:network n:packet n:relay n:remote n:resolv n:rhost n:sendfile n:server n:setsockopt n:'(?sock' n:sockaddr n:'sockaddr_in(' n:sock[ad,et,fd] n:'socket(' n:'socket@' n:socketcall n:socklen n:'sockopen(' s:?0x[a-z0-9]\{2\}.* s:backdoor s:/bin/sh s:chmod s:chown s:keylog s:logcleaner s:login s:password s:/ptmx s:/pty s:setgid s:setreuid s:setuid s:shellcode s:tmp/sh s:/tty s:\"/\x[a-z0-9]\{2\}.* t:'0^wN' t:0wn3d t:0wned t:advantag t:advisory t:affect t:allocation t:anony t:arbitr t:attack t:authenti t:bogus t:brute t:buscar t:comando t:crypt t:decode t:destinat t:destruct t:device t:/dev/kmem t:/dev/mem t:disclosure t:discover t:distrib t:downloader t:elf-init t:elflbl t:endian t:enem t:evasion t:exception t:exclusiv t:existant t:exploit t:fake t:fatal t:fixed t:fragment t:fuckin t:group t:h[a4]x[oO0]r t:hardcod t:harvest t:heap t:hexdump t:hidden t:hide t:host t:hostile t:hotfix t:infect t:info t:init t:inject t:kernel t:kill t:leak t:'log(' t:mech t:modif[yi] t:mprotect t:nvalid t:overwrit t:pages t:patch t:payload t:philar\.pl t:pointer t:priv[a8] t:process t:procur t:publi[cs] t:purpose t:registered t:risk t:r.nin t:sapphire t:scam t:segment t:sent t:shell\.php t:signed t:sniff t:spawn t:spoof t:stealth t:succes t:suficiente t:terminate t:transact t:transpar t:udp\.pl t:victim t:violat t:vma t:vuln t:worm t:wreck v:aleph v:OpticFiber x:apache x:mambo x:openssl x:samba x:sshd x:wwwadmin ; do
+					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail -1` ; do
+
+						# Break off if the score already exceeds threshold
+						if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
+							break
+						fi
+
 						SUSPSCAN_TERM="${SUSPSCAN_STRING}"
 
 						#
@@ -5868,7 +5874,7 @@ suspscan() {
 							  ;;
 						esac
 
-						grep -i "${SUSPSCAN_TERM}" ${FILENAME} >/dev/null 2>&1
+						grep -i ${SUSPSCAN_TERM} ${FILENAME} >/dev/null 2>&1
 						if [ $? -eq 0 ]; then
 							#
 							# Use hitlist to find relationship with other terms and influence multiplier. Examples:
@@ -5876,9 +5882,15 @@ suspscan() {
 							# {bin/sh,tmp/sh} + {setuid,setgid,drop}
 							# irc + {server,nick,iroffer,?dcc}
 							# This implies the "more serious" terms need to be moved to the front of the table.
-							# We could also prefix a category along the lines of:
+							# We could also prefix a class along the lines of:
 							# a: (asm) e: (exploit) to help classification: e:jmp+100 e:%e[cx,si]+100
-							#
+							# This way when say SUSPSCAN_CLASS -gt 4, we could SUSPSCAN_MULTIPLIER + n
+
+							if [ "$SUSPSCAN_CLASS" = "$SUSPSCAN_CLASS_PREV" ]; then
+								SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + 10`
+							fi
+
+							# to further up the score for this file.
 
 							SUSPSCAN_HITS="$SUSPSCAN_NUM ${SUSPSCAN_HITS}"
 
@@ -5888,22 +5900,37 @@ suspscan() {
 							else
 								SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + 1`
 							fi
+
+							SUSPSCAN_HITCOUNT=`expr $SUSPSCAN_HITCOUNT + 1`
+
+							SUSPSCAN_STRINGS="${SUSPSCAN_STRINGS} ${SUSPSCAN_TERM}"
+
+							SUSPSCAN_CLASS_PREV="$SUSPSCAN_CLASS"
+
 						fi
 
 						SUSPSCAN_NUM=`expr ${SUSPSCAN_NUM} + 1`
+
 					done
 
-					if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
-						FOUNDDIRS="${FOUNDDIRS}
-$SUSPSCAN_SCORE ${SUSPSCAN_ITEM}"
+					# Yes, this is not set!
+					if [ -n $SUSPSCAN_DEBUG ]; then
+						display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_CHECK_DEBUG "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE" "$SUSPSCAN_HITCOUNT" "${SUSPSCAN_STRINGS}"
+					else
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"
+						fi
 					fi
 
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"
+					if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
+						display --to LOG --type WARNING SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"
 					fi
 
 					unset SUSPSCAN_TERM
-					rm -f ${FILENAME} >/dev/null 2>&1
+
+				# Compressed or obfuscated:
+				elif [ -n "`echo \"${FTYPE}\" | grep 'corrupted section header size'`" ]; then
+					display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_TYPE "Possible UPX-compressed or obfuscated binary" "${SUSPSCAN_ITEM}"
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_TYPE "${FTYPE}" "${SUSPSCAN_ITEM}"
 				fi # test file type
@@ -5917,27 +5944,47 @@ $SUSPSCAN_SCORE ${SUSPSCAN_ITEM}"
 		fi # test dir exists
 	done # outer loop dirs
 
-
 	#
 	# Now display the results.
 	#
 
+	# Cruel hack due to looping
+
+	FOUNDDIRS=`grep '.score:.*contains' "${RKHLOGFILE}" | head -1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
-
-		IFS=$IFSNL
-
-		for RKHTMPVAR in ${FOUNDDIRS}; do
-			SUSPSCAN_SCORE=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
-			SUSPSCAN_ITEM=`echo "${RKHTMPVAR}" | cut -d' ' -f2-`
-
-			display --to LOG --type WARNING SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" $SUSPSCAN_SCORE
-		done
-
-		IFS=$RKHIFS
 	fi
+
+	return
+}
+
+
+do_system_commands_checks() {
+
+	#
+	# This function carries out a sequence of tests on
+	# system commands. These consist of the 'strings' command
+	# check, library checks and the file properties checks.
+	#
+
+	if `check_test system_commands`; then
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_SYS_COMMANDS
+		display --to LOG --type INFO STARTING_TEST system_commands
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST system_commands
+		return
+	fi
+
+
+	strings_check
+
+	shared_libs_check
+
+	file_properties_check
+
+	keypresspause
 
 	return
 }
