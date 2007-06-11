@@ -5990,35 +5990,6 @@ do_system_commands_checks() {
 }
 
 
-do_system_commands_checks() {
-
-	#
-	# This function carries out a sequence of tests on
-	# system commands. These consist of the 'strings' command
-	# check, library checks and the file properties checks.
-	#
-
-	if `check_test system_commands`; then
-		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_SYS_COMMANDS
-		display --to LOG --type INFO STARTING_TEST system_commands
-	else
-		display --to LOG --type INFO --nl USER_DISABLED_TEST system_commands
-		return
-	fi
-
-
-	strings_check
-
-	shared_libs_check
-
-	file_properties_check
-
-	keypresspause
-
-	return
-}
-
-
 rootkit_file_dir_checks() {
 
 	#
