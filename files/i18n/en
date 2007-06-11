@@ -1,4 +1,4 @@
-Version:2007060301
+Version:2007060501
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -62,7 +62,7 @@ CONFIG_MOW_DISABLED:Disabling use of mail-on-warning at users request
 CONFIG_MAIL_ON_WARN:Emailing warnings to '$1' using command '$2'
 CONFIG_SSH_ROOT:Rkhunter option ALLOW_SSH_ROOT_USER set to '$1'.
 CONFIG_SSH_PROTV1:Rkhunter option set to allow SSH protocol version 1
-CONFIG_X_AUTO:X will be automatically detected
+CONFIG_X_AUTO:X will automatically be detected
 CONFIG_CLRSET2:Using second color set
 CONFIG_NO_SHOW_SUMMARY:Disabling system check summary at users request
 CONFIG_SCAN_MODE_DEV:SCAN_MODE_DEV set to '$1'
@@ -71,14 +71,18 @@ CONFIG_XINETD_PATH:Using $1 configuration file '$2'
 CONFIG_SOL10_INETD:Using Solaris 10 and later inetd mechanism
 CONFIG_LOCAL_RC_DIR:Using system startup directory: $1
 CONFIG_LOCAL_RC_FILE:Using local startup file(s): $1
+CONFIG_ROTATE_MIRRORS:The mirrors file will be rotated
+CONFIG_NO_ROTATE_MIRRORS:The mirrors file will not be rotated
+CONFIG_UPDATE_MIRRORS:The mirrors file will be updated
+CONFIG_NO_UPDATE_MIRRORS:The mirrors file will not be updated
 
 FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
 
 SYS_PRELINK:System is using prelinking
 SYS_NO_PRELINK:System is not using prelinking
-HASH_FUNC_PRELINK:Using prelink command (with $1) for file hash checks
 
+HASH_FUNC_PRELINK:Using prelink command (with $1) for file hash checks
 HASH_FUNC_PERL:Using the perl $1 module for the file hash checks
 HASH_FUNC:Using the '$1' command for the file hash checks
 HASH_FUNC_NONE:File hash checks disabled: NONE specified
@@ -90,12 +94,12 @@ HASH_PKGMGR_OLD:Stored hash values used package manager '$1'
 HASH_PKGMGR_OLD_NONMD5:Stored hash values used package manager '$1' (md5 function)
 HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a packet manager
 
-HASH_PKGMGR:Using package manager '$1' for package verification
-HASH_PKGMGR_MD5:Using MD5 hash function command '$1' to assist package verification
-HASH_PKGMGR_NOT_SPEC:No package manager for verification specified: using hash function '$1'
-HASH_PKGMGR_NOT_SPEC_PRELINKED:No package manager for verification specified: using prelink command with '$1'
-HASH_PKGMGR_USE_VRFY:Package manager verification will be used for file property test results
-HASH_PKGMGR_NO_USE_VRFY:Package manager verification will not be used for file property test results
+HASH_PKGMGR:Using package manager '$1' for file property checks
+HASH_PKGMGR_MD5:Using MD5 hash function command '$1' to assist package manager verification
+HASH_PKGMGR_NOT_SPEC:No package manager specified: using hash function '$1'
+HASH_PKGMGR_NOT_SPEC_PRELINKED:No package manager specified: using prelink command with '$1'
+HASH_PKGMGR_USE_VRFY:Package manager verification will be used for file property check results
+HASH_PKGMGR_NO_USE_VRFY:Package manager verification will not be used for file property check results
 
 HASH_FIELD_INDEX:The hash function field index is set to $1
 

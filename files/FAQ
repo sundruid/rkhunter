@@ -37,6 +37,8 @@ The latest version of this FAQ can be found at the RKH web site.
           fully supported!
    3.7) I have just installed Rootkit Hunter, and I am already
         getting warning messages. Why is that?
+   3.8) When I used the '--propupd' option, Rootkit Hunter told me
+        I had some missing hashes. What does this mean?
 
 
  4. ERROR AND WARNING MESSAGES
@@ -327,6 +329,21 @@ A.   The first run of rkhunter after an installation will give some
            systems, it must be remembered that the package manager itself
            uses files stored on the system. Those files may have been
            tampered with.
+
+
+3.8) When I used the '--propupd' option, Rootkit Hunter told me
+     I had some missing hashes. What does this mean?
+
+A.   Your system probably uses prelinking (the log file will say if
+     it does or not). Sometimes a file may be updated but not be
+     prelinked. When this happens RKH cannot determine the files hash
+     value. If you run the command 'prelink --verify --sha <file>'
+     on the file, it will probably give an error about the files
+     dependencies having changed. This is what RKH sees, and flags
+     it as a missing hash. If you are sure that the file is genuine,
+     then you may try using 'prelink <file>' to correct it. The
+     'prelink' command above should then work. Re-run RKH with the
+     '--propupd' option to ensure that all the hash values are recorded.
 
 
 ===========================================================

@@ -2463,6 +2463,59 @@ get_rc_options() {
 }
 
 
+get_mirror_options() {
+
+	#
+	# This function gets the mirror file options.
+	#
+	# First we see if the mirrors.dat file
+	# should be rotated when it is used.
+	#
+
+	ROTATE_MIRRORS=`grep '^ROTATE_MIRRORS=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${ROTATE_MIRRORS}" ]; then
+		ROTATE_MIRRORS=`echo "${ROTATE_MIRRORS}" | sed -e 's/ROTATE_MIRRORS=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${ROTATE_MIRRORS}" -o "${ROTATE_MIRRORS}" = " " ]; then
+			echo "Invalid ROTATE_MIRRORS configuration option - no value specified."
+			exit 1
+		elif [ "${ROTATE_MIRRORS}" != "0" -a "${ROTATE_MIRRORS}" != "1" ]; then
+			echo "Invalid ROTATE_MIRRORS configuration option: ${ROTATE_MIRRORS}"
+			exit 1
+		fi
+	else
+		ROTATE_MIRRORS=1
+	fi
+
+
+	#
+	# Next we see if the mirror file is to be updated when
+	# we use the '--update' option.
+	#
+
+	if [ $UPDATE -eq 1 ]; then
+		UPDATE_MIRRORS=`grep '^UPDATE_MIRRORS=' ${CONFIGFILE} | tail -1`
+
+		if [ -n "${UPDATE_MIRRORS}" ]; then
+			UPDATE_MIRRORS=`echo "${UPDATE_MIRRORS}" | sed -e 's/UPDATE_MIRRORS=//' | tr -d '"' | tr -s ' '`
+
+			if [ -z "${UPDATE_MIRRORS}" -o "${UPDATE_MIRRORS}" = " " ]; then
+				echo "Invalid UPDATE_MIRRORS configuration option - no value specified."
+				exit 1
+			elif [ "${UPDATE_MIRRORS}" != "0" -a "${UPDATE_MIRRORS}" != "1" ]; then
+				echo "Invalid UPDATE_MIRRORS configuration option: ${UPDATE_MIRRORS}"
+				exit 1
+			fi
+		else
+			UPDATE_MIRRORS=1
+		fi
+	fi
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
@@ -2559,6 +2612,15 @@ get_configfile_options() {
 		get_if_prelinked
 
 		test $SKIP_HASH_MSG -eq 0 && get_hash_function
+	fi
+
+
+	#
+	# Get the mirror file options if necessary.
+	#
+
+	if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
+		get_mirror_options
 	fi
 
 	return
@@ -2965,7 +3027,7 @@ do_prop_update() {
 		display --to LOG --type INFO PROPUPD_REL_FILE "${RELEASE}"
 	else
 		display --to LOG --type INFO PROPUPD_NO_REL_FILE
-		display --to LOG --type PLAIN NAME "      `ls -d ${RKHROOTDIR}/etc/*release* ${RKHROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
+		display --to LOG --type PLAIN NAME "      `ls -ld ${RKHROOTDIR}/etc/*release* ${RKHROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
 	fi
 
 	if [ -n "${OSNAME}" ]; then
@@ -3031,8 +3093,8 @@ get_next_mirror() {
 
 	#
 	# This function will obtain the next mirror in the mirrors file
-	# if no mirror is currently being used. It then rotates the
-	# mirrors in the mirrors file.
+	# if no mirror is currently being used. It then optionally
+	# rotates the mirrors in the file.
 	#
 
 
@@ -3050,10 +3112,23 @@ get_next_mirror() {
 	# Return if there are no defined mirrors.
 	#
 
-	MIRROR=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | head -n 1 | cut -d= -f2`
+	MIRROR=`egrep -i '^(remote|mirror)=' ${DB_PATH}/mirrors.dat | head -n 1`
 
 	if [ -z "${MIRROR}" ]; then
 		display --to LOG --type INFO MIRRORS_NO_MIRRORS "${DB_PATH}/mirrors.dat"
+		return
+	fi
+
+
+	#
+	# If we are not rotating the mirrors, then we need to calculate
+	# which one to use next in the list. Return when we have done that.
+	#
+
+	if [ $ROTATE_MIRRORS -eq 0 ]; then
+		N=`expr $TOTAL_MIRRORS - $MIRROR_COUNT`
+		MIRROR=`egrep -i '^(remote|mirror)=' ${DB_PATH}/mirrors.dat | head -n $N | tail -1 | cut -d= -f2-`
+
 		return
 	fi
 
@@ -3069,7 +3144,7 @@ get_next_mirror() {
 
 	if [ -z "${MIRRORSVERSION}" ]; then
 		display --to LOG --type INFO MIRRORS_NO_VERSION "${DB_PATH}/mirrors.dat"
-		MIRRORSVERSION="version:0000000000"
+		MIRRORSVERSION="Version:0000000000"
 	fi
 
 
@@ -3077,7 +3152,7 @@ get_next_mirror() {
 	# Next get the remaining mirrors.
 	#
 
-	OTHERMIRRORS=`grep '^mirror=http://' ${DB_PATH}/mirrors.dat | grep -v ${MIRROR}`
+	OTHERMIRRORS=`egrep -i '^(remote|mirror)=' ${DB_PATH}/mirrors.dat | grep -v "${MIRROR}"`
 
 
 	#
@@ -3101,7 +3176,9 @@ get_next_mirror() {
 		echo "${M}" >>${MIRRORS_FILE}
 	done;
 
-	echo "mirror=${MIRROR}" >>${MIRRORS_FILE}
+	echo "${MIRROR}" >>${MIRRORS_FILE}
+
+	MIRROR=`echo "${MIRROR}" | cut -d= -f2-`
 
 
 	#
@@ -3141,13 +3218,16 @@ download_file() {
 
 	DNLOADERR=0
 	MIRROR_COUNT=0
+	TOTAL_MIRRORS=0
 
 	if [ -f "${DB_PATH}/mirrors.dat" ]; then
-		MIRROR_COUNT=`grep -i '^mirror=http://' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
+		MIRROR_COUNT=`egrep -i '^(remote|mirror)=' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
 		test -z "${MIRROR_COUNT}" && MIRROR_COUNT=0
 	fi
 
 	test $MIRROR_COUNT -eq 0 && MIRROR_COUNT=1
+
+	TOTAL_MIRRORS=$MIRROR_COUNT
 
 
 	while test $MIRROR_COUNT -gt 0; do
@@ -3394,7 +3474,13 @@ do_update() {
 	UPD_ERROR=0
 	MIRROR=""
 
-	for UPDFILE in mirrors.dat programs_bad.dat backdoorports.dat; do
+	for UPDFILE in mirrors.dat programs_bad.dat backdoorports.dat suspscan.dat; do
+		if [ $UPDATE_MIRRORS -eq 0 -a "${UPDFILE}" = "mirrors.dat" ]; then
+			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result SKIPPED UPDATE_CHECKING_FILE "${UPDFILE}"
+			continue
+		fi
+
+
 		LATEST_VERS=0
 
 		if [ -s "${DB_PATH}/${UPDFILE}" ]; then
@@ -10747,6 +10833,11 @@ UPDATE_ONLY=0
 # Set if UPDATE_ONLY is set, and some language files are missing.
 RKHLANGUPDT=0
 
+# By default we rotate the mirrors in the mirrors.dat file,
+# and we update the file when the '--update' option is used.
+ROTATE_MIRRORS=1
+UPDATE_MIRRORS=1
+
 
 ######################################################################
 #
@@ -11722,11 +11813,15 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
 				fi
 
-				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
+					display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				fi
 			elif [ "${PKGMGR}" = "BSD" ]; then
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
 
-				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
+					display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				fi
 			elif [ "${PKGMGR}" = "MD5" ]; then
 				if [ $PRELINKED -eq 1 ]; then
 					if [ -n "${PKGMGR_PRELINK_HASH}" ]; then
@@ -11778,6 +11873,22 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	display --to LOG --type INFO DISABLED_TESTS "${DISABLE_TESTS}"
 
 	test $VERBOSE_LOGGING -eq 0 && display --to LOG --type INFO CONFIG_NO_VL
+fi
+
+if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
+	if [ $ROTATE_MIRRORS -eq 0 ]; then
+		display --to LOG --type INFO CONFIG_NO_ROTATE_MIRRORS
+	else
+		display --to LOG --type INFO CONFIG_ROTATE_MIRRORS
+	fi
+
+	if [ $UPDATE -eq 1 ]; then
+		if [ $UPDATE_MIRRORS -eq 0 ]; then
+			display --to LOG --type INFO CONFIG_NO_UPDATE_MIRRORS
+		else
+			display --to LOG --type INFO CONFIG_UPDATE_MIRRORS
+		fi
+	fi
 fi
 
 if [ $CHECK -eq 1 ]; then
