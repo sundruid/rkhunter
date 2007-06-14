@@ -1,4 +1,4 @@
-Version:2007060501
+Version:2007061401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -75,6 +75,9 @@ CONFIG_ROTATE_MIRRORS:The mirrors file will be rotated
 CONFIG_NO_ROTATE_MIRRORS:The mirrors file will not be rotated
 CONFIG_UPDATE_MIRRORS:The mirrors file will be updated
 CONFIG_NO_UPDATE_MIRRORS:The mirrors file will not be updated
+CONFIG_MIRRORS_MODE0:Both local and remote mirrors will be used
+CONFIG_MIRRORS_MODE1:Only local mirrors will be used
+CONFIG_MIRRORS_MODE2:Only remote mirrors will be used
 
 FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
@@ -151,9 +154,10 @@ SUMMARY_NO_LOGFILE:No log file created.
 CREATED_TEMP_FILE:Created temporary file '$1'
 
 MIRRORS_NO_FILE:The mirrors file '$1' does not exist.
-MIRRORS_NO_MIRRORS:The mirrors file '$1' has no mirrors in it.
+MIRRORS_NO_MIRRORS:The mirrors file '$1' has no required mirrors in it.
 MIRRORS_NO_VERSION:The mirrors file '$1' has no version number - resetting to zero.
 MIRRORS_ROTATED:Mirrors file '$1' has been rotated.
+MIRRORS_SF_DEFAULT:Using the SourceForge mirror: $1
 
 DOWNLOAD_CMD:Executing download command '$1'
 DOWNLOAD_FAIL:Download failed - $1 mirrors left.

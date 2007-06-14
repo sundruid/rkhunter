@@ -331,6 +331,73 @@ false-positive warnings of files which have changed. As always RKH can only
 report on changes, but not on what has caused the change.
 
 
+USING LOCAL MIRRORS
+===================
+
+When the '--update' or '--versioncheck' options are used, rkhunter uses
+a mirror site from the mirrors.dat file to obtain the required information.
+By default rkhunter will use any mirror listed in the file, and it will
+then rotate the list of mirrors. At the time of writing the supplied
+mirrors.dat file lists the Rootkit Hunter SourceForge site as a mirror.
+
+However, it is possible for users to define a local mirror if they wish to.
+This is done by simply editing the mirrors.dat file and inserting the
+mirror URL. The line should begin with the text 'local='. For example:
+
+    local=http://www.example.com/rkhunter_data
+
+The required rkhunter files must be placed in a location, of the users choice,
+which is accessible by the clients. So in the above example, the rkhunter
+data files would have been placed in the 'rkhunter_data' directory. The
+required files consist of the '.dat' files supplied with rkhunter, and which
+will have been installed in the database directory. For a default
+installation this would have been in '/var/lib/rkhunter/db'. Additionally,
+the directory must have an 'i18n' sub-directory which contains all the
+current language translation files. Again, the database directory will
+already have had the 'i18n' sub-directory installed in to it. Finally, if
+the '--versioncheck' option is to be supported with the local mirror, then
+the directory, 'rkhunter_data' in the above example, must contain a file
+called 'rkhunter_latest.dat'. This file must contain the current rkhunter
+version number (for example, '1.3.0') and no other text.
+
+It is possible to similarly define 'remote' mirrors, which begin with the
+text 'remote='. At present though there is no real difference between a
+local or remote mirror.
+
+The supplied mirror site(s) in the mirrors.dat file begin with the text
+'mirror=', and this should not be changed.
+
+In order to select whether all the mirrors or only the local or remote
+mirrors should be used, the rkhunter configuration file has an option in
+it called 'MIRRORS_MODE'. This option takes a numeric value, which by default
+is zero. The current values and meanings are:
+
+    0 - use any mirror (the default)
+    1 - use only local mirrors
+    2 - use only remote mirrors
+
+To further support local and remote mirrors there are two other configuration
+options available:
+
+The first is 'UPDATE_MIRRORS', which simply tells rkhunter whether the
+mirrors.dat file itself should be updated (i.e. overwritten) when the
+'--update' option is used. If local mirrors are listed in the file then you
+probably do not want the file automatically updated. The 'UPDATE_MIRRORS'
+option has a default value of one, indicating that the mirrors.dat file should
+be updated. Set this option to zero to disable this feature.
+
+The second option is 'ROTATE_MIRRORS'. This tells rkhunter whether it should
+rotate the list of mirrors whenever the '--update' or '--versioncheck' options
+are used. Again, with local mirrors you may want these accessed in a specific
+order, rather than rotated each time. The option has a default value of one
+indicating that the mirrors should be rotated. Set this option to zero to
+disable this feature.
+
+By default if a mirror fails for some reason, then rkhunter will use the next
+mirror, of the configured type, listed in the file. If there are no more
+mirrors left, then rkhunter will give a warning message.
+
+
 ROOTKIT HUNTER SUPPORT
 ======================
 

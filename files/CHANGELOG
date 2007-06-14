@@ -68,7 +68,7 @@
    displayed during test processing are obtained from an indexed file.
    This file can be translated in to other languages, keeping the index
    the same. To see which languages are provided use the new
-   '--list languages' option.
+   '--list languages' option. Chinese translation provided.
  - Added two new command-line and configuration file options, '--enable'
    and '--disable' to specify which tests are to be carried out and which
    are to be ignored. Use of either option will automatically assume '--check'.
@@ -128,6 +128,14 @@
    the package manager database information to verify if the file has changed
    or not. If this option is specified then the data in rkhunter.dat is not
    used for the file properties checks. See the README file for more details.
+ - It is now possible to configure rkhunter to use local or remote mirrors,
+   rather than just the SourceForge one. This applies when either the
+   '--update' or the '--versioncheck' option is used. The default is to use
+   all defined mirrors. The README file has more details about this.
+ - It is possible to configure rkhunter to not rotate the mirrors.dat file.
+   It is also possible to configure the mirrors file not to be updated when
+   the '--update' option is used. Both of these options can be useful when
+   defining local mirrors. The README file has more details about this.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -212,10 +220,10 @@
  - The version numbering of the '.dat' database files has changed. This makes
    them incompatable with previous versions of rkhunter, and as such files
    from previous versions will be overwritten if used with this version.
- - The displayed output and logged output are now pretty much the same. This
-   allows checking the log file to be easier when looking for specific tests
-   or BAD results.
-   NOTE: This change has not been applied to all tests yet.
+ - The displayed output and logged output are now similar. This allows
+   checking the log file to be easier when looking for specific tests. The
+   log file will, of course, log more information than is displayed on
+   the screen.
  - Script replacement check now checks for any type of script (perl, awk, etc).
    Previous versions only checked for shell scripts. Commands which are
    supposed to be scripts can be whitelisted in the configuration file.
