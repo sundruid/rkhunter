@@ -25,7 +25,7 @@
 # if it is used.
 #
 
-test "$1" == "-f" && shift
+test "$1" = "-f" && shift
 
 LINKNAME=$1
 PWD_CMD=$2
@@ -47,10 +47,7 @@ fi
 # Now do some tests on the link name.
 #
 
-if [ ! -e "${LINKNAME}" ]; then
-	echo "${LINKNAME}"
-	exit
-elif [ -d "${LINKNAME}" ]; then
+if [ -d "${LINKNAME}" ]; then
 	FNAME=""
 	DIR="${LINKNAME}"
 else
