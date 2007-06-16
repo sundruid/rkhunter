@@ -226,9 +226,17 @@ esac
 RKHINST_ETC_DIR="${SYSCONFIGDIR}"
 RKHINST_BIN_DIR="${BINDIR}"
 RKHINST_SCRIPT_DIR="${LIBDIR}/${APPNAME}/scripts"
-RKHINST_DB_DIR="${VARDIR}/lib/${APPNAME}/db"
-RKHINST_TMP_DIR="${VARDIR}/lib/${APPNAME}/tmp"
-RKHINST_DOC_DIR="${SHAREDIR}/doc/${APPNAME}-${APPVERSION}"
+
+if [ "${RKHINST_LAYOUT}" = "oldschool" ]; then
+	RKHINST_DB_DIR="${VARDIR}/${APPNAME}/db"
+	RKHINST_TMP_DIR="${VARDIR}/${APPNAME}/tmp"
+	RKHINST_DOC_DIR="${SHAREDIR}/${APPNAME}/docs"
+else
+	RKHINST_DB_DIR="${VARDIR}/lib/${APPNAME}/db"
+	RKHINST_TMP_DIR="${VARDIR}/lib/${APPNAME}/tmp"
+	RKHINST_DOC_DIR="${SHAREDIR}/doc/${APPNAME}-${APPVERSION}"
+fi
+
 RKHINST_MAN_DIR="${SHAREDIR}/man/man8"
 RKHINST_LANG_DIR="${RKHINST_DB_DIR}/i18n"
 
@@ -443,8 +451,14 @@ esac # end Check PREFIX
 
 echo "Checking installation directories:"
 
+if [ "${RKHINST_LAYOUT}" = "oldschool" ]; then
+	RKHDIR_LIST="${RKHINST_DIRS}"
+else
+	RKHDIR_LIST="${RKHINST_DIRS} ${LIBDIR} ${VARDIR}/lib"
+fi
+
 umask 022
-for DIR in ${RKHINST_DIRS} ${LIBDIR} ${VARDIR}; do
+for DIR in ${RKHDIR_LIST}; do
 	echo $N $ECHOOPT " Directory ${DIR}: "
 	if [ -d "${DIR}" ]; then
 		echo $N "exists, and is "
