@@ -10263,18 +10263,20 @@ set_file_prop_dirs_files() {
 		fi
 	done
 
-	PROP_FILE_LIST="adduser amd basename bash cat chattr checkproc
-	    chkconfig chmod chown chroot cron csh curl date depmod df
-	    dirname dmesg du echo ed egrep env fgrep file find grep groupadd
-	    groupdel groupmod groups grpck head id ifconfig ifdown ifstatus
-	    ifup inetd init insmod ip kallsyms kill killall ksyms kudzu last
-	    lastlog less locate logger login ls lsattr lsmod lynx md5 md5sum
-	    mlocate modinfo modload modprobe modstat modunload more mount
-	    netstat newgrp newsyslog nologin passwd ps pstree pwck rkhunter
-	    rmmod runlevel sh sha1 sha1sum size slocate sockstat sort stat
-	    strace strings su sudo sulogin sysctl syslogd systat tail tcpd
-	    test top touch uname useradd userdel usermod users vipw vmstat w
-	    watch wc wget whatis whereis which who whoami xinetd"
+	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
+	    chkconfig chmod chown chroot cp cron csh curl cut date depmod df
+	    diff dirname dmesg dpkg dpkg-query du echo ed egrep elinks env fgrep
+	    file find GET grep groupadd groupdel groupmod groups grpck head id
+	    ifconfig ifdown ifstatus ifup inetd init insmod ip kallsyms kill
+	    killall ksyms kudzu last lastlog ldd less links locate logger login
+	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
+	    modload modprobe modstat modunload more mount mv netstat newgrp
+	    newsyslog nologin passwd perl pkgdb pkg_info prelink ps pstree pwck
+	    pwd readlink rkhunter rmmod rpm runcon runlevel sed sh sha1 sha1sum
+	    size skdet slocate sockstat sort stat strace strings su sudo sulogin
+	    sysctl syslogd systat tail tcpd test top touch tr uname unhide uniq
+	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
+	    whereis which who whoami xinetd"
 
 
 	#
@@ -10284,7 +10286,7 @@ set_file_prop_dirs_files() {
 	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 		PROP_FILE_LIST="${PROP_FILE_LIST} gbasename gcat gchmod gchown
 		    gdate gdirname gecho gfind gfile ggroups ghead gid glocate
-		    gmd5sum gsize gtail gtest gtouch guname gusers truss"
+		    gmd5sum gsize gtail gtest gtouch guname gusers inetadm truss"
 	elif [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
 		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload"
 	fi
