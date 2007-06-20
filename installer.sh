@@ -355,27 +355,53 @@ else
 fi
 
 echo " Available file retrieval tools: "
-echo $N "  wget: "
+echo $N "      wget: "
 SEARCH=`which wget 2>/dev/null`
 if [ "${SEARCH}" = "" ]; then
 	echo "not found." 
-	echo $N "  fetch: "
-	SEARCH=`which fetch 2>/dev/null`
+
+	echo $N "     links: "
+	SEARCH=`which links 2>/dev/null`
 	if [ "${SEARCH}" = "" ]; then
 		echo "not found."
-		echo $N "  curl: "
-		SEARCH=`which curl 2>/dev/null`
+
+		echo $N "    elinks: "
+		SEARCH=`which elinks 2>/dev/null`
 		if [ "${SEARCH}" = "" ]; then
-			echo "NOT found."
-			echo "Please install one of wget, fetch, curl or bget (www.cpan.org/authors/id/E/EL/ELIJAH/bget)."
-		else
-			echo "found. OK"
+			echo "not found."
+
+			echo $N "      lynx: "
+			SEARCH=`which lynx 2>/dev/null`
+			if [ "${SEARCH}" = "" ]; then
+				echo "not found."
+
+				echo $N "      curl: "
+				SEARCH=`which curl 2>/dev/null`
+				if [ "${SEARCH}" = "" ]; then
+					echo "not found."
+
+					echo $N "       GET: "
+					SEARCH=`which GET 2>/dev/null`
+					if [ "${SEARCH}" = "" ]; then
+						echo "not found."
+
+						echo $N "      bget: "
+						SEARCH=`which bget 2>/dev/null`
+						if [ "${SEARCH}" = "" ]; then
+							echo "NOT found."
+						fi
+					fi
+				fi
+			fi
 		fi
-	else
-		echo "found. OK"
 	fi
-else
+fi
+
+if [ -n "${SEARCH}" ]; then
 	echo "found. OK"
+else
+	echo " Please install one of wget, links, elinks, lynx, curl, GET or"
+	echo "   bget (from www.cpan.org/authors/id/E/EL/ELIJAH/bget)"
 fi
 
 # Perl will be found in Rkhunter itself.
