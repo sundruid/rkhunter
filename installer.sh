@@ -31,6 +31,7 @@ RKHINST_MODE_RW="0640"
 RKHINST_LAYOUT=""
 USE_CVS=0
 STRIPROOT=""
+N="-n"
 
 umask 027
 
@@ -53,22 +54,10 @@ esac
 # rootmgu: modified for solaris
 case "${OPERATING_SYSTEM}" in
 AIX|OpenBSD|SunOS)
-	# rootmgu:
-	# What is the default shell
+	# If running ksh, then use print command.
 	if print >/dev/null 2>&1; then
 		alias echo='print'
-		N="-n"
-		E=""
-		ECHOOPT="--"
-	else
-		E="-e"
-		ECHOOPT=""
 	fi
-	;;
-*)
-	E="-e"
-	N="-n"
-	ECHOOPT=""
 	;;
 esac
 
@@ -298,7 +287,7 @@ useCVS() {
 echo $N "Looking for cvs binary: "
 SEARCH=`which cvs 2>/dev/null`
 if [ "${SEARCH}" = "" ]; then
-	echo $E "not found." 
+	echo "not found." 
 else
 	cvs -z3 -d:pserver:anonymous@rkhunter.cvs.sourceforge.net:/cvsroot/rkhunter co rkhunter
 	case "$?" in
@@ -459,7 +448,7 @@ fi
 
 umask 022
 for DIR in ${RKHDIR_LIST}; do
-	echo $N $ECHOOPT " Directory ${DIR}: "
+	echo $N " Directory ${DIR}: "
 	if [ -d "${DIR}" ]; then
 		echo $N "exists, and is "
 		if [ ! -w "${PREFIX}" ]; then
@@ -476,7 +465,7 @@ done
 umask 027
 
 for DIR in ${RKHINST_DIRS_EXCEP}; do
-	echo $N $ECHOOPT " Directory ${DIR}: "
+	echo $N " Directory ${DIR}: "
 	if [ -d "${DIR}" ]; then
 		echo $N "exists, and is "
 		if [ ! -w "${PREFIX}" ]; then
@@ -542,9 +531,13 @@ done
 
 # Configuration file
 for FILE in ${RKHINST_ETC_FILE}; do
-# We need people to make local changes themselves, so give opportunity and alert.
-# Don't use Perl to get value.
-RANDVAL=`date +%N%s%N`
+	# We need people to make local changes themselves, so
+	# give opportunity and alert. Don't use Perl to get value.
+	if [ -n "$RANDOM" ]; then
+		RANDVAL=$RANDOM
+	else
+		RANDVAL=`date +%Y%m%d%H%M%S 2>/dev/null`
+	fi
 
 	if [ -f "${RKHINST_ETC_DIR}/${FILE}" ]; then
 		NEWFILE="${FILE}.${RANDVAL}"
@@ -678,6 +671,13 @@ for DIR in ${RKHINST_DIRS}; do
 done
 
 # Could use patch for removing custom $VARDIR $SHAREDIR $PREFIX here.
+
+if [ "${RKHINST_LAYOUT}" = "oldschool" ]; then
+	if [ -d "/usr/local/rkhunter" ]; then
+		echo ""
+		echo "Note: The directory '/usr/local/rkhunter' still exists."
+	fi
+fi
 
 echo ""
 echo "Done removing files. Please double-check."
