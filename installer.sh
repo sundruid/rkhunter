@@ -355,47 +355,16 @@ else
 fi
 
 echo " Available file retrieval tools: "
-echo $N "      wget: "
-SEARCH=`which wget 2>/dev/null`
-if [ "${SEARCH}" = "" ]; then
-	echo "not found." 
+for RKHWEBCMD in wget links elinks lynx curl GET bget; do
+	echo $N "    ${RKHWEBCMD}: "
 
-	echo $N "     links: "
-	SEARCH=`which links 2>/dev/null`
-	if [ "${SEARCH}" = "" ]; then
+	SEARCH=`which ${RKHWEBCMD} 2>/dev/null`
+	if [ -z "${SEARCH}" ]; then
 		echo "not found."
-
-		echo $N "    elinks: "
-		SEARCH=`which elinks 2>/dev/null`
-		if [ "${SEARCH}" = "" ]; then
-			echo "not found."
-
-			echo $N "      lynx: "
-			SEARCH=`which lynx 2>/dev/null`
-			if [ "${SEARCH}" = "" ]; then
-				echo "not found."
-
-				echo $N "      curl: "
-				SEARCH=`which curl 2>/dev/null`
-				if [ "${SEARCH}" = "" ]; then
-					echo "not found."
-
-					echo $N "       GET: "
-					SEARCH=`which GET 2>/dev/null`
-					if [ "${SEARCH}" = "" ]; then
-						echo "not found."
-
-						echo $N "      bget: "
-						SEARCH=`which bget 2>/dev/null`
-						if [ "${SEARCH}" = "" ]; then
-							echo "NOT found."
-						fi
-					fi
-				fi
-			fi
-		fi
+	else
+		break
 	fi
-fi
+done
 
 if [ -n "${SEARCH}" ]; then
 	echo "found. OK"

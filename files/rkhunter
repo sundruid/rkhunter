@@ -416,7 +416,7 @@ display() {
 			done
 
 			IFS="${OLDIFS}"
-		elif [ $SHOWWARNINGSONLY -eq 1 -a -n "`echo \"${LOGLINE1}\" | egrep '^\[([0-9][0-9]:){2}[0-9][0-9]\]         '`" ]; then
+		elif [ $SHOWWARNINGSONLY -eq 1 -a -n "`echo \"${LOGLINE1}\" | grep '^\[[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\]         '`" ]; then
 			echo $ECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
 		fi
 	fi
@@ -465,8 +465,12 @@ get_temp_file() {
 		TEMPFILE=`${MKTEMP_CMD} ${TEMPFILE_BASE}.XXXXXX`
 	elif [ -n "$RANDOM" ]; then
 		TEMPFILE="${TEMPFILE_BASE}.$RANDOM"
-	else
+	elif [ $BSDOS -eq 1 ]; then
+		TEMPFILE="${TEMPFILE_BASE}.`date +%s`"
+	elif [ -n "`date +%N%s 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
 		TEMPFILE="${TEMPFILE_BASE}.`date +%N%s%N`"
+	else
+		TEMPFILE="${TEMPFILE_BASE}.`date +%Y%m%d%H%M%S`"
 	fi
 
 
@@ -2656,9 +2660,9 @@ rkh_dat_set_version() {
 	# one to it. If there is no value then simply start at zero.
 	#
 
-	TODAY=`date +%Y%m%d`
+	TODAY=`date +%Y%m%d 2>/dev/null`
 
-	OLDVER=`egrep '^[Vv]ersion:' ${DB_PATH}/rkhunter.dat 2>/dev/null | tail -1 | cut -d: -f2`
+	OLDVER=`grep '^[Vv]ersion:' ${DB_PATH}/rkhunter.dat 2>/dev/null | tail -1 | cut -d: -f2`
 
 	if [ -n "${OLDVER}" ]; then
 		OLDDATE=`echo "${OLDVER}" | cut -c1-8`
@@ -3174,7 +3178,7 @@ get_next_mirror() {
 	# option is used.
 	#
 
-	MIRRORSVERSION=`egrep '^[Vv]ersion:[0-9]{10}$' ${DB_PATH}/mirrors.dat | tail -1`
+	MIRRORSVERSION=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/mirrors.dat | tail -1`
 
 	if [ -z "${MIRRORSVERSION}" ]; then
 		display --to LOG --type INFO MIRRORS_NO_VERSION "${DB_PATH}/mirrors.dat"
@@ -3377,7 +3381,7 @@ download_file() {
 				# version number as the first line in them.
 				#
 
-				if [ -z "`egrep '^[Vv]ersion:[0-9]{10}$' ${OUTPUT_FILE} | tail -1`" ]; then
+				if [ -z "`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${OUTPUT_FILE} | tail -1`" ]; then
 					DNLOADERR=1
 				fi
 			fi
@@ -3420,7 +3424,7 @@ do_i18n_update() {
 		# downloading the language files.
 		#
 
-		FOUNDFILES=`egrep '^[a-zA-Z][a-zA-Z]*:[0-9]{10}$' ${RKHUPD_FILE}`
+		FOUNDFILES=`grep '^[a-zA-Z][a-zA-Z]*:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE}`
 
 		rm -f ${RKHUPD_FILE} >/dev/null 2>&1
 
@@ -3446,7 +3450,7 @@ do_i18n_update() {
 			LATEST_VERS=`echo "${FNAME}" | cut -d: -f2`
 
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
-				PROG_VERS=`egrep '^[Vv]ersion:[0-9]{10}$' ${DB_PATH}/i18n/${LANGFILE} | tail -1 | cut -d: -f2`
+				PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} | tail -1 | cut -d: -f2`
 
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
@@ -3555,7 +3559,7 @@ do_update() {
 		LATEST_VERS=0
 
 		if [ -s "${DB_PATH}/${UPDFILE}" ]; then
-			PROG_VERS=`egrep '^[Vv]ersion:[0-9]{10}$' ${DB_PATH}/${UPDFILE} | tail -1 | cut -d: -f2`
+			PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/${UPDFILE} | tail -1 | cut -d: -f2`
 
 			if [ -z "${PROG_VERS}" ]; then
 				PROG_VERS=0
@@ -3588,7 +3592,7 @@ do_update() {
 		#
 
 		if [ $? -eq 0 ]; then
-			LATEST_VERS=`egrep '^[Vv]ersion:[0-9]{10}$' ${RKHUPD_FILE} | tail -1 | cut -d: -f2`
+			LATEST_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE} | tail -1 | cut -d: -f2`
 
 			test -z "${LATEST_VERS}" && LATEST_VERS=0
 
@@ -4730,6 +4734,7 @@ file_properties_check() {
 	USE_DAT_FILE=1
 	SKIP_IMMUT_OS=0
 	PROP_FILE_LIST_COUNT=0
+	RKH_USE_PKGMGR_VERIFY=0
 
 	#
 	# In order to disable the whole test we have to check if
@@ -5598,11 +5603,26 @@ file_properties_check() {
 			#
 
 			if [ $SKIP_SCRIPT -eq 0 ]; then
-				SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
+				PKGMGR_TEST_OK=0
+				SYSSCRIPT=""
+
+				if [ "${PKGMGR}" = "RPM" -a $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+					:
+# jh - if this test is accepted, then add an entry in the README file that for the scripts test to run on its own requires at least one other non-immutable properties test. Without it the test acts as if pkgmgr verification wasn't being used.
+# jh					test -z "${PKGMGR_VERIFY_RESULT}" && PKGMGR_TEST_OK=1
+				fi
+
+				if [ $PKGMGR_TEST_OK -eq 0 ]; then
+					if [ "${FNAME}" = "rkhunter" ]; then
+						SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i -v 'shell script( |$)'`
+					else
+						SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
+					fi
+				fi
 
 
 				#
-				# Test if the file is whitelisted.
+				# See if the file is whitelisted.
 				#
 
 				if [ -n "${SYSSCRIPT}" ]; then
@@ -5751,7 +5771,11 @@ file_properties_check() {
 						display --to LOG --type WARNING FILE_PROP_IMMUT "${DIR}/${FNAME}"
 						;;
 					file)
-						display --to LOG --type WARNING FILE_PROP_SCRIPT "${DIR}/${FNAME}" "${SYSSCRIPT}"
+						if [ "${FNAME}" = "rkhunter" ]; then
+							display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "${DIR}/${FNAME}" "${SYSSCRIPT}"
+						else
+							display --to LOG --type WARNING FILE_PROP_SCRIPT "${DIR}/${FNAME}" "${SYSSCRIPT}"
+						fi
 						;;
 					esac
 				done
@@ -7726,7 +7750,7 @@ trojan_checks() {
 				# service, then we just use the service name.
 				#
 
-				if [ -n "`echo \"${STR}\" | grep '^[0-9/]*$'`" ]; then
+				if [ -n "`echo \"${STR}\" | grep '^[0-9/_-]*$'`" ]; then
 					EXECNAME=`grep "^${STR}" ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $6 }'`
 
 					if [ -z "${EXECNAME}" -o "${EXECNAME}" = "internal" ]; then
@@ -7734,9 +7758,22 @@ trojan_checks() {
 					fi
 
 					STR="${EXECNAME}"
+
+
+					#
+					# Now check if the executable has been whitelisted.
+					#
+
+					for SVC in ${INETDALLOWEDSVCS}; do
+						if [ "${STR}" = "${SVC}" ]; then
+							FOUND=1
+							display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" "inetd"
+							break
+						fi
+					done
 				fi
 
-				RKHTMPVAR="${RKHTMPVAR} ${STR}"
+				test $FOUND -eq 0 && RKHTMPVAR="${RKHTMPVAR} ${STR}"
 			fi
 		done
 
@@ -8157,8 +8194,16 @@ do_network_port_checks() {
 	# if any known backdoor ports are being used.
 	#
 
+	if `check_test ports`; then
+		display --to LOG --type INFO STARTING_TEST ports
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST ports
+		return
+	fi
+
+
 	#
-	# We must check to see who can perform this test.
+	# We must first check to see who can perform this test.
 	#
 
 	case "${OPERATING_SYSTEM}" in
@@ -8261,53 +8306,58 @@ do_network_interface_checks() {
 	# network interface packets.
 	#
 
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_INTERFACE_START
+	if `check_test promisc`; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_INTERFACE_START
+		display --to LOG --type INFO STARTING_TEST promisc
 
 
-	if [ -n "${IFCONFIG_CMD}" ]; then
-		PROMISCSCAN1=""; PROMISCSCAN2=""
+		if [ -n "${IFCONFIG_CMD}" ]; then
+			PROMISCSCAN1=""; PROMISCSCAN2=""
 
-		if [ "${OPERATING_SYSTEM}" = "OpenBSD" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
-			PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep -v 'pflog' | grep 'PROMISC'`
-		elif [ $BSDOS -eq 1 -o "${OPERATING_SYSTEM}" = "SunOS" ]; then
-			PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep 'PROMISC'`
-		else
-			PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | grep 'PROMISC'`
-		fi
-
-		if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-			if [ -n "${IP_CMD}" ]; then
-				PROMISCSCAN2=`${IP_CMD} -s link | grep 'PROMISC'`
+			if [ "${OPERATING_SYSTEM}" = "OpenBSD" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep -v 'pflog' | grep 'PROMISC'`
+			elif [ $BSDOS -eq 1 -o "${OPERATING_SYSTEM}" = "SunOS" ]; then
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep 'PROMISC'`
 			else
-				display --to LOG --type INFO NETWORK_PROMISC_NO_IP
+				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | grep 'PROMISC'`
 			fi
-		fi
+
+			if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+				if [ -n "${IP_CMD}" ]; then
+					PROMISCSCAN2=`${IP_CMD} -s link | grep 'PROMISC'`
+				else
+					display --to LOG --type INFO NETWORK_PROMISC_NO_IP
+				fi
+			fi
 
 
-		#
-		# Now show the results of the interface check.
-		#
+			#
+			# Now show the results of the interface check.
+			#
 
-		if [ -z "${PROMISCSCAN1}" -a -z "${PROMISCSCAN2}" ]; then
-			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 NETWORK_PROMISC_CHECK
+			if [ -z "${PROMISCSCAN1}" -a -z "${PROMISCSCAN2}" ]; then
+				display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 NETWORK_PROMISC_CHECK
+			else
+				display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PROMISC_CHECK
+
+				display --to LOG --type WARNING NETWORK_PROMISC_IF
+
+				display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_1 "${PROMISCSCAN1}"
+
+				if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${PROMISCSCAN2}" ]; then
+					PROMISCSCAN2=`echo "${PROMISCSCAN2}" | cut -d: -f2`
+
+					for IFACE in ${PROMISCSCAN2}; do
+						display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_2 "${IFACE}"
+					done
+				fi
+			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PROMISC_CHECK
-
-			display --to LOG --type WARNING NETWORK_PROMISC_IF
-
-			display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_1 "${PROMISCSCAN1}"
-
-			if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${PROMISCSCAN2}" ]; then
-				PROMISCSCAN2=`echo "${PROMISCSCAN2}" | cut -d: -f2`
-
-				for IFACE in ${PROMISCSCAN2}; do
-					display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_2 "${IFACE}"
-				done
-			fi
+			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --screen-indent 4 NETWORK_PROMISC_CHECK
+			display --to LOG --type WARNING NETWORK_PROMISC_NO_IFCONFIG
 		fi
 	else
-		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --screen-indent 4 NETWORK_PROMISC_CHECK
-		display --to LOG --type WARNING NETWORK_PROMISC_NO_IFCONFIG
+		display --to LOG --type INFO --nl USER_DISABLED_TEST promisc
 	fi
 
 
@@ -10811,7 +10861,8 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     group_changes possible_rkts possible_rkt_files possible_rkt_strings
 	     system_commands shared_libs shared_libs_path running_procs
 	     hidden_procs trojans other_malware os_specific startup_malware
-	     startup_files group_accounts system_configs filesystem suspscan"
+	     startup_files group_accounts system_configs filesystem suspscan
+	     ports promisc"
 
 # A space-separated list of test 'group names'. This list allows test
 # names to be grouped together. For example, 'system_commands' can include
@@ -10826,7 +10877,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:other_malware:os_specific:suspscan
 	       additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings
 	       possible_rkts:possible_rkt_files:possible_rkt_strings
-	       network:packet_cap_apps
+	       network:packet_cap_apps:ports:promisc
 	       malware:running_procs:hidden_procs:deleted_files:suspscan
 	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem
 	       startup_files:startup_malware
