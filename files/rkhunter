@@ -273,17 +273,9 @@ display() {
 	fi
 
 
-	if [ "${WRITETO}" = "SCREEN" -o "${WRITETO}" = "SCREEN+LOG" ]; then
-		WRITETOTTY=1
-	else
-		WRITETOTTY=0
-	fi
+	test "${WRITETO}" = "SCREEN" -o "${WRITETO}" = "SCREEN+LOG" && WRITETOTTY=1 || WRITETOTTY=0
 
-	if [ "${WRITETO}" = "LOG" -o "${WRITETO}" = "SCREEN+LOG" ]; then
-		WRITETOLOG=1
-	else
-		WRITETOLOG=0
-	fi
+	test "${WRITETO}" = "LOG" -o "${WRITETO}" = "SCREEN+LOG" && WRITETOLOG=1 || WRITETOLOG=0
 
 
 	#
@@ -341,9 +333,7 @@ display() {
 		if [ -n "${TYPE}" ]; then
 			LOGLINE1="${LOGLINE1} ${TYPE}: ${LINE1}"
 		else
-			if [ $LOGINDENT -gt 0 ]; then
-				SPACES=`echo "${BLANK_LINE}" | cut -c1-$LOGINDENT`
-			fi
+			test $LOGINDENT -gt 0 && SPACES=`echo "${BLANK_LINE}" | cut -c1-$LOGINDENT`
 
 			LOGLINE1="${LOGLINE1} ${SPACES}${LINE1}"
 		fi
@@ -690,16 +680,14 @@ scanrootkit() {
 
 	FILE_FOUND=""
 
-	for RKHTMPVAR in ${SCAN_FILES}; do
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | tr -s '%' ' '`
+	for RKHTMPVAR2 in ${SCAN_FILES}; do
+		RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
 		if [ -f "${RKHTMPVAR}" ]; then
 			SCAN_STATUS=1
-			FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR}"
+			FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
-			fi
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
 		fi
@@ -712,16 +700,14 @@ scanrootkit() {
 
 	DIR_FOUND=""
 
-	for RKHTMPVAR in ${SCAN_DIRS}; do
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | tr -s '%' ' '`
+	for RKHTMPVAR2 in ${SCAN_DIRS}; do
+		RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
 		if [ -d "${RKHTMPVAR}" ]; then
 			SCAN_STATUS=1
-			DIR_FOUND="${DIR_FOUND} ${RKHTMPVAR}"
+			DIR_FOUND="${DIR_FOUND} ${RKHTMPVAR2}"
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHTMPVAR}"
-			fi
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHTMPVAR}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHTMPVAR}"
 		fi
@@ -743,9 +729,7 @@ scanrootkit() {
 					SCAN_STATUS=1
 					KSYM_FOUND="${KSYM_FOUND} ${KS}"
 
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result FOUND  --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
-					fi
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND  --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
 				fi
@@ -774,10 +758,12 @@ scanrootkit() {
 		#
 
 		for RKHTMPVAR in ${FILE_FOUND}; do
+			RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '%' ' '`
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_FILE_FOUND "${RKHTMPVAR}"
 		done
 
 		for RKHTMPVAR in ${DIR_FOUND}; do
+			RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '%' ' '`
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${RKHTMPVAR}"
 		done
 
@@ -871,9 +857,7 @@ check_commands() {
 		# executable, then go find the command to use.
 		#
 
-		if [ -z "${CFG_CMD}" ]; then
-			eval ${RKHTMPVAR}=`find_cmd ${CMD}`
-		fi
+		test -z "${CFG_CMD}" && eval ${RKHTMPVAR}=`find_cmd ${CMD}`
 	done
 
 
@@ -1324,13 +1308,13 @@ get_bindir_option() {
 
 			if [ "${OPERATING_SYSTEM}" = "SunOS" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
 				if [ -h /bin ]; then
-					B=""
+					RKHB=""
 
 					for DIR in ${BINPATHS}; do
-						test "${DIR}" != "/bin" && B="${B} ${DIR}"
+						test "${DIR}" != "/bin" && RKHB="${RKHB} ${DIR}"
 					done
 
-					BINPATHS=`echo ${B} | sed -e 's/^ *//'`
+					BINPATHS=`echo ${RKHB}`
 				fi
 			fi
 
@@ -2249,6 +2233,8 @@ get_hash_function() {
 		fi
 	fi
 
+	test "${PKGMGR}" = "NONE" && PKGMGR=""
+
 
 	#
 	# Now check that the package manager we have been given is valid.
@@ -2256,8 +2242,6 @@ get_hash_function() {
 
 	case "${PKGMGR}" in
 	"")
-		;;
-	NONE)
 		;;
 	RPM)
 		RPM_CMD=`find_cmd rpm`
@@ -2313,19 +2297,6 @@ get_hash_function() {
 			fi
 		fi
 		;;
-	MD5)
-		if [ $PRELINKED -eq 1 ]; then
-			PKGMGR_PRELINK_HASH="MD5"
-			PKGMGR_MD5_HASH="${PRELINK_CMD} --verify --md5"
-		else
-			PKGMGR_MD5_HASH=`get_md5_hash_function`
-		fi
-
-		if [ -z "${PKGMGR_MD5_HASH}" ]; then
-			echo "Unable to find an MD5 hash function command for package manager 'MD5'."
-			exit 1
-		fi
-		;;
 	*)
 		echo "Invalid package manager given - ${PKGMGR}"
 		exit 1
@@ -2339,7 +2310,7 @@ get_hash_function() {
 	# is only effective if we have defined a package manager.
 	#
 
-	if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" -a "${PKGMGR}" != "MD5" ]; then
+	if [ -n "${PKGMGR}" ]; then
 		USE_PKGMGR_VERIFY=`grep '^USE_PKGMGR_VERIFY=' ${CONFIGFILE} | tail -1`
 
 		if [ -n "${USE_PKGMGR_VERIFY}" ]; then
@@ -2818,7 +2789,7 @@ rkh_dat_set_file_properties() {
 	elif [ -z "${STAT_CMD}" ]; then
 		SCMD=""
 	else
-		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
+		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
 		elif [ $BSDOS -eq 1 ]; then
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
@@ -2831,7 +2802,7 @@ rkh_dat_set_file_properties() {
 	if ! `check_test hashes`; then
 		HCMD=""
 		SYSHASH=""
-	elif [ \( -z "${PKGMGR}" -o "${PKGMGR}" = "NONE" \) -a "${HASH_FUNC}" = "NONE" ]; then
+	elif [ -z "${PKGMGR}" -a "${HASH_FUNC}" = "NONE" ]; then
 		HCMD=""
 		SYSHASH=""
 	else
@@ -2942,9 +2913,6 @@ rkh_dat_set_file_properties() {
 						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 					fi
-				elif [ "${PKGMGR}" = "MD5" ]; then
-					RKH_USE_PKGMGR=1
-					SYSHASH=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 				fi
 
 				if [ $RKH_USE_PKGMGR -eq 0 ]; then
@@ -3068,16 +3036,13 @@ do_prop_update() {
 
 	if ! `check_test hashes`; then
 		echo "Hash:Disabled" >>${RKHDAT_FILE}
-		echo "Pkgmgr:" >>${RKHDAT_FILE}
+	elif [ -n "${PRELINK_HASH}" ]; then
+		echo "Hash:${PRELINK_HASH}" >>${RKHDAT_FILE}
 	else
-		if [ -n "${PRELINK_HASH}" ]; then
-			echo "Hash:${PRELINK_HASH}" >>${RKHDAT_FILE}
-		else
-			echo "Hash:${HASH_FUNC}" >>${RKHDAT_FILE}
-		fi
-
-		echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_FILE}
+		echo "Hash:${HASH_FUNC}" >>${RKHDAT_FILE}
 	fi
+
+	echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_FILE}
 
 	if ! `check_test attributes`; then
 		echo "Attributes:Disabled" >>${RKHDAT_FILE}
@@ -3210,8 +3175,8 @@ get_next_mirror() {
 
 	echo "${MIRRORSVERSION}" >${MIRRORS_FILE}
 
-	for M in ${OTHERMIRRORS}; do
-		echo "${M}" >>${MIRRORS_FILE}
+	for RKHM in ${OTHERMIRRORS}; do
+		echo "${RKHM}" >>${MIRRORS_FILE}
 	done;
 
 	echo "${MIRROR}" >>${MIRRORS_FILE}
@@ -4136,15 +4101,15 @@ do_system_check_initialisation() {
 
 
 	# Shutdown Rootkit
-	# The '%%' characters represent a space.
-	SHUTDOWN_FILES="${RKHROOTDIR}/usr/man/man5/..%%/.dir/scannah/asus
-			${RKHROOTDIR}/usr/man/man5/..%%/.dir/see
-			${RKHROOTDIR}/usr/man/man5/..%%/.dir/nscd
-			${RKHROOTDIR}/usr/man/man5/..%%/.dir/alpd
-			${RKHROOTDIR}/etc/rc.d/rc.local%%"
-	SHUTDOWN_DIRS="${RKHROOTDIR}/usr/man/man5/..%%/.dir/
-		       ${RKHROOTDIR}/usr/man/man5/..%%/.dir/scannah
-		       ${RKHROOTDIR}/etc/rc.d/rc0.d/..%%/.dir"
+	# The '%' character represents a space.
+	SHUTDOWN_FILES="${RKHROOTDIR}/usr/man/man5/..%/.dir/scannah/asus
+			${RKHROOTDIR}/usr/man/man5/..%/.dir/see
+			${RKHROOTDIR}/usr/man/man5/..%/.dir/nscd
+			${RKHROOTDIR}/usr/man/man5/..%/.dir/alpd
+			${RKHROOTDIR}/etc/rc.d/rc.local%"
+	SHUTDOWN_DIRS="${RKHROOTDIR}/usr/man/man5/..%/.dir/
+		       ${RKHROOTDIR}/usr/man/man5/..%/.dir/scannah
+		       ${RKHROOTDIR}/etc/rc.d/rc0.d/..%/.dir"
 
 
 	# Scalper (FreeBSD.Scalper.Worm) Worm
@@ -4609,9 +4574,7 @@ shared_libs_check() {
 	for RKHTMPVAR in LD_PRELOAD LD_AOUT_PRELOAD LD_ELF_PRELOAD; do
 		RKHTMPVAR_RES=`eval echo "\\$${RKHTMPVAR}"`
 
-		if [ -n "${RKHTMPVAR_RES}" ]; then
-			VARFOUND="${VARFOUND} ${RKHTMPVAR}"
-		fi
+		test -n "${RKHTMPVAR_RES}" && VARFOUND="${VARFOUND} ${RKHTMPVAR}"
 	done
 
 	if [ -z "${VARFOUND}" ]; then
@@ -4752,7 +4715,7 @@ file_properties_check() {
 
 	#
 	# The immutable-bit test is only applicable to Linux and
-	# *BSD systems. We need to disable the test, but not have
+	# BSD systems. We need to disable the test, but not have
 	# it logged as if the user had disabled it (that would be
 	# confusing).
 	#
@@ -4788,9 +4751,7 @@ file_properties_check() {
 			test $SKIP_IMMUT_OS -eq 0 && TEST_NAME=$SKIP_IMMUT
 		fi
 
-		if [ $TEST_NAME -eq 1 ]; then
-			display --to LOG --type INFO USER_DISABLED_TEST ${RKHTMPVAR}
-		fi
+		test $TEST_NAME -eq 1 && display --to LOG --type INFO USER_DISABLED_TEST ${RKHTMPVAR}
 	done
 
 
@@ -4810,15 +4771,9 @@ file_properties_check() {
 		RKHTMPVAR="${RKHTMPVAR} attr"
 	fi
 
-	if [ -n "${OLD_PKGMGR}" -a "${OLD_PKGMGR}" != "NONE" ]; then
-		REAL_OLD_PKGMGR=1
-	else
-		REAL_OLD_PKGMGR=0
-	fi
-
 	if [ $SKIP_HASH -eq 0 ]; then
 		# Not sure about this one...!
-		if [ $REAL_OLD_PKGMGR -eq 0 -a -s "${DB_PATH}/rkhunter.dat" -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) ]; then
+		if [ -z "${OLD_PKGMGR}" -a -s "${DB_PATH}/rkhunter.dat" -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} hash"
 
@@ -4992,14 +4947,12 @@ file_properties_check() {
 	if [ $SKIP_ATTR -eq 1 ]; then
 		SCMD=""
 	else
-		if [ -n "`echo ${STAT_CMD} | grep '\.pl$'`" ]; then
+		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+		elif [ $BSDOS -eq 1 ]; then
+			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
 		else
-			if [ $BSDOS -eq 1 ]; then
-				SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
-			else
-				SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
-			fi
+			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
 		fi
 	fi
 
@@ -5096,12 +5049,10 @@ file_properties_check() {
 
 					continue
 				fi
+			elif [ $FILE_EXISTS -eq 1 ]; then
+				RKHLINE=""
 			else
-				if [ $FILE_EXISTS -eq 1 ]; then
-					RKHLINE=""
-				else
-					continue
-				fi
+				continue
 			fi
 
 
@@ -5119,7 +5070,7 @@ file_properties_check() {
 				# of the tests we are doing, we obtain the verified
 				# data now. The other package managers, at present,
 				# only provide the MD5 checksum. As such we simply
-				# handle them within that test.
+				# handle them within the hash test.
 				#
 
 				if [ "${PKGMGR}" = "RPM" ]; then
@@ -5206,7 +5157,7 @@ file_properties_check() {
 					# hash value, so we have to allow for that.
 					#
 
-					if [ $REAL_OLD_PKGMGR -eq 1 -o -n "${RKHHASH}" ]; then
+					if [ -n "${OLD_PKGMGR}" -o -n "${RKHHASH}" ]; then
 						SYSHASH=""
 
 						if [ "${PKGMGR}" = "RPM" ]; then
@@ -5232,7 +5183,11 @@ file_properties_check() {
 								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
 									RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-									test "${RKHTMPVAR2}" = "${SYSHASH}" && PKGMGR_TEST_OK=1
+									if [ "${RKHTMPVAR2}" = "${SYSHASH}" ]; then
+										PKGMGR_TEST_OK=1
+									else
+										PKGMGR_VERIFY_RESULT="5"
+									fi
 								fi
 							fi
 						elif [ "${PKGMGR}" = "BSD" ]; then
@@ -5257,15 +5212,12 @@ file_properties_check() {
 								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
 									RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-									test "${RKHTMPVAR2}" = "${SYSHASH}" && PKGMGR_TEST_OK=1
+									if [ "${RKHTMPVAR2}" = "${SYSHASH}" ]; then
+										PKGMGR_TEST_OK=1
+									else
+										PKGMGR_VERIFY_RESULT="5"
+									fi
 								fi
-							fi
-						elif [ "${PKGMGR}" = "MD5" ]; then
-							RKH_USE_PKGMGR=1
-							SYSHASH=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
-
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								test "${RKHHASH}" = "${SYSHASH}" && PKGMGR_TEST_OK=1
 							fi
 						fi
 
@@ -5366,7 +5318,7 @@ file_properties_check() {
 						fi
 
 						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
-						SYSPERM=`echo "${FDATA}" | cut -d: -f2`
+						SYSPERM=`echo ${FDATA} | cut -d: -f2`
 
 						if [ -n "${RKHPERM}" ]; then
 							if [ $RKH_USE_PKGMGR -eq 1 ]; then
@@ -5538,12 +5490,17 @@ file_properties_check() {
 					# are links are ignored.
 					#
 
+					RKHTMPVAR=""
 					SYSPERM=`echo ${FDATA} | cut -d: -f2`
 
-					if [ -h "${DIR}/${FNAME}" ]; then
-						RKHTMPVAR=""
-					else
-						RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
+					if [ ! -h "${DIR}/${FNAME}" ]; then
+						if [ "${PKGMGR}" = "RPM" -a $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'M'`" ]; then
+								RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
+							fi
+						else
+							RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
+						fi
 					fi
 
 					if [ -n "${RKHTMPVAR}" ]; then
@@ -5606,10 +5563,20 @@ file_properties_check() {
 				PKGMGR_TEST_OK=0
 				SYSSCRIPT=""
 
-				if [ "${PKGMGR}" = "RPM" -a $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-					:
-# jh - if this test is accepted, then add an entry in the README file that for the scripts test to run on its own requires at least one other non-immutable properties test. Without it the test acts as if pkgmgr verification wasn't being used.
-# jh					test -z "${PKGMGR_VERIFY_RESULT}" && PKGMGR_TEST_OK=1
+				#
+				# To use the package manager result here, one of the previous tests
+				# which use the package manager must also have run. That is, the
+				# hashes or attributes test must have been selected.
+				#
+
+				if [ $SKIP_HASH -eq 0 -o $SKIP_ATTR -eq 0 ]; then
+					if [ -n "${PKGMGR}" -a $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
+						if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+							PKGMGR_TEST_OK=1
+						elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
+							PKGMGR_TEST_OK=1
+						fi
+					fi
 				fi
 
 				if [ $PKGMGR_TEST_OK -eq 0 ]; then
@@ -7753,9 +7720,7 @@ trojan_checks() {
 				if [ -n "`echo \"${STR}\" | grep '^[0-9/_-]*$'`" ]; then
 					EXECNAME=`grep "^${STR}" ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $6 }'`
 
-					if [ -z "${EXECNAME}" -o "${EXECNAME}" = "internal" ]; then
-						EXECNAME="${STR}"
-					fi
+					test -z "${EXECNAME}" -o "${EXECNAME}" = "internal" && EXECNAME="${STR}"
 
 					STR="${EXECNAME}"
 
@@ -10489,9 +10454,7 @@ display_tests() {
 		LEN=`echo "${GROUP_NAME}" | wc -c | tr -d ' '`
 		LEN=`expr $MAX - $LEN`
 
-		if [ $LEN -gt 0 ]; then
-			GROUP_NAME="${GROUP_NAME} `echo \"${BLANK_LINE}\" | cut -d' ' -f1-$LEN`"
-		fi
+		test $LEN -gt 0 && GROUP_NAME="${GROUP_NAME} `echo \"${BLANK_LINE}\" | cut -d' ' -f1-$LEN`"
 
 
 		#
@@ -10504,10 +10467,10 @@ display_tests() {
 		for TEST in `echo "${STR}" | cut -d: -f2- | tr ':' ' '`; do
 			RKHTMPVAR=`echo "${GROUPED_TESTS}" | egrep "(^| )${TEST}:"`
 
-			if [ -n "${RKHTMPVAR}" ]; then
-				continue
-			else
+			if [ -z "${RKHTMPVAR}" ]; then
 				TEST_NAMES="${TEST_NAMES}:${TEST}"
+			else
+				continue
 			fi
 		done
 
@@ -10637,7 +10600,7 @@ help() {
 	echo "   --ns, --nosummary                   Do not show the summary of check results"
 	echo " --novl, --no-verbose-logging          No verbose logging"
 	echo "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain or"
-	echo "                   MD5 | NONE}         verify file hash values. (Default is NONE)"
+	echo "                   NONE}               verify file hash values. (Default is NONE)"
 	echo "         --propupd                     Update the file properties database"
 	echo "     -q, --quiet                       Quiet mode (no output at all)"
 	echo "  --rwo, --report-warnings-only        Show only warning messages"
@@ -10737,7 +10700,6 @@ PRELINKED=0
 PRELINK_CMD=""
 PRELINK_HASH=""
 PKGMGR_MD5_HASH=""
-PKGMGR_PRELINK_HASH=""
 MD5_CMD=""
 
 UPDATE=0
@@ -10878,7 +10840,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 	       additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings
 	       possible_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps:ports:promisc
-	       malware:running_procs:hidden_procs:deleted_files:suspscan
+	       malware:running_procs:hidden_procs:deleted_files:suspscan:other_malware
 	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem
 	       startup_files:startup_malware
 	       group_accounts:passwd_changes:group_changes"
@@ -11529,11 +11491,11 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 fi
 
 
-if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a \( -z "${PKGMGR}" -o "${PKGMGR}" = "NONE" \) -a "${HASH_FUNC}" != "NONE" ]; then
+if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a -z "${PKGMGR}" -a "${HASH_FUNC}" != "NONE" ]; then
 	#
 	# For a hash update on a prelinked system, we must have
 	# a valid hash function to use. The package managers use
-	# an md5 hash function by default.
+	# an MD5 hash function by default.
 	#
 
 	if [ -z "${PRELINK_HASH}" ]; then
@@ -11801,7 +11763,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 
 		if [ "${HASH_FUNC}" = "NONE" ]; then
-			if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" ]; then
+			if [ -n "${PKGMGR}" ]; then
 				display --to LOG --type INFO HASH_FUNC_NONE_PKGMGR
 			else
 				display --to LOG --type INFO HASH_FUNC_NONE
@@ -11817,7 +11779,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		display --to LOG --type INFO SYS_NO_PRELINK
 
 		if [ "${HASH_FUNC}" = "NONE" ]; then
-			if [ -n "${PKGMGR}" -a "${PKGMGR}" != "NONE" ]; then
+			if [ -n "${PKGMGR}" ]; then
 				display --to LOG --type INFO HASH_FUNC_NONE_PKGMGR
 			else
 				display --to LOG --type INFO HASH_FUNC_NONE
@@ -11839,10 +11801,8 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 
 	if [ -z "${OLD_PKGMGR}" ]; then
 		display --to LOG --type INFO HASH_PKGMGR_OLD_UNSET
-	elif [ "${OLD_PKGMGR}" = "NONE" -o "${OLD_PKGMGR}" = "MD5" ]; then
-		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}"
 	else
-		display --to LOG --type INFO HASH_PKGMGR_OLD_NONMD5 "${OLD_PKGMGR}"
+		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}"
 	fi
 
 	display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
@@ -11860,16 +11820,6 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			else
 				display --to LOG --type INFO HASHUPD_PKGMGR_NOT_SPEC "${HASH_FUNC}"
 			fi
-		elif [ "${PKGMGR}" = "NONE" ]; then
-			if [ $PRELINKED -eq 1 ]; then
-				if [ -n "${PRELINK_HASH}" ]; then
-					display --to LOG --type INFO HASHUPD_PKGMGR_NONE_PRELINKED "${PRELINK_HASH}"
-				else
-					display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
-				fi
-			else
-				display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
-			fi
 		elif [ -n "${PKGMGR}" ]; then
 			display --to LOG --type INFO HASHUPD_PKGMGR "${PKGMGR}"
 
@@ -11883,16 +11833,6 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				fi
 			elif [ "${PKGMGR}" = "BSD" ]; then
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
-			elif [ "${PKGMGR}" = "MD5" ]; then
-				if [ $PRELINKED -eq 1 ]; then
-					if [ -n "${PKGMGR_PRELINK_HASH}" ]; then
-						display --to LOG --type INFO HASHUPD_PKGMGR_MD5_PRELINK "${PKGMGR_PRELINK_HASH}"
-					else
-						display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-					fi
-				else
-					display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-				fi
 			fi
 		fi
 	fi
@@ -11907,16 +11847,6 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				fi
 			else
 				display --to LOG --type INFO HASH_PKGMGR_NOT_SPEC "${HASH_FUNC}"
-			fi
-		elif [ "${PKGMGR}" = "NONE" ]; then
-			if [ $PRELINKED -eq 1 ]; then
-				if [ -n "${PRELINK_HASH}" ]; then
-					display --to LOG --type INFO HASHUPD_PKGMGR_NONE_PRELINKED "${PRELINK_HASH}"
-				else
-					display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
-				fi
-			else
-				display --to LOG --type INFO HASHUPD_PKGMGR_NONE "${HASH_FUNC}"
 			fi
 		elif [ -n "${PKGMGR}" ]; then
 			display --to LOG --type INFO HASH_PKGMGR "${PKGMGR}"
@@ -11939,24 +11869,12 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
 					display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 				fi
-			elif [ "${PKGMGR}" = "MD5" ]; then
-				if [ $PRELINKED -eq 1 ]; then
-					if [ -n "${PKGMGR_PRELINK_HASH}" ]; then
-						display --to LOG --type INFO HASHUPD_PKGMGR_MD5_PRELINK "${PKGMGR_PRELINK_HASH}"
-					else
-						display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-					fi
-				else
-					display --to LOG --type INFO HASHUPD_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-				fi
 			fi
 
-			if [ "${PKGMGR}" != "NONE" ]; then
-				if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
-					display --to LOG --type INFO HASH_PKGMGR_USE_VRFY
-				else
-					display --to LOG --type INFO HASH_PKGMGR_NO_USE_VRFY
-				fi
+			if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
+				display --to LOG --type INFO HASH_PKGMGR_USE_VRFY
+			else
+				display --to LOG --type INFO HASH_PKGMGR_NO_USE_VRFY
 			fi
 		fi
 	fi

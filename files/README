@@ -22,7 +22,7 @@ Please note RKH has some requirements:
    'cat', 'sed', 'head', 'tail', etc. If a command is missing then
    RKH will not run.
 
-2) Some tests require commands such as stat, readlink, md5/md5sum,
+2) Some tests require commands such as stat, readlink, md5/md5sum or
    sha1/sha1sum. If these are not present, then RKH has perl
    scripts which will automatically be used instead. However, this
    requires perl being present. If it is not, then the tests will
@@ -281,17 +281,13 @@ check the values from the package manager are compared against those in the
 rkhunter.dat file.
 
 The currently available package managers are 'RPM' for RedHat/RPM-based
-systems, 'DPKG' for Debian-based systems, and 'BSD' for *BSD systems. It is
-also possible to specify 'MD5' which forces RKH to use an MD5 hash function
-command, or 'NONE' to indicate not to use a package manager. The program
-default is 'NONE'.
+systems, 'DPKG' for Debian-based systems, and 'BSD' for BSD systems. It is
+also possible to specify 'NONE' to indicate not to use a package manager.
+The program default is 'NONE'.
 
 Any file which is not part of a package is treated as before, that is, the
 HASH_FUNC configuration file option, or the '--hash' command-line option will
 be used.
-
-If the MD5 package manager is used, then all files are considered part of a
-package and an MD5 hash value will be calculated for them all.
 
 
 USING PACKAGE MANAGER VERIFICATION
@@ -317,9 +313,9 @@ values as well, such as the file permissions, uid/gid, modification time and so
 on. During verification all of these values will be used, rather than the ones
 stored in the rkhunter.dat file.
 
-It should also be noted that the 'DPKG', 'BSD' and 'MD5' package manager
-options only provide the files MD5 hash value. As such, during verification,
-all the other current file properties will be re-calculated as before, and
+It should also be noted that the 'DPKG' and 'BSD' package manager options
+only provide the files MD5 hash value. As such, during verification, all
+the other current file properties will be re-calculated as before, and
 compared against the values in the rkhunter.dat file. Hence, only the 'RPM'
 package manager offers any real benefit in using package manager verification.
 

@@ -51,7 +51,7 @@
    rkhunter.dat file.
  - Added the HASH_FLD_IDX option to the configuration file. This specifies the
    field of the HASH_FUNC command output which contains the hash value. A
-   default of 1 is used, except for *BSD systems where 4 will be used.
+   default of 1 is used, except for BSD systems where 4 will be used.
  - The files for the file hash checks are now 'looked for'. The code will
    search the command directories, and check the relevant files in all the
    directories. Additional commands and directories are used for Solaris,
@@ -121,9 +121,9 @@
    PKGMGR. These provide support for package managers when using the
    '--propupd' and '--check' options. Currently supported package managers are
    'RPM' for RedHat/RPM-based systems, 'DPKG' for Debian-based systems, and
-   'BSD' for *BSD systems. Additionally 'MD5' can be used to specify that an
-   md5 command must be used, or 'NONE' to indicate that no package manager is
-   to be used. Default is 'NONE'. See the README file for more details.
+   'BSD' for BSD systems. Additionally, 'NONE' can be used to indicate that
+   no package manager is to be used. The default is 'NONE'. See the README file
+   for more details.
  - Added the configuration file option USE_PKGMGR_VERIFY. This tells RKH to use
    the package manager database information to verify if the file has changed
    or not. If this option is specified then the data in rkhunter.dat is not
@@ -174,7 +174,7 @@
    checked.
  - Hidden file search now checks /usr/share/man directories.
  - Improved NetBSD support.
- - The supplied perl scripts, providing the stat command, md5 and sha1,
+ - The supplied perl scripts, providing the stat, md5 and sha1 commands,
    can now be executed without perl being in the default directory (/usr/bin).
  - If a perl script is to be used, then a check is made that required modules
    are installed on the system. If they are not, then it is treated the same
@@ -227,6 +227,8 @@
  - Script replacement check now checks for any type of script (perl, awk, etc).
    Previous versions only checked for shell scripts. Commands which are
    supposed to be scripts can be whitelisted in the configuration file.
+   The 'rkhunter' command itself is an exception. The check will ensure
+   that 'rkhunter' *is* a shell script.
  - File permissions check improved to check if 'other' has the 'w' bit set.
    Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
    into the file properties checks. Soft links are ignored.
@@ -248,7 +250,7 @@
  - The application version check no longer checks against known 'good'
    versions. Only a file of bad versions is kept. The previous method was
    impossible to maintain.
- - Enabled the immutable file test for *BSD systems.
+ - Enabled the immutable file test for BSD systems.
  - Soft (symbolic) links for files and directories are now handled correctly.
    Previously the link was dealt with, but not what it pointed to. Soft links
    are dealt with when using the '--propupd' command, and when running the

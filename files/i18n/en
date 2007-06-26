@@ -1,4 +1,4 @@
-Version:2007062201
+Version:2007062601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -93,8 +93,7 @@ HASH_FUNC_NONE_PKGMGR:File hash function NONE specified: only package manager wi
 HASH_FUNC_DISABLED:Hash function set to 'NONE': automatically disabling file hash checks
 HASH_FUNC_OLD:Stored hash values used hash function '$1'
 HASH_FUNC_OLD_DISABLED:Previous hash function was disabled: no hash values were stored
-HASH_PKGMGR_OLD:Stored hash values used package manager '$1'
-HASH_PKGMGR_OLD_NONMD5:Stored hash values used package manager '$1' (md5 function)
+HASH_PKGMGR_OLD:Stored hash values used package manager '$1' (md5 function)
 HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a packet manager
 
 HASH_PKGMGR:Using package manager '$1' for file property checks
@@ -108,12 +107,8 @@ HASH_FIELD_INDEX:The hash function field index is set to $1
 
 HASHUPD_DISABLED:Hash checks disabled: current file hash values will not be stored
 HASHUPD_PKGMGR:Using package manager '$1' to update the file hash values
-HASHUPD_PKGMGR_NONE:Package manager 'NONE' specified: using hash function '$1'
-HASHUPD_PKGMGR_NONE_PRELINKED:Package manager 'NONE' specified: using prelink command with '$1'
 HASHUPD_PKGMGR_NOT_SPEC:No file hash update package manager specified: using hash function '$1'
 HASHUPD_PKGMGR_NOT_SPEC_PRELINKED:No file hash update package manager specified: using prelink command with '$1'
-HASHUPD_PKGMGR_MD5:Using MD5 hash function command '$1' as the package manager
-HASHUPD_PKGMGR_MD5_PRELINK:Using prelink command (with $1) as the package manager
 
 ATTRUPD_DISABLED:File attribute checks disabled: current file attributes will not be stored
 ATTRUPD_NOSTAT:File attribute checks disabled: no 'stat' command found: current file attributes will not be stored

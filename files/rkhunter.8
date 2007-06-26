@@ -1,5 +1,5 @@
 .\" rkhunter - RootKit Hunter
-.TH rkhunter 8 "May, 2007"
+.TH rkhunter 8 "June, 2007"
 
 .SH NAME
 rkhunter \- RootKit Hunter
@@ -232,12 +232,12 @@ option reduces the amount of logging, and so can improve the performance of
 \fBrkhunter\fP. However, the log file will contain less information should any
 warnings occur. By default verbose logging is enabled.
 
-.IP "\fB\-\-pkgmgr {RPM | DPKG | BSD | MD5 | NONE}\fP"
+.IP "\fB\-\-pkgmgr {RPM | DPKG | BSD | NONE}\fP"
 This option is used during the file properties check or when the
 \fB\-\-propupd\fP command option is given. It tells \fBrkhunter\fP that the
 current file hash values should be obtained from the relevant package manager.
 See the README file for more details of this option, and about package manager
-verification. The default is not to use a package manager.
+verification. The default is \fINONE\fp, which means not to use a package manager.
 
 .IP "\fB\-q, \-\-quiet\fP"
 This option tells \fBrkhunter\fP not to display any output. It can be useful
