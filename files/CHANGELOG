@@ -232,8 +232,8 @@
    supposed to be scripts can be whitelisted in the configuration file.
    The 'rkhunter' command itself is an exception, and the check will ensure
    that 'rkhunter' *is* a shell script. The script check will be automatically
-   skipped if the file has already passed the file size check and the hash
-   check.
+   skipped if the file has already passed the RPM package manager file size and
+   hash checks.
  - File permissions check improved to check if 'other' has the 'w' bit set.
    Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
    into the file properties checks. Soft links, and files verified by the

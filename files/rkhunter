@@ -5238,7 +5238,11 @@ file_properties_check() {
 
 						if [ $RKH_USE_PKGMGR -eq 1 ]; then
 							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:hashchanged"
+								if [ $PKGMGR_TEST_OK -eq 0 ]; then
+									RKHTMPVAR="verify:hashchanged"
+								else
+									HASH_TEST_PASSED=1
+								fi
 							elif [ "${RKHHASH}" != "${SYSHASH}" ]; then
 								RKHTMPVAR="hashchanged"
 							fi
@@ -5270,12 +5274,8 @@ file_properties_check() {
 								break
 							fi
 						done
-					fi
 
-					if [ -z "${RKHTMPVAR}" ]; then
-						HASH_TEST_PASSED=1
-					else
-						TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 					fi
 				fi
 
@@ -5465,7 +5465,11 @@ file_properties_check() {
 							RKHTMPVAR=""
 
 							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 -a "${PKGMGR}" = "RPM" ]; then
-								echo "${PKGMGR_VERIFY_RESULT}" | grep 'S' >/dev/null && RKHTMPVAR="verify:sizechanged"
+								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'S'`" ]; then
+									RKHTMPVAR="verify:sizechanged"
+								else
+									SIZE_TEST_PASSED=1
+								fi
 							else
 								RKHSIZE=`echo ${RKHLINE} | cut -d: -f8`
 								SYSSIZE=`echo ${FDATA} | cut -d: -f5`
@@ -5477,11 +5481,7 @@ file_properties_check() {
 								fi
 							fi
 
-							if [ -z "${RKHTMPVAR}" ]; then
-								SIZE_TEST_PASSED=1
-							else
-								TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
-							fi
+							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 
 
 							#
