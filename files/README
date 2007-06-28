@@ -94,7 +94,7 @@ directory or where you chose using the --layout switch. Man pages will
 be installed into '/usr/local/share/man', and other documentation will 
 be installed into the '/usr/local/share/doc' directory. RKH data files,
 language support, and a directory for temporary files will be
-installed into '/var/rkhunter'. All directories will be created 
+installed into '/var/lib/rkhunter'. All directories will be created 
 where necessary.
 
 To run RKH, as root simply enter the following command:
@@ -109,9 +109,9 @@ To see what other options can be used with rkhunter, enter:
     rkhunter --help
 
 
-NOTE: The first run of 'rkhunter' after installation is likely to
-      give some warning messages. Please see the FAQ file for more
-      details about this.
+NOTE: The first run of 'rkhunter' after installation may give some
+      warning messages. Please see the FAQ file for more details
+      about this.
 
 
 STANDALONE INSTALLATION

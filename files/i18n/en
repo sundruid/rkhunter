@@ -1,4 +1,4 @@
-Version:2007062601
+Version:2007062801
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -267,6 +267,9 @@ FILE_PROP_NO_RKHGID:No group-id value found for file '$1' in the rkhunter.dat fi
 FILE_PROP_INODE_UNAVAIL:Current inode: Unavailable    Stored inode: $1
 FILE_PROP_INODE:Current inode: $1    Stored inode: $2
 FILE_PROP_NO_RKHINODE:No inode value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_SIZE_UNAVAIL:Current size: Unavailable    Stored size: $1
+FILE_PROP_SIZE:Current size: $1    Stored size: $2
+FILE_PROP_NO_RKHSIZE:No size value found for file '$1' in the rkhunter.dat file.
 FILE_PROP_SYSDTM_UNAVAIL:Current file modification time: Unavailable
 FILE_PROP_SYSDTM:Current file modification time: $1
 FILE_PROP_RKHDTM:Stored file modification time : $1
@@ -281,9 +284,10 @@ FILE_PROP_SCRIPT_RKH:The command '$1' has been replaced and is not a script: $2
 FILE_PROP_VRFY:Package manager verification has failed:
 FILE_PROP_VRFY_HASH:The file hash value has changed
 FILE_PROP_VRFY_PERM:The file permissions have changed
-FILE_PROP_VRFY_UID:The files owner has changed
-FILE_PROP_VRFY_GID:The files group has changed
-FILE_PROP_VRFY_DTM:The files modification time has changed
+FILE_PROP_VRFY_UID:The file owner has changed
+FILE_PROP_VRFY_GID:The file group has changed
+FILE_PROP_VRFY_DTM:The file modification time has changed
+FILE_PROP_VRFY_SIZE:The file size has changed
 
 CHECK_ROOTKITS:Checking for rootkits...
 ROOTKIT_FILES_DIRS_START:Performing check of known rootkit files and directories

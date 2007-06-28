@@ -301,19 +301,15 @@ A.   This is a message from older versions of rkhunter. Upgrade to
 3.7) I have just installed Rootkit Hunter, and I am already
      getting warning messages. Why is that?
 
-A.   The first run of rkhunter after an installation will give some
-     warning messages. One of the checks is that the file of file
-     properties (called 'rkhunter.dat') for the file properties
-     checks exists. This file won't exist until rkhunter is run with
-     the '--propupd' option. Two other warning messages will relate
-     to checks of changes to the passwd and group files. To do this,
-     rkhunter must use a copy of the files. However, since no copies
-     yet exist, warnings are generated. These warnings will disappear
-     once rkhunter is run again. There is also a check to see if any
-     commands have been replaced by shell scripts. One of the commands
-     is 'rkhunter' itself. To avoid these warning messages you must
-     whitelist the commands in your rkhunter.conf file. Look in the
-     configuration file and you will find examples of this.
+A.   The first run of rkhunter after an installation will usually give
+     some warning messages. One of the checks is whether the file of
+     file properties (called 'rkhunter.dat') exists. This file won't
+     exist until rkhunter is run with the '--propupd' option. There is
+     also a check to see if any commands have been replaced by a script.
+     To avoid these warning messages you can whitelist the commands in
+     your rkhunter.conf file. Similarly if there are warnings about
+     hidden files or directories, then these can be whitelisted. Look in
+     the configuration file and you will find examples of these.
 
      Once these changes have been made, then re-run rkhunter and no
      warnings should appear. Obviously warning messages from other
@@ -341,7 +337,7 @@ A.   Your system probably uses prelinking (the log file will say if
      on the file, it will probably give an error about the files
      dependencies having changed. This is what RKH sees, and flags
      it as a missing hash. If you are sure that the file is genuine,
-     then you may try using 'prelink <file>' to correct it. The
+     then you can try using 'prelink <file>' to correct it. The
      'prelink' command above should then work. Re-run RKH with the
      '--propupd' option to ensure that all the hash values are recorded.
 
@@ -412,11 +408,11 @@ A.   The first thing would be to verify that the update is the cause
 
      It is most likely that the stored rkhunter file property values
      need to be recalculated. To do this use the RKH '--propupd'
-     option. However, the output of the RKH file hash value check
+     option. However, the output of the RKH file properties check
      should only be seen as an indication that the file has changed.
-     Updating the stored hash values should be done only after proper
-     verification of the files using a file integrity checker or your
-     distributions package management tools.
+     Updating the stored property values should be done only after
+     proper verification of the files using a file integrity checker
+     or your distributions package management tools.
 
      Alteratively, you can use the '--pkgmgr' command-line option, or
      the PKGMGR option in the configuration file, to tell RKH to obtain

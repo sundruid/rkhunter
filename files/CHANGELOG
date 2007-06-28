@@ -136,6 +136,9 @@
    It is also possible to configure the mirrors file not to be updated when
    the '--update' option is used. Both of these options can be useful when
    defining local mirrors. The README file has more details about this.
+ - Added a file size check to the file properties checks. This will only occur
+   for non-prelinked files, files not part of a package, or packaged files
+   when the RPM package manager is being used.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -227,11 +230,14 @@
  - Script replacement check now checks for any type of script (perl, awk, etc).
    Previous versions only checked for shell scripts. Commands which are
    supposed to be scripts can be whitelisted in the configuration file.
-   The 'rkhunter' command itself is an exception. The check will ensure
-   that 'rkhunter' *is* a shell script.
+   The 'rkhunter' command itself is an exception, and the check will ensure
+   that 'rkhunter' *is* a shell script. The script check will be automatically
+   skipped if the file has already passed the file size check and the hash
+   check.
  - File permissions check improved to check if 'other' has the 'w' bit set.
    Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
-   into the file properties checks. Soft links are ignored.
+   into the file properties checks. Soft links, and files verified by the
+   RPM package manager permissions check, are ignored.
  - The '--report-mode' option has been removed. It was not seen as being
    useful, and combinations of the other options will provide the same, if
    not better, reporting.

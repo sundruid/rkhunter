@@ -2771,7 +2771,11 @@ rkh_dat_set_file_properties() {
 	# files to be checked. The format in the rkhunter.dat file is:
 	#
 	#     File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
-	#          <date/time modified>
+	#          <file size>:<date/time modified>
+	#
+	# The format is actually governed by the stat.pl file, and the
+	# output it produces. Changing the order of options does not
+	# change the order of the output.
 	#
 	# To save time in the loops below, we determine the exact commands
 	# required before entering them.
@@ -2790,11 +2794,11 @@ rkh_dat_set_file_properties() {
 		SCMD=""
 	else
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
-			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
 		elif [ $BSDOS -eq 1 ]; then
-			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
 		else
-			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+			SCMD="${STAT_CMD} --format='%i 0%a %u %g %s %Y:'"
 		fi
 	fi
 
@@ -2858,7 +2862,7 @@ rkh_dat_set_file_properties() {
 
 					RKH_USE_PKGMGR=1
 
-					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 
 					if [ $? -eq 0 ]; then
 						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
@@ -2872,10 +2876,12 @@ rkh_dat_set_file_properties() {
 						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
 						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+						RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+
+						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
 
 						FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
-						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHDTM}:"
+						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
 					fi
 				fi
 			fi
@@ -2885,7 +2891,7 @@ rkh_dat_set_file_properties() {
 				SYSHASH=""
 
 				if [ "${PKGMGR}" = "RPM" ]; then
-					test $RKH_USE_PKGMGR -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
+					test $RKH_USE_PKGMGR -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
 				elif [ "${PKGMGR}" = "DPKG" ]; then
 					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
@@ -2946,7 +2952,7 @@ rkh_dat_set_file_properties() {
 			if [ -n "${SCMD}" ]; then
 				test -z "${FDATA}" && FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
 			else
-				FDATA=":::::"
+				FDATA="::::::"
 			fi
 
 			echo "File:${FILENAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
@@ -4948,11 +4954,11 @@ file_properties_check() {
 		SCMD=""
 	else
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
-			SCMD="${STAT_CMD} --modeoct --raw --mode --ino -uid -gid -Mtime"
+			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
 		elif [ $BSDOS -eq 1 ]; then
-			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %m:'"
+			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
 		else
-			SCMD="${STAT_CMD} --format='%i 0%a %u %g %Y:'"
+			SCMD="${STAT_CMD} --format='%i 0%a %u %g %s %Y:'"
 		fi
 	fi
 
@@ -5010,6 +5016,9 @@ file_properties_check() {
 		for FNAME in ${PROP_FILE_LIST}; do
 			TEST_RESULT=""
 			WHITELIST_RESULT=""
+
+			HASH_TEST_PASSED=0
+			SIZE_TEST_PASSED=0
 
 
 			#
@@ -5117,7 +5126,7 @@ file_properties_check() {
 						# from the package manager database.
 						#
 
-						RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+						RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 
 						if [ $? -eq 0 ]; then
 							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
@@ -5131,10 +5140,12 @@ file_properties_check() {
 							RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
 							RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+							RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+
+							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
 
 							FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
-							FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHDTM}:"
+							FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
 						fi
 					else
 						RKH_USE_PKGMGR_VERIFY=0
@@ -5169,7 +5180,7 @@ file_properties_check() {
 										PKGMGR_TEST_OK=1
 									fi
 								else
-									SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
+									SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
 								fi
 							fi
 						elif [ "${PKGMGR}" = "DPKG" ]; then
@@ -5259,20 +5270,25 @@ file_properties_check() {
 								break
 							fi
 						done
+					fi
 
-						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+					if [ -z "${RKHTMPVAR}" ]; then
+						HASH_TEST_PASSED=1
+					else
+						TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 					fi
 				fi
 
 
 				#
 				# Do the file attributes checks.
-				# This checks the files permissions, and the
-				# uid/gid. If prelinking is not in use then
-				# the inode and modification date-time are
-				# checked as well. We also check the file
-				# permissions to see if 'w' has been
-				# allowed for all users.
+				#
+				# This checks the files permissions, and the uid/gid.
+				# The file permissions are also checked to see if 'w'
+				# has been allowed for all users. If prelinking is not
+				# in use then the inode and modification date-time are
+				# checked as well. For the RPM package manager, and
+				# non-prelinked files, we also check the file size.
 				#
 
 				if [ $SKIP_ATTR -eq 0 ]; then
@@ -5417,62 +5433,76 @@ file_properties_check() {
 						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 
 
-						if [ $PRELINKED -eq 0 ]; then
+						if [ $PRELINKED -eq 0 -o $RKH_USE_PKGMGR_VERIFY -eq 0 ]; then
 							#
 							# Check the file inode number.
 							#
 
+# jh
+#echo In inode check
 							RKHTMPVAR=""
 
 							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
 							SYSINODE=`echo ${FDATA} | cut -d: -f1`
 
 							if [ -n "${RKHINODE}" ]; then
-								if [ "${RKHINODE}" != "${SYSINODE}" ]; then
-									RKHTMPVAR="inodechanged"
-								fi
+								test "${RKHINODE}" != "${SYSINODE}" && RKHTMPVAR="inodechanged"
 							else
 								RKHTMPVAR="norkhinode"
 							fi
 
 							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+						fi
+
+
+						if [ $PRELINKED -eq 0 -o $RKH_USE_PKGMGR_VERIFY -eq 0 -o \( "${PKGMGR}" = "RPM" -a $RKH_USE_PKGMGR_VERIFY -eq 1 \) ]; then
+							#
+							# Check the file size.
+							#
+
+# jh
+#echo In size test
+							RKHTMPVAR=""
+
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 -a "${PKGMGR}" = "RPM" ]; then
+								echo "${PKGMGR_VERIFY_RESULT}" | grep 'S' >/dev/null && RKHTMPVAR="verify:sizechanged"
+							else
+								RKHSIZE=`echo ${RKHLINE} | cut -d: -f8`
+								SYSSIZE=`echo ${FDATA} | cut -d: -f5`
+
+								if [ -n "${RKHSIZE}" ]; then
+									test "${RKHSIZE}" != "${SYSSIZE}" && RKHTMPVAR="sizechanged"
+								else
+									RKHTMPVAR="norkhsize"
+								fi
+							fi
+
+							if [ -z "${RKHTMPVAR}" ]; then
+								SIZE_TEST_PASSED=1
+							else
+								TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+							fi
 
 
 							#
 							# Check the file modification date-time.
 							#
 
+# jh
+#echo In DTM test
 							RKHTMPVAR=""
-							PKGMGR_TEST_OK=0
-							RKH_USE_PKGMGR=0
 
-							if [ "${PKGMGR}" = "RPM" ]; then
-								RKH_USE_PKGMGR=1
-
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-										PKGMGR_TEST_OK=1
-									elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'T'`" ]; then
-										PKGMGR_TEST_OK=1
-									fi
-								fi
-							fi
-
-							RKHDTM=`echo ${RKHLINE} | cut -d: -f8`
-							SYSDTM=`echo ${FDATA} | cut -d: -f5`
-
-							if [ -n "${RKHDTM}" ]; then
-								if [ $RKH_USE_PKGMGR -eq 1 ]; then
-									if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-										test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:dtmchanged"
-									elif [ "${RKHDTM}" != "${SYSDTM}" ]; then
-										RKHTMPVAR="dtmchanged"
-									fi
-								elif [ "${RKHDTM}" != "${SYSDTM}" ]; then
-									RKHTMPVAR="dtmchanged"
-								fi
+							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 -a "${PKGMGR}" = "RPM" ]; then
+								echo "${PKGMGR_VERIFY_RESULT}" | grep 'T' >/dev/null && RKHTMPVAR="verify:dtmchanged"
 							else
-								RKHTMPVAR="norkhdtm"
+								RKHDTM=`echo ${RKHLINE} | cut -d: -f9`
+								SYSDTM=`echo ${FDATA} | cut -d: -f6`
+
+								if [ -n "${RKHDTM}" ]; then
+									test "${RKHDTM}" != "${SYSDTM}" && RKHTMPVAR="dtmchanged"
+								else
+									RKHTMPVAR="norkhdtm"
+								fi
 							fi
 
 							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
@@ -5560,48 +5590,42 @@ file_properties_check() {
 			#
 
 			if [ $SKIP_SCRIPT -eq 0 ]; then
-				PKGMGR_TEST_OK=0
-				SYSSCRIPT=""
-
 				#
-				# To use the package manager result here, one of the previous tests
-				# which use the package manager must also have run. That is, the
-				# hashes or attributes test must have been selected.
+				# If both the hash test and the file size test have passed,
+				# then we skip the script replacement check. The assumption is
+				# that to change a file with one value remaining the same is
+				# possible, but to change it such that both are the same is
+				# improbable.
 				#
 
-				if [ $SKIP_HASH -eq 0 -o $SKIP_ATTR -eq 0 ]; then
-					if [ -n "${PKGMGR}" -a $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-						if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-							PKGMGR_TEST_OK=1
-						elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
-							PKGMGR_TEST_OK=1
-						fi
-					fi
-				fi
+# jh
+#echo In script test
+#test $HASH_TEST_PASSED -eq 1 -a $SIZE_TEST_PASSED -eq 1 && echo script test being skipped
+				if [ $HASH_TEST_PASSED -eq 0 -o $SIZE_TEST_PASSED -eq 0 ]; then
+					SYSSCRIPT=""
 
-				if [ $PKGMGR_TEST_OK -eq 0 ]; then
 					if [ "${FNAME}" = "rkhunter" ]; then
 						SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i -v 'shell script( |$)'`
 					else
 						SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
 					fi
-				fi
 
 
-				#
-				# See if the file is whitelisted.
-				#
+					#
+					# See if the file is whitelisted.
+					#
 
-				if [ -n "${SYSSCRIPT}" ]; then
-					for WHITELISTFILE in ${SCRIPTWHITELIST}; do
-						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
-							SYSSCRIPT=""
-							WHITELIST_RESULT="${WHITELIST_RESULT} file"
-							break
-						fi
-					done
+					if [ -n "${SYSSCRIPT}" ]; then
+						for WHITELISTFILE in ${SCRIPTWHITELIST}; do
+							if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+								SYSSCRIPT=""
+								WHITELIST_RESULT="${WHITELIST_RESULT} script"
+								break
+							fi
+						done
 
-					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} file"
+						test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
+					fi
 				fi
 			fi
 
@@ -5621,7 +5645,7 @@ file_properties_check() {
 				RKHTMPVAR3=0
 				for RKHTMPVAR in ${TEST_RESULT}; do
 					case "${RKHTMPVAR}" in
-					hashchanged|permchanged|uidchanged|gidchanged|inodechanged|dtmchanged)
+					hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged)
 						if [ $RKHTMPVAR2 -eq 0 ]; then
 							RKHTMPVAR2=1
 							display --to LOG --type WARNING FILE_PROP_CHANGED
@@ -5666,6 +5690,13 @@ file_properties_check() {
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_INODE "${SYSINODE}" "${RKHINODE}"
 							fi
 							;;
+						sizechanged)
+							if [ -z "${SYSSIZE}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SIZE_UNAVAIL "${RKHSIZE}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SIZE "${SYSSIZE}" "${RKHSIZE}"
+							fi
+							;;
 						dtmchanged)
 							if [ -z "${SYSDTM}" ]; then
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM_UNAVAIL
@@ -5677,7 +5708,7 @@ file_properties_check() {
 							;;
 						esac
 						;;
-					verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged)
+					verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged|verify:sizechanged|verify:dtmchanged)
 						if [ $RKHTMPVAR3 -eq 0 ]; then
 							RKHTMPVAR3=1
 							display --to LOG --type WARNING FILE_PROP_VRFY
@@ -5688,21 +5719,22 @@ file_properties_check() {
 						verify:hashchanged)
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
 							;;
-						permchanged)
+						verify:permchanged)
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_PERM
 							;;
-						uidchanged)
+						verify:uidchanged)
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_UID
 							;;
-						gidchanged)
+						verify:gidchanged)
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_GID
 							;;
+						verify:sizechanged)
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_SIZE
+							;;
+						verify:dtmchanged)
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM
+							;;
 						esac
-						;;
-					verify:dtmchanged)
-						display --to LOG --type WARNING FILE_PROP_VRFY
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${DIR}/${FNAME}"
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM
 						;;
 					norkhline)
 						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "${DIR}/${FNAME}"
@@ -5722,6 +5754,9 @@ file_properties_check() {
 					norkhinode)
 						display --to LOG --type WARNING FILE_PROP_NO_RKHINODE "${DIR}/${FNAME}"
 						;;
+					norkhsize)
+						display --to LOG --type WARNING FILE_PROP_NO_RKHSIZE "${DIR}/${FNAME}"
+						;;
 					norkhdtm)
 						display --to LOG --type WARNING FILE_PROP_NO_RKHDTM "${DIR}/${FNAME}"
 						;;
@@ -5737,7 +5772,7 @@ file_properties_check() {
 					immutable)
 						display --to LOG --type WARNING FILE_PROP_IMMUT "${DIR}/${FNAME}"
 						;;
-					file)
+					script)
 						if [ "${FNAME}" = "rkhunter" ]; then
 							display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "${DIR}/${FNAME}" "${SYSSCRIPT}"
 						else
@@ -5763,7 +5798,7 @@ file_properties_check() {
 					immutable)
 						RKHTMPVAR="file immutable-bit"
 						;;
-					file)
+					script)
 						RKHTMPVAR="script replacement"
 						;;
 					esac
