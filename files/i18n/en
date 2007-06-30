@@ -1,4 +1,4 @@
-Version:2007062801
+Version:2007063001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -94,7 +94,7 @@ HASH_FUNC_DISABLED:Hash function set to 'NONE': automatically disabling file has
 HASH_FUNC_OLD:Stored hash values used hash function '$1'
 HASH_FUNC_OLD_DISABLED:Previous hash function was disabled: no hash values were stored
 HASH_PKGMGR_OLD:Stored hash values used package manager '$1' (md5 function)
-HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a packet manager
+HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a package manager
 
 HASH_PKGMGR:Using package manager '$1' for file property checks
 HASH_PKGMGR_MD5:Using MD5 hash function command '$1' to assist package manager verification

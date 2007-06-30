@@ -2781,9 +2781,9 @@ rkh_dat_set_file_properties() {
 	# required before entering them.
 	#
 
+	NOHASH_COUNT=0
 	DIR_FILE_COUNT=0
 	PROP_FILE_LIST_COUNT=0
-	NOHASH_COUNT=0
 
 	display --to LOG --type PLAIN SET_FILE_PROP_START
 
@@ -2805,10 +2805,8 @@ rkh_dat_set_file_properties() {
 
 	if ! `check_test hashes`; then
 		HCMD=""
-		SYSHASH=""
 	elif [ -z "${PKGMGR}" -a "${HASH_FUNC}" = "NONE" ]; then
 		HCMD=""
-		SYSHASH=""
 	else
 		if [ $PRELINKED -eq 0 -o "${HASH_FUNC}" = "NONE" ]; then
 			HCMD="${HASH_FUNC}"
@@ -2837,8 +2835,9 @@ rkh_dat_set_file_properties() {
 			test ! -f "${DIR}/${FNAME}" && continue
 
 			FDATA=""
+			SYSHASH=""
 			RPM_QUERY_RESULT=""
-			RKH_USE_PKGMGR=0
+			FILE_IS_PKGD=0
 
 			FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
 
@@ -2856,15 +2855,17 @@ rkh_dat_set_file_properties() {
 					#
 					# Okay we have a package name.
 					#
-					# If multiple versions of the same package
-					# have been installed, we use the last one.
-					#
 
-					RKH_USE_PKGMGR=1
+					FILE_IS_PKGD=1
 
 					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 
 					if [ $? -eq 0 ]; then
+						#
+						# If multiple versions of the same package
+						# have been installed, we use the last one.
+						#
+
 						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
 
 						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
@@ -2888,40 +2889,36 @@ rkh_dat_set_file_properties() {
 
 
 			if [ -n "${HCMD}" ]; then
-				SYSHASH=""
-
 				if [ "${PKGMGR}" = "RPM" ]; then
-					test $RKH_USE_PKGMGR -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
+					test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
 				elif [ "${PKGMGR}" = "DPKG" ]; then
 					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-						RKH_USE_PKGMGR=1
+						FILE_IS_PKGD=1
 						FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
-						SYSHASH=`grep ' ${FILNAM}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+						SYSHASH=`grep " ${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
 					fi
 				elif [ "${PKGMGR}" = "BSD" ]; then
 					#
-					# First see if the file is part of
-					# a known package.
+					# First see if the file is part of a known package.
 					#
 
 					RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
 
 					if [ -n "${RKHTMPVAR}" ]; then
 						#
-						# Next strip of the '/usr/pkg'
-						# from the pathname, and then
-						# get the hash value.
+						# Next strip of the '/usr/pkg' from the pathname,
+						# and then get the hash value.
 						#
 
-						RKH_USE_PKGMGR=1
+						FILE_IS_PKGD=1
 						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 					fi
 				fi
 
-				if [ $RKH_USE_PKGMGR -eq 0 ]; then
+				if [ $FILE_IS_PKGD -eq 0 ]; then
 					if [ "${HCMD}" != "NONE" ]; then
 						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 					fi
@@ -11777,7 +11774,7 @@ if [ $NOLOG -eq 0 ]; then
 fi
 
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
-	if [ "${HASH_FUNC}" = "NONE" ]; then
+	if [ -z "${PKGMGR}" -a "${HASH_FUNC}" = "NONE" ]; then
 		HASH_CHECK_ENABLED=0
 		DISABLE_TESTS="${DISABLE_TESTS} hashes"
 		display --to LOG --type INFO HASH_FUNC_DISABLED
