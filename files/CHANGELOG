@@ -51,7 +51,7 @@
    rkhunter.dat file.
  - Added the HASH_FLD_IDX option to the configuration file. This specifies the
    field of the HASH_FUNC command output which contains the hash value. A
-   default of 1 is used, except for BSD systems where 4 will be used.
+   default of 1 is used, except for *BSD systems where 4 will be used.
  - The files for the file hash checks are now 'looked for'. The code will
    search the command directories, and check the relevant files in all the
    directories. Additional commands and directories are used for Solaris,
@@ -121,13 +121,9 @@
    PKGMGR. These provide support for package managers when using the
    '--propupd' and '--check' options. Currently supported package managers are
    'RPM' for RedHat/RPM-based systems, 'DPKG' for Debian-based systems, and
-   'BSD' for BSD systems. Additionally, 'NONE' can be used to indicate that
+   'BSD' for *BSD systems. Additionally, 'NONE' can be used to indicate that
    no package manager is to be used. The default is 'NONE'. See the README file
    for more details.
- - Added the configuration file option USE_PKGMGR_VERIFY. This tells RKH to use
-   the package manager database information to verify if the file has changed
-   or not. If this option is specified then the data in rkhunter.dat is not
-   used for the file properties checks. See the README file for more details.
  - It is now possible to configure rkhunter to use local or remote mirrors,
    rather than just the SourceForge one. This applies when either the
    '--update' or the '--versioncheck' option is used. The default is to use
@@ -231,13 +227,13 @@
    Previous versions only checked for shell scripts. Commands which are
    supposed to be scripts can be whitelisted in the configuration file.
    The 'rkhunter' command itself is an exception, and the check will ensure
-   that 'rkhunter' *is* a shell script. The script check will be automatically
-   skipped if the file has already passed the RPM package manager file size and
-   hash checks.
+   that 'rkhunter' is a shell script. The script check will be automatically
+   skipped if a package manager is being used, and the file has already
+   passed the file size and hash checks.
  - File permissions check improved to check if 'other' has the 'w' bit set.
    Previous versions only checked if '777' ('rwxrwxrwx') was set. Merged this
-   into the file properties checks. Soft links, and files verified by the
-   RPM package manager permissions check, are ignored.
+   into the file properties checks. Soft links are ignored, as are packaged
+   files when the RPM package manager is used.
  - The '--report-mode' option has been removed. It was not seen as being
    useful, and combinations of the other options will provide the same, if
    not better, reporting.
@@ -249,14 +245,14 @@
  - The checks on accounts and the password and shadow files, have been improved.
    The user can configure the pathname to the password and shadow files, as
    well as being able to whitelist accounts with no password or which are root
-   equivalent. BSD support improved.
+   equivalent. *BSD support improved.
  - Improved the hidden files and directories checks. Some directories are now
    searched more thoroughly, and checks against the file type are more robust.
  - Apache backdoor test now looks in more places.
  - The application version check no longer checks against known 'good'
    versions. Only a file of bad versions is kept. The previous method was
    impossible to maintain.
- - Enabled the immutable file test for BSD systems.
+ - Enabled the immutable file test for *BSD systems.
  - Soft (symbolic) links for files and directories are now handled correctly.
    Previously the link was dealt with, but not what it pointed to. Soft links
    are dealt with when using the '--propupd' command, and when running the

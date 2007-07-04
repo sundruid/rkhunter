@@ -1,4 +1,4 @@
-Version:2007063001
+Version:2007070401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -100,8 +100,6 @@ HASH_PKGMGR:Using package manager '$1' for file property checks
 HASH_PKGMGR_MD5:Using MD5 hash function command '$1' to assist package manager verification
 HASH_PKGMGR_NOT_SPEC:No package manager specified: using hash function '$1'
 HASH_PKGMGR_NOT_SPEC_PRELINKED:No package manager specified: using prelink command with '$1'
-HASH_PKGMGR_USE_VRFY:Package manager verification will be used for file property check results
-HASH_PKGMGR_NO_USE_VRFY:Package manager verification will not be used for file property check results
 
 HASH_FIELD_INDEX:The hash function field index is set to $1
 
@@ -111,10 +109,10 @@ HASHUPD_PKGMGR_NOT_SPEC:No file hash update package manager specified: using has
 HASHUPD_PKGMGR_NOT_SPEC_PRELINKED:No file hash update package manager specified: using prelink command with '$1'
 
 ATTRUPD_DISABLED:File attribute checks disabled: current file attributes will not be stored
-ATTRUPD_NOSTAT:File attribute checks disabled: no 'stat' command found: current file attributes will not be stored
+ATTRUPD_NOSTATCMD:File attribute checks disabled: no 'stat' command found: current file attributes will not be stored
 ATTRUPD_OK:Current file attributes will be stored
 ATTRUPD_OLD_DISABLED:Previous file attributes were disabled: no file attributes were stored
-ATTRUPD_OLD_NOSTAT:Previous file attributes were disabled: no 'stat' command found: no file attributes were stored
+ATTRUPD_OLD_NOSTATCMD:Previous file attributes were disabled: no 'stat' command found: no file attributes were stored
 ATTRUPD_OLD_OK:Previous file attributes were stored
 
 GRSECINSTALLED:Found GRSEC installed

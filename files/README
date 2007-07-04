@@ -269,55 +269,40 @@ The RKH file properties check, by default, performs a check of various current
 file properties against those that it has previously stored in the
 'rkhunter.dat' file. This way RKH can warn the user if a file has changed. The
 file properties include items such as the files hash value, file permissions,
-uid/gid, inode number and so on. The properties are obtained and stored in the
+uid, gid, inode number and so on. The properties are obtained and stored in the
 rkhunter.dat file when RKH is run with the '--propupd' option.
 
 Typically the file properties are obtained using commands such as 'stat',
 'file', 'md5sum' and 'prelink'. However, it is also possible to specify that
 RKH should get whatever values it can by using a package manager. This can be
 done by using the '--pkgmgr' command-line option, or the 'PKGMGR' configuration
-file option. When a package manager is specified, during the file properties
-check the values from the package manager are compared against those in the
-rkhunter.dat file.
+file option. When the RPM package manager is specified, during the file properties
+check the results from the RPM verification command are used as the test results.
+For the other package managers, the values from the package manager database are
+compared against the current values for the files. By using a package manager,
+it is possible to avoid some false-positive reports that a file has changed when
+in fact it has been automatically updated by the system.
 
 The currently available package managers are 'RPM' for RedHat/RPM-based
-systems, 'DPKG' for Debian-based systems, and 'BSD' for BSD systems. It is
+systems, 'DPKG' for Debian-based systems, and 'BSD' for *BSD systems. It is
 also possible to specify 'NONE' to indicate not to use a package manager.
 The program default is 'NONE'.
 
 Any file which is not part of a package is treated as before, that is, the
-HASH_FUNC configuration file option, or the '--hash' command-line option will
+HASH_FUNC configuration file option, or the '--hash' command-line option, will
 be used.
-
-
-USING PACKAGE MANAGER VERIFICATION
-==================================
-
-As mentioned above, during the file properties check, and when using a package
-manager, the property value from the package manager is compared against the
-previously stored value in the rkhunter.dat file. However, if a file, which is
-part of a package, is automatically updated by the system, then RKH will show
-that the file has changed.
-
-To avoid this problem it is possible to set the 'USE_PKGMGR_VERIFY' option in
-the configuration file. This option tells RKH to re-calculate the files current
-property value, again using commands such as 'stat', 'md5sum' etc, and compare
-that value against the package manager value. Hence the value stored in the
-rkhunter.dat file is not used. This, in effect, compares the package manager
-values against the current file values, and for updated files RKH should show
-that the file has not changed.
 
 It should be noted that all the package managers provide an MD5 hash value for
 a file. However, the 'RPM' package manager can provide other file property
-values as well, such as the file permissions, uid/gid, modification time and so
-on. During verification all of these values will be used, rather than the ones
-stored in the rkhunter.dat file.
+values as well, such as the file permissions, uid, gid, modification time and
+so on. During the file properties check all of these values will be used,
+rather than the ones stored in the rkhunter.dat file.
 
 It should also be noted that the 'DPKG' and 'BSD' package manager options
-only provide the files MD5 hash value. As such, during verification, all
-the other current file properties will be re-calculated as before, and
-compared against the values in the rkhunter.dat file. Hence, only the 'RPM'
-package manager offers any real benefit in using package manager verification.
+only provide the files MD5 hash value. As such, during the file properties
+check, all the other current file properties will be re-calculated as before,
+and compared against the values in the rkhunter.dat file. Hence, only the 'RPM'
+package manager offers any real benefit in using a package manager.
 
 NOTE: It is possible for a package manager database to become maliciously
 corrupted. To that extent the use of the package manager options with RKH

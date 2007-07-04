@@ -2303,31 +2303,6 @@ get_hash_function() {
 		;;
 	esac
 
-
-	#
-	# Finally, we get the option as to whether we use the result
-	# of the package manager verification or not. This option
-	# is only effective if we have defined a package manager.
-	#
-
-	if [ -n "${PKGMGR}" ]; then
-		USE_PKGMGR_VERIFY=`grep '^USE_PKGMGR_VERIFY=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${USE_PKGMGR_VERIFY}" ]; then
-			USE_PKGMGR_VERIFY=`echo "${USE_PKGMGR_VERIFY}" | sed -e 's/USE_PKGMGR_VERIFY=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${USE_PKGMGR_VERIFY}" -o "${USE_PKGMGR_VERIFY}" = " " ]; then
-				echo "Invalid USE_PKGMGR_VERIFY configuration option - no value specified."
-				exit 1
-			elif [ "${USE_PKGMGR_VERIFY}" != "0" -a "${USE_PKGMGR_VERIFY}" != "1" ]; then
-				echo "Invalid USE_PKGMGR_VERIFY configuration option: ${USE_PKGMGR_VERIFY}"
-				exit 1
-			fi
-		else
-			USE_PKGMGR_VERIFY=0
-		fi
-	fi
-
 	return
 }
 
@@ -3050,7 +3025,7 @@ do_prop_update() {
 	if ! `check_test attributes`; then
 		echo "Attributes:Disabled" >>${RKHDAT_FILE}
 	elif [ -z "${STAT_CMD}" ]; then
-		echo "Attributes:Nostat" >>${RKHDAT_FILE}
+		echo "Attributes:Nostatcmd" >>${RKHDAT_FILE}
 	else
 		echo "Attributes:Stored" >>${RKHDAT_FILE}
 	fi
@@ -4700,7 +4675,6 @@ file_properties_check() {
 	USE_DAT_FILE=1
 	SKIP_IMMUT_OS=0
 	PROP_FILE_LIST_COUNT=0
-	RKH_USE_PKGMGR_VERIFY=0
 
 	#
 	# In order to disable the whole test we have to check if
@@ -4709,10 +4683,20 @@ file_properties_check() {
 
 	for RKHTMPVAR in attributes hashes immutable scripts; do
 		if ! `check_test ${RKHTMPVAR}`; then
-			test "${RKHTMPVAR}" = "attributes" && SKIP_ATTR=1
-			test "${RKHTMPVAR}" = "hashes" && SKIP_HASH=1
-			test "${RKHTMPVAR}" = "immutable" && SKIP_IMMUT=1
-			test "${RKHTMPVAR}" = "scripts" && SKIP_SCRIPT=1
+			case "${RKHTMPVAR}" in
+			attributes)
+				SKIP_ATTR=1
+				;;
+			hashes)
+				SKIP_HASH=1
+				;;
+			immutable)
+				SKIP_IMMUT=1
+				;;
+			scripts)
+				SKIP_SCRIPT=1
+				;;
+			esac
 		fi
 	done
 
@@ -4724,8 +4708,10 @@ file_properties_check() {
 	#
 
 	if [ $BSDOS -eq 0 -a "${OPERATING_SYSTEM}" != "Linux" ]; then
-		test $SKIP_IMMUT -eq 0 && SKIP_IMMUT_OS=1
-		SKIP_IMMUT=1
+		if [ $SKIP_IMMUT -eq 0 ]; then
+			SKIP_IMMUT=1
+			SKIP_IMMUT_OS=1
+		fi
 	fi
 
 	if ! `check_test properties`; then
@@ -4745,14 +4731,21 @@ file_properties_check() {
 	#
 
 	for RKHTMPVAR in attributes hashes immutable scripts; do
-		test "${RKHTMPVAR}" = "attributes" && TEST_NAME=$SKIP_ATTR
-		test "${RKHTMPVAR}" = "hashes" && TEST_NAME=$SKIP_HASH
-		test "${RKHTMPVAR}" = "scripts" && TEST_NAME=$SKIP_SCRIPT
-
-		if [ "${RKHTMPVAR}" = "immutable" ]; then
+		case "${RKHTMPVAR}" in
+		attributes)
+			TEST_NAME=$SKIP_ATTR
+			;;
+		hashes)
+			TEST_NAME=$SKIP_HASH
+			;;
+		scripts)
+			TEST_NAME=$SKIP_SCRIPT
+			;;
+		immutable)
 			TEST_NAME=0
 			test $SKIP_IMMUT_OS -eq 0 && TEST_NAME=$SKIP_IMMUT
-		fi
+			;;
+		esac
 
 		test $TEST_NAME -eq 1 && display --to LOG --type INFO USER_DISABLED_TEST ${RKHTMPVAR}
 	done
@@ -4813,14 +4806,10 @@ file_properties_check() {
 			if [ $SKIP_HASH_MSG -eq 1 ]; then
 				SKIP_HASH=1
 				RKHTMPVAR="${RKHTMPVAR} prelink"
-			fi
-
-			if [ $SKIP_HASH_MSG -eq 2 ]; then
+			elif [ $SKIP_HASH_MSG -eq 2 ]; then
 				SKIP_HASH=1
 				RKHTMPVAR="${RKHTMPVAR} sha1"
-			fi
-
-			if [ $SKIP_HASH_MSG -eq 3 ]; then
+			elif [ $SKIP_HASH_MSG -eq 3 ]; then
 				SKIP_HASH=1
 				RKHTMPVAR="${RKHTMPVAR} libsafe"
 			fi
@@ -4978,6 +4967,7 @@ file_properties_check() {
 
 	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
 
+
 	#
 	# Set up some whitelist variables. There is no point
 	# recalculating the (static) whitelist as we look at
@@ -5014,6 +5004,7 @@ file_properties_check() {
 			TEST_RESULT=""
 			WHITELIST_RESULT=""
 
+			FILE_IS_PKGD=0
 			HASH_TEST_PASSED=0
 			SIZE_TEST_PASSED=0
 
@@ -5062,13 +5053,14 @@ file_properties_check() {
 			fi
 
 
+			#
+			# Start the tests.
+			#
+
 			if [ $USE_DAT_FILE -eq 1 -a -n "${RKHLINE}" ]; then
 				FDATA=""
 				RPM_QUERY_RESULT=""
 				PKGMGR_VERIFY_RESULT=""
-
-				RKH_USE_PKGMGR=0
-				RKH_USE_PKGMGR_VERIFY=$USE_PKGMGR_VERIFY
 
 
 				#
@@ -5081,7 +5073,7 @@ file_properties_check() {
 
 				if [ "${PKGMGR}" = "RPM" ]; then
 					#
-					# First we get the package name for the file being tested.
+					# First we see if the file is part of a package.
 					#
 
 					PKGNAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
@@ -5095,32 +5087,31 @@ file_properties_check() {
 						# have been installed, we use the last one.
 						#
 
-						RKH_USE_PKGMGR=1
+						FILE_IS_PKGD=1
 
-						if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-							PKGNAME=`echo "${PKGNAME}" | tail -1`
+						PKGNAME=`echo "${PKGNAME}" | tail -1`
 
-							if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
-								#
-								# No, it isn't in the list. So we verify the package
-								# and either add it to the list if it verifies okay,
-								# or get the verification result for the file.
-								#
+						if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
+							#
+							# No, it isn't in the list. So we verify the package
+							# and either add it to the list if it verifies okay,
+							# or get the verification result for the file.
+							#
 
-								PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>/dev/null`
+							PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>/dev/null`
 
-								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-									VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
-								else
-									PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
-								fi
+							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
+							else
+								PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
 							fi
 						fi
 
 
 						#
-						# Now dig out the rest of the information about this file
-						# from the package manager database.
+						# The package manager check does not verify all the items
+						# we check. So we still need to dig out the rest of the
+						# information about this file from the package manager database.
 						#
 
 						RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
@@ -5143,9 +5134,14 @@ file_properties_check() {
 
 							FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
 							FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
+						else
+							#
+							# If, for some reason, we cannot get the package information,
+							# then treat it as if it returned all null values.
+							#
+
+							FDATA="::::::"
 						fi
-					else
-						RKH_USE_PKGMGR_VERIFY=0
 					fi
 				fi
 
@@ -5155,125 +5151,114 @@ file_properties_check() {
 				#
 
 				if [ $SKIP_HASH -eq 0 ]; then
-					RKHTMPVAR=""
-					PKGMGR_TEST_OK=0
-
-					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
-
 					#
-					# Package managers may genuinely return a null
-					# hash value, so we have to allow for that.
+					# First we get all the package manager results.
 					#
 
-					if [ -n "${OLD_PKGMGR}" -o -n "${RKHHASH}" ]; then
-						SYSHASH=""
+					if [ "${PKGMGR}" = "RPM" ]; then
+						:
+					elif [ "${PKGMGR}" = "DPKG" ]; then
+						PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
-						if [ "${PKGMGR}" = "RPM" ]; then
-							if [ $RKH_USE_PKGMGR -eq 1 ]; then
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-										PKGMGR_TEST_OK=1
-									elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
-										PKGMGR_TEST_OK=1
-									fi
-								else
-									SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
-								fi
-							fi
-						elif [ "${PKGMGR}" = "DPKG" ]; then
-							PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+							FILE_IS_PKGD=1
 
-							if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-								RKH_USE_PKGMGR=1
-								FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
-								SYSHASH=`grep ' ${FILENAME}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+							FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
+							SYSHASH=`grep ' ${FILENAME}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
 
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-									if [ "${RKHTMPVAR2}" = "${SYSHASH}" ]; then
-										PKGMGR_TEST_OK=1
-									else
-										PKGMGR_VERIFY_RESULT="5"
-									fi
-								fi
-							fi
-						elif [ "${PKGMGR}" = "BSD" ]; then
+							test "${RKHTMPVAR2}" != "${SYSHASH}" && PKGMGR_VERIFY_RESULT="5"
+						fi
+					elif [ "${PKGMGR}" = "BSD" ]; then
+						#
+						# First see if the file is part of a known package.
+						#
+
+						PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+
+						if [ -n "${PKGNAME}" ]; then
 							#
-							# First see if the file is part of
-							# a known package.
+							# Next strip of the '/usr/pkg' from the
+							# pathname, and then get the hash value.
 							#
 
-							PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+							FILE_IS_PKGD=1
 
-							if [ -n "${PKGNAME}" ]; then
-								#
-								# Next strip of the '/usr/pkg'
-								# from the pathname, and then
-								# get the hash value.
-								#
+							FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+							SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
 
-								RKH_USE_PKGMGR=1
-								FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
-								SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
+							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
-
-									if [ "${RKHTMPVAR2}" = "${SYSHASH}" ]; then
-										PKGMGR_TEST_OK=1
-									else
-										PKGMGR_VERIFY_RESULT="5"
-									fi
-								fi
-							fi
+							test "${RKHTMPVAR2}" != "${SYSHASH}" && PKGMGR_VERIFY_RESULT="5"
 						fi
+					fi
 
-						if [ $RKH_USE_PKGMGR -eq 0 -a "${HCMD}" != "NONE" ]; then
-							SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
-						fi
 
-						if [ $RKH_USE_PKGMGR -eq 1 ]; then
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								if [ $PKGMGR_TEST_OK -eq 0 ]; then
-									RKHTMPVAR="verify:hashchanged"
-								else
-									HASH_TEST_PASSED=1
-								fi
-							elif [ "${RKHHASH}" != "${SYSHASH}" ]; then
-								RKHTMPVAR="hashchanged"
-							fi
-						elif [ "${RKHHASH}" != "${SYSHASH}" ]; then
-							RKHTMPVAR="hashchanged"
+					#
+					# Now see if we need to work out the hash value or not.
+					#
+
+					if [ $FILE_IS_PKGD -eq 1 ]; then
+						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
+							HASH_TEST_PASSED=1
+						else
+							TEST_RESULT="${TEST_RESULT} verify:hashchanged"
 						fi
 					else
-						RKHTMPVAR="norkhhash"
-					fi
+						#
+						# The file is not part of a package. So we need
+						# to compare the on-disk hash value against the
+						# value in the rkhunter.dat file.
+						#
+						# First see if we have a stored hash value, and
+						# then test if the file is whitelisted.
+						#
 
+						RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
 
-					#
-					# Test if the file is whitelisted.
-					#
+						if [ -z "${RKHHASH}" ]; then
+							TEST_RESULT="${TEST_RESULT} norkhhash"
+						else
+							for WHITELISTFILE in ${HASHWHITELIST}; do
+								WL_FILE=`echo ${WHITELISTFILE} | cut -d: -f1`
+								WL_HASH=`echo ${WHITELISTFILE} | cut -d: -f2`
 
-					if [ -n "${RKHTMPVAR}" ]; then
-						for WHITELISTFILE in ${HASHWHITELIST}; do
-							WL_FILE=`echo ${WHITELISTFILE} | cut -d: -f1`
-							WL_HASH=`echo ${WHITELISTFILE} | cut -d: -f2`
+								if [ "${RKHROOTDIR}${WL_FILE}" = "${DIR}/${FNAME}" ]; then
+									if [ "${WL_HASH}" = "${RKHHASH}" ]; then
+										WHITELIST_RESULT="${WHITELIST_RESULT} hash"
+									else
+										TEST_RESULT="${TEST_RESULT} hwlinvalid"
+									fi
 
-							if [ "${RKHROOTDIR}${WL_FILE}" = "${DIR}/${FNAME}" ]; then
-								if [ "${WL_HASH}" = "${RKHHASH}" ]; then
-									RKHTMPVAR=""
-									WHITELIST_RESULT="${WHITELIST_RESULT} hash"
-								else
-									RKHTMPVAR="${RKHTMPVAR} hwlinvalid"
+									break
 								fi
+							done
+						fi
 
-								break
+						if [ -z "${TEST_RESULT}" ]; then
+							#
+							# The file isn't whitelisted, so do the test.
+							#
+
+							if [ "${HCMD}" = "NONE" ]; then
+								SYSHASH=""
+							else
+								SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 							fi
-						done
 
-						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+							test "${RKHHASH}" != "${SYSHASH}" && TEST_RESULT="${TEST_RESULT} hashchanged"
+						fi
 					fi
+
+
+					#
+					# Because the BSD and DPKG package managers only provide the
+					# MD5 checksum, we can assume that any file which is part of
+					# a package after this test must be an RPM file.
+					#
+
+					test "${PKGMGR}" != "RPM" && FILE_IS_PKGD=0
 				fi
 
 
@@ -5283,21 +5268,18 @@ file_properties_check() {
 				# This checks the files permissions, and the uid/gid.
 				# The file permissions are also checked to see if 'w'
 				# has been allowed for all users. If prelinking is not
-				# in use then the inode and modification date-time are
-				# checked as well. For the RPM package manager, and
-				# non-prelinked files, we also check the file size.
+				# in use then the inode, file size, and modification
+				# date-time are checked as well.
 				#
 
 				if [ $SKIP_ATTR -eq 0 ]; then
-					WL_FILE=""
-					RKHTMPVAR=""
-					PKGMGR_TEST_OK=0
-
 					#
-					# We check to see if the file is whitelisted here,
+					# First check to see if the file is whitelisted here,
 					# just the once. It is better than checking after
 					# each individual attribute test.
 					#
+
+					WL_FILE=""
 
 					for WHITELISTFILE in ${ATTRWHITELIST}; do
 						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
@@ -5314,195 +5296,113 @@ file_properties_check() {
 						# Check the file permissions.
 						#
 
-						RKHTMPVAR=""
-						PKGMGR_TEST_OK=0
-						RKH_USE_PKGMGR=0
-
-						if [ "${PKGMGR}" = "RPM" ]; then
-							RKH_USE_PKGMGR=1
-
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-									PKGMGR_TEST_OK=1
-								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'M'`" ]; then
-									PKGMGR_TEST_OK=1
-								fi
-							fi
-						fi
-
-						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
-						SYSPERM=`echo ${FDATA} | cut -d: -f2`
-
-						if [ -n "${RKHPERM}" ]; then
-							if [ $RKH_USE_PKGMGR -eq 1 ]; then
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:permchanged"
-								elif [ "${RKHPERM}" != "${SYSPERM}" ]; then
-									RKHTMPVAR="permchanged"
-								fi
-							elif [ "${RKHPERM}" != "${SYSPERM}" ]; then
-								RKHTMPVAR="permchanged"
-							fi
+						if [ $FILE_IS_PKGD -eq 1 ]; then
+							echo "${PKGMGR_VERIFY_RESULT}" | grep 'M' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
 						else
-							RKHTMPVAR="norkhperm"
-						fi
+							RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
+							SYSPERM=`echo ${FDATA} | cut -d: -f2`
 
-						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+							if [ -n "${RKHPERM}" ]; then
+								test "${RKHPERM}" != "${SYSPERM}" && TEST_RESULT="${TEST_RESULT} permchanged"
+							else
+								TEST_RESULT="${TEST_RESULT} norkhperm"
+							fi
+						fi
 
 
 						#
 						# Check the file user-id.
 						#
 
-						RKHTMPVAR=""
-						PKGMGR_TEST_OK=0
-						RKH_USE_PKGMGR=0
-
-						if [ "${PKGMGR}" = "RPM" ]; then
-							RKH_USE_PKGMGR=1
-
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-									PKGMGR_TEST_OK=1
-								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'U'`" ]; then
-									PKGMGR_TEST_OK=1
-								fi
-							fi
-						fi
-
-						RKHUID=`echo ${RKHLINE} | cut -d: -f6`
-						SYSUID=`echo ${FDATA} | cut -d: -f3`
-
-						if [ -n "${RKHUID}" ]; then
-							if [ $RKH_USE_PKGMGR -eq 1 ]; then
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:uidchanged"
-								elif [ "${RKHUID}" != "${SYSUID}" ]; then
-									RKHTMPVAR="uidchanged"
-								fi
-							elif [ "${RKHUID}" != "${SYSUID}" ]; then
-								RKHTMPVAR="uidchanged"
-							fi
+						if [ $FILE_IS_PKGD -eq 1 ]; then
+							echo "${PKGMGR_VERIFY_RESULT}" | grep 'U' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
 						else
-							RKHTMPVAR="norkhuid"
-						fi
+							RKHUID=`echo ${RKHLINE} | cut -d: -f6`
+							SYSUID=`echo ${FDATA} | cut -d: -f3`
 
-						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
+							if [ -n "${RKHUID}" ]; then
+								test "${RKHUID}" != "${SYSUID}" && TEST_RESULT="${TEST_RESULT} uidchanged"
+							else
+								TEST_RESULT="${TEST_RESULT} norkhuid"
+							fi
+						fi
 
 
 						#
 						# Check the file group-id.
 						#
 
-						RKHTMPVAR=""
-						PKGMGR_TEST_OK=0
-						RKH_USE_PKGMGR=0
-
-						if [ "${PKGMGR}" = "RPM" ]; then
-							RKH_USE_PKGMGR=1
-
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-								if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-									PKGMGR_TEST_OK=1
-								elif [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'G'`" ]; then
-									PKGMGR_TEST_OK=1
-								fi
-							fi
-						fi
-
-						RKHGID=`echo ${RKHLINE} | cut -d: -f7`
-						SYSGID=`echo ${FDATA} | cut -d: -f4`
-
-						if [ -n "${RKHGID}" ]; then
-							if [ $RKH_USE_PKGMGR -eq 1 ]; then
-								if [ $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-									test $PKGMGR_TEST_OK -eq 0 && RKHTMPVAR="verify:gidchanged"
-								elif [ "${RKHGID}" != "${SYSGID}" ]; then
-									RKHTMPVAR="gidchanged"
-								fi
-							elif [ "${RKHGID}" != "${SYSGID}" ]; then
-								RKHTMPVAR="gidchanged"
-							fi
+						if [ $FILE_IS_PKGD -eq 1 ]; then
+							echo "${PKGMGR_VERIFY_RESULT}" | grep 'G' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
 						else
-							RKHTMPVAR="norkhgid"
+							RKHGID=`echo ${RKHLINE} | cut -d: -f7`
+							SYSGID=`echo ${FDATA} | cut -d: -f4`
+
+							if [ -n "${RKHGID}" ]; then
+								test "${RKHGID}" != "${SYSGID}" && TEST_RESULT="${TEST_RESULT} gidchanged"
+							else
+								TEST_RESULT="${TEST_RESULT} norkhgid"
+							fi
 						fi
 
-						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 
+						#
+						# Check the file inode number.
+						#
 
-						if [ $PRELINKED -eq 0 -o $RKH_USE_PKGMGR_VERIFY -eq 0 ]; then
-							#
-							# Check the file inode number.
-							#
-
-# jh
-#echo In inode check
-							RKHTMPVAR=""
-
+						if [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
 							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
 							SYSINODE=`echo ${FDATA} | cut -d: -f1`
 
 							if [ -n "${RKHINODE}" ]; then
-								test "${RKHINODE}" != "${SYSINODE}" && RKHTMPVAR="inodechanged"
+								test "${RKHINODE}" != "${SYSINODE}" && TEST_RESULT="${TEST_RESULT} inodechanged"
 							else
-								RKHTMPVAR="norkhinode"
+								TEST_RESULT="${TEST_RESULT} norkhinode"
 							fi
-
-							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 						fi
 
 
-						if [ $PRELINKED -eq 0 -o $RKH_USE_PKGMGR_VERIFY -eq 0 -o \( "${PKGMGR}" = "RPM" -a $RKH_USE_PKGMGR_VERIFY -eq 1 \) ]; then
-							#
-							# Check the file size.
-							#
+						#
+						# Check the file size.
+						#
 
-# jh
-#echo In size test
-							RKHTMPVAR=""
+						if [ $FILE_IS_PKGD -eq 1 ]; then
+							if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'S'`" ]; then
+								SIZE_TEST_PASSED=1
+							else
+								TEST_RESULT="${TEST_RESULT} verify:sizechanged"
+							fi
+						elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
+							RKHSIZE=`echo ${RKHLINE} | cut -d: -f8`
+							SYSSIZE=`echo ${FDATA} | cut -d: -f5`
 
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 -a "${PKGMGR}" = "RPM" ]; then
-								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'S'`" ]; then
-									RKHTMPVAR="verify:sizechanged"
-								else
+							if [ -n "${RKHSIZE}" ]; then
+								if [ "${RKHSIZE}" = "${SYSSIZE}" ]; then
 									SIZE_TEST_PASSED=1
+								else
+									TEST_RESULT="${TEST_RESULT} sizechanged"
 								fi
 							else
-								RKHSIZE=`echo ${RKHLINE} | cut -d: -f8`
-								SYSSIZE=`echo ${FDATA} | cut -d: -f5`
-
-								if [ -n "${RKHSIZE}" ]; then
-									test "${RKHSIZE}" != "${SYSSIZE}" && RKHTMPVAR="sizechanged"
-								else
-									RKHTMPVAR="norkhsize"
-								fi
+								TEST_RESULT="${TEST_RESULT} norkhsize"
 							fi
+						fi
 
-							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 
+						#
+						# Check the file modification date-time.
+						#
 
-							#
-							# Check the file modification date-time.
-							#
+						if [ $FILE_IS_PKGD -eq 1 ]; then
+							echo "${PKGMGR_VERIFY_RESULT}" | grep 'T' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
+						elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
+							RKHDTM=`echo ${RKHLINE} | cut -d: -f9`
+							SYSDTM=`echo ${FDATA} | cut -d: -f6`
 
-# jh
-#echo In DTM test
-							RKHTMPVAR=""
-
-							if [ $RKH_USE_PKGMGR_VERIFY -eq 1 -a "${PKGMGR}" = "RPM" ]; then
-								echo "${PKGMGR_VERIFY_RESULT}" | grep 'T' >/dev/null && RKHTMPVAR="verify:dtmchanged"
+							if [ -n "${RKHDTM}" ]; then
+								test "${RKHDTM}" != "${SYSDTM}" && TEST_RESULT="${TEST_RESULT} dtmchanged"
 							else
-								RKHDTM=`echo ${RKHLINE} | cut -d: -f9`
-								SYSDTM=`echo ${FDATA} | cut -d: -f6`
-
-								if [ -n "${RKHDTM}" ]; then
-									test "${RKHDTM}" != "${SYSDTM}" && RKHTMPVAR="dtmchanged"
-								else
-									RKHTMPVAR="norkhdtm"
-								fi
+								TEST_RESULT="${TEST_RESULT} norkhdtm"
 							fi
-
-							test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} ${RKHTMPVAR}"
 						fi
 					elif [ -z "${WL_FILE}" ]; then
 						TEST_RESULT="${TEST_RESULT} sysattrunavail"
@@ -5510,38 +5410,31 @@ file_properties_check() {
 
 
 					#
-					# We check the file permissions here
-					# to see if the 'other' permission
-					# contains a 'w'. The check is
-					# against the octal value. Files which
-					# are links are ignored.
+					# Check the file permissions here to see if the 'other' permission
+					# contains a 'w'. The check is against the octal value. Symbolic
+					# links are ignored.
 					#
 
-					RKHTMPVAR=""
-					SYSPERM=`echo ${FDATA} | cut -d: -f2`
+					if [ ! -h "${DIR}/${FNAME}" -a $FILE_IS_PKGD -eq 0 ]; then
+						WL_FILE=""
 
-					if [ ! -h "${DIR}/${FNAME}" ]; then
-						if [ "${PKGMGR}" = "RPM" -a $RKH_USE_PKGMGR_VERIFY -eq 1 ]; then
-							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'M'`" ]; then
-								RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
-							fi
-						else
-							RKHTMPVAR=`echo ${SYSPERM} | grep '[2367]$'`
-						fi
-					fi
-
-					if [ -n "${RKHTMPVAR}" ]; then
 						for WHITELISTFILE in ${WRITEWHITELIST}; do
 							if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
-								RKHTMPVAR=""
+								WL_FILE="whitelisted"
 								WHITELIST_RESULT="${WHITELIST_RESULT} write"
 								break
 							fi
 						done
 
-						test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} write"
-					elif [ -z "${SYSPERM}" ]; then
-						TEST_RESULT="${TEST_RESULT} syspermunavail"
+						if [ -z "${WL_FILE}" ]; then
+							SYSPERM=`echo ${FDATA} | cut -d: -f2`
+
+							if [ -n "`echo ${SYSPERM} | grep '[2367]\$'`" ]; then
+								TEST_RESULT="${TEST_RESULT} write"
+							elif [ -z "${SYSPERM}" ]; then
+								TEST_RESULT="${TEST_RESULT} syspermunavail"
+							fi
+						fi
 					fi
 				fi
 			fi
@@ -5557,25 +5450,27 @@ file_properties_check() {
 			#
 
 			if [ $SKIP_IMMUT -eq 0 ]; then
-				if [ $BSDOS -eq 0 ]; then
-					RKHTMPVAR=`${LSATTR_CMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
-				else
-					RKHTMPVAR=`ls -lno ${DIR}/${FNAME} 2>/dev/null | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
-				fi
-
-
 				#
 				# Test if the file is whitelisted.
 				#
 
-				if [ -n "${RKHTMPVAR}" ]; then
-					for WHITELISTFILE in ${IMMUTWHITELIST}; do
-						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
-							RKHTMPVAR=""
-							WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
-							break
-						fi
-					done
+				WL_FILE=""
+				RKHTMPVAR=""
+
+				for WHITELISTFILE in ${IMMUTWHITELIST}; do
+					if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+						WL_FILE="whitelisted"
+						WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
+						break
+					fi
+				done
+
+				if [ -z "${WL_FILE}" ]; then
+					if [ $BSDOS -eq 0 ]; then
+						RKHTMPVAR=`${LSATTR_CMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+					else
+						RKHTMPVAR=`ls -lno ${DIR}/${FNAME} 2>/dev/null | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+					fi
 
 					test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} immutable"
 				fi
@@ -5588,38 +5483,37 @@ file_properties_check() {
 
 			if [ $SKIP_SCRIPT -eq 0 ]; then
 				#
-				# If both the hash test and the file size test have passed,
-				# then we skip the script replacement check. The assumption is
-				# that to change a file with one value remaining the same is
-				# possible, but to change it such that both are the same is
-				# improbable.
+				# If we are using a package manager, and both the hash test
+				# and the file size test have passed, then we skip the script
+				# replacement check. The assumption is that to change a file
+				# with one value remaining the same is possible, but to change
+				# it such that both are the same is improbable. It would also
+				# require the package manager database having being corrupted
+				# as well.
 				#
 
-# jh
-#echo In script test
-#test $HASH_TEST_PASSED -eq 1 -a $SIZE_TEST_PASSED -eq 1 && echo script test being skipped
 				if [ $HASH_TEST_PASSED -eq 0 -o $SIZE_TEST_PASSED -eq 0 ]; then
-					SYSSCRIPT=""
-
-					if [ "${FNAME}" = "rkhunter" ]; then
-						SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i -v 'shell script( |$)'`
-					else
-						SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
-					fi
-
-
 					#
 					# See if the file is whitelisted.
 					#
 
-					if [ -n "${SYSSCRIPT}" ]; then
-						for WHITELISTFILE in ${SCRIPTWHITELIST}; do
-							if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
-								SYSSCRIPT=""
-								WHITELIST_RESULT="${WHITELIST_RESULT} script"
-								break
-							fi
-						done
+					WL_FILE=""
+					SYSSCRIPT=""
+
+					for WHITELISTFILE in ${SCRIPTWHITELIST}; do
+						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+							WL_FILE="whitelisted"
+							WHITELIST_RESULT="${WHITELIST_RESULT} script"
+							break
+						fi
+					done
+
+					if [ -z "${WL_FILE}" ]; then
+						if [ "${FNAME}" = "rkhunter" ]; then
+							SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i -v 'shell script( |$)'`
+						else
+							SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
+						fi
 
 						test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
 					fi
@@ -10722,7 +10616,6 @@ PKGMGR=""
 OLD_PKGMGR=""
 OLD_ATTRUPD=""
 HASH_FLD_IDX=1
-USE_PKGMGR_VERIFY=0
 PROP_DIR_LIST=""
 PROP_FILE_LIST=""
 PROP_FILE_LIST_COUNT=0
@@ -10772,7 +10665,7 @@ SKIP_KEY_PRESS=0
 # Is this the Gentoo operating system?
 GENTOO=0
 
-# Is this a BSD operating system?
+# Is this a *BSD operating system?
 case "${OPERATING_SYSTEM}" in
 *BSD)
 	BSDOS=1
@@ -11892,21 +11785,10 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
 				fi
 
-				if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
-					display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-				fi
+				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 			elif [ "${PKGMGR}" = "BSD" ]; then
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
-
-				if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
-					display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-				fi
-			fi
-
-			if [ $USE_PKGMGR_VERIFY -eq 1 ]; then
-				display --to LOG --type INFO HASH_PKGMGR_USE_VRFY
-			else
-				display --to LOG --type INFO HASH_PKGMGR_NO_USE_VRFY
+				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 			fi
 		fi
 	fi
@@ -11918,8 +11800,8 @@ test $CHECK -eq 1 && `check_test attributes` && RKHTMPVAR=1
 if [ $RKHTMPVAR -eq 1 ]; then
 	if [ "${OLD_ATTRUPD}" = "Disabled" ]; then
 		display --to LOG --type INFO ATTRUPD_OLD_DISABLED
-	elif [ "${OLD_ATTRUPD}" = "Nostat" ]; then
-		display --to LOG --type INFO ATTRUPD_OLD_NOSTAT
+	elif [ "${OLD_ATTRUPD}" = "Nostatcmd" ]; then
+		display --to LOG --type INFO ATTRUPD_OLD_NOSTATCMD
 	else
 		display --to LOG --type INFO ATTRUPD_OLD_OK
 	fi
@@ -11929,7 +11811,7 @@ if [ $PROP_UPDATE -eq 1 ]; then
 	if ! `check_test attributes`; then
 		display --to LOG --type INFO ATTRUPD_DISABLED
 	elif [ -z "${STAT_CMD}" ]; then
-		display --to LOG --type INFO ATTRUPD_NOSTAT
+		display --to LOG --type INFO ATTRUPD_NOSTATCMD
 	else
 		display --to LOG --type INFO ATTRUPD_OK
 	fi
