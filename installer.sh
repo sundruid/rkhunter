@@ -28,6 +28,7 @@ APPVERSION="1.3.0"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
+RKHINST_MODE_RWR="0644"
 RKHINST_LAYOUT=""
 USE_CVS=0
 STRIPROOT=""
@@ -142,8 +143,8 @@ case "$1" in
 						;;
 					*)
 						if [ "$action" = "install" ]; then
-							rkhtmpvar=`echo "${PATH}" | grep "${PREFIX}/bin"`
-							if [ -z "${rkhtmpvar}" ]; then
+							RKHTMPVAR=`echo "${PATH}" | grep "${PREFIX}/bin"`
+							if [ -z "${RKHTMPVAR}" ]; then
 								echo
 								echo "Note: Directory ${PREFIX}/bin is not in your PATH"
 								echo
@@ -168,8 +169,8 @@ case "$1" in
 			*)
 				if [ "$action" = "install" ]; then
 					if [ ! -d "${PREFIX}" ]; then
-						echo "Bad prefix chosen (nonexistent dirname), exiting."
-						echo "\"mkdir -p ${PREFIX}\" first?"
+						echo "Bad prefix chosen (non-existent directory), exiting."
+						echo "Perhaps run \"mkdir -p ${PREFIX}\" first?"
 						exit 1
 					fi
 				fi
@@ -186,18 +187,29 @@ case "$1" in
 		esac
 		case "$1" in
 			custom_*)
-				LIBDIR="${PREFIX}/lib"; VARDIR="${PREFIX}/var"
-				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
-				;;
-			RPM)	if [ `uname -m` = x86_64 -a -d "${PREFIX}/lib64" ]; then
+				if [ "`uname -m`" = "x86_64" ]; then
 					LIBDIR="${PREFIX}/lib64"
 				else
 					LIBDIR="${PREFIX}/lib"
 				fi
-				VARDIR="${RPM_BUILD_ROOT}/var"; SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+				VARDIR="${PREFIX}/var"
+				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+				;;
+			RPM)	if [ "`uname -m`" = "x86_64" ]; then
+					LIBDIR="${PREFIX}/lib64"
+				else
+					LIBDIR="${PREFIX}/lib"
+				fi
+				VARDIR="${RPM_BUILD_ROOT}/var"
+				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
 				;;
 			*)
-				LIBDIR="${PREFIX}/lib"; VARDIR="/var"
+				if [ -d "${PREFIX}/lib64" ]; then
+					LIBDIR="${PREFIX}/lib64"
+				else
+					LIBDIR="${PREFIX}/lib"
+				fi
+				VARDIR="/var"
 				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
 				;;
 		esac
@@ -266,7 +278,7 @@ showTemplate() { # Take input from the "--installdir parameter"
 			fi
 			;;
 	esac
-		
+
 	exit 0
 }
 
@@ -321,7 +333,7 @@ else
 	esac
 fi
 }
-	
+
 #################################################################################
 #
 # Start installation
@@ -493,7 +505,7 @@ for FILE in ${RKHINST_SCRIPT_FILES} ${RKHINST_DB_FILES} ${RKHINST_MAN_FILES}; do
 				;;
 		*.8)		echo $N " Installing ${FILE}: "
 				cp -f ./files/"${FILE}" "${RKHINST_MAN_DIR}"; retValChk
-				chmod "${RKHINST_MODE_RW}" "${RKHINST_MAN_DIR}/${FILE}"
+				chmod "${RKHINST_MODE_RWR}" "${RKHINST_MAN_DIR}/${FILE}"
 				;;
 		esac
 done
@@ -502,6 +514,7 @@ done
 for FILE in ${RKHINST_DOC_FILES}; do
 	echo $N " Installing ${FILE}: "
 	cp -f ./files/"${FILE}" "${RKHINST_DOC_DIR}"; retValChk
+	chmod "${RKHINST_MODE_RWR}" "${RKHINST_DOC_DIR}/${FILE}"
 done
 
 # Language support files
@@ -539,17 +552,19 @@ for FILE in ${RKHINST_ETC_FILE}; do
 		echo $N " Installing ${FILE} in no-clobber mode: "
 		cp -f "./files/${FILE}" "${RKHINST_ETC_DIR}/${NEWFILE}"; retValChk
 		chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${NEWFILE}"
-		
+
 		echo "" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "INSTALLDIR=${PREFIX}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "DBDIR=${RKHINST_DB_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "TMPDIR=${RKHINST_TMP_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
-	
-		echo " >>> "
-		echo " >>> PLEASE NOTE: inspect for update changes in "${RKHINST_ETC_DIR}/${NEWFILE}""
-		echo " >>> and apply to "${RKHINST_ETC_DIR}/${FILE}" before running Rootkit Hunter."
-		echo " >>> "
+
+		if [ "${RKHINST_LAYOUT}" != "RPM" ]; then
+			echo " >>> "
+			echo " >>> PLEASE NOTE: inspect for update changes in "${RKHINST_ETC_DIR}/${NEWFILE}""
+			echo " >>> and apply to "${RKHINST_ETC_DIR}/${FILE}" before running Rootkit Hunter."
+			echo " >>> "
+		fi
 	else
 		echo $N " Installing ${FILE}: "
 		cp -f "./files/${FILE}" "${RKHINST_ETC_DIR}"; retValChk
@@ -734,7 +749,7 @@ while [ $# -ge 1 ]; do
 			echo "No layout given. The '--layout' option must be specified first."
 			exit 1
 		fi
-		action=`echo "$1"|sed "s/-//g"`;
+		action=`echo "$1"|sed "s/-//g"`
 		case "$action" in
 			show)	showTemplate $RKHINST_LAYOUT
 				;;
