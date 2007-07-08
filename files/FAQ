@@ -129,6 +129,10 @@ A.   The RKH source contains an rkhunter.spec file which will
 
             rpmbuild -ta rkhunter-<version>.tar.gz
 
+     The last part of the displayed build process should indicate
+     where the RPM file has been written. However, it will usually
+     be found in '/usr/src/redhat/RPMS/noarch'.
+
      NOTE: The RKH development team do not support any third-party
      RPM files. However, the rkhunter.spec file will be maintained. 
 
