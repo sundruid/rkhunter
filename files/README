@@ -95,9 +95,9 @@ be installed into '/usr/local/share/man', and other documentation will
 be installed into the '/usr/local/share/doc' directory. RKH data files,
 language support, and a directory for temporary files will be
 installed into '/var/lib/rkhunter'. Finally, RKH support scripts will
-be installed into '/usr/local/lib/rkhunter/scripts', or, if using a
-64-bit system, into '/usr/local/lib64/rkhunter/scripts'.
-All directories will be created where necessary.
+be installed into '/usr/local/lib/rkhunter/scripts', or, if using an
+x86_64 system, into '/usr/local/lib64/rkhunter/scripts'. All directories,
+except 'lib64', will be created where necessary.
 
 To run RKH, as root simply enter the following command:
 
@@ -140,18 +140,18 @@ To run RKH, as root simply enter the following command:
     ./rkhunter --check
 
 
-INSTALLATION INFORMATION FOR 64-BIT SYSTEMS
+INSTALLATION INFORMATION FOR x86_64 SYSTEMS
 ===========================================
 
 The installation of RKH is largely independent of the system architecture.
 However, RKH does have some support scripts and these need to be installed
-into the appropriate 'lib' directory. When using the 'default' layout option,
-or one of the known layout options (for example, '/usr' or '/usr/local'),
-then the relevant 'lib64' directory will be used only if it already exists.
-For a 'custom' layout, the 'lib64' directory will be used and created if
-necessary. Standalone installations do not use any special 'lib' directory
-at all. RPM installations will use the relevant 'lib64' directory only if
-the system architecture is detected as being 'x86_64'.
+into the appropriate library directory. When using the 'default' layout
+option, or one of the known layout options (for example, '/usr' or
+'/usr/local'), then the relevant 'lib64' directory will be used only if it
+already exists. For a 'custom' layout, the 'lib64' directory will be used
+and created if necessary. Standalone installations do not use any special
+library directory at all. RPM installations will use the relevant 'lib64'
+directory only if the system architecture is detected as being 'x86_64'.
 
 
 REMOVING AN INSTALLATION
