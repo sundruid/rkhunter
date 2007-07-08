@@ -5200,7 +5200,7 @@ file_properties_check() {
 					#
 
 					if [ $FILE_IS_PKGD -eq 1 ]; then
-						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep '5'`" ]; then
+						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
 							HASH_TEST_PASSED=1
 						else
 							TEST_RESULT="${TEST_RESULT} verify:hashchanged"
@@ -5297,7 +5297,7 @@ file_properties_check() {
 						#
 
 						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | grep 'M' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
+							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'M|(^.\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
 						else
 							RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
 							SYSPERM=`echo ${FDATA} | cut -d: -f2`
@@ -5315,7 +5315,7 @@ file_properties_check() {
 						#
 
 						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | grep 'U' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
+							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'U|(^.....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
 						else
 							RKHUID=`echo ${RKHLINE} | cut -d: -f6`
 							SYSUID=`echo ${FDATA} | cut -d: -f3`
@@ -5333,7 +5333,7 @@ file_properties_check() {
 						#
 
 						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | grep 'G' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
+							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'G|(^......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
 						else
 							RKHGID=`echo ${RKHLINE} | cut -d: -f7`
 							SYSGID=`echo ${FDATA} | cut -d: -f4`
@@ -5367,7 +5367,7 @@ file_properties_check() {
 						#
 
 						if [ $FILE_IS_PKGD -eq 1 ]; then
-							if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep 'S'`" ]; then
+							if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep 'S|(^\?)'`" ]; then
 								SIZE_TEST_PASSED=1
 							else
 								TEST_RESULT="${TEST_RESULT} verify:sizechanged"
@@ -5393,7 +5393,7 @@ file_properties_check() {
 						#
 
 						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | grep 'T' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
+							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'T|(^.......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
 						elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
 							RKHDTM=`echo ${RKHLINE} | cut -d: -f9`
 							SYSDTM=`echo ${FDATA} | cut -d: -f6`
@@ -9228,7 +9228,7 @@ do_system_config_files_check() {
 			# block which uses TCP or UDP.
 			#
 
-			RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${SYSLOG_CONFIG_FILE} | egrep -i '( |	|{|^)(tcp|udp)6?( |	|\(|$)'`
+			RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${SYSLOG_CONFIG_FILE} | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)'`
 		fi
 
 		if [ -z "${RKHTMPVAR}" ]; then
