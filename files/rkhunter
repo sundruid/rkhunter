@@ -4814,6 +4814,10 @@ file_properties_check() {
 				RKHTMPVAR="${RKHTMPVAR} libsafe"
 			fi
 		fi
+
+		if [ $OS_CHANGED -eq 1 -a $SHOWWARNINGSONLY -eq 0 ]; then
+			RKHTMPVAR="${RKHTMPVAR} os_changed"
+		fi
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 -a $BSDOS -eq 0 -a -z "${LSATTR_CMD}" ]; then
@@ -4909,6 +4913,9 @@ file_properties_check() {
 				;;
 			script)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_SCRIPT
+				;;
+			os_changed)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_OS_CHANGED
 				;;
 			missing)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_DAT_MISSING
@@ -10151,6 +10158,8 @@ check_os_info() {
 	fi
 
 	if [ $FOUND -eq 1 ]; then
+		OS_CHANGED=1
+
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG1
 		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG2
 		display --to LOG --type WARNING --nl PROPUPD_WARN
@@ -10675,6 +10684,9 @@ case "${OPERATING_SYSTEM}" in
 	BSDOS=0
 	;;
 esac
+
+# This will be set if the local host or O/S has changed in some way.
+OS_CHANGED=0
 
 # These SSH options can only be set in the configuration file.
 ALLOW_SSH_PROT_V1=0
