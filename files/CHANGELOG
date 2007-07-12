@@ -58,9 +58,10 @@
    MAC OS X, NetBSD and FreeBSD systems. Overall more commands will be checked.
  - Added support for Ubuntu, and the 'dash' and 'ash' shells.
  - If the O/S name, architecture or prelinking status changes from one rkhunter
-   run to the next, then a warning message is written to the log file. The
-   change may well cause the file hash checks to show false positives. (The
-   user should rerun rkhunter with the --propupd option.)
+   run to the next, then a warning message is written to the log file and the
+   file properties prerequisite check will fail. The change may well cause the
+   file hash checks to show false positives. (The user should rerun rkhunter
+   with the --propupd option.)
  - Rkhunter will now check that certain commands are present before starting
    any checks. This avoids spurious 'command not found' type messages
    suddenly appearing.
