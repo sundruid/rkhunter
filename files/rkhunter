@@ -2054,18 +2054,28 @@ get_md5_hash_function() {
 	# This is a short function to try and locate
 	# an MD5 hash function command.
 	#
+	# The first parameter simply indicates if we are
+	# setting the hash function (parameter is 1) or
+	# just looking for an MD5 command to support a
+	# package manager (parameter is 0).
+	#
 
-	HFUNC=`find_cmd md5sum`
-
-	test -z "${HFUNC}" && HFUNC=`find_cmd md5`
-
-	if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
-		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
-
-		test -n "${MOD_INSTALLED}" && echo "${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
+	if [ $PRELINKED -eq 1 ]; then
+		test $1 -eq 1 && PRELINK_HASH="MD5"
+		echo "${PRELINK_CMD} --verify --md5"
 	else
-		echo "${HFUNC}"
-		MD5_CMD="${HFUNC}"
+		HFUNC=`find_cmd md5sum`
+
+		test -z "${HFUNC}" && HFUNC=`find_cmd md5`
+
+		if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
+
+			test -n "${MOD_INSTALLED}" && echo "${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
+		else
+			echo "${HFUNC}"
+			MD5_CMD="${HFUNC}"
+		fi
 	fi
 
 	return
@@ -2140,12 +2150,7 @@ get_hash_function() {
 	#
 
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "MD5" ]; then
-		if [ $PRELINKED -eq 1 ]; then
-			PRELINK_HASH="MD5"
-			HASH_FUNC="${PRELINK_CMD} --verify --md5"
-		else
-			HASH_FUNC=`get_md5_hash_function`
-		fi
+		HASH_FUNC=`get_md5_hash_function 1`
 	fi
 
 
@@ -2267,7 +2272,7 @@ get_hash_function() {
 		fi
 
 		if [ $CHECK -eq 1 ]; then
-			PKGMGR_MD5_HASH=`get_md5_hash_function`
+			PKGMGR_MD5_HASH=`get_md5_hash_function 0`
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
 				echo "Unable to find an MD5 hash function command to assist package manager 'DPKG'."
@@ -2289,7 +2294,7 @@ get_hash_function() {
 		fi
 
 		if [ $CHECK -eq 1 ]; then
-			PKGMGR_MD5_HASH=`get_md5_hash_function`
+			PKGMGR_MD5_HASH=`get_md5_hash_function 0`
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
 				echo "Unable to find an MD5 hash function command to assist package manager 'BSD'."
@@ -2783,17 +2788,7 @@ rkh_dat_set_file_properties() {
 	elif [ -z "${PKGMGR}" -a "${HASH_FUNC}" = "NONE" ]; then
 		HCMD=""
 	else
-		if [ $PRELINKED -eq 0 -o "${HASH_FUNC}" = "NONE" ]; then
-			HCMD="${HASH_FUNC}"
-		else
-			if [ "${PRELINK_HASH}" = "MD5" ]; then
-				HCMD="${PRELINK_CMD} --verify --md5"
-			elif [ "${PRELINK_HASH}" = "SHA1" ]; then
-				HCMD="${PRELINK_CMD} --verify --sha"
-			else
-				HCMD="${HASH_FUNC}"
-			fi
-		fi
+		HCMD="${HASH_FUNC}"
 	fi
 
 	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
@@ -2912,7 +2907,7 @@ rkh_dat_set_file_properties() {
 
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
 
-							if [ -n "`echo \"${RKHTMPVAR}\" | grep 'dependencies'`" ]; then
+							if [ -n "`echo \"${RKHTMPVAR}\" | grep 'prelink.* dependencies '`" ]; then
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
 							fi
 						fi
@@ -4959,17 +4954,7 @@ file_properties_check() {
 		HCMD=""
 		SYSHASH=""
 	else
-		if [ $PRELINKED -eq 0 ]; then
-			HCMD="${HASH_FUNC}"
-		else
-			if [ "${PRELINK_HASH}" = "MD5" ]; then
-				HCMD="${PRELINK_CMD} --verify --md5"
-			elif [ "${PRELINK_HASH}" = "SHA1" ]; then
-				HCMD="${PRELINK_CMD} --verify --sha"
-			else
-				HCMD="${HASH_FUNC}"
-			fi
-		fi
+		HCMD="${HASH_FUNC}"
 	fi
 
 	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
@@ -5012,6 +4997,7 @@ file_properties_check() {
 			WHITELIST_RESULT=""
 
 			FILE_IS_PKGD=0
+			DEPENDENCY_ERR=0
 			HASH_TEST_PASSED=0
 			SIZE_TEST_PASSED=0
 
@@ -5105,11 +5091,15 @@ file_properties_check() {
 							# or get the verification result for the file.
 							#
 
-							PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>/dev/null`
+							PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>&1`
 
 							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
 							else
+								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep " ${FILENAME}:" | grep 'prelink.* dependencies '`" ]; then
+									DEPENDENCY_ERR=1
+								fi
+
 								PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
 							fi
 						fi
@@ -5175,7 +5165,13 @@ file_properties_check() {
 
 							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-							test "${RKHTMPVAR2}" != "${SYSHASH}" && PKGMGR_VERIFY_RESULT="5"
+							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+								PKGMGR_VERIFY_RESULT="5"
+
+								if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+									DEPENDENCY_ERR=1
+								fi
+							fi
 						fi
 					elif [ "${PKGMGR}" = "BSD" ]; then
 						#
@@ -5197,7 +5193,13 @@ file_properties_check() {
 
 							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-							test "${RKHTMPVAR2}" != "${SYSHASH}" && PKGMGR_VERIFY_RESULT="5"
+							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+								PKGMGR_VERIFY_RESULT="5"
+
+								if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+									DEPENDENCY_ERR=1
+								fi
+							fi
 						fi
 					fi
 
@@ -5252,6 +5254,12 @@ file_properties_check() {
 								SYSHASH=""
 							else
 								SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+								if [ -z "${SYSHASH}" ]; then
+									if [ -n "`${HCMD} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+										DEPENDENCY_ERR=1
+									fi
+								fi
 							fi
 
 							test "${RKHHASH}" != "${SYSHASH}" && TEST_RESULT="${TEST_RESULT} hashchanged"
@@ -5559,6 +5567,8 @@ file_properties_check() {
 							fi
 
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH "${RKHHASH}"
+
+							test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
 							;;
 						permchanged)
 							if [ -z "${SYSPERM}" ]; then
@@ -5611,6 +5621,8 @@ file_properties_check() {
 							RKHTMPVAR3=1
 							display --to LOG --type WARNING FILE_PROP_VRFY
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${DIR}/${FNAME}"
+
+							test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
 						fi
 
 						case "${RKHTMPVAR}" in
