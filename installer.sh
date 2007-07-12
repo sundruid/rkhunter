@@ -592,11 +592,17 @@ if [ -n "${STRIPROOT}" ]; then
 	done
 fi
 
-# Finally copy the passwd/group files to the TMP directory
-# to avoid warnings when rkhunter is first run.
+case "${RKHINST_LAYOUT}" in
+		RPM)	# Maybe this should be a %postinstall
+			;;
+		*) 
+			# Finally copy the passwd/group files to the TMP directory
+			# to avoid warnings when rkhunter is first run.
 
-cp -p /etc/passwd ${RKHINST_TMP_DIR} >/dev/null 2>&1
-cp -p /etc/group ${RKHINST_TMP_DIR} >/dev/null 2>&1
+			cp -p /etc/passwd ${RKHINST_TMP_DIR} >/dev/null 2>&1
+			cp -p /etc/group ${RKHINST_TMP_DIR} >/dev/null 2>&1
+			;;
+esac
 
 echo "Installation finished."
 

@@ -95,7 +95,7 @@ fi
 %attr(750,root,root) %dir %{_var}/lib/%{name}/db/i18n
 %attr(640,root,root) %{_var}/lib/%{name}/db/i18n/*
 %attr(750,root,root) %dir %{_var}/lib/%{name}/tmp
-%verify(user group mode) %{_var}/lib/%{name}/tmp/*
+#%verify(user group mode) %{_var}/lib/%{name}/tmp/*
 %{_sysconfdir}/cron.daily/01-rkhunter
 
 

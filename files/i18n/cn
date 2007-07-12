@@ -1,5 +1,4 @@
-Version:2007060301
-
+Version:2007061401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -10,47 +9,39 @@ Version:2007060301
 # included here for completeness. The index names of MSG_TYPE_ and
 # MSG_RESULT_ are reserved - no messages can use this as part of its index.
 #
-
-#
-#If any problem related with this cn version message,please mail to 
-#linux_fqh@yahoo.com.cn.I will fix them as soon as possible.
-#如果有任何关于本中文版信息的问题，请联系linux_fqh@yahoo.com.cn
-＃我将尽快修正它们
-#
-
 MSG_TYPE_PLAIN:
 MSG_TYPE_INFO:信息
 MSG_TYPE_WARNING:警告
 
+
 #
 # This is the list of message results.
 #
-
-MSG_RESULT_OK: 正常
-MSG_RESULT_BAD: 坏
-MSG_RESULT_SKIPPED: 跳过
-MSG_RESULT_WARNING: 警告
-MSG_RESULT_FOUND:	发现
-MSG_RESULT_NOT_FOUND: 没发现
-MSG_RESULT_NONE_FOUND: 没发现
-MSG_RESULT_ALLOWED: 允许
-MSG_RESULT_NOT_ALLOWED: 不允许
+MSG_RESULT_OK:正常
+MSG_RESULT_BAD:坏
+MSG_RESULT_SKIPPED:跳过
+MSG_RESULT_WARNING:警告
+MSG_RESULT_FOUND:发现
+MSG_RESULT_NOT_FOUND:没发现
+MSG_RESULT_NONE_FOUND:没发现
+MSG_RESULT_ALLOWED:允许
+MSG_RESULT_NOT_ALLOWED:不允许
 
 MSG_RESULT_UPD: 更新的	
 MSG_RESULT_NO_UPD: 没更新
 MSG_RESULT_UPD_FAILED: 更新失败
-MSG_RESULT_VCHK_FAILED:版本检查失败
+MSG_RESULT_VCHK_FAILED: 版本检查失败
+
 
 #
 # The messages.
 #
-
 VERSIONLINE:[ $1 版本 $2 ]
 VERSIONLINE2:运行 $1 版本 $2 在 $3
 VERSIONLINE3:运行 $1 版本 $2
 
-RKH_STARTDATE:开始日期是 $1
-RKH_ENDDATE:结束日期是 $1
+RKH_STARTDATE:开始时间是 $1
+RKH_ENDDATE:结束时间是 $1
 
 OPSYS:探测到的系统是 '$1'
 UNAME:Uname 输出是 '$1'
@@ -60,7 +51,6 @@ CONFIG_CMDLINE:命令行是 $1
 CONFIG_ENVSHELL:环境 shell 是 $1; rkhunter 正在使用 $2
 CONFIG_CONFIGFILE:正在使用配置文件 '$1'
 CONFIG_INSTALLDIR:安装目录是'$1'
-
 CONFIG_LANGUAGE:使用语言是 '$1'
 CONFIG_DBDIR:使用 '$1' 作为数据库目录
 CONFIG_SCRIPTDIR:使用 '$1' 支持脚本目录
@@ -71,7 +61,7 @@ CONFIG_NO_MAIL_ON_WARN:没有配置警告信的地址
 CONFIG_MOW_DISABLED:根据用户要求，不使用警告信
 CONFIG_MAIL_ON_WARN:使用命令'$2'给 '$1' 发警告信
 CONFIG_SSH_ROOT:Rkhunter 的选项 ALLOW_SSH_ROOT_USER被设置成 '$1'.
-CONFIG_SSH_PROTV1:Rkhunter option被设置成允许第一版本的SSH协议
+CONFIG_SSH_PROTV1:Rkhunter 选项被设置成允许第一版本的SSH协议
 CONFIG_X_AUTO:自动检测X
 CONFIG_CLRSET2:使用第二配色方案
 CONFIG_NO_SHOW_SUMMARY:根据用户要求不检测系统总况
@@ -81,13 +71,21 @@ CONFIG_XINETD_PATH:使用 $1 配置文件 '$2'
 CONFIG_SOL10_INETD:使用Solaris 10 及以后的inetd机制
 CONFIG_LOCAL_RC_DIR:使用系统的启动目录: $1
 CONFIG_LOCAL_RC_FILE:使用本地的启动目录文件: $1
+CONFIG_ROTATE_MIRRORS:镜像文件将被 rotated
+ONFIG_NO_ROTATE_MIRRORS:镜像文件将不被rotated
+CONFIG_UPDATE_MIRRORS:镜像文件将被更新
+CONFIG_NO_UPDATE_MIRRORS:镜像文件将不被更新
+CONFIG_MIRRORS_MODE0:本地和远程镜像文件将都被使用
+CONFIG_MIRRORS_MODE1:只使用本地镜像文件
+CONFIG_MIRRORS_MODE2:只使用远程镜像文件
 
 FOUND_CMD:找到 '$1' 命令: $2
 NOT_FOUND_CMD:无法找到'$1' 命令
 
 SYS_PRELINK:系统正在使用prelinking
 SYS_NO_PRELINK:系统没用prelinking
-HASH_FUNC_PRELINK:使用 prelink命令(带 $1)检查文件hash
+
+HASH_FUNC_PRELINK:为了文件的 hash 检测而使用 prelink 命令 (带 $1) 
 HASH_FUNC_PERL:使用 perl $1 模块来检查文件hash
 HASH_FUNC:使用 '$1'命令检查文件hash
 HASH_FUNC_NONE:无法检查文件hash : 没指定
@@ -99,13 +97,15 @@ HASH_PKGMGR_OLD::使用包管理器'$1'储存hash值
 HASH_PKGMGR_OLD_NONMD5:使用包管理器'$1'(md5 function)储存hash值 
 HASH_PKGMGR_OLD_UNSET:不使用包管理器而保存hash值
 
-HASH_PKGMGR:使用包管理器'$1'检测程序包
-HASH_PKGMGR_MD5:使用MD5 hash函数命令'$1'辅助检测程序包
-HASH_PKGMGR_NOT_SPEC:没有指定检测的包管理器: 使用hash 函数 '$1'
-HASH_PKGMGR_NOT_SPEC_PRELINKED:没有指定检测的包管理器: 使用带'$1'的 prelink命令 
-HASH_PKGMGR_USE_VRFY:包管理器验证将用于文件属性测试结果
-HASH_PKGMGR_NO_USE_VRFY:包管理器验证将不用于文件属性测试结果
+HASH_PKGMGR:使用包管理器 '$1' 检查文件属性
+HASH_PKGMGR_MD5:使用 MD5 hash 函数命令 '$1' 辅助包管理器的验证
+HASH_PKGMGR_NOT_SPEC:没有指定包管理器: 使用 hash 函数 '$1'
+HASH_PKGMGR_NOT_SPEC_PRELINKED:没有指定包管理器: 使用带 '$1' 的 prelink 命令
+HASH_PKGMGR_USE_VRFY:包管理器验证将用于文件属性的检测结果
+HASH_PKGMGR_NO_USE_VRFY:包管理器验证将不用于文件属性的检测结果
+
 HASH_FIELD_INDEX:hash 函数的域索引被设置为 $1
+
 HASHUPD_DISABLED:Hash 检测失效: 当前文件hash值将不会保存
 HASHUPD_PKGMGR:使用包管理器 '$1' 来更新文件hash值
 HASHUPD_PKGMGR_NONE:没有指定包管理器: 使用hash函数 '$1'
@@ -114,13 +114,16 @@ HASHUPD_PKGMGR_NOT_SPEC:没有指定文件 hash 更新包管理器: 使用 hash 
 HASHUPD_PKGMGR_NOT_SPEC_PRELINKED:没有指定文件 hash 更新包管理器: 使用带 '$1'的 prelink 命令
 HASHUPD_PKGMGR_MD5:使用MD5 hash函数命令'$1'作为包管理器
 HASHUPD_PKGMGR_MD5_PRELINK:使用prelink命令 (带 $1)作为包管理器
+
 ATTRUPD_DISABLED:文件属性检测失效: 当前文件属性将不会保存
 ATTRUPD_NOSTAT:文件属性检测失效: 没有发现'stat'命令:当前文件属性将不会保存
 ATTRUPD_OK:当前文件属性将被保存
 ATTRUPD_OLD_DISABLED:原先文件属性无效: 没有文件属性保存
 ATTRUPD_OLD_NOSTAT:原先文件属性无效: 没有发现'stat'命令: 没有文件属性被保存
 ATTRUPD_OLD_OK:原先文件属性被保存
+
 GRSECINSTALLED:发现安装有GRSEC
+
 SYSLOG_ENABLED:因为一些logging使用 syslog - facility/priority 级别是 '$1'.
 SYSLOG_DISABLED:根据用户要求不使用 syslog .
 SYSLOG_NO_LOGGER:无法使用 syslog - 无法找到 'logger' 命令.
@@ -129,7 +132,7 @@ NAME:$1
 PRESSENTER:[敲 <ENTER> 键继续]
 TEST_SKIPPED_OS:因为 O/S: $2，检测 '$1' 被跳过
 
-SUMMARY_TITLE1:系统概要检查
+SUMMARY_TITLE1:系统检测概要
 SUMMARY_TITLE2:=====================
 SUMMARY_PROP_SCAN:检测文件属性...
 SUMMARY_PROP_REQCMDS:请求的检测命令失败
@@ -147,11 +150,15 @@ SUMMARY_SCAN_TIME:检查系统用时: $1
 SUMMARY_NO_SCAN_TIME:检查系统用时: 无法计算时钟时间
 SUMMARY_LOGFILE:所有结果已被写入到日志文件($1)
 SUMMARY_NO_LOGFILE:没有创建日志文件.
+
 CREATED_TEMP_FILE:创建临时文件夹 '$1'
+
 MIRRORS_NO_FILE:镜象文件'$1'不存在
-MIRRORS_NO_MIRRORS:镜象文件'$1'中没有镜象.
+MIRRORS_NO_MIRRORS:镜像文件 '$1' 中没有需要的镜像.
 MIRRORS_NO_VERSION:镜象文件 '$1'中没有版本号 - 重新设置为0.
 MIRRORS_ROTATED:镜象文件 '$1' 已被更新.
+MIRRORS_SF_DEFAULT:使用 SourceForge 镜像: $1
+
 DOWNLOAD_CMD:执行下载命令 '$1'
 DOWNLOAD_FAIL:下载失败 - $1 镜象文件无效.
 
@@ -195,13 +202,15 @@ PROPUPD_NO_REL_FILE:不能找到release 文件: LS output shows:
 PROPUPD_OSNAME_FOUND:发现 O/S 名称: $1
 PROPUPD_ERROR:安装新的 rkhunter.dat 文件发生错误. 代码 $1
 PROPUPD_NEW_DAT_FILE:新的 rkhunter.dat 文件已安装在 '$1'
-PROPUPD_WARN:警告! 当使用式 '--propupd' 选项时用户必须负责确保那样
-PROPUPD_WARN:被使用, 他们系统中所有的文件已知是真实的, 并且是安装于
-PROPUPD_WARN:可靠的源文件. rkhunter '--check' 选项将对比当前文件属性
-PROPUPD_WARN:对比先前保存的值,并且报告任何改变的值. 然而, rkhunter
-PROPUPD_WARN:不能确定是什么导致了这个变化，它有待用户去确认.
+PROPUPD_WARN:警告! 当使用 '--propupd' 选项时用户必须负责确保
+PROPUPD_WARN:系统中所有的文件已知是真实的, 并且是安装于可靠的
+PROPUPD_WARN:源文件. rkhunter '--check' 选项将当前文件属性与先前
+PROPUPD_WARN:保存的值进行对比,并且报告任何变化的值. 然而, rkhunter
+PROPUPD_WARN:无法确定是什么导致了这个变化，它有待用户去确认.
+
 ENABLED_TESTS:生效的测试是: $1
 DISABLED_TESTS:失效的测试是: $1
+
 KSYMS_FOUND:发现 ksym 文件 '$1'
 KSYMS_MISSING:所有的 ksyms 和 kallsyms 检测已被取消 - 这两种文件在系统中都不存在.
 
@@ -237,9 +246,8 @@ FILE_PROP_DAT_MISSING:保存文件属性的文件 (rkhunter.dat) 不存在, 所�
 FILE_PROP_DAT_EMPTY:保存文件属性的文件 (rkhunter.dat) 是空的, 所以必须创建它. 输入命令 'rkhunter --propupd'创建.
 FILE_PROP_SKIP_ALL:现忽略所有文件属性的检测.
 
-
-FILE_PROP_FILE_NOT_EXIST:系统中不存在 '$1' 文件, 但是它存在于 rkhunter.dat 文件.
-FILE_PROP_WL:发现文件 '$1': it is whitelisted for the '$2' check.
+FILE_PROP_FILE_NOT_EXIST:系统中不存在 '$1' 文件, 但是它列于 rkhunter.dat 文件.
+FILE_PROP_WL:发现文件 '$1': 它列于白名单中用于 '$2' 检测.
 FILE_PROP_NO_RKH_REC:系统中存在文件 '$1' , 但是它不列于 the rkhunter.dat 文件.
 FILE_PROP_HASH_WL_INVALID:发现文件 '$1': 白名单的 hash 值 ($2) 与当前的 hash 值不匹配.
 FILE_PROP_CHANGED:文件属性已改变:
@@ -253,28 +261,28 @@ FILE_PROP_SYSHASH:当前 hash: $1
 FILE_PROP_RKHHASH:保存 hash : $1
 FILE_PROP_NO_RKHHASH:不能找到rkhunter.dat中文件'$1' 的hash值.
 FILE_PROP_NO_RKHPERM:不能找到rkhunter.dat中文件'$1' 的权限值.
-FILE_PROP_PERM_UNAVAIL:当前权限: 无法获取     储存的权限: $1
+FILE_PROP_PERM_UNAVAIL:当前权限: 无法获取   cvs -d:pserver:anonymous@rkhunter.cvs.sourceforge.net:/cvsroot/rkhunter   储存的权限: $1
 FILE_PROP_PERM:当前权限: $1    储存的权限: $2
 FILE_PROP_UID_UNAVAIL:当前 uid: 无法获取    储存的 uid: $1
 FILE_PROP_UID:当前 uid: $1    储存的 uid: $2
-FILE_PROP_NO_RKHUID:不能找到rkhunter.dat中文件'$1' 的 user-id 值.
-FILE_PROP_GID_UNAVAIL:当前 gid: 无法获取    储存的 gid: $1
-FILE_PROP_GID:当前 gid: $1    储存的 gid: $2
-FILE_PROP_NO_RKHGID:没发现rkhunter.dat所列文件 '$1'的 group-id 值.
+FILE_PROP_NO_RKHUID:在文件rkhunter.dat中没有找到文件 '$1' 的user-id值.
+FILE_PROP_GID_UNAVAIL:当前的 gid: 无法获取    保存的 gid: $1
+FILE_PROP_GID:当前的 gid: $1    保存的 gid: $2
+FILE_PROP_NO_RKHGID:在文件rkhunter.dat中没有找到文件 '$1' 的group-id值.
 FILE_PROP_INODE_UNAVAIL:当前的 inode: 无法获取    保存的 inode: $1
-FILE_PROP_INODE:当前 inode: $1    保存的 inode: $2
-FILE_PROP_NO_RKHINODE:没发现rkhunter.dat所列文件 '$1'的inode值
-FILE_PROP_SYSDTM_UNAVAIL:当前文件的修改时间: 无法获取
-FILE_PROP_SYSDTM:当前文件的修改时间: $1
-FILE_PROP_RKHDTM:储存的文件修改时间 : $1
-FILE_PROP_NO_RKHDTM:不能找到rkhunter.dat中文件'$1' 的修改时间
-FILE_PROP_NO_SYSATTR:不能获取文件 '$1'的当前属性
-FILE_PROP_WRITE:文件 '$1'的对所有用户都设置了写权限.
-FILE_PROP_SYSPERM_UNAVAIL:不能获取文件 '$1'当前的写属性
-FILE_PROP_IMMUT:File '$1' has the immutable-bit set.
-FILE_PROP_SCRIPT:命令 '$1' 已被脚本: $2 代替
+FILE_PROP_INODE:当前的 inode: $1    保存的 inode: $2
+FILE_PROP_NO_RKHINODE:在文件rkhunter.dat中没有找到文件 '$1' 的inode值.
+FILE_PROP_SYSDTM_UNAVAIL:当前的文件修改时间: 无法获取
+FILE_PROP_SYSDTM:当前文件修改时间: $1
+FILE_PROP_RKHDTM:保存的文件修改时间 : $1
+FILE_PROP_NO_RKHDTM:在文件rkhunter.dat中没有找到文件 '$1' 的修改时间值.
+FILE_PROP_NO_SYSATTR:无法获取 '$1' 的当前属性
+FILE_PROP_WRITE:文件 '$1'被设置为对所有用户可写.
+FILE_PROP_SYSPERM_UNAVAIL:无法获取文件 '$1' 的当前写权限
+FILE_PROP_IMMUT:文件 '$1' 被设置了 immutable-bit .
+FILE_PROP_SCRIPT:命令 '$1' 已经被脚本: $2 代替
 
-FILE_PROP_VRFY:包管理器检验已失效:
+FILE_PROP_VRFY:包管理器验证已失效:
 FILE_PROP_VRFY_HASH:文件hash值已改变
 FILE_PROP_VRFY_PERM:文件权限已改变
 FILE_PROP_VRFY_UID:文件的拥有者属性已改变
@@ -334,7 +342,7 @@ ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND:发现 login 后门文件: $1
 ROOTKIT_MALWARE_SUSP_DIR:检测可疑目录
 ROOTKIT_MALWARE_SUSP_DIR_LOG:执行可疑目录的检测
 ROOTKIT_MALWARE_SUSP_DIR_FOUND:发现可疑的目录: $1
-ROOTKIT_MALWARE_SFW_INTRUSION:Checking for software intrusions
+ROOTKIT_MALWARE_SFW_INTRUSION:检测软件入侵
 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND:文件 '$1' 中包含有字符串 '$2'. 可能存在rootkit: SHV5
 ROOTKIT_MALWARE_SFW_INTRUSION_SKIP:跳过检测 - tripwire 没有安装
 ROOTKIT_MALWARE_SNIFFER:检测 sniffer 日志文件
@@ -343,11 +351,11 @@ ROOTKIT_MALWARE_SNIFFER_FOUND:发现可疑的sniffer 日志文件: $1
 
 ROOTKIT_TROJAN_START:执行木马详细检测
 ROOTKIT_TROJAN_INETD:检测启动的 inetd 服务
-ROOTKIT_TROJAN_INETD_SKIP:Check skipped - file '$1' does not exist.
+ROOTKIT_TROJAN_INETD_SKIP:跳过检测 - 文件 '$1' 不存在.
 ROOTKIT_TROJAN_INETD_FOUND:发现已启动的 inetd 服务: $1
 ROOTKIT_TROJAN_XINETD:检测启动的 xinetd 服务
 ROOTKIT_TROJAN_XINETD_LOG:执行已启动的 xinetd 服务的检测
-ROOTKIT_TROJAN_XINETD_ENABLED:Checking '$1' for enabled services
+ROOTKIT_TROJAN_XINETD_ENABLED:在 '$1' 中检测已启动的服务
 ROOTKIT_TROJAN_XINETD_INCLUDE:发现 'include $1' 指令
 ROOTKIT_TROJAN_XINETD_INCLUDEDIR:发现 'includedir $1' 指令
 ROOTKIT_TROJAN_XINETD_ENABLED_FOUND:发现启动的 xinetd 服务: $1
@@ -417,7 +425,7 @@ HISTORY_CHECK_FOUND:Root 帐户 $1 shell 历史文件是一个符号链接: $2
 SYSTEM_CONFIGS_START:执行系统配置文件检测
 SYSTEM_CONFIGS_FILE:检测配置文件 $1 
 SYSTEM_CONFIGS_FILE_FOUND:发现 $1 配置文件: $2
-SYSTEM_CONFIGS_SSH_ROOT:检测root是否允许访问
+SYSTEM_CONFIGS_SSH_ROOT:检测SSH是否允许root访问
 SYSTEM_CONFIGS_SSH_ROOT_FOUND: SSH 和 rkhunter 的配置选顶应当相同:
 SYSTEM_CONFIGS_SSH_ROOT_FOUND1:SSH 配置选项 'PermitRootLogin': $1
 SYSTEM_CONFIGS_SSH_ROOT_FOUND2:Rkhunter 配置选项 'ALLOW_SSH_ROOT_USER': $1
@@ -431,7 +439,8 @@ SYSTEM_CONFIGS_SYSLOG:检测是否运行syslog daemon
 SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:syslog daemon 没有运行.
 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:The syslog daemon 没有运行, 但是已经发现一个metalog daemon.
 SYSTEM_CONFIGS_SYSLOG_NO_FILE:syslog daemon 正在运行, 但是无法发现配置文件.
-SYSTEM_CONFIGS_SYSLOG_REMOTE:检测是否允许 syslog remote logging SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog 配置文件允许远程登陆: $1
+SYSTEM_CONFIGS_SYSLOG_REMOTE:检测是否允许 syslog remote logging 
+SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog 配置文件允许远程登陆: $1
 SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter 配置选项 'ALLOW_SYSLOG_REMOTE_LOGGING' 已经生效.
 
 FILESYSTEM_START:执行文件系统检测
@@ -440,6 +449,7 @@ FILESYSTEM_DEV_CHECK_NO_DEV:/dev 不存在.
 FILESYSTEM_DEV_FILE_WL:发现文件 '$1': 它列于白名单中.
 FILESYSTEM_DEV_FILE_FOUND:在 ${1}中发现可疑文件:
 FILESYSTEM_HIDDEN_DIR_WL:发现隐藏的目录'$1': 它列于白名单中.名单中.
+FILESYSTEM_HIDDEN_FILE_WL:Found hidden file '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_CHECK:检测隐藏的文件和目录
 FILESYSTEM_HIDDEN_DIR_FOUND:发现隐藏的目录: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:发现隐藏的文件: $1
@@ -475,8 +485,8 @@ NETWORK_PROMISC_NO_IP:使用'ip' 命令检测Promiscuous 网络接口 - 无法�
 NETWORK_PROMISC_IF:可能的确promiscuous 接口:
 NETWORK_PROMISC_IF_1:'ifconfig' 命令输出: $1
 NETWORK_PROMISC_IF_2:'ip' 命令输出: $1
-NETWORK_PACKET_CAP_CHECK:检测 packet capturing applications
-NETWORK_PACKET_CAP_CHECK_NO_FILE:Packet capturing application 检测被跳过 - 文件 '$1' 丢失.
+NETWORK_PACKET_CAP_CHECK:检测 数据报捕捉程序
+NETWORK_PACKET_CAP_CHECK_NO_FILE:数据包检测程序检测被跳过 - 文件 '$1' 丢失.
 NETWORK_PACKET_CAP_FOUND:进程 '$1' (PID $2) 正在网络上监听.
 NETWORK_PACKET_CAP_WL:发现进程 '$1': 它列于白名单中.
 
@@ -484,13 +494,13 @@ SHARED_LIBS_START:执行 '共享库' 的检测
 SHARED_LIBS_PRELOAD_VAR:检测预装载变量
 SHARED_LIBS_PRELOAD_VAR_FOUND:发现预装载变量: $1
 SHARED_LIBS_PRELOAD_FILE:检测预装文件
-SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1
+SHARED_LIBS_PRELOAD_FILE_FOUND:发现library preload 文件: $1
 SHARED_LIBS_PATH:检测 LD_LIBRARY_PATH 变量
 SHARED_LIBS_PATH_BAD: LD_LIBRARY_PATH 环境变量被设置，它会影响二进制程序: 被设置为: $1
 
 SUSPSCAN_CHECK:检测具有可疑 contents 的文件
 SUSPSCAN_DIR_NOT_EXIST:目录 '$1' 不存在.
-SUSPSCAN_INSPECT:文件 '$1' (test score: $2) 包含一些可疑的内容，它应当被检测.
+SUSPSCAN_INSPECT:文件 '$1' (score: $2) 包含一些可疑的内容，它将被检测.
 SUSPSCAN_START:执行带有可疑contents文件的检测
 SUSPSCAN_DIRS:待检测目录是: $1
 SUSPSCAN_NO_DIRS:没有指定目录: 使用用默认 ($1)
@@ -498,24 +508,30 @@ SUSPSCAN_TEMP:使用临时文件夹: $1
 SUSPSCAN_NO_TEMP:没指定临刊文件夹: 使用用默认的 ($1)
 SUSPSCAN_TEMP_NOT_EXIST:The suspscan 临时目录不存在: $1
 SUSPSCAN_TEMP_NO_WRITE:The suspscan 临时目录不可写: $1
-SUSPSCAN_SIZE:检测最大的文件大小 (以bytes计): $1
+SUSPSCAN_SIZE:Maximum file size to check (in bytes): '$1'
 SUSPSCAN_NO_SIZE:没指定最大的文件大小: 使用默认值($1)
 SUSPSCAN_SIZE_INVALID:The suspscan 最大文件大小无效: $1
 SUSPSCAN_THRESH:Score 上限被设置为: $1
 SUSPSCAN_NO_THRESH:没有指定 score 上限: 使用默认值 ($1)
 SUSPSCAN_THRESH_INVALID:The suspscan score 上限是无效的: $1
-SUSPSCAN_DIR_CHECK:检查目录: $1
+SUSPSCAN_DIR_CHECK:检查目录: '$1'
 SUSPSCAN_DIR_CHECK_NO_FILES:没有合适的文件检查.
-SUSPSCAN_FILE_CHECK:检查文件: 名称: $1    Score: $2
-SUSPSCAN_FILE_SKIPPED_EMPTY:忽略文件: 空: $1
-SUSPSCAN_FILE_SKIPPED_LINK:忽略文件: 符号链接: $1
-SUSPSCAN_FILE_SKIPPED_TYPE:忽略文件 错误类型: $1: $2
-SUSPSCAN_FILE_SKIPPED_SIZE:忽略文件: 太大: $1
-SUSPSCAN_FILE_LINK_CHANGE:找到符号链接: $1 -> $2
+SUSPSCAN_FILE_CHECK:文件检测: Name: '$1' Score: $2
+SUSPSCAN_FILE_CHECK_DEBUG:文件检测: Name: '$1' Score: $2 Hitcount: $3 Hits: ($4)
+SUSPSCAN_FILE_SKIPPED_EMPTY:忽略文件: 空白: '$1'
+SUSPSCAN_FILE_SKIPPED_LINK:忽略文件: 符号连接: '$1'
+SUSPSCAN_FILE_SKIPPED_TYPE:忽略文件: 错误类型: '$1': '$2'
+SUSPSCAN_FILE_SKIPPED_SIZE:忽略文件: 太大: '$1'
+SUSPSCAN_FILE_LINK_CHANGE:发现符号连接: '$1' -> '$2'
 
 LIST_TESTS:有效的测试名:
 LIST_GROUPED_TESTS:分组检测名称:
 LIST_LANGS:可用的语言:
 LIST_RTKTS:检测rootkit
 
-
+#
+#If any problem related with this cn version message,please mail to 
+#linux_fqh@yahoo.com.cn.I will fix them as soon as possible.
+#如果有任何关于本中文版信息的问题，请联系linux_fqh@yahoo.com.cn
+＃我将尽快修正它们
+#

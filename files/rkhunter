@@ -6014,6 +6014,9 @@ suspscan() {
 				# Compressed or obfuscated:
 				elif [ -n "`echo \"${FTYPE}\" | grep 'corrupted section header size'`" ]; then
 					display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_TYPE "Possible UPX-compressed or obfuscated binary" "${SUSPSCAN_ITEM}"
+				# ELF ultimate compression kit (ELFuck)
+				elif [ -n "`echo \"${FTYPE}\" | grep 'invalid class invalid byte order'`" ]; then
+					display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_TYPE "Possible ELFuck obfuscated binary" "${SUSPSCAN_ITEM}"
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_SKIPPED_TYPE "${FTYPE}" "${SUSPSCAN_ITEM}"
 				fi # test file type
