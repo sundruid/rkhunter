@@ -71,8 +71,8 @@ EOF
 %post
 # Only do this on an initial install
 if [ $1 -eq 1 ]; then
-	%{__cp} -p /etc/passwd /var/lib/rkhunter/tmp >/dev/null 2>&1
-	%{__cp} -p /etc/group /var/lib/rkhunter/tmp >/dev/null 2>&1
+	%{__cp} -p /etc/passwd /var/lib/rkhunter/tmp >/dev/null 2>&1 || :
+	%{__cp} -p /etc/group /var/lib/rkhunter/tmp >/dev/null 2>&1 || :
 fi
 
 
