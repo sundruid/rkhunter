@@ -260,6 +260,8 @@
    file properties checks. For those systems with no 'readlink' command (e.g.
    Solaris), or those in which readlink does not understand the '-f' option
    (e.g. NetBSD), a shell script is now provided to support this.
+ - RPM spec file and installer now caters for x86_64 machines. Removing the
+   RPM now more fully removes RKH; only the rkhunter.conf file should remain.
 
  Bugfixes:
  - Command-line options requiring an argument now work correctly under Solaris.

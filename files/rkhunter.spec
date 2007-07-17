@@ -59,13 +59,29 @@ Rootkit Hunter is released as a GPL licensed project and free for everyone to us
 sh ./installer.sh --layout RPM --install
 
 
-# make a cron.daily file to mail us the reports
+# Make a cron.daily file to mail us the reports
 %{__mkdir} -p "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily"
 %{__cat} > "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily/01-rkhunter" <<EOF
 #!/bin/sh
 %{_bindir}/rkhunter --cronjob --rwo --nomow | /bin/mail -s 'rkhunter Daily Run' root
 EOF
 %{__chmod} a+rwx,g-w,o-rwx ${RPM_BUILD_ROOT}%{_sysconfdir}/cron.daily/01-rkhunter
+
+
+%post
+# Only do this on an initial install
+if [ $1 -eq 1 ]; then
+	%{__cp} -p /etc/passwd /var/lib/rkhunter/tmp >/dev/null 2>&1
+	%{__cp} -p /etc/group /var/lib/rkhunter/tmp >/dev/null 2>&1
+fi
+
+
+%preun
+# Only do this when removing the RPM
+if [ $1 -eq 0 ]; then
+	%{__rm} -f /var/log/rkhunter.log /var/log/rkhunter.log.old >/dev/null 2>&1
+	%{__rm} -rf /var/lib/rkhunter/* >/dev/null 2>&1
+fi
 
 
 %clean
@@ -95,7 +111,6 @@ fi
 %attr(750,root,root) %dir %{_var}/lib/%{name}/db/i18n
 %attr(640,root,root) %{_var}/lib/%{name}/db/i18n/*
 %attr(750,root,root) %dir %{_var}/lib/%{name}/tmp
-#%verify(user group mode) %{_var}/lib/%{name}/tmp/*
 %{_sysconfdir}/cron.daily/01-rkhunter
 
 

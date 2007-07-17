@@ -592,16 +592,16 @@ if [ -n "${STRIPROOT}" ]; then
 	done
 fi
 
-case "${RKHINST_LAYOUT}" in
-		RPM)	# Maybe this should be a %postinstall
-			;;
-		*) 
-			# Finally copy the passwd/group files to the TMP directory
-			# to avoid warnings when rkhunter is first run.
+# Finally copy the passwd/group files to the TMP directory
+# to avoid warnings when rkhunter is first run.
 
-			cp -p /etc/passwd ${RKHINST_TMP_DIR} >/dev/null 2>&1
-			cp -p /etc/group ${RKHINST_TMP_DIR} >/dev/null 2>&1
-			;;
+case "${RKHINST_LAYOUT}" in
+	RPM)	# This is done by a %post section in the spec file.
+		;;
+	*)
+		cp -p /etc/passwd ${RKHINST_TMP_DIR} >/dev/null 2>&1
+		cp -p /etc/group ${RKHINST_TMP_DIR} >/dev/null 2>&1
+		;;
 esac
 
 echo "Installation finished."
@@ -700,6 +700,9 @@ if [ "${RKHINST_LAYOUT}" = "oldschool" ]; then
 		echo "Note: The directory '/usr/local/rkhunter' still exists."
 	fi
 fi
+
+# Remove any old log files.
+rm -f /var/log/rkhunter.log /var/log/rkhunter.log.old >/dev/null 2>&1
 
 echo ""
 echo "Done removing files. Please double-check."
