@@ -9908,6 +9908,8 @@ do_system_check() {
 
 	if [ -n "$SECONDS" ]; then
 		BEGINTIME=$SECONDS
+	elif [ $BSDOS -eq 1 ]; then
+		BEGINTIME=`date +%s`
 	elif [ -n "${PERL_CMD}" ]; then
 		BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 	fi
@@ -9966,6 +9968,8 @@ do_system_check() {
 	if [ $BEGINTIME -ne 0 ]; then
 		if [ -n "$SECONDS" ]; then
 			ENDTIME=$SECONDS
+		elif [ $BSDOS -eq 1 ]; then
+			ENDTIME=`date +%s`
 		else
 			ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 		fi
@@ -11412,10 +11416,15 @@ fi
 
 
 if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
-	if [ -h "${DB_PATH}/rkhunter.dat" ]; then
-		echo "The rkhunter.dat file is a symbolic link: ${DB_PATH}/rkhunter.dat"
-		echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
-		exit 1
+	if [ -e "${DB_PATH}/rkhunter.dat" ]; then
+		if [ -h "${DB_PATH}/rkhunter.dat" ]; then
+			echo "The rkhunter.dat file is a symbolic link: ${DB_PATH}/rkhunter.dat"
+			echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
+			exit 1
+		elif [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
+			echo "The rkhunter.dat file is not a file: ${DB_PATH}/rkhunter.dat"
+			exit 1
+		fi
 	fi
 
 
@@ -11431,7 +11440,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	# hash function and package manager.
 	#
 
-	if [ -f "${DB_PATH}/rkhunter.dat" ]; then
+	if [ -s "${DB_PATH}/rkhunter.dat" ]; then
 		OLD_HASH_FUNC=`grep '^Hash:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
 
 		OLD_PKGMGR=`grep '^Pkgmgr:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
@@ -11743,16 +11752,18 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 	fi
 
-	if [ "${OLD_HASH_FUNC}" = "Disabled" ]; then
-		display --to LOG --type INFO HASH_FUNC_OLD_DISABLED
-	else
-		display --to LOG --type INFO HASH_FUNC_OLD "${OLD_HASH_FUNC}"
-	fi
+	if [ -s "${DB_PATH}/rkhunter.dat" ]; then
+		if [ "${OLD_HASH_FUNC}" = "Disabled" ]; then
+			display --to LOG --type INFO HASH_FUNC_OLD_DISABLED
+		else
+			display --to LOG --type INFO HASH_FUNC_OLD "${OLD_HASH_FUNC}"
+		fi
 
-	if [ -z "${OLD_PKGMGR}" ]; then
-		display --to LOG --type INFO HASH_PKGMGR_OLD_UNSET
-	else
-		display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}"
+		if [ -z "${OLD_PKGMGR}" ]; then
+			display --to LOG --type INFO HASH_PKGMGR_OLD_UNSET
+		else
+			display --to LOG --type INFO HASH_PKGMGR_OLD "${OLD_PKGMGR}"
+		fi
 	fi
 
 	display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
