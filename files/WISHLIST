@@ -21,16 +21,11 @@
 #
 #################################################################################
 #
-
-Stale:
- - the defaulthashes.dat file will be deprecated in the next release in
-   favour of locally generated hashes using the community-supplied hashupd
- - the os.dat file will be deprecated in the next release, since it is only
-   used by defaulthashes.dat.
+ Project:
+ - more dedicated medior developers
+ - more dedicated testers
 
  Important:
- - Make a 'whereis' function for the installer
- - Make the installer FSSTND or FHS or whatever-else-goes compliant.
  - Add MD5 check for unknown OSes
  - Add/improve Tuxkit
  - Missing hashes for any releases of supported O.S.es
@@ -43,12 +38,7 @@ Stale:
  - Black/whitelisting of LKM/KLD
  
  Processes:
- - Black/whitelisting of processes
  - Check for multiple instances of tools (like file, ls, ps, find)
-
- Scanning:
- - Check Perl (and configuration) when Perl tests are used
- - Implement string scanner into main scanner
 
  Support:
  - Set lo interface into promisc mode to test ifconfig
@@ -56,23 +46,14 @@ Stale:
  - Option to use Perl modules on a different place than the usual
    (requested by Henk Wevers)
  - Debian package (.deb)
- - Improve translation (and add it to main script)
  
  Misc:
- - Multi-language (checker and website)
- - Make installation optional, so rkhunter can run without installing
- - Create more documentation
  - Scanning of multiple machines by using a central server
- - Add debuglevels (also for use with logfile)
- - Add checksums for all databases and scripts
  - Add support for SSH version of SSH.com
  
  Website:
- - Reporting tool for trojaned binaries
- - Create a static download URL for releases (rkhunter-latest.tar.gz), after setting up mirrors..
  - Adding comparision between Rootkit Hunter and other projects (pros/cons).
-   *** Maybe someone would like to help us with this? I would like an objective comparison, not
-       a commercial bullsh*t comparison which tells all other competitors are bad ;-)
+   *** Maybe someone would like to help us with this? I would like an objective comparison.
 
  NetBSD:
  - Remove whereis parameter '-b' (doesn't exist)
