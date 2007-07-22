@@ -6003,7 +6003,7 @@ suspscan() {
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
 							display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"
 						fi
-					#fi
+					fi
 
 					if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
 						display --to LOG --type WARNING SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"
