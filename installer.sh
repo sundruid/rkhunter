@@ -120,7 +120,7 @@ showExamples() { # Show examples
 	exit 1
 }
 
-showVersion() { echo "${INSTALLER_NAME} ${INSTALL_VERSION} ${INSTALLER_LICENSE}"; exit 1; }
+showVersion() { echo "${INSTALLER_NAME} ${INSTALLER_VERSION} ${INSTALLER_LICENSE}"; exit 1; }
 
 selectTemplate() { # Take input from the "--installdir parameter"
 case "$1" in

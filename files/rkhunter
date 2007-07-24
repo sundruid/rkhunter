@@ -7963,7 +7963,7 @@ linux_specific_checks() {
 	#
 
 	if [ -z "${RKHROOTDIR}" ]; then
-		LKMPATH="${RKHROOTDIR}/lib/modules/`uname -r 2>/dev/null`"
+		LKMPATH="/lib/modules/`uname -r 2>/dev/null`"
 	else
 		LKMPATH="${RKHROOTDIR}/lib/modules"
 	fi
