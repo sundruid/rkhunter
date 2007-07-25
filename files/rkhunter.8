@@ -49,6 +49,9 @@ of any of its text data files. A command\-line web browser, for example
 It is suggested that this command option is run regularly in order to ensure
 that the data files are kept up to date.
 
+If this option is used via cron, then it is recommended that the \fB\-\-nocolors\fP
+option is also used.
+
 An exit code of zero for this command option means that no updates were
 available. An exit code of one means that a download error occurred, and a code
 of two means that no error occurred but updates were available and have been
@@ -74,6 +77,9 @@ has changed, and the \fB\-\-propupd\fP command option is used, then
 This command option causes \fBrkhunter\fP to check if there is a later version
 of the program. A command\-line web browser must be present on the system when
 using this option.
+
+If this option is used via cron, then it is recommended that the \fB\-\-nocolors\fP
+option is also used.
 
 An exit code of zero for this command option means that no new version was
 available. An exit code of one means that an error occurred downloading the
@@ -142,7 +148,7 @@ to specify a different pathname.
 This is similar to the \fB\-\-check\fP command option, but it disables several
 of the interactive options. When this option is used \fB\-\-check\fP,
 \fB\-\-nocolors\fP and \fB\-\-skip-keypress\fP are assumed. By default no output
-is sent to stdout, so the \fB\-\-report-warnings-only\fP option may be useful
+is sent to stdout, so the \fB\-\-report\-warnings\-only\fP option may be useful
 with this option.
 
 .IP "\fB\-\-dbdir <directory>\fP"
@@ -152,9 +158,10 @@ to specify a different directory.
 
 .IP \fB\-\-debug\fP
 This is a special option mainly for the developers. It produces no output on
-stdout. If debugging must be used make sure it is the first command\-line switch.
-Regular logging will continue per default or as specified by the \fB\-\-logfile\fP 
-command option and debug output will be in /tmp/rkhunter-debug.
+stdout. If debugging must be used, then make sure that it is the first command\-line
+switch. Regular logging will continue as per default or as specified by the
+\fB\-\-logfile\fP option, and debug output will be in the file
+\fI/tmp/rkhunter\-debug\fP.
 
 .IP "\fB\-\-disable <test>[,<test>...]\fP"
 This option tells \fBrkhunter\fP not to run the specified tests. If this

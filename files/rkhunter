@@ -41,7 +41,15 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 fi
 
 if [ "$1" = "--debug" ]; then
-	rm -f /tmp/rkhunter-debug >/dev/null 2>&1
+	if [ -e "/tmp/rkhunter-debug" ]; then
+		if [ -f "/tmp/rkhunter-debug" -a ! -h "/tmp/rkhunter-debug" ]; then
+			rm -f /tmp/rkhunter-debug >/dev/null 2>&1
+		else
+			echo "Cannot use '--debug' option. /tmp/rkhunter-debug already exists, and it is not a file."
+			exit 1
+		fi
+	fi
+
 	exec 1>/tmp/rkhunter-debug 2>&1
 	set -x
 fi
@@ -353,7 +361,14 @@ display() {
 		if [ $WRITETOTTY -eq 1 ]; then
 			LINE1_NUM=`echo "${LINE1}" | wc -c | tr -d ' '`
 			NUM_SPACES=`expr 62 - ${LINE1_NUM}`
-			LINE1="${LINE1}\033[${NUM_SPACES}C[ ${COLOR}${RESULT}${NORMAL} ]"
+			test $NUM_SPACES -lt 1 && NUM_SPACES=1
+
+			if [ $COLORS -eq 0 ]; then
+				SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
+				LINE1="${LINE1}${SPACES}[ ${RESULT} ]"
+			else
+				LINE1="${LINE1}\033[${NUM_SPACES}C[ ${COLOR}${RESULT}${NORMAL} ]"
+			fi
 		fi
 
 		if [ $WRITETOLOG -eq 1 ]; then
@@ -2576,11 +2591,10 @@ get_configfile_options() {
 	# properties database.
 	#
 
-	if [ $HASH_CHECK_ENABLED -eq 1 -o $PROP_UPDATE -eq 1 ]; then
-
+	if `check_test properties` || test $PROP_UPDATE -eq 1; then
 		#
-		# For the file properties hash check we need to find out
-		# if we are a prelinked system, and if so, then find out
+		# For the file properties check we need to find out if
+		# we are a prelinked system, and if so, then find out
 		# which hash function to use. We also need to find the
 		# 'stat' command.
 		#

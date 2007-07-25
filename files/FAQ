@@ -264,8 +264,8 @@ A.   You can create a cronjob script like this:
 
           #!/bin/sh
 
-          ( /usr/local/bin/rkhunter --versioncheck
-            /usr/local/bin/rkhunter --update
+          ( /usr/local/bin/rkhunter --versioncheck --nocolors
+            /usr/local/bin/rkhunter --update --nocolors
             /usr/local/bin/rkhunter --cronjob --rwo --nomow
           ) | /bin/mail -s 'rkhunter Daily Run' root
 
