@@ -10871,6 +10871,8 @@ ROTATE_MIRRORS=1
 UPDATE_MIRRORS=1
 MIRRORS_MODE=0
 
+# By default suspscan verbose logging should be initialised and off.
+SUSPSCAN_DEBUG=0
 
 ######################################################################
 #

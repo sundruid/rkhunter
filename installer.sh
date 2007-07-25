@@ -413,6 +413,9 @@ if [ -e "${PREFIX}" ]; then
 				find ./files -type d -name CVS | while read DIR; do
 					rm -rf "${DIR}"
 				done
+				find ./files -type f -name Entries -o -name Repository -o -iname Root | while read FILE; do
+					rm -rf "${FILE}"
+				done
 				find ./files -type f | while read ITEM; do
 					case "${ITEM}" in
 						*.sh|*.pl|rkhunter)
