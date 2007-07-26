@@ -2049,18 +2049,19 @@ get_if_prelinked() {
 		elif [ -z "${LIBSAFE_TEST1}" -a -z "${LIBSAFE_TEST2}" ]; then
 			PRELINKED=1
 
-			# Only use 'runcon' in SELinux is enabled.
+			#
+			# Only use 'runcon' if SELinux is enabled.
+			#
+
 			SESTATUS_CMD=`find_cmd sestatus`
-			${RUNCON_CMD}|grep -q disabled||USE_RUNCON=1
 
-			if [ ${USE_RUNCON} -eq 1 ]; then
-				RUNCON_CMD=`find_cmd runcon`
-
-				if [ -n "${RUNCON_CMD}" ]; then
-					PRELINK_CMD="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD}"
+			if [ -n "${SESTATUS_CMD}" ]; then
+				if [ -n "`${SESTATUS_CMD} 2>/dev/null | grep ' status: *enabled$'`" ]; then
+					SELINUX_ENABLED=1
+					RUNCON_CMD=`find_cmd runcon`
+					test -n "${RUNCON_CMD}" && USE_RUNCON=1
 				fi
 			fi
-
 		elif [ -n "${LIBSAFE_TEST1}" -a -n "${LIBSAFE_TEST2}" ]; then
 			SKIP_HASH_MSG=3
 		fi
@@ -2084,7 +2085,12 @@ get_md5_hash_function() {
 
 	if [ $PRELINKED -eq 1 ]; then
 		test $1 -eq 1 && PRELINK_HASH="MD5"
-		echo "${PRELINK_CMD} --verify --md5"
+
+		if [ $USE_RUNCON -eq 1 ]; then
+			echo "${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify --md5"
+		else
+			echo "${PRELINK_CMD} --verify --md5"
+		fi
 	else
 		HFUNC=`find_cmd md5sum`
 
@@ -2146,7 +2152,12 @@ get_hash_function() {
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "SHA1" ]; then
 		if [ $PRELINKED -eq 1 ]; then
 			PRELINK_HASH="SHA1"
-			HASH_FUNC="${PRELINK_CMD} --verify --sha"
+
+			if [ $USE_RUNCON -eq 1 ]; then
+				HASH_FUNC="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify --sha"
+			else
+				HASH_FUNC="${PRELINK_CMD} --verify --sha"
+			fi
 		else
 			HF=`find_cmd sha1sum`
 
@@ -10260,10 +10271,10 @@ set_file_prop_dirs_files() {
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
 	    newsyslog nologin passwd perl pkgdb pkg_info prelink ps pstree pwck
-	    pwd readlink rkhunter rmmod rpm runcon runlevel sed sh sha1 sha1sum
-	    size skdet slocate sockstat sort stat strace strings su sudo sulogin
-	    sysctl syslogd systat tail tcpd test top touch tr uname unhide uniq
-	    useradd userdel usermod users vipw vmstat w watch wc wget whatis
+	    pwd readlink rkhunter rmmod rpm runcon runlevel sed sestatus sh sha1
+	    sha1sum size skdet slocate sockstat sort stat strace strings su sudo
+	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname unhide
+	    uniq useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"
 
 
@@ -10754,7 +10765,7 @@ TOTAL_SCANTIME=""
 # This will be set if a warning message is logged.
 WARNING_COUNT=0
 
-# Set if grsec is installed.
+# Set if grsecurity is installed.
 GRSECINSTALLED=0
 
 # Ksyms or kallsyms file used in some checks.
@@ -10897,6 +10908,7 @@ SUSPSCAN_DEBUG=0
 
 # SELinux runcon usage as determined by get_if_prelinked.
 USE_RUNCON=0
+SELINUX_ENABLED=0
 
 ######################################################################
 #
@@ -11556,7 +11568,7 @@ fi
 
 
 #
-# See if we have GRSEC installed.
+# See if we have grsecurity installed.
 #
 
 if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "`uname -a | grep 'grsec'`" ]; then
@@ -11736,15 +11748,24 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	if [ $PRELINKED -eq 1 ]; then
 		display --to LOG --type INFO SYS_PRELINK
 
-		RKHTMPVAR="${PRELINK_CMD}"
-		test -n "${RUNCON_CMD}" && RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^.* unconfined_t -- //'`
+		display --to LOG --type INFO FOUND_CMD 'prelink' "${PRELINK_CMD}"
 
-		display --to LOG --type INFO FOUND_CMD 'prelink' "${RKHTMPVAR}"
+		if [ -n "${SESTATUS_CMD}" ]; then
+			display --to LOG --type INFO FOUND_CMD 'sestatus' "${SESTATUS_CMD}"
 
-		if [ -n "${RUNCON_CMD}" ]; then
-			display --to LOG --type INFO FOUND_CMD 'runcon' "${RUNCON_CMD}"
+			if [ $SELINUX_ENABLED -eq 1 ]; then
+				display --to LOG --type INFO SYS_SELINUX
+
+				if [ $USE_RUNCON -eq 1 ]; then
+					display --to LOG --type INFO FOUND_CMD 'runcon' "${RUNCON_CMD}"
+				else
+					display --to LOG --type INFO NOT_FOUND_CMD 'runcon'
+				fi
+			else
+				display --to LOG --type INFO SYS_NO_SELINUX
+			fi
 		else
-			display --to LOG --type INFO NOT_FOUND_CMD 'runcon'
+			display --to LOG --type INFO NOT_FOUND_CMD 'sestatus'
 		fi
 
 		if [ "${HASH_FUNC}" = "NONE" ]; then

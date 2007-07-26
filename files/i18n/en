@@ -1,4 +1,4 @@
-Version:2007071001
+Version:2007072601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -84,6 +84,8 @@ NOT_FOUND_CMD:Unable to find the '$1' command
 
 SYS_PRELINK:System is using prelinking
 SYS_NO_PRELINK:System is not using prelinking
+SYS_SELINUX:SELinux is enabled
+SYS_NO_SELINUX:SELinux is disabled
 
 HASH_FUNC_PRELINK:Using prelink command (with $1) for file hash checks
 HASH_FUNC_PERL:Using the perl $1 module for the file hash checks
@@ -115,7 +117,7 @@ ATTRUPD_OLD_DISABLED:Previous file attributes were disabled: no file attributes 
 ATTRUPD_OLD_NOSTATCMD:Previous file attributes were disabled: no 'stat' command found: no file attributes were stored
 ATTRUPD_OLD_OK:Previous file attributes were stored
 
-GRSECINSTALLED:Found GRSEC installed
+GRSECINSTALLED:Found grsecurity installed
 
 SYSLOG_ENABLED:Using syslog for some logging - facility/priority level is '$1'.
 SYSLOG_DISABLED:Disabling use of syslog at users request.
