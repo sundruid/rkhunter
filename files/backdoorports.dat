@@ -1,8 +1,10 @@
-Version:2006120900
+Version:2007080301
 #
 # Syntax: <port>:<description>:protocol
 #
-# Note: Descriptions cannot contain any colon (:) characters.
+# Note: The port number must be between 1 and 65535 inclusive.
+#       Descriptions cannot contain any colon (:) characters.
+#       The protocol must be UDP or TCP.
 #
 
 2001:Scalper:UDP:

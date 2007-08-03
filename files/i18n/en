@@ -1,4 +1,4 @@
-Version:2007072601
+Version:2007080301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -476,7 +476,8 @@ NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) 
 NETWORK_PORTS_FILE_MISSING:If it has been deleted, then you will need to run 'rkhunter --update'.
 NETWORK_PORTS_FILE_NO_NETSTAT:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_NO_NETSTAT:Unable to find the 'netstat' command
-NETWORK_PORTS:Checking for $1 port ${2}
+NETWORK_PORTS:Checking for $1 port $2
+NETWORK_PORTS_WHITELIST:Network $1 port $2 is being used: it is whitelisted.
 NETWORK_PORTS_FOUND:Network $1 port $2 is being used. Possible rootkit: $3
 NETWORK_PORTS_FOUND:Run the 'netstat -an' command to check this.
 NETWORK_INTERFACE_START:Performing checks on the network interfaces

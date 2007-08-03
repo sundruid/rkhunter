@@ -2016,6 +2016,59 @@ get_xinetd_option() {
 }
 
 
+get_ports_option() {
+
+	#
+	# Get the option from the configuration file, and do some
+	# checks that it is valid.
+	#
+
+	PORT_WHITELIST=`grep '^PORT_WHITELIST=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${PORT_WHITELIST}" ]; then
+		PORT_WHITELIST=`echo "${PORT_WHITELIST}" | sed -e 's/PORT_WHITELIST=//' | tr -d '"' | tr ',' ' ' | tr -s ' ' | tr '[a-z]' '[A-Z]'`
+
+		if [ -z "${PORT_WHITELIST}" -o "${PORT_WHITELIST}" = " " ]; then
+			echo "Invalid PORT_WHITELIST configuration option - no ports specified."
+			exit 1
+		fi
+
+
+		#
+		# At this point we should have a spaced-separated list of
+		# 'protocol:port' pairs. We loop through the list checking
+		# that it all looks okay.
+		#
+
+		RKHTMPVAR2=0
+
+		for RKHTMPVAR in ${PORT_WHITELIST}; do
+			PROTO=`echo ${RKHTMPVAR} | cut -d: -f1`
+			PORT=`echo ${RKHTMPVAR} | cut -d: -f2`
+
+			if [ "${PROTO}" != "UDP" -a "${PROTO}" != "TCP" ]; then
+				RKHTMPVAR2=1
+				echo "Invalid protocol specified in PORT_WHITELIST configuration option: ${RKHTMPVAR}"
+			fi
+
+			if [ -z "`echo ${PORT} | grep '^[1-9][0-9]*$'`" ]; then
+				RKHTMPVAR2=1
+				echo "Non-numeric port specified in PORT_WHITELIST configuration option: ${RKHTMPVAR}"
+			elif [ $PORT -gt 65535 ]; then
+				RKHTMPVAR2=1
+				echo "Invalid port specified in PORT_WHITELIST configuration option: ${RKHTMPVAR}"
+			fi
+		done
+
+		test $RKHTMPVAR2 -eq 1 && exit 1
+
+		PORT_WHITELIST=" ${PORT_WHITELIST} "
+	fi
+
+	return
+}
+
+
 get_if_prelinked() {
 
 	#
@@ -2600,6 +2653,8 @@ get_configfile_options() {
 		check_test attributes && HASH_CHECK_ENABLED=1
 
 		check_test trojans && get_xinetd_option
+
+		check_test ports && get_ports_option
 	fi
 
 
@@ -8200,28 +8255,51 @@ do_network_port_checks() {
 		PROTO=`echo ${LINE} | cut -d: -f3 | tr '[a-z]' '[A-Z]'`
 
 		if [ -n "`echo \"${PORT}\" | grep -v '^[0-9]'`" ]; then
-			echo "Error: Invalid port in backdoorports.dat: $LINE"
+			echo "Error: Invalid port in backdoorports.dat file: $LINE"
 			continue
 		elif [ "${PROTO}" != "UDP" -a "${PROTO}" != "TCP" ]; then
-			echo "Error: Invalid protocol in backdoorports.dat: $LINE"
+			echo "Error: Invalid protocol in backdoorports.dat file: $LINE"
 			continue
 		fi
 
+		FOUND=""
+
 		case "${OPERATING_SYSTEM}" in
 		Linux)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} "`
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
 			;;
 		*BSD|Darwin)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} "`
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
 			;;
-		AIX|SunOS)
+		AIX)
 			if [ "${PROTO}" = "UDP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | grep "\.${PORT} "`
+				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
 			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | egrep 'BOUND|ESTABLISH|LISTEN' | grep "\.${PORT} "`
+				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}\$"`
+			fi
+			;;
+		SunOS)
+			if [ "${PROTO}" = "UDP" ]; then
+				FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+
+				if [ -z "${FOUND}" ]; then
+					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+				fi
+			elif [ "${PROTO}" = "TCP" ]; then
+				FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+
+				if [ -z "${FOUND}" ]; then
+					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+				fi
 			fi
 			;;
 		esac
+
+		if [ -n "${FOUND}" ]; then
+			if [ -n "`echo \"${PORT_WHITELIST}\" | grep \" ${PROTO}:${PORT} \"`" ]; then
+				FOUND="whitelisted"
+			fi
+		fi
 
 
 		#
@@ -8229,6 +8307,9 @@ do_network_port_checks() {
 		#
 
 		if [ -z "${FOUND}" ]; then
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+		elif [ "${FOUND}" = "whitelisted" ]; then
+			display --to LOG --type INFO NETWORK_PORTS_WHITELIST "${PROTO}" "${PORT}"
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
 		else
 			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NETWORK_PORTS "${PROTO}" "${PORT}"
