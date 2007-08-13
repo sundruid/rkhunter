@@ -2469,6 +2469,9 @@ get_rc_options() {
 			elif [ ! -r "${RKHROOTDIR}${RKHTMPVAR}" ]; then
 				echo "Local system startup file is not readable: ${RKHROOTDIR}${RKHTMPVAR}"
 				exit 1
+			elif [ ! -s "${RKHROOTDIR}${RKHTMPVAR}" ]; then
+				echo "Local system startup file is empty: ${RKHROOTDIR}${RKHTMPVAR}"
+				exit 1
 			fi
 		done
 	fi
@@ -2578,6 +2581,46 @@ get_mirror_options() {
 }
 
 
+get_os_version_option() {
+
+	#
+	# This function gets the O/S 'release' file pathname
+	# from the configuration file. There is no default.
+	#
+
+	OS_VERSION_FILE=`grep '^OS_VERSION_FILE=' ${CONFIGFILE} | tail -1`
+
+	if [ -n "${OS_VERSION_FILE}" ]; then
+		OS_VERSION_FILE=`echo "${OS_VERSION_FILE}" | sed -e 's/OS_VERSION_FILE=//' | tr -d '"' | tr -s ' '`
+
+		if [ -z "${OS_VERSION_FILE}" -o "${OS_VERSION_FILE}" = " " ]; then
+			echo "Invalid OS_VERSION_FILE configuration option - no pathname specified."
+			exit 1
+		fi
+
+		#
+		# Now check that the given option is useable.
+		#
+
+		if [ ! -f "${RKHROOTDIR}${OS_VERSION_FILE}" ]; then
+			echo "O/S release file does not exist: ${RKHROOTDIR}${OS_VERSION_FILE}"
+			exit 1
+		elif [ -h "${RKHROOTDIR}${OS_VERSION_FILE}" ]; then
+			echo "O/S release file is a symbolic link: ${RKHROOTDIR}${OS_VERSION_FILE}"
+			exit 1
+		elif [ ! -r "${RKHROOTDIR}${OS_VERSION_FILE}" ]; then
+			echo "O/S release file is not readable: ${RKHROOTDIR}${OS_VERSION_FILE}"
+			exit 1
+		elif [ ! -s "${RKHROOTDIR}${OS_VERSION_FILE}" ]; then
+			echo "O/S release file is empty: ${RKHROOTDIR}${OS_VERSION_FILE}"
+			exit 1
+		fi
+	fi
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
@@ -2675,6 +2718,8 @@ get_configfile_options() {
 		get_if_prelinked
 
 		test $SKIP_HASH_MSG -eq 0 && get_hash_function
+
+		get_os_version_option
 	fi
 
 
@@ -2744,7 +2789,11 @@ rkh_dat_get_os_info() {
 
 	ARCH=`uname -m 2>/dev/null`
 
-	REL_FILES="${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/lunar.release ${RKHROOTDIR}/etc/ROCK-VERSION ${RKHROOTDIR}/etc/GoboLinuxVersion ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
+	if [ -n "${OS_VERSION_FILE}" ]; then
+		REL_FILES="${RKHROOTDIR}${OS_VERSION_FILE}"
+	else
+		REL_FILES="${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/lunar.release ${RKHROOTDIR}/etc/ROCK-VERSION ${RKHROOTDIR}/etc/GoboLinuxVersion ${RKHROOTDIR}/etc/kanotix-version ${RKHROOTDIR}/etc/sidux-version ${RKHROOTDIR}/etc/knoppix-version ${RKHROOTDIR}/etc/zenwalk-version ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
+	fi
 
 	for FNAME in ${REL_FILES}; do
 		if [ -f "${FNAME}" -a ! -h "${FNAME}" ]; then
@@ -2758,8 +2807,6 @@ rkh_dat_get_os_info() {
 				GENTOO=1
 				if [ -h ${RKHROOTDIR}/etc/make.profile ]; then
 					OSNAME="Gentoo `ls -l ${RKHROOTDIR}/etc/make.profile 2>/dev/null | sed -e 's/^.*\/\([^\/]*\)$/\1/'`"
-				else
-					OSNAME=`head -n 1 ${RELEASE} | tr -s ' '`
 				fi
 				;;
 			${RKHROOTDIR}/var/ipcop/general-functions.pl)
@@ -2771,22 +2818,34 @@ rkh_dat_get_os_info() {
 			${RKHROOTDIR}/etc/GoboLinuxVersion)
 				OSNAME="GoboLinux `cat ${RELEASE}`"
 				;;
+			${RKHROOTDIR}/etc/knoppix-version)
+				OSNAME="Knoppix `cat ${RELEASE}`"
+				;;
+			${RKHROOTDIR}/etc/zenwalk-version)
+				OSNAME="Zenwalk `cat ${RELEASE}`"
+				;;
 			*)
-				OSNAME=`head -n 1 ${RELEASE} | tr -s ' '`
+				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head -n 1`
 				;;
 			esac
 
-			test "${OSNAME}" = " " && OSNAME=""
+
+			#
+			# Strip out any leading blanks and tabs
+			# from the O/S version.
+			#
+
+			test -n "${OSNAME}" && OSNAME=`echo "${OSNAME}" | sed -e 's/^[ 	]*//'`
 
 
 			#
-			# If we have a release file but the first line seems
-			# to be blank, we take a quick look at the second
-			# line.
+			# If we have a release file but it seems to be blank,
+			# we take a look for the first non-blank line. We
+			# then, again, strip out any leading blanks and tabs.
 			#
 
-			if [ -z "${OSNAME}" -a `wc -l ${RELEASE} | awk '{ print $1 }'` -gt 1 ]; then
-				OSNAME=`head -n 2 ${RELEASE} | tail -1 | tr -s ' '`
+			if [ -z "${OSNAME}" ]; then
+				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head -n 1 | sed -e 's/^[ 	]*//'`
 			fi
 
 			test -n "${OSNAME}" && break
@@ -2826,6 +2885,19 @@ rkh_dat_get_os_info() {
 		OSNAME="IBM AIX `oslevel 2>/dev/null`"
 		;;
 	esac
+
+
+	#
+	# If we still have no O/S version information, then as a last
+	# resort we will look to see if an 'issue' file exists. We test
+	# this last because it is not necessarily reliable in providing
+	# the O/S version.
+	#
+
+	if [ -z "${OSNAME}" -a -f "${RKHROOTDIR}/etc/issue" ]; then
+		OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/issue | head -n 1 | sed -e 's/^[ 	]*//'`
+		test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/issue"
+	fi
 
 	return
 }
@@ -7664,9 +7736,17 @@ sol10_inetd() {
 
 	if [ -f "${RKHROOTDIR}${INETD_CONF_PATH}" ]; then
 		STR=`grep -v '^#' ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
-		if [ -n "${FOUNDSTRING}" -o -n "${STR}" ]; then
-			FOUNDSTRING="${FOUNDSTRING} ${STR}"
-		fi
+
+		#
+		# Remove any inetd services which we already know
+		# about from inetadm.
+		#
+
+		for RKHTMPVAR in ${STR}; do
+			if [ -z "`echo \"${FOUNDSTRING}\" | grep \"/${RKHTMPVAR}/\"`" ]; then
+				FOUNDSTRING="${FOUNDSTRING} ${RKHTMPVAR}"
+			fi
+		done
 	fi
 
 	return
@@ -10991,6 +11071,10 @@ SUSPSCAN_DEBUG=0
 USE_RUNCON=0
 SELINUX_ENABLED=0
 
+# The O/S 'release' file location.
+OS_VERSION_FILE=""
+
+
 ######################################################################
 #
 # Command-line option processing
@@ -11428,6 +11512,9 @@ if [ ! -f "${CONFIGFILE}" ]; then
 	exit 1
 elif [ ! -r "${CONFIGFILE}" ]; then
 	echo "Configuration file is not readable: ${CONFIGFILE}"
+	exit 1
+elif [ ! -s "${CONFIGFILE}" ]; then
+	echo "Configuration file is empty: ${CONFIGFILE}"
 	exit 1
 fi
 
