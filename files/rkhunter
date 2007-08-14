@@ -5125,10 +5125,6 @@ file_properties_check() {
 	# each file. We may as well just do it the once here.
 	#
 
-	if [ $SKIP_HASH -eq 0 ]; then
-		HASHWHITELIST=`grep '^HASHWHITELIST=' ${CONFIGFILE} | sed -e 's/HASHWHITELIST=//g'`
-	fi
-
 	if [ $SKIP_ATTR -eq 0 ]; then
 		ATTRWHITELIST=`grep '^ATTRWHITELIST=' ${CONFIGFILE} | sed -e 's/ATTRWHITELIST=//g'`
 		WRITEWHITELIST=`grep '^WRITEWHITELIST=' ${CONFIGFILE} | sed -e 's/WRITEWHITELIST=//g'`
@@ -5385,24 +5381,7 @@ file_properties_check() {
 
 						RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
 
-						if [ -z "${RKHHASH}" ]; then
-							TEST_RESULT="${TEST_RESULT} norkhhash"
-						else
-							for WHITELISTFILE in ${HASHWHITELIST}; do
-								WL_FILE=`echo ${WHITELISTFILE} | cut -d: -f1`
-								WL_HASH=`echo ${WHITELISTFILE} | cut -d: -f2`
-
-								if [ "${RKHROOTDIR}${WL_FILE}" = "${DIR}/${FNAME}" ]; then
-									if [ "${WL_HASH}" = "${RKHHASH}" ]; then
-										WHITELIST_RESULT="${WHITELIST_RESULT} hash"
-									else
-										TEST_RESULT="${TEST_RESULT} hwlinvalid"
-									fi
-
-									break
-								fi
-							done
-						fi
+						test -z "${RKHHASH}" && TEST_RESULT="${TEST_RESULT} norkhhash"
 
 						if [ -z "${TEST_RESULT}" ]; then
 							#
@@ -5874,10 +5853,6 @@ file_properties_check() {
 
 					display --to LOG --type INFO FILE_PROP_WL "${DIR}/${FNAME}" "${RKHTMPVAR}"
 				done
-			fi
-
-			if [ -n "`echo \"${TEST_RESULT}\" | grep 'hwlinvalid'`" ]; then
-				display --to LOG -type INFO FILE_PROP_HASH_WL_INVALID "${DIR}/${FNAME}" "${WL_HASH}"
 			fi
 		done
 	done

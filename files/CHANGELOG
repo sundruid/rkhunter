@@ -154,7 +154,9 @@
  - Expanded the command PATH used to include the /System/Links/Executables
    directory for GoboLinux users.
  - Versioncheck now checks the versions numerically.
- - The MD5WHITELIST configuration file option has changed name to HASHWHITELIST.
+ - The HASHWHITELIST configuration file option has been removed. It is no
+   longer required because users can now create their own file of hash
+   values using the '--propupd' option.
  - The '--checkall' option has been changed to '--check'. The old option is
    still recognised, but will be deprecated at some time.
  - If a logfile is to be written, but not appended to, then the old log file
@@ -167,7 +169,7 @@
  - Improved the O/S detection mechanism. Rather than requiring users to send
    us details, rkhunter actively looks at the 'release' file(s) to find the
    O/S name. Included support for some lesser-known Linuxes - GoboLinux,
-   Lunar Linux, Rock Linux, and Source Mage Linux.
+   Lunar Linux, Rock Linux, Source Mage Linux, Kanotix, Sidux and Zenwalk.
  - If the --propupd or --update options are used, as well as the system
    check option --check, then the update checks are performed before the
    system is checked. Previously the update occurred after the system was

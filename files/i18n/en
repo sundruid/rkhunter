@@ -1,4 +1,4 @@
-Version:2007080301
+Version:2007081401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -245,7 +245,6 @@ FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
 FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
 FILE_PROP_WL:Found file '$1': it is whitelisted for the '$2' check.
 FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the rkhunter.dat file.
-FILE_PROP_HASH_WL_INVALID:Found file '$1': the whitelist hash value ($2) does not match the current hash value.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
 FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
