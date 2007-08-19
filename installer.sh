@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#################################################################################
+################################################################################
 #
 #  Rootkit Hunter installer
 # --------------------------
@@ -8,7 +8,7 @@
 # Copyright Michael Boelen ( michael AT rootkit DOT nl )
 # See LICENSE file for use of this software
 #
-#################################################################################
+################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
 INSTALLER_VERSION="1.2.6"
@@ -38,8 +38,7 @@ umask 027
 
 OPERATING_SYSTEM=`uname 2>/dev/null`
 
-case "${OPERATING_SYSTEM}" in
-AIX|OpenBSD|SunOS)
+if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	if [ -z "$RANDOM" ]; then
 		if [ -n "`which bash 2>/dev/null | grep '^/'`" ]; then
 			exec bash $0 $*
@@ -49,73 +48,85 @@ AIX|OpenBSD|SunOS)
 
 		exit 0
 	fi
-	;;
-esac
+fi
 
-# rootmgu: modified for solaris
 case "${OPERATING_SYSTEM}" in
 AIX|OpenBSD|SunOS)
-	# If running ksh, then use print command.
+	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'
+		ECHOOPT="--"
+	else
+		ECHOOPT="-e"
+	fi
+
+	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+		# We need /usr/xpg4/bin before other directories on Solaris 
+		PATH="/usr/xpg4/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin" 
+	fi
+	;;
+*)
+	ECHOOPT="-e"
+
+	#
+	# We want to get the actual shell used by this program, and
+	# so we need to test /bin/sh.
+	#
+
+	MYSHELL=/bin/sh
+	test -h ${MYSHELL} && MYSHELL=`readlink ${MYSHELL} 2>/dev/null`
+	MYSHELL=`basename ${MYSHELL} 2>/dev/null`
+
+	if [ "${MYSHELL}" = "dash" -o "${MYSHELL}" = "ash" ]; then
+		ECHOOPT=""
 	fi
 	;;
 esac
 
-# rootmgu: some lines added for solaris...
-case `uname` in
-SunOS)
-	# We need /usr/xpg4/bin before other commands on solaris 
-	PATH="/usr/xpg4/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin" 
-	#export PATH
-	;;
-*)
-	;;
-esac
 
 showHelp() { # Show help / version
-	echo "${INSTALLER_NAME}"
-	echo "Usage: $0 <parameters>"
-	echo ""
-	echo "Ordered valid parameters:"
-	echo "--help (-h)      : Show this help."
-	echo "--examples       : Show layout examples."
-	echo "--layout <value> : Choose installation template (mandatory switch)."
-	echo "                   The templates are:"
-        echo "                    - default: (FHS compliant),"
-        echo "                    - /usr,"
-        echo "                    - /usr/local,"
-	echo "                    - oldschool: previous version file locations,"
-	echo "                    - custom: supply your own prefix,"
-	echo "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
-	echo "--striproot      : Strip path from custom layout (for package maintainers)."
-	echo "--install        : Install according to chosen layout."
-	echo "--show           : Show chosen layout."
-	echo "--remove         : Uninstall according to chosen layout."
+	echo $ECHOOPT "${INSTALLER_NAME}"
+	echo $ECHOOPT "Usage: $0 <parameters>"
+	echo $ECHOOPT ""
+	echo $ECHOOPT "Ordered valid parameters:"
+	echo $ECHOOPT "--help (-h)      : Show this help."
+	echo $ECHOOPT "--examples       : Show layout examples."
+	echo $ECHOOPT "--layout <value> : Choose installation template (mandatory switch)."
+	echo $ECHOOPT "                   The templates are:"
+        echo $ECHOOPT "                    - default: (FHS compliant),"
+        echo $ECHOOPT "                    - /usr,"
+        echo $ECHOOPT "                    - /usr/local,"
+	echo $ECHOOPT "                    - oldschool: previous version file locations,"
+	echo $ECHOOPT "                    - custom: supply your own prefix,"
+	echo $ECHOOPT "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
+	echo $ECHOOPT "--striproot      : Strip path from custom layout (for package maintainers)."
+	echo $ECHOOPT "--install        : Install according to chosen layout."
+	echo $ECHOOPT "--show           : Show chosen layout."
+	echo $ECHOOPT "--remove         : Uninstall according to chosen layout."
 
 	exit 1
 }
 
 showExamples() { # Show examples
-	echo "${INSTALLER_NAME}"
-	echo ""
-	echo "Examples: "
-	echo "1. Show layout, files in /usr:"
-	echo "     installer.sh --layout /usr --show"
-	echo ""
-	echo "2. Install, layout /usr/local:"
-	echo "     installer.sh --layout /usr/local --install"
-	echo ""
-	echo "3. Install in temporary directory /tmp/rkhunter/usr/local,"
-	echo " with files in /usr/local (for package maintainers):"
-	echo "      mkdir -p /tmp/rkhunter/usr/local"
-	echo "     installer.sh --layout custom /tmp/rkhunter/usr/local \\"
-	echo "     --striproot /tmp/rkhunter --install"
-	echo ""
-	echo "4. Remove files, layout /usr/local:"
-	echo "     installer.sh --layout /usr/local --remove"
-	echo ""
-	echo "Note: The installer will not remove files when a custom layout is chosen."
+	echo $ECHOOPT "${INSTALLER_NAME}"
+	echo $ECHOOPT ""
+	echo $ECHOOPT "Examples: "
+	echo $ECHOOPT "1. Show layout, files in /usr:"
+	echo $ECHOOPT "     installer.sh --layout /usr --show"
+	echo $ECHOOPT ""
+	echo $ECHOOPT "2. Install, layout /usr/local:"
+	echo $ECHOOPT "     installer.sh --layout /usr/local --install"
+	echo $ECHOOPT ""
+	echo $ECHOOPT "3. Install in temporary directory /tmp/rkhunter/usr/local,"
+	echo $ECHOOPT " with files in /usr/local (for package maintainers):"
+	echo $ECHOOPT "      mkdir -p /tmp/rkhunter/usr/local"
+	echo $ECHOOPT "     installer.sh --layout custom /tmp/rkhunter/usr/local \\"
+	echo $ECHOOPT "     --striproot /tmp/rkhunter --install"
+	echo $ECHOOPT ""
+	echo $ECHOOPT "4. Remove files, layout /usr/local:"
+	echo $ECHOOPT "     installer.sh --layout /usr/local --remove"
+	echo $ECHOOPT ""
+	echo $ECHOOPT "Note: The installer will not remove files when a custom layout is chosen."
 
 	exit 1
 }
@@ -145,9 +156,9 @@ case "$1" in
 						if [ "$action" = "install" ]; then
 							RKHTMPVAR=`echo "${PATH}" | grep "${PREFIX}/bin"`
 							if [ -z "${RKHTMPVAR}" ]; then
-								echo
+								echo ""
 								echo "Note: Directory ${PREFIX}/bin is not in your PATH"
-								echo
+								echo ""
 							fi
 						fi
 						;;
@@ -274,7 +285,7 @@ showTemplate() { # Take input from the "--installdir parameter"
 			echo "Databases:          ${RKHINST_DB_DIR}"
 			echo "Temporary files:    ${RKHINST_TMP_DIR}"
 			if [ -n "${STRIPROOT}" ]; then
-				echo; echo "Got STRIPROOT=\"${STRIPROOT}\""
+				echo ""; echo "Got STRIPROOT=\"${STRIPROOT}\""
 			fi
 			;;
 	esac
@@ -761,7 +772,7 @@ while [ $# -ge 1 ]; do
 			echo "No layout given. The '--layout' option must be specified first."
 			exit 1
 		fi
-		action=`echo "$1"|sed "s/-//g"`
+		action=`echo $ECHOOPT "$1"|sed "s/-//g"`
 		case "$action" in
 			show)	showTemplate $RKHINST_LAYOUT
 				;;
