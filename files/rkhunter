@@ -451,6 +451,93 @@ keypresspause() {
 }
 
 
+get_option() {
+
+	#
+	# This function is used to process configuration file options.
+	#
+	# Syntax: get_option <option type> [single | multi] <option name>
+	#
+	# Since different options require different needs, the first
+	# argument is the 'type' of option we are processing. The second
+	# argument is the word 'single' or 'multi'. This indicates if
+	# the option can occur on one or more lines in the configuration
+	# file. The third argument is the option name.
+	#
+	# There are currently three types defined:
+	#
+	# Type 1: A number, single word or pathname.
+	# Type 2: A space-separated word list.
+	#
+	# Typically, single and double-quotes, spaces and tabs will be
+	# removed. For type 2 options, tabs are converted to spaces, and
+	# all spaces are squeezed into one. Leading and trailing spaces
+	# are removed. All other types of options are processed separately.
+	#
+	# The function will output the final modified option.
+	#
+
+	OPTTYPE="$1"
+	OPTMULTI="$2"
+	OPTV="$3"
+
+
+	#
+	# First see if the option is in the configuration file, and if
+	# it is then process it according to the multi-line argument.
+	#
+
+	if [ -z "`grep \"^${OPTV}=\" ${CONFIGFILE}`" ]; then
+		echo ""
+		return 0
+	else
+		if [ "${OPTMULTI}" = "single" ]; then
+			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
+		elif [ "${OPTMULTI}" = "multi" ]; then
+			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | sed -e "s/${OPTV}=//"`
+		else
+			echo "Error: Invalid multi-line argument in get_option function: $*" >&2
+			# Treat this as a single-line option.
+			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
+		fi
+	fi
+
+
+	#
+	# Now process the option.
+	#
+
+	case "$OPTTYPE" in
+	1)
+		OPTVAR=`echo "${OPTVAR}" | tr -d '" 	' | tr -d "'"`
+		;;
+	2)
+		OPTVAR=`echo "${OPTVAR}" | tr ',' ' ' | tr '	' ' ' | tr -s '	'`
+		OPTVAR=`echo "${OPTVAR}" | sed -e 's/^"\(.*\)"$/\1/' | sed -e "s/^'\(.*\)'$/\1/"`
+		OPTVAR=`echo ${OPTVAR}`
+		;;
+	*)
+		echo "Error: Invalid option type in get_option function: $*" >&2
+		;;
+	esac
+
+
+	#
+	# If the option is in the configuration file, but has no value,
+	# then give an error message.
+	#
+
+	if [ -z "${OPTVAR}" ]; then
+		echo "Invalid ${OPTV} configuration option - no value specified." >&2
+		exit 1
+	else
+		echo "${OPTVAR}"
+	fi
+
+	return 0
+}
+
+
 get_temp_file() {
 
 	#
@@ -842,14 +929,10 @@ check_commands() {
 		# the configuration file.
 		#
 
-		CFG_CMD=`grep "^${RKHTMPVAR}=" ${CONFIGFILE} | tail -1`
+		CFG_CMD=`get_option 2 single "${RKHTMPVAR}"` || exit 1
 
 		if [ -n "${CFG_CMD}" ]; then
-			CFG_CMD=`echo "${CFG_CMD}" | sed -e "s/${RKHTMPVAR}=//" | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
-
-			if [ -z "${CFG_CMD}" -o "${CFG_CMD}" = " " ]; then
-				CFG_CMD=""
-			elif [ "${CFG_CMD}" = "DISABLED" ]; then
+			if [ "${CFG_CMD}" = "DISABLED" ]; then
 				eval ${RKHTMPVAR}=\"${CFG_CMD}\"
 			else
 				#
@@ -925,12 +1008,9 @@ get_installdir_option() {
 	# be set by the installer script, and has no default.
 	#
 
-	RKHINSTALLDIR=`grep '^INSTALLDIR=' ${CONFIGFILE} | tail -1 | sed -e 's/INSTALLDIR=//' | tr -d '"' | tr -s ' '`
+	RKHINSTALLDIR=`get_option 1 single INSTALLDIR` || exit 1
 
-	if [ -z "${RKHINSTALLDIR}" -o "${RKHINSTALLDIR}" = " " ]; then
-		echo "Invalid INSTALLDIR configuration option - no installation directory specified."
-		exit 1
-	elif [ ! -d "${RKHINSTALLDIR}" ]; then
+	if [ ! -d "${RKHINSTALLDIR}" ]; then
 		echo "Installation directory does not exist: ${RKHINSTALLDIR}"
 		exit 1
 	elif [ ! -r "${RKHINSTALLDIR}" ]; then
@@ -951,23 +1031,14 @@ get_language_option() {
 	#
 
 	if [ -n "${LANGUAGE}" ]; then
-		LANGUAGE=`echo "${LANGUAGE}" | tr -s ' '`
+		LANGUAGE=`echo "${LANGUAGE}" | tr -d '" 	' | tr -d "'"`
 
-		if [ "${LANGUAGE}" = " " ]; then
+		if [ -z "${LANGUAGE}" ]; then
 			echo "Invalid --language option - no language given."
 			exit 1
 		fi
 	else
-		LANGUAGE=`grep '^LANGUAGE=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${LANGUAGE}" ]; then
-			LANGUAGE=`echo "${LANGUAGE}" | sed -e 's/LANGUAGE=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${LANGUAGE}" -o "${LANGUAGE}" = " " ]; then
-				echo "Invalid LANGUAGE configuration option - no language specified."
-				exit 1
-			fi
-		fi
+		LANGUAGE=`get_option 1 single LANGUAGE` || exit 1
 	fi
 
 	#
@@ -1023,25 +1094,18 @@ get_logfile_option() {
 	#
 
 	if [ -n "${RKHLOGFILE}" ]; then
-		RKHLOGFILE=`echo "${RKHLOGFILE}" | tr -s ' '`
+		RKHLOGFILE=`echo "${RKHLOGFILE}" | tr -d '" 	' | tr -d "'"`
 
-		if [ "${RKHLOGFILE}" = " " ]; then
+		if [ -z "${RKHLOGFILE}" ]; then
 			echo "Invalid --logfile option - no logfile name given."
 			exit 1
 		fi
 	else
-		RKHLOGFILE=`grep '^LOGFILE=' ${CONFIGFILE} | tail -1`
+		RKHLOGFILE=`get_option 1 single LOGFILE` || exit 1
 
-		if [ -n "${RKHLOGFILE}" ]; then
-			RKHLOGFILE=`echo "${RKHLOGFILE}" | sed -e 's/LOGFILE=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${RKHLOGFILE}" -o "${RKHLOGFILE}" = " " ]; then
-				echo "Invalid LOGFILE configuration option - no logfile name specified."
-				exit 1
-			fi
-		else
-			echo "Default logfile will be used ($DFLT_LOGFILE)."
-			RKHLOGFILE=$DFLT_LOGFILE
+		if [ -z "${RKHLOGFILE}" ]; then
+			RKHLOGFILE="${DFLT_LOGFILE}"
+			echo "Default logfile will be used (${RKHLOGFILE})."
 		fi
 	fi
 
@@ -1054,7 +1118,7 @@ get_logfile_option() {
 	else
 		LOGDIR=`echo "${RKHLOGFILE}" | sed -e 's/\/[^/][^/]*$//'`
 
-		if [ -z "`echo ${LOGDIR} | grep '/'`" ]; then
+		if [ -z "`echo \"${LOGDIR}\" | grep '/'`" ]; then
 			LOGDIR="."
 		fi
 
@@ -1086,16 +1150,11 @@ get_logfile_option() {
 		#
 
 		if [ $APPEND_OPT -eq 0 ]; then
-			APPEND_LOG=`grep '^APPEND_LOG=' ${CONFIGFILE} | tail -1`
+			APPEND_LOG=`get_option 1 single APPEND_LOG` || exit 1
 
 			if [ -n "${APPEND_LOG}" ]; then
-				APPEND_LOG=`echo "${APPEND_LOG}" | sed -e 's/APPEND_LOG=//' | tr -d '"' | tr -s ' '`
-
-				if [ -z "${APPEND_LOG}" -o "${APPEND_LOG}" = " " ]; then
-					echo "Invalid APPEND_LOG configuration option - no value specified."
-					exit 1
-				elif [ "${APPEND_LOG}" != "0" -a "${APPEND_LOG}" != "1" ]; then
-					echo "Invalid APPEND_LOG configuration option: ${APPEND_LOG}"
+				if [ "${APPEND_LOG}" != "0" -a "${APPEND_LOG}" != "1" ]; then
+					echo "Invalid APPEND_LOG configuration option: not a number: ${APPEND_LOG}"
 					exit 1
 				fi
 			else
@@ -1117,24 +1176,18 @@ get_tmpdir_option() {
 	#
 
 	if [ -n "${RKHTMPDIR}" ]; then
-		RKHTMPDIR=`echo "${RKHTMPDIR}" | tr -s ' '`
+		RKHTMPDIR=`echo "${RKHTMPDIR}" | tr -d '" 	' | tr -d "'"`
 
-		if [ "${RKHTMPDIR}" = " " ]; then
+		if [ -z "${RKHTMPDIR}" ]; then
 			echo "Invalid --tmpdir option - no directory name given."
 			exit 1
 		fi
 	else
-		RKHTMPDIR=`grep '^TMPDIR=' ${CONFIGFILE} | tail -1`
+		RKHTMPDIR=`get_option 1 single TMPDIR` || exit 1
 
-		if [ -n "${RKHTMPDIR}" ]; then
-			RKHTMPDIR=`echo "${RKHTMPDIR}" | sed -e 's/TMPDIR=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${RKHTMPDIR}" -o "${RKHTMPDIR}" = " " ]; then
-				echo "Invalid TMPDIR configuration option - no directory name specified."
-				exit 1
-			fi
-		else
+		if [ -z "${RKHTMPDIR}" ]; then
 			RKHTMPDIR="${RKHINSTALLDIR}/lib/rkhunter/tmp"
+			echo "Default temporary directory will be used (${RKHTMPDIR})."
 		fi
 	fi
 
@@ -1174,24 +1227,18 @@ get_dbdir_option() {
 	#
 
 	if [ -n "${DB_PATH}" ]; then
-		DB_PATH=`echo "${DB_PATH}" | tr -s ' '`
+		DB_PATH=`echo "${DB_PATH}" | tr -d '" 	' | tr -d "'"`
 
-		if [ "${DB_PATH}" = " " ]; then
+		if [ -z "${DB_PATH}" ]; then
 			echo "Invalid --dbdir option - no directory name given."
 			exit 1
 		fi
 	else
-		DB_PATH=`grep '^DBDIR=' ${CONFIGFILE} | tail -1`
+		DB_PATH=`get_option 1 single DBDIR` || exit 1
 
-		if [ -n "${DB_PATH}" ]; then
-			DB_PATH=`echo "${DB_PATH}" | sed -e 's/DBDIR=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${DB_PATH}" -o "${DB_PATH}" = " " ]; then
-				echo "Invalid DBDIR configuration option - no directory name specified."
-				exit 1
-			fi
-		else
+		if [ -z "${DB_PATH}" ]; then
 			DB_PATH="${RKHINSTALLDIR}/lib/rkhunter/db"
+			echo "Default database directory will be used (${DB_PATH})."
 		fi
 	fi
 
@@ -1294,23 +1341,16 @@ get_bindir_option() {
 	USE_DFLT=0
 
 	if [ -n "${BINPATHS}" ]; then
-		BINPATHS=`echo "${BINPATHS}" | tr -s ' '`
+		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
 
 		if [ "${BINPATHS}" = " " ]; then
 			echo "Invalid --bindir option - no directory names given."
 			exit 1
 		fi
 	else
-		BINPATHS=`grep '^BINDIR=' ${CONFIGFILE} | tail -1`
+		BINPATHS=`get_option 2 single BINDIR` || exit 1
 
-		if [ -n "${BINPATHS}" ]; then
-			BINPATHS=`echo "${BINPATHS}" | sed -e 's/BINDIR=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${BINPATHS}" -o "${BINPATHS}" = " " ]; then
-				echo "Invalid BINDIR configuration option - no directory names specified."
-				exit 1
-			fi
-		else
+		if [ -z "${BINPATHS}" ]; then
 			USE_DFLT=1
 
 			BINPATHS="${DFLT_BINPATHS}"
@@ -1350,7 +1390,7 @@ get_bindir_option() {
 
 	for DIR in ${BINPATHS}; do
 		if [ -z "`echo ${DIR} | grep '^[./]'`" ]; then
-			echo "Invalid BINDIR directory: ${DIR}"
+			echo "Invalid BINDIR directory found: ${DIR}"
 			exit 1
 		fi
 	done
@@ -1369,16 +1409,9 @@ get_scriptdir_option() {
 	# is no default.
 	#
 
-	SCRIPT_PATH=`grep '^SCRIPTDIR=' ${CONFIGFILE} | tail -1`
+	SCRIPT_PATH=`get_option 1 single SCRIPTDIR` || exit 1
 
-	if [ -n "${SCRIPT_PATH}" ]; then
-		SCRIPT_PATH=`echo "${SCRIPT_PATH}" | sed -e 's/SCRIPTDIR=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${SCRIPT_PATH}" -o "${SCRIPT_PATH}" = " " ]; then
-			echo "Invalid SCRIPTDIR configuration option - no directory name specified."
-			exit 1
-		fi
-	else
+	if [ -z "${SCRIPT_PATH}" ]; then
 		echo "The SCRIPTDIR configuration option has not been set by the installer."
 		exit 1
 	fi
@@ -1438,23 +1471,14 @@ get_rootdir_option() {
 	#
 
 	if [ -n "${RKHROOTDIR}" ]; then
-		RKHROOTDIR=`echo "${RKHROOTDIR}" | tr -s ' '`
+		RKHROOTDIR=`echo "${RKHROOTDIR}" | tr -d '" 	' | tr -d "'"`
 
-		if [ "${RKHROOTDIR}" = " " ]; then
+		if [ -z "${RKHROOTDIR}" ]; then
 			echo "Invalid --rootdir option - no directory name given."
 			exit 1
 		fi
 	else
-		RKHROOTDIR=`grep '^ROOTDIR=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${RKHROOTDIR}" ]; then
-			RKHROOTDIR=`echo "${RKHROOTDIR}" | sed -e 's/ROOTDIR=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${RKHROOTDIR}" -o "${RKHROOTDIR}" = " " ]; then
-				echo "Invalid ROOTDIR configuration option - no directory name specified."
-				exit 1
-			fi
-		fi
+		RKHROOTDIR=`get_option 1 single ROOTDIR` || exit 1
 	fi
 
 	#
@@ -1479,34 +1503,17 @@ get_mailonwarn_option() {
 
 	#
 	# Get the option from the configuration file, and do a simple
-	# check on whether it is empty or a space.
+	# check on whether it is empty or a space. We cannot use the
+	# 'get_option' function here because this option may well
+	# contain quote characters.
 	#
 
-	MAILONWARNING=`grep '^MAIL-ON-WARNING=' ${CONFIGFILE} | tail -1`
+	MAILONWARNING=`get_option 2 single MAIL-ON-WARNING` || exit 1
 
 	if [ -n "${MAILONWARNING}" ]; then
-		MAILONWARNING=`echo "${MAILONWARNING}" | sed -e 's/MAIL-ON-WARNING=//' | tr -d '"' | tr -s ' '`
+		MAIL_CMD=`get_option 2 single MAIL_CMD` || exit 1
 
-		if [ -z "${MAILONWARNING}" -o "${MAILONWARNING}" = " " ]; then
-			echo "Invalid MAIL-ON-WARNING configuration option - no email address specified."
-			exit 1
-		fi
-	fi
-
-
-	if [ -n "${MAILONWARNING}" ]; then
-		MAIL_CMD=`grep '^MAIL_CMD=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${MAIL_CMD}" ]; then
-			MAIL_CMD=`echo "${MAIL_CMD}" | sed -e 's/MAIL_CMD=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
-
-			if [ -z "${MAIL_CMD}" -o "${MAIL_CMD}" = " " ]; then
-				echo "Invalid MAIL_CMD configuration option - no command specified."
-				exit 1
-			fi
-		else
-			MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
-		fi
+		test -z "${MAIL_CMD}" && MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
 
 
 		#
@@ -1546,23 +1553,14 @@ get_syslog_option() {
 	#
 
 	if [ -n "${USE_SYSLOG}" ]; then
-		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr -s ' '`
+		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr -d '" 	' | tr -d "'"`
 
-		if [ "${USE_SYSLOG}" = " " ]; then
+		if [ -z "${USE_SYSLOG}" ]; then
 			echo "Invalid --syslog option - no facility/priority names given."
 			exit 1
 		fi
 	else
-		USE_SYSLOG=`grep '^USE_SYSLOG=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${USE_SYSLOG}" ]; then
-			USE_SYSLOG=`echo "${USE_SYSLOG}" | sed -e 's/USE_SYSLOG=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${USE_SYSLOG}" -o "${USE_SYSLOG}" = " " ]; then
-				echo "Invalid USE_SYSLOG configuration option - no value specified."
-				exit 1
-			fi
-		fi
+		USE_SYSLOG=`get_option 1 single USE_SYSLOG` || exit 1
 	fi
 
 
@@ -1575,6 +1573,7 @@ get_syslog_option() {
 		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr '[A-Z]' '[a-z]'`
 
 		if [ "${USE_SYSLOG}" = "none" ]; then
+			# The value of 'none' will be processed later on.
 			return
 		elif [ -z "`echo \"${USE_SYSLOG}\" | grep '^[a-z][a-z0-7]*\.[a-z][a-z]*$'`" ]; then
 			echo "Invalid syslog facility/priority value: ${USE_SYSLOG}"
@@ -1632,22 +1631,15 @@ get_ssh_options() {
 	# As such it's value is not just zero or one.
 	#
 
-	ALLOW_SSH_ROOT_USER=`grep '^ALLOW_SSH_ROOT_USER=' ${CONFIGFILE} | tail -1`
+	ALLOW_SSH_ROOT_USER=`get_option 1 single ALLOW_SSH_ROOT_USER` || exit 1
 
 	if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
-		ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | sed -e 's/ALLOW_SSH_ROOT_USER=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${ALLOW_SSH_ROOT_USER}" -o "${ALLOW_SSH_ROOT_USER}" = " " ]; then
-			echo "Invalid ALLOW_SSH_ROOT_USER configuration option - no value specified."
-			exit 1
-		else
-			ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[A-Z]' '[a-z]'`
-		fi
+		ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[A-Z]' '[a-z]'`
 	else
 		#
 		# By default SSH tends to allow root access. However, we
-		# do not. By doing this the user will receive a warning
-		# unless they set the options the same.
+		# do not. By setting this option to 'no', the user will
+		# receive a warning unless they set the options the same.
 		#
 
 		ALLOW_SSH_ROOT_USER="no"
@@ -1656,20 +1648,14 @@ get_ssh_options() {
 
 	#
 	# See if the ALLOW_SSH_PROT_V1 option is specified in the
-	# configuration file. If it is then we do a simple check on
-	# whether it is empty, a space, or not 0 or 1.
+	# configuration file.
 	#
 
-	ALLOW_SSH_PROT_V1=`grep '^ALLOW_SSH_PROT_V1=' ${CONFIGFILE} | tail -1`
+	ALLOW_SSH_PROT_V1=`get_option 1 single ALLOW_SSH_PROT_V1` || exit 1
 
 	if [ -n "${ALLOW_SSH_PROT_V1}" ]; then
-		ALLOW_SSH_PROT_V1=`echo "${ALLOW_SSH_PROT_V1}" | sed -e 's/ALLOW_SSH_PROT_V1=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${ALLOW_SSH_PROT_V1}" -o "${ALLOW_SSH_PROT_V1}" = " " ]; then
-			echo "Invalid ALLOW_SSH_PROT_V1 configuration option - no value specified."
-			exit 1
-		elif [ "${ALLOW_SSH_PROT_V1}" != "0" -a "${ALLOW_SSH_PROT_V1}" != "1" ]; then
-			echo "Invalid ALLOW_SSH_PROT_V1 configuration option: ${ALLOW_SSH_PROT_V1}"
+		if [ "${ALLOW_SSH_PROT_V1}" != "0" -a "${ALLOW_SSH_PROT_V1}" != "1" ]; then
+			echo "Invalid ALLOW_SSH_PROT_V1 configuration option: not a number: ${ALLOW_SSH_PROT_V1}"
 			exit 1
 		fi
 	else
@@ -1681,16 +1667,14 @@ get_ssh_options() {
 	# See if the directory of the SSH configuration file has been set.
 	#
 
-	SSH_CONFIG_DIR=`grep '^SSH_CONFIG_DIR=' ${CONFIGFILE} | tail -1`
+	SSH_CONFIG_DIR=`get_option 1 single SSH_CONFIG_DIR` || exit 1
 
 	if [ -n "${SSH_CONFIG_DIR}" ]; then
-		SSH_CONFIG_DIR=`echo "${SSH_CONFIG_DIR}" | sed -e 's/SSH_CONFIG_DIR=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${SSH_CONFIG_DIR}" -o "${SSH_CONFIG_DIR}" = " " ]; then
-			echo "Invalid SSH_CONFIG_DIR configuration option - no value specified."
-			exit 1
-		elif [ ! -d "${SSH_CONFIG_DIR}" ]; then
+		if [ ! -d "${SSH_CONFIG_DIR}" ]; then
 			echo "The SSH configuration file directory does not exist: ${SSH_CONFIG_DIR}"
+			exit 1
+		elif [ ! -r "${SSH_CONFIG_DIR}" ]; then
+			echo "The SSH configuration file directory is not readable: ${SSH_CONFIG_DIR}"
 			exit 1
 		fi
 	fi
@@ -1708,20 +1692,14 @@ get_syslog_config_options() {
 
 	#
 	# See if the ALLOW_SYSLOG_REMOTE_LOGGING option is specified
-	# in the configuration file. If it is then we do a simple check
-	# on whether it is empty, a space, or not 0 or 1.
+	# in the configuration file.
 	#
 
-	ALLOW_SYSLOG_REMOTE_LOGGING=`grep '^ALLOW_SYSLOG_REMOTE_LOGGING=' ${CONFIGFILE} | tail -1`
+	ALLOW_SYSLOG_REMOTE_LOGGING=`get_option 1 single ALLOW_SYSLOG_REMOTE_LOGGING` || exit 1
 
 	if [ -n "${ALLOW_SYSLOG_REMOTE_LOGGING}" ]; then
-		ALLOW_SYSLOG_REMOTE_LOGGING=`echo "${ALLOW_SYSLOG_REMOTE_LOGGING}" | sed -e 's/ALLOW_SYSLOG_REMOTE_LOGGING=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${ALLOW_SYSLOG_REMOTE_LOGGING}" -o "${ALLOW_SYSLOG_REMOTE_LOGGING}" = " " ]; then
-			echo "Invalid ALLOW_SYSLOG_REMOTE_LOGGING configuration option - no value specified."
-			exit 1
-		elif [ "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "0" -a "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "1" ]; then
-			echo "Invalid ALLOW_SYSLOG_REMOTE_LOGGING configuration option: ${ALLOW_SYSLOG_REMOTE_LOGGING}"
+		if [ "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "0" -a "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "1" ]; then
+			echo "Invalid ALLOW_SYSLOG_REMOTE_LOGGING configuration option: not a number: ${ALLOW_SYSLOG_REMOTE_LOGGING}"
 			exit 1
 		fi
 	else
@@ -1733,16 +1711,8 @@ get_syslog_config_options() {
 	# See if the pathname to the syslog configuration file has been set.
 	#
 
-	SYSLOG_CONFIG_FILE=`grep '^SYSLOG_CONFIG_FILE=' ${CONFIGFILE} | tail -1`
+	SYSLOG_CONFIG_FILE=`get_option 1 single SYSLOG_CONFIG_FILE` || exit 1
 
-	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
-		SYSLOG_CONFIG_FILE=`echo "${SYSLOG_CONFIG_FILE}" | sed -e 's/SYSLOG_CONFIG_FILE=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${SYSLOG_CONFIG_FILE}" -o "${SYSLOG_CONFIG_FILE}" = " " ]; then
-			echo "Invalid SYSLOG_CONFIG_FILE configuration option - no value specified."
-			exit 1
-		fi
-	fi
 
 	return
 }
@@ -1759,16 +1729,11 @@ get_auto_x_option() {
 	#
 
 	if [ $AUTO_X_OPT -eq 0 ]; then
-		AUTO_X_DTCT=`grep '^AUTO_X_DETECT=' ${CONFIGFILE} | tail -1`
+		AUTO_X_DTCT=`get_option 1 single AUTO_X_DETECT` || exit 1
 
 		if [ -n "${AUTO_X_DTCT}" ]; then
-			AUTO_X_DTCT=`echo "${AUTO_X_DTCT}" | sed -e 's/AUTO_X_DETECT=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${AUTO_X_DTCT}" -o "${AUTO_X_DTCT}" = " " ]; then
-				echo "Invalid AUTO_X_DETECT configuration option - no value specified."
-				exit 1
-			elif [ "${AUTO_X_DTCT}" != "0" -a "${AUTO_X_DTCT}" != "1" ]; then
-				echo "Invalid AUTO_X_DETECT configuration option: ${AUTO_X_DTCT}"
+			if [ "${AUTO_X_DTCT}" != "0" -a "${AUTO_X_DTCT}" != "1" ]; then
+				echo "Invalid AUTO_X_DETECT configuration option: not a number: ${AUTO_X_DTCT}"
 				exit 1
 			fi
 		else
@@ -1783,16 +1748,11 @@ get_auto_x_option() {
 
 
 	if [ $CLRSET2 -eq 0 ]; then
-		CLRSET2=`grep '^COLOR_SET2=' ${CONFIGFILE} | tail -1`
+		CLRSET2=`get_option 1 single COLOR_SET2` || exit 1
 
 		if [ -n "${CLRSET2}" ]; then
-			CLRSET2=`echo "${CLRSET2}" | sed -e 's/COLOR_SET2=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${CLRSET2}" -o "${CLRSET2}" = " " ]; then
-				echo "Invalid COLOR_SET2 configuration option - no value specified."
-				exit 1
-			elif [ "${CLRSET2}" != "0" -a "${CLRSET2}" != "1" ]; then
-				echo "Invalid COLOR_SET2 configuration option: ${CLRSET2}"
+			if [ "${CLRSET2}" != "0" -a "${CLRSET2}" != "1" ]; then
+				echo "Invalid COLOR_SET2 configuration option: not a number: ${CLRSET2}"
 				exit 1
 			fi
 		else
@@ -1815,11 +1775,14 @@ get_enable_option() {
 
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${ENABLE_TESTS}" ]; then
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
+			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | sed -e 's/^ //' | sed -e 's/ $//'`
 
-			if [ "${ENABLE_TESTS}" = " " ]; then
+			if [ -z "${ENABLE_TESTS}" ]; then
 				echo "Invalid --enable option - no test names given."
 				exit 1
+			else
+				ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[A-Z]' '[a-z]'`
 			fi
 
 
@@ -1837,16 +1800,8 @@ get_enable_option() {
 			fi
 		fi
 	else
-		ENABLE_TESTS=`grep '^ENABLE_TESTS=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${ENABLE_TESTS}" ]; then
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | sed -e 's/ENABLE_TESTS=//' | tr -d '"' | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
-
-			if [ -z "${ENABLE_TESTS}" -o "${ENABLE_TESTS}" = " " ]; then
-				echo "Invalid ENABLE_TESTS configuration option - no test names specified."
-				exit 1
-			fi
-		fi
+		ENABLE_TESTS=`get_option 2 single ENABLE_TESTS` || exit 1
+		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[A-Z]' '[a-z]'`
 	fi
 
 	test -z "${ENABLE_TESTS}" && ENABLE_TESTS="all"
@@ -1923,27 +1878,23 @@ get_disable_option() {
 
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${DISABLE_TESTS}" ]; then
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
+			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e 's/^ //' | sed -e 's/ $//'`
 
-			if [ "${DISABLE_TESTS}" = " " ]; then
+			if [ -z "${DISABLE_TESTS}" ]; then
 				echo "Invalid --disable option - no test names given."
 				exit 1
 			fi
 		fi
 	else
-		DISABLE_TESTS=`grep '^DISABLE_TESTS=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${DISABLE_TESTS}" ]; then
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e 's/DISABLE_TESTS=//' | tr -d '"' | tr ',' ' ' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
-
-			if [ -z "${DISABLE_TESTS}" -o "${DISABLE_TESTS}" = " " ]; then
-				echo "Invalid DISABLE_TESTS configuration option - no test names specified."
-				exit 1
-			fi
-		fi
+		DISABLE_TESTS=`get_option 2 single DISABLE_TESTS` || exit 1
 	fi
 
-	test -z "${DISABLE_TESTS}" && DISABLE_TESTS="none"
+	if [ -z "${DISABLE_TESTS}" ]; then
+		DISABLE_TESTS="none"
+	else
+		DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr '[A-Z]' '[a-z]'`
+	fi
 
 
 	#
@@ -1981,36 +1932,36 @@ get_xinetd_option() {
 	# whitelisted services.
 	#
 
-	FNAME=`grep '^INETD_CONF_PATH=' ${CONFIGFILE} | tail -1`
+	FNAME=`get_option 1 single INETD_CONF_PATH` || exit 1
 
 	if [ -n "${FNAME}" ]; then
-		INETD_CONF_PATH=`echo "${FNAME}" | sed -e 's/INETD_CONF_PATH=//' | tr -d '"' | tr -s ' '`
+		INETD_CONF_PATH="${FNAME}"
 
-		if [ -z "${INETD_CONF_PATH}" -o "${INETD_CONF_PATH}" = " " ]; then
-			echo "Invalid INETD_CONF_PATH configuration option - no pathname specified."
+		if [ ! -f "${INETD_CONF_PATH}" ]; then
+			echo "Invalid INETD_CONF_PATH configuration option - non-existent pathname specified."
 			exit 1
 		fi
 	fi
 
-	INETDALLOWEDSVCS=`grep '^INETD_ALLOWED_SVC=' ${CONFIGFILE} | sed -e 's/INETD_ALLOWED_SVC=//g' | tr -d '"'`
+	INETDALLOWEDSVCS=`get_option 1 multi INETD_ALLOWED_SVC` || exit 1
 
 
 	#
 	# Now do the same for xinetd.
 	#
 
-	FNAME=`grep '^XINETD_CONF_PATH=' ${CONFIGFILE} | tail -1`
+	FNAME=`get_option 1 single XINETD_CONF_PATH` || exit 1
 
 	if [ -n "${FNAME}" ]; then
-		XINETD_CONF_PATH=`echo "${FNAME}" | sed -e 's/XINETD_CONF_PATH=//' | tr -d '"' | tr -s ' '`
+		XINETD_CONF_PATH="${FNAME}"
 
-		if [ -z "${XINETD_CONF_PATH}" -o "${XINETD_CONF_PATH}" = " " ]; then
-			echo "Invalid XINETD_CONF_PATH configuration option - no pathname specified."
+		if [ ! -f "${XINETD_CONF_PATH}" ]; then
+			echo "Invalid XINETD_CONF_PATH configuration option - non-existent pathname specified."
 			exit 1
 		fi
 	fi
 
-	XINETDALLOWEDSVCS=`grep '^XINETD_ALLOWED_SVC=' ${CONFIGFILE} | sed -e 's/XINETD_ALLOWED_SVC=//g' | tr -d '"'`
+	XINETDALLOWEDSVCS=`get_option 1 multi XINETD_ALLOWED_SVC` || exit 1
 
 	return
 }
@@ -2023,46 +1974,47 @@ get_ports_option() {
 	# checks that it is valid.
 	#
 
-	PORT_WHITELIST=`grep '^PORT_WHITELIST=' ${CONFIGFILE} | tail -1`
+	RKHTMPVAR=`get_option 2 single PORT_WHITELIST` || exit 1
 
-	if [ -n "${PORT_WHITELIST}" ]; then
-		PORT_WHITELIST=`echo "${PORT_WHITELIST}" | sed -e 's/PORT_WHITELIST=//' | tr -d '"' | tr ',' ' ' | tr -s ' ' | tr '[a-z]' '[A-Z]'`
+	if [ -n "${RKHTMPVAR}" ]; then
+		#
+		# Loop through the list checking that it all looks okay.
+		#
 
-		if [ -z "${PORT_WHITELIST}" -o "${PORT_WHITELIST}" = " " ]; then
-			echo "Invalid PORT_WHITELIST configuration option - no ports specified."
-			exit 1
+		FOUND=0
+
+		if [ -n "`echo \"${RKHTMPVAR}\" | grep '\*'`" ]; then
+			PORT_WHITELIST_ALL_TRUSTED=1
+			RKHTMPVAR=`echo "${RKHTMPVAR}" | tr -d '*'`
 		fi
 
+		for RKHTMPVAR2 in ${RKHTMPVAR}; do
+			if [ -n "`echo \"${RKHTMPVAR2}\" | grep '^/'`" ]; then
+				if [ ! -f "${RKHTMPVAR2}" ]; then
+					FOUND=1
+					echo "Non-existent pathname specified in PORT_WHITELIST configuration option: ${RKHTMPVAR2}"
+				else
+					PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH} ${RKHTMPVAR2}"
+				fi
+			elif [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
+				PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
 
-		#
-		# At this point we should have a spaced-separated list of
-		# 'protocol:port' pairs. We loop through the list checking
-		# that it all looks okay.
-		#
-
-		RKHTMPVAR2=0
-
-		for RKHTMPVAR in ${PORT_WHITELIST}; do
-			PROTO=`echo ${RKHTMPVAR} | cut -d: -f1`
-			PORT=`echo ${RKHTMPVAR} | cut -d: -f2`
-
-			if [ "${PROTO}" != "UDP" -a "${PROTO}" != "TCP" ]; then
-				RKHTMPVAR2=1
-				echo "Invalid protocol specified in PORT_WHITELIST configuration option: ${RKHTMPVAR}"
-			fi
-
-			if [ -z "`echo ${PORT} | grep '^[1-9][0-9]*$'`" ]; then
-				RKHTMPVAR2=1
-				echo "Non-numeric port specified in PORT_WHITELIST configuration option: ${RKHTMPVAR}"
-			elif [ $PORT -gt 65535 ]; then
-				RKHTMPVAR2=1
-				echo "Invalid port specified in PORT_WHITELIST configuration option: ${RKHTMPVAR}"
+				if [ $PORT -gt 65535 ]; then
+					FOUND=1
+					echo "Invalid port specified in PORT_WHITELIST configuration option: ${RKHTMPVAR2}"
+				else
+					PORT_WHITELIST="${PORT_WHITELIST} ${RKHTMPVAR2}"
+				fi
+			else
+				FOUND=1
+				echo "Invalid entry specified in PORT_WHITELIST configuration option: ${RKHTMPVAR2}"
 			fi
 		done
 
-		test $RKHTMPVAR2 -eq 1 && exit 1
+		test $FOUND -eq 1 && exit 1
 
-		PORT_WHITELIST=" ${PORT_WHITELIST} "
+		PORT_WHITELIST=`echo " ${PORT_WHITELIST} " | tr '[a-z]' '[A-Z]'`
+		PORT_WHITELIST_PATH=" ${PORT_WHITELIST_PATH} "
 	fi
 
 	return
@@ -2076,12 +2028,14 @@ get_if_prelinked() {
 	# prelink command can be found, then we simply skip the
 	# file properties hash check.
 	#
+
 	LIBSAFE_TEST1=""
 	LIBSAFE_TEST2=""
 
 	if [ -f "${RKHROOTDIR}/etc/prelink.cache" ]; then
 		PRELINK_CMD=`find_cmd prelink`
 
+		#
 		# Test (twice) for existance of Libsafe since this seems to
 		# riddle prelink test results with "dependency cycle" errors.
 		# Don't test for existance of /lib/libsafe since it may be
@@ -2089,6 +2043,7 @@ get_if_prelinked() {
 		# If Libsafe is found *and* this is a prelink system, we'll
 		# skip the prelink test.
 		#
+
 		if [ -f "${RKHROOTDIR}/etc/ld.so.preload" ]; then
 			LIBSAFE_TEST1=`grep libsafe ${RKHROOTDIR}/etc/ld.so.preload 2>&1`
 		fi
@@ -2171,27 +2126,17 @@ get_hash_function() {
 	#
 
 	if [ -n "${HASH_FUNC}" ]; then
-		HASH_FUNC=`echo "${HASH_FUNC}" | tr -s ' '`
+		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
+		HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/^ //' | sed -e 's/ $//'`
 
-		if [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|NONE)$'`" ]; then
-			HASH_FUNC=`echo "${HASH_FUNC}" | tr '[a-z]' '[A-Z]'`
-		fi
-
-		if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = " " ]; then
+		if [ -z "${HASH_FUNC}" ]; then
 			echo "Invalid --hash option - no hash function given."
 			exit 1
+		elif [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|NONE)$'`" ]; then
+			HASH_FUNC=`echo "${HASH_FUNC}" | tr '[a-z]' '[A-Z]'`
 		fi
 	else
-		HASH_FUNC=`grep '^HASH_FUNC=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${HASH_FUNC}" ]; then
-			HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/HASH_FUNC=//' | sed -e 's/^"\(.*\)"$/\1/' | tr -s ' '`
-
-			if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = " " ]; then
-				echo "Invalid HASH_FUNC configuration option - no command specified."
-				exit 1
-			fi
-		fi
+		HASH_FUNC=`get_option 2 single HASH_FUNC` || exit 1
 	fi
 
 
@@ -2280,15 +2225,10 @@ get_hash_function() {
 	# the user to specify the hash function to use.
 	#
 
-	RKHTMPVAR=`grep '^HASH_FLD_IDX=' ${CONFIGFILE} | tail -1`
+	RKHTMPVAR=`get_option 1 single HASH_FLD_IDX` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/HASH_FLD_IDX=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${RKHTMPVAR}" -o "${RKHTMPVAR}" = " " ]; then
-			echo "Invalid HASH_FLD_IDX configuration option - no value specified."
-			exit 1
-		elif [ -z "`echo \"${RKHTMPVAR}\" | grep '^[1-9][0-9]*$'`" ]; then
+		if [ -z "`echo \"${RKHTMPVAR}\" | grep '^[1-9][0-9]*$'`" ]; then
 			echo "Invalid HASH_FLD_IDX configuration option: not a number: ${RKHTMPVAR}"
 			exit 1
 		else
@@ -2305,24 +2245,17 @@ get_hash_function() {
 	#
 
 	if [ -n "${PKGMGR}" ]; then
-		PKGMGR=`echo "${PKGMGR}" | tr -s ' ' | tr '[a-z]' '[A-Z]'`
+		PKGMGR=`echo "${PKGMGR}" | tr -d '" 	' | tr -d "'"`
 
-		if [ -z "${PKGMGR}" -o "${PKGMGR}" = " " ]; then
+		if [ -z "${PKGMGR}" ]; then
 			echo "Invalid --pkgmgr option - no package manager given."
 			exit 1
 		fi
 	else
-		PKGMGR=`grep '^PKGMGR=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${PKGMGR}" ]; then
-			PKGMGR=`echo "${PKGMGR}" | sed -e 's/PKGMGR=//' | tr -d '"' | tr -s ' ' | tr '[a-z]' '[A-Z]'`
-
-			if [ -z "${PKGMGR}" -o "${PKGMGR}" = " " ]; then
-				echo "Invalid PKGMGR configuration option - no package manager specified."
-				exit 1
-			fi
-		fi
+		PKGMGR=`get_option 1 single PKGMGR` || exit 1
 	fi
+
+	PKGMGR=`echo "${PKGMGR}" | tr '[a-z]' '[A-Z]'`
 
 	test "${PKGMGR}" = "NONE" && PKGMGR=""
 
@@ -2409,18 +2342,15 @@ get_scan_mode_dev_option() {
 
 	#
 	# See if the option is specified in the configuration file.
-	# If it is then we do a simple check on whether it is empty,
-	# a space.
 	#
 
-	SCAN_MODE_DEV=`grep '^SCAN_MODE_DEV=' ${CONFIGFILE} | tail -1`
+	SCAN_MODE_DEV=`get_option 1 single SCAN_MODE_DEV` || exit 1
 
 	if [ -n "${SCAN_MODE_DEV}" ]; then
-		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | sed -e 's/SCAN_MODE_DEV=//' | tr -d '"' | tr -s ' ' | tr '[a-z]' '[A-Z]'`
+		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | tr '[a-z]' '[A-Z]'`
 
 		case "${SCAN_MODE_DEV}" in
 		THOROUGH|LAZY)
-			SCAN_MODE_DEV="${SCAN_MODE_DEV}"
 			;;
 		*)	# Don't make this fatal.
 			echo "Invalid SCAN_MODE_DEV configuration option: ${SCAN_MODE_DEV}"
@@ -2445,18 +2375,11 @@ get_rc_options() {
 	# There are no defaults.
 	#
 
-	RC_FILE=`grep '^LOCAL_RC_PATH=' ${CONFIGFILE} | tail -1`
+	RC_FILE=`get_option 2 single LOCAL_RC_PATH` || exit 1
 
 	if [ -n "${RC_FILE}" ]; then
-		RC_FILE=`echo "${RC_FILE}" | sed -e 's/LOCAL_RC_PATH=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${RC_FILE}" -o "${RC_FILE}" = " " ]; then
-			echo "Invalid LOCAL_RC_PATH configuration option - no pathname specified."
-			exit 1
-		fi
-
 		#
-		# Now check that the given option is useable.
+		# Check that the given files are useable.
 		#
 
 		for RKHTMPVAR in ${RC_FILE}; do
@@ -2477,18 +2400,11 @@ get_rc_options() {
 	fi
 
 
-	RC_DIR=`grep '^SYSTEM_RC_DIR=' ${CONFIGFILE} | tail -1`
+	RC_DIR=`get_option 1 single SYSTEM_RC_DIR` || exit 1
 
 	if [ -n "${RC_DIR}" ]; then
-		RC_DIR=`echo "${RC_DIR}" | sed -e 's/SYSTEM_RC_DIR=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${RC_DIR}" -o "${RC_DIR}" = " " ]; then
-			echo "Invalid SYSTEM_RC_DIR configuration option - no directory specified."
-			exit 1
-		fi
-
 		#
-		# Now check that the given option is useable.
+		# Check that the given directory is useable.
 		#
 
 		if [ ! -d "${RKHROOTDIR}${RC_DIR}" ]; then
@@ -2516,16 +2432,11 @@ get_mirror_options() {
 	# should be rotated when it is used.
 	#
 
-	ROTATE_MIRRORS=`grep '^ROTATE_MIRRORS=' ${CONFIGFILE} | tail -1`
+	ROTATE_MIRRORS=`get_option 1 single ROTATE_MIRRORS` || exit 1
 
 	if [ -n "${ROTATE_MIRRORS}" ]; then
-		ROTATE_MIRRORS=`echo "${ROTATE_MIRRORS}" | sed -e 's/ROTATE_MIRRORS=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${ROTATE_MIRRORS}" -o "${ROTATE_MIRRORS}" = " " ]; then
-			echo "Invalid ROTATE_MIRRORS configuration option - no value specified."
-			exit 1
-		elif [ "${ROTATE_MIRRORS}" != "0" -a "${ROTATE_MIRRORS}" != "1" ]; then
-			echo "Invalid ROTATE_MIRRORS configuration option: ${ROTATE_MIRRORS}"
+		if [ "${ROTATE_MIRRORS}" != "0" -a "${ROTATE_MIRRORS}" != "1" ]; then
+			echo "Invalid ROTATE_MIRRORS configuration option: not a number: ${ROTATE_MIRRORS}"
 			exit 1
 		fi
 	else
@@ -2539,16 +2450,11 @@ get_mirror_options() {
 	#
 
 	if [ $UPDATE -eq 1 ]; then
-		UPDATE_MIRRORS=`grep '^UPDATE_MIRRORS=' ${CONFIGFILE} | tail -1`
+		UPDATE_MIRRORS=`get_option 1 single UPDATE_MIRRORS` || exit 1
 
 		if [ -n "${UPDATE_MIRRORS}" ]; then
-			UPDATE_MIRRORS=`echo "${UPDATE_MIRRORS}" | sed -e 's/UPDATE_MIRRORS=//' | tr -d '"' | tr -s ' '`
-
-			if [ -z "${UPDATE_MIRRORS}" -o "${UPDATE_MIRRORS}" = " " ]; then
-				echo "Invalid UPDATE_MIRRORS configuration option - no value specified."
-				exit 1
-			elif [ "${UPDATE_MIRRORS}" != "0" -a "${UPDATE_MIRRORS}" != "1" ]; then
-				echo "Invalid UPDATE_MIRRORS configuration option: ${UPDATE_MIRRORS}"
+			if [ "${UPDATE_MIRRORS}" != "0" -a "${UPDATE_MIRRORS}" != "1" ]; then
+				echo "Invalid UPDATE_MIRRORS configuration option: not a number: ${UPDATE_MIRRORS}"
 				exit 1
 			fi
 		else
@@ -2561,16 +2467,11 @@ get_mirror_options() {
 	# Finally, we see which mirrors are to be used.
 	#
 
-	MIRRORS_MODE=`grep '^MIRRORS_MODE=' ${CONFIGFILE} | tail -1`
+	MIRRORS_MODE=`get_option 1 single MIRRORS_MODE` || exit 1
 
 	if [ -n "${MIRRORS_MODE}" ]; then
-		MIRRORS_MODE=`echo "${MIRRORS_MODE}" | sed -e 's/MIRRORS_MODE=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${MIRRORS_MODE}" -o "${MIRRORS_MODE}" = " " ]; then
-			echo "Invalid MIRRORS_MODE configuration option - no value specified."
-			exit 1
-		elif [ "${MIRRORS_MODE}" != "0" -a "${MIRRORS_MODE}" != "1" -a "${MIRRORS_MODE}" != "2" ]; then
-			echo "Invalid MIRRORS_MODE configuration option: ${MIRRORS_MODE}"
+		if [ "${MIRRORS_MODE}" != "0" -a "${MIRRORS_MODE}" != "1" -a "${MIRRORS_MODE}" != "2" ]; then
+			echo "Invalid MIRRORS_MODE configuration option: not a number: ${MIRRORS_MODE}"
 			exit 1
 		fi
 	else
@@ -2588,18 +2489,11 @@ get_os_version_option() {
 	# from the configuration file. There is no default.
 	#
 
-	OS_VERSION_FILE=`grep '^OS_VERSION_FILE=' ${CONFIGFILE} | tail -1`
+	OS_VERSION_FILE=`get_option 1 single OS_VERSION_FILE` || exit 1
 
 	if [ -n "${OS_VERSION_FILE}" ]; then
-		OS_VERSION_FILE=`echo "${OS_VERSION_FILE}" | sed -e 's/OS_VERSION_FILE=//' | tr -d '"' | tr -s ' '`
-
-		if [ -z "${OS_VERSION_FILE}" -o "${OS_VERSION_FILE}" = " " ]; then
-			echo "Invalid OS_VERSION_FILE configuration option - no pathname specified."
-			exit 1
-		fi
-
 		#
-		# Now check that the given option is useable.
+		# Check that the given file is useable.
 		#
 
 		if [ ! -f "${RKHROOTDIR}${OS_VERSION_FILE}" ]; then
@@ -5126,16 +5020,16 @@ file_properties_check() {
 	#
 
 	if [ $SKIP_ATTR -eq 0 ]; then
-		ATTRWHITELIST=`grep '^ATTRWHITELIST=' ${CONFIGFILE} | sed -e 's/ATTRWHITELIST=//g'`
-		WRITEWHITELIST=`grep '^WRITEWHITELIST=' ${CONFIGFILE} | sed -e 's/WRITEWHITELIST=//g'`
+		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || exit 1
+		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || exit 1
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
-		IMMUTWHITELIST=`grep '^IMMUTWHITELIST=' ${CONFIGFILE} | sed -e 's/IMMUTWHITELIST=//g'`
+		IMMUTWHITELIST=`get_option 1 multi IMMUTWHITELIST` || exit 1
 	fi
 
 	if [ $SKIP_SCRIPT -eq 0 ]; then
-		SCRIPTWHITELIST=`grep '^SCRIPTWHITELIST=' ${CONFIGFILE} | sed -e 's/SCRIPTWHITELIST=//g'`
+		SCRIPTWHITELIST=`get_option 1 multi SCRIPTWHITELIST` || exit 1
 	fi
 
 
@@ -5375,8 +5269,7 @@ file_properties_check() {
 						# to compare the on-disk hash value against the
 						# value in the rkhunter.dat file.
 						#
-						# First see if we have a stored hash value, and
-						# then test if the file is whitelisted.
+						# First see if we have a stored hash value.
 						#
 
 						RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
@@ -5384,10 +5277,6 @@ file_properties_check() {
 						test -z "${RKHHASH}" && TEST_RESULT="${TEST_RESULT} norkhhash"
 
 						if [ -z "${TEST_RESULT}" ]; then
-							#
-							# The file isn't whitelisted, so do the test.
-							#
-
 							if [ "${HCMD}" = "NONE" ]; then
 								SYSHASH=""
 							else
@@ -5912,7 +5801,7 @@ suspscan() {
 	# Get the directories to scan.
 	#
 
-	SUSPSCAN_DIRS=`grep "^SUSPSCAN_DIRS=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}' | tr ':' ' '`
+	SUSPSCAN_DIRS=`get_option 2 single SUSPSCAN_DIRS` || exit 1
 
 	if [ -z "${SUSPSCAN_DIRS}" ]; then
 		SUSPSCAN_DIRS="/tmp /var/tmp"
@@ -5925,7 +5814,7 @@ suspscan() {
 	# Get the tempdir. Should be a /dev/shm type.
 	#
 
-	SUSPSCAN_TEMP=`grep "^SUSPSCAN_TEMP=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}'`
+	SUSPSCAN_TEMP=`get_option 1 single SUSPSCAN_TEMP` || exit 1
 
 	if [ -z "${SUSPSCAN_TEMP}" ]; then
 		SUSPSCAN_TEMP="/dev/shm"
@@ -5948,7 +5837,7 @@ suspscan() {
 	# Get the max filesize to handle, say 1024000.
 	#
 
-	SUSPSCAN_MAXSIZE=`grep "^SUSPSCAN_MAXSIZE=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}'`
+	SUSPSCAN_MAXSIZE=`get_option 1 single SUSPSCAN_MAXSIZE` || exit 1
 
 	if [ -z "${SUSPSCAN_MAXSIZE}" ]; then
 		SUSPSCAN_MAXSIZE=1024000
@@ -5965,7 +5854,7 @@ suspscan() {
 	# Get the score threshold, 600 seems sensible.
 	#
 
-	SUSPSCAN_THRESH=`grep "^SUSPSCAN_THRESH=" ${CONFIGFILE} | tail -1 | awk -F'=' '{print $2}'`
+	SUSPSCAN_THRESH=`get_option 1 single SUSPSCAN_THRESH` || exit 1
 
 	if [ -z "${SUSPSCAN_THRESH}" ]; then
 		SUSPSCAN_THRESH=600
@@ -7206,35 +7095,41 @@ malware_checks() {
 
 		if [ -n "${LSOF_CMD}" ]; then
 			FOUND=0
-			WHITEPROC=""; BLACKPROC=""
+			SOL_PROC=0
+			WHITEPROC=""; BLACKPROC=""; SOLARISX=""
 
-			DELE_FILES=`${LSOF_CMD} -n -l -w | grep '(dele' | head -n 1`
+
+			#
+			# If we are running Solaris 10, then see if
+			# we have the command pathname available.
+			#
+			# Solaris 10 and above should have the 'a.out'
+			# file present. We use the PID of 1 here since
+			# it should exist on all systems.
+			#
+			# If we are running Solaris 10 (or above), then
+			# we add the '-X' option to the 'lsof' command
+			# in order to get the deleted files.
+			#
+
+			if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+				if [ -h "/proc/1/path/a.out" ]; then
+					SOLARISX='-X'
+					test -n "${READLINK_CMD}" && SOL_PROC=1
+				fi
+			fi
+
+
+			DELE_FILES=`${LSOF_CMD} -n -l -w ${SOLARISX} | grep '(dele' | head -n 1`
 
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
 
-				ALLOWPROCDELFILES=`grep '^ALLOWPROCDELFILE=' ${CONFIGFILE} | sed -e 's/ALLOWPROCDELFILE=//g'`
-
-
-				#
-				# If we are running Solaris 10, then see if
-				# we have the command pathname available.
-				#
-				# Solaris 10 and above should have the 'a.out'
-				# file present. We use the PID of 1 here since
-				# it should exist on all systems.
-				#
-
-				SOL_PROC=0
-
-				if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-					test -n "${READLINK_CMD}" -a -h "/proc/1/path/a.out" && SOL_PROC=1
-				fi
-
+				ALLOWPROCDELFILES=`get_option 1 multi ALLOWPROCDELFILE` || exit 1
 
 				IFS=$IFSNL
 
-				for LINE in `${LSOF_CMD} -n -l -w | grep '(dele'`; do
+				for LINE in `${LSOF_CMD} -n -l -w $SOLARISX | grep '(dele'`; do
 					PROC=`echo "$LINE" | awk '{ print $1 }'`
 					PID=`echo "$LINE" | awk '{ print $2 }'`
 					NODE=`echo "$LINE" | awk '{ print $8 }'`
@@ -8258,17 +8153,13 @@ do_network_port_checks() {
 
 
 	#
-	# We must first check to see who can perform this test.
+	# We must first check to see if we can perform this test.
 	#
 
-	case "${OPERATING_SYSTEM}" in
-	*BSD|Linux|AIX|SunOS|Darwin)
-		;;
-	*)
-		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "netstat command required"
+	if [ -z "${LSOF_CMD}" -a -z "${NETSTAT_CMD}" ]; then
+		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "lsof or netstat command required"
 		return
-		;;
-	esac
+	fi
 
 	#
 	# Systems with a modified kernel must also skip this test.
@@ -8286,10 +8177,25 @@ do_network_port_checks() {
 	if [ ! -s "${DB_PATH}/backdoorports.dat" ]; then
 		display --to SCREEN+LOG --type WARNING --screen-indent 4 NETWORK_PORTS_FILE_MISSING
 		return
-	elif [ -z "${NETSTAT_CMD}" ]; then
-		display --to SCREEN+LOG --type WARNING --screen-indent 4 NETWORK_PORTS_FILE_NO_NETSTAT
-		return
+	elif [ -z "${LSOF_CMD}" ]; then
+		case "${OPERATING_SYSTEM}" in
+		*BSD|Linux|AIX|SunOS|Darwin)
+			#
+			# We can only use pathnames if we have the 'lsof' command.
+			#
+
+			PORT_WHITELIST_PATH=""
+			PORT_WHITELIST_ALL_TRUSTED=0
+			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
+			;;
+		*)
+			display --to SCREEN+LOG --type WARNING --screen-indent 4 NETWORK_PORTS_UNKNOWN_NETSTAT
+			return
+			;;
+		esac
 	fi
+
+	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 
 
 	#
@@ -8306,10 +8212,10 @@ do_network_port_checks() {
 		fi
 
 		PORT=`echo "${LINE}" | cut -d: -f1`
-		DESCRIPTION=`echo ${LINE} | cut -d: -f2`
-		PROTO=`echo ${LINE} | cut -d: -f3 | tr '[a-z]' '[A-Z]'`
+		DESCRIPTION=`echo "${LINE}" | cut -d: -f2`
+		PROTO=`echo "${LINE}" | cut -d: -f3 | tr '[a-z]' '[A-Z]'`
 
-		if [ -n "`echo \"${PORT}\" | grep -v '^[0-9]'`" ]; then
+		if [ -z "`echo \"${PORT}\" | grep '^[1-9][0-9]*$'`" ]; then
 			echo "Error: Invalid port in backdoorports.dat file: $LINE"
 			continue
 		elif [ "${PROTO}" != "UDP" -a "${PROTO}" != "TCP" ]; then
@@ -8319,40 +8225,88 @@ do_network_port_checks() {
 
 		FOUND=""
 
-		case "${OPERATING_SYSTEM}" in
-		Linux)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
-			;;
-		*BSD|Darwin)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
-			;;
-		AIX)
-			if [ "${PROTO}" = "UDP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
-			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}\$"`
-			fi
-			;;
-		SunOS)
-			if [ "${PROTO}" = "UDP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+		if [ -n "${LSOF_CMD}" ]; then
+			FNAME=""
+			PID_SEEN=0
+			IFS=$RKHIFS
 
-				if [ -z "${FOUND}" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
-				fi
-			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+			for PID in `${LSOF_CMD} -wnl -i ${PROTO}:${PORT} | grep -v '^COMMAND' | awk '{ print $2 }'`; do
+				PID_SEEN=1
 
-				if [ -z "${FOUND}" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+				FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+
+				if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
+					FOUND="${FNAME}"
+					break
 				fi
+			done
+
+			if [ -z "${FOUND}" -a $PID_SEEN -eq 1 ]; then
+				FNAME=""
+				FOUND="${PROTO}:${PORT}"
 			fi
-			;;
-		esac
+
+			IFS=$IFSNL
+		else
+			case "${OPERATING_SYSTEM}" in
+			Linux)
+				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
+				;;
+			*BSD|Darwin)
+				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
+				;;
+			AIX)
+				if [ "${PROTO}" = "UDP" ]; then
+					FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
+				elif [ "${PROTO}" = "TCP" ]; then
+					FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}\$"`
+				fi
+				;;
+			SunOS)
+				if [ "${PROTO}" = "UDP" ]; then
+					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+
+					if [ -z "${FOUND}" ]; then
+						FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+					fi
+				elif [ "${PROTO}" = "TCP" ]; then
+					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+
+					if [ -z "${FOUND}" ]; then
+						FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+					fi
+				fi
+				;;
+			esac
+		fi
+
+
+		#
+		# If we have found something, then see if it is whitelisted.
+		#
 
 		if [ -n "${FOUND}" ]; then
-			if [ -n "`echo \"${PORT_WHITELIST}\" | grep \" ${PROTO}:${PORT} \"`" ]; then
-				FOUND="whitelisted"
+			RKHTMPVAR2=0
+
+			if [ -n "${LSOF_CMD}" ]; then
+				if [ -n "${FNAME}" ]; then
+					if [ -n "`echo \"${PORT_WHITELIST_PATH}\" | grep \" ${FNAME} \"`" ]; then
+						RKHTMPVAR2=1
+						FOUND="path_whitelisted"
+					elif [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
+						RKHTMPVAR=`basename ${FNAME}`
+						RKHTMPVAR=`IFS=$RKHIFS find_cmd ${RKHTMPVAR}`
+
+						if [ "${RKHTMPVAR}" = "${FNAME}" ]; then
+							RKHTMPVAR2=1
+							FOUND="trusted_whitelisted"
+						fi
+					fi
+				fi
+			fi
+
+			if [ $RKHTMPVAR2 -eq 0 -a -n "`echo \"${PORT_WHITELIST}\" | grep \" ${PROTO}:${PORT} \"`" ]; then
+				FOUND="port_whitelisted"
 			fi
 		fi
 
@@ -8363,12 +8317,23 @@ do_network_port_checks() {
 
 		if [ -z "${FOUND}" ]; then
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
-		elif [ "${FOUND}" = "whitelisted" ]; then
-			display --to LOG --type INFO NETWORK_PORTS_WHITELIST "${PROTO}" "${PORT}"
+		elif [ "${FOUND}" = "path_whitelisted" ]; then
+			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+		elif [ "${FOUND}" = "trusted_whitelisted" ]; then
+			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+		elif [ "${FOUND}" = "port_whitelisted" ]; then
+			display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
 		else
-			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NETWORK_PORTS "${PROTO}" "${PORT}"
-			display --to LOG --type WARNING NETWORK_PORTS_FOUND "${PROTO}" "${PORT}" "${DESCRIPTION}"
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WARNING --color RED NETWORK_PORTS "${PROTO}" "${PORT}"
+
+			if [ -n "${FNAME}" ]; then
+				display --to LOG --type WARNING NETWORK_PORTS_FOUND "${PROTO}" "${PORT}" " by ${FNAME}" "${DESCRIPTION}"
+			else
+				display --to LOG --type WARNING NETWORK_PORTS_FOUND "${PROTO}" "${PORT}" "" "${DESCRIPTION}"
+			fi
 		fi
 	done
 
@@ -8485,7 +8450,7 @@ do_network_interface_checks() {
 		# We only need to get the whitelisted processes once.
 		#
 
-		ALLOWPROCLISTENERS=`grep '^ALLOWPROCLISTEN=' ${CONFIGFILE} | sed -e 's/ALLOWPROCLISTEN=//g'`
+		ALLOWPROCLISTENERS=`get_option 1 multi ALLOWPROCLISTEN` || exit 1
 
 
 		INODE_LIST=""
@@ -8882,12 +8847,7 @@ do_group_accounts_check() {
 		# from the above list.
 		#
 
-		UID0_WHITELIST=`grep '^UID0_ACCOUNTS=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${UID0_WHITELIST}" ]; then
-			UID0_WHITELIST=`echo "${UID0_WHITELIST}" | sed -e 's/UID0_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
-		fi
-
+		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || exit 1
 		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
@@ -8926,14 +8886,9 @@ do_group_accounts_check() {
 	# provided this in the config file, then we use that.
 	#
 
-	SHADOW_FILE=`grep '^PASSWORD_FILE=' ${CONFIGFILE} | tail -1`
+	SHADOW_FILE=`get_option 1 single PASSWORD_FILE` || exit 1
 
-	if [ -n "${SHADOW_FILE}" ]; then
-		SHADOW_FILE=`echo "${SHADOW_FILE}" | sed -e 's/PASSWORD_FILE=//' | tr -d '"' | tr -s ' '`
-
-		test "${SHADOW_FILE}" = " " && SHADOW_FILE=""
-		test -n "${SHADOW_FILE}" -a ! -s "${RKHROOTDIR}${SHADOW_FILE}" && SHADOW_FILE=""
-	fi
+	test -n "${SHADOW_FILE}" -a ! -s "${RKHROOTDIR}${SHADOW_FILE}" && SHADOW_FILE=""
 
 	if [ -n "${SHADOW_FILE}" ]; then
 		SHADOW_FILE="${RKHROOTDIR}${SHADOW_FILE}"
@@ -8963,12 +8918,7 @@ do_group_accounts_check() {
 		# We need to remove any whitelisted passwordless accounts.
 		#
 
-		PWD_WHITELIST=`grep '^PWDLESS_ACCOUNTS=' ${CONFIGFILE} | tail -1`
-
-		if [ -n "${PWD_WHITELIST}" ]; then
-			PWD_WHITELIST=`echo "${PWD_WHITELIST}" | sed -e 's/PWDLESS_ACCOUNTS=//' | tr -d '"' | tr -s ' '`
-		fi
-
+		PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
 		PWD_WHITELIST=" ${PWD_WHITELIST} "
 
 		UID_LIST=""
@@ -9447,7 +9397,7 @@ do_dev_whitelist_check() {
 	#
 
 
-	FNAME=`${FILE_CMD} ${RKHTMPVAR} | cat -v | sed -e 's/[ 	][ 	]*/ /' | egrep -v ' (character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV)'`
+	FNAME=`${FILE_CMD} ${RKHTMPVAR} | cat -v | tr '	' ' ' | tr -s ' ' | egrep -v ' (character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV)'`
 
 	test -z "${FNAME}" && return
 
@@ -9508,7 +9458,7 @@ do_filesystem_check() {
 		FOUNDFILES=""
 		ALLOWDEVFILES=" "
 
-		for FNAME in `grep '^ALLOWDEVFILE=' ${CONFIGFILE} | sed -e 's/ALLOWDEVFILE=//g'`; do
+		for FNAME in `get_option 1 multi ALLOWDEVFILE`; do
 			ALLOWDEVFILES="${ALLOWDEVFILES} ${FNAME}"
 		done
 
@@ -9595,13 +9545,13 @@ do_filesystem_check() {
 	ALLOWHIDDENDIRS=" "
 	ALLOWHIDDENFILES=" "
 
-	for DIR in `grep '^ALLOWHIDDENDIR=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENDIR=//g'`; do
+	for DIR in `get_option 1 multi ALLOWHIDDENDIR`; do
 		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
 	done
 
 	ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
 
-	for FNAME in `grep '^ALLOWHIDDENFILE=' ${CONFIGFILE} | sed -e 's/ALLOWHIDDENFILE=//g'`; do
+	for FNAME in `get_option 1 multi ALLOWHIDDENFILE`; do
 		ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
 	done
 
@@ -9618,7 +9568,7 @@ do_filesystem_check() {
 			test ! -s "${FNAME}" -a -n "`echo \"${FNAME}\" | grep '/\.keep$'`" && continue
 		fi
 
-		FTYPE=`${FILE_CMD} ${FNAME} | cat -v | sed -e 's/[ 	][ 	]*/ /' | cut -d' ' -f2-`
+		FTYPE=`${FILE_CMD} ${FNAME} | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
 
 		test -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
 
@@ -9784,12 +9734,9 @@ do_app_checks() {
 
 	APP_WHITELIST=""
 
-	RKHTMVAR=`grep '^APP_WHITELIST=' ${CONFIGFILE} | tail -1`
+	RKHTMVAR=`get_option 2 single APP_WHITELIST` || exit 1
 
-	if [ -n "${RKHTMVAR}" ]; then
-		APP_WHITELIST=`echo "${RKHTMVAR}" | sed -e 's/APP_WHITELIST=//' | tr -d '"' | tr -s ' ' | tr '[A-Z]' '[a-z]'`
-		APP_WHITELIST=" ${APP_WHITELIST} "
-	fi
+	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[A-Z]' '[a-z]'`
 
 
 	IFS=$IFSNL
@@ -10682,62 +10629,62 @@ help() {
 	# This function outputs the help menu.
 	#
 
-	echo ""
-	echo "Usage: rkhunter {--check | --update | --propupd | --versioncheck |"
-	echo "                 --list [tests | languages | rootkits] |"
-	echo "                 --version | --help} [options]"
-	echo ""
+	echo $ECHOOPT ""
+	echo $ECHOOPT "Usage: rkhunter {--check | --update | --propupd | --versioncheck |"
+	echo $ECHOOPT "                 --list [tests | languages | rootkits] |"
+	echo $ECHOOPT "                 --version | --help} [options]"
+	echo $ECHOOPT ""
 
-	echo "Current options are:"
-	echo "         --append-log                  Append to the logfile, do not overwrite"
-	echo "         --bindir <directory>...       Use the specified command directories"
-	echo "     -c, --check                       Check the local system"
-	echo "  --cs2, --color-set2                  Use the second color set for output"
-	echo "         --configfile <file>           Use the specified configuration file"
-	echo "         --cronjob                     Run as a cron job"
-	echo "                                       (implies -c, --sk and --nocolors options)"
-	echo "         --dbdir <directory>           Use the specified database directory"
-	echo "         --debug                       Debug mode"
-	echo "                                       (Do not use unless asked to do so)"
-	echo "         --disable <test>[,<test>...]  Disable specific tests"
-	echo "                                       (Default is to disable no tests)"
-	echo "         --display-logfile             Display the logfile at the end"
-	echo "         --enable  <test>[,<test>...]  Enable specific tests"
-	echo "                                       (Default is to enable all tests)"
-	echo "         --hash {MD5 | SHA1 | NONE |   Use the specified file hash function"
-	echo "                 <command>}            (Default is SHA1)"
-	echo "     -h, --help                        Display this help menu, then exit"
-	echo " --lang, --language <language>         Specify the language to use"
-	echo "                                       (Default is English)"
-	echo "         --list [tests | languages |   List the available test names, languages,"
-	echo "                 rootkits]             or checked for rootkits, then exit"
-	echo "     -l, --logfile [file]              Write to a logfile"
-	echo "                                       (Default is $DFLT_LOGFILE)"
-	echo "         --noappend-log                Do not append to the logfile, overwrite it"
-	echo "         --nocolors                    Use black and white output"
-	echo "         --nolog                       Do not write to a logfile"
-	echo "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
-	echo "   --ns, --nosummary                   Do not show the summary of check results"
-	echo " --novl, --no-verbose-logging          No verbose logging"
-	echo "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain or"
-	echo "                   NONE}               verify file hash values. (Default is NONE)"
-	echo "         --propupd                     Update the file properties database"
-	echo "     -q, --quiet                       Quiet mode (no output at all)"
-	echo "  --rwo, --report-warnings-only        Show only warning messages"
-	echo "     -r, --rootdir <directory>         Use the specified root directory"
-	echo "   --sk, --skip-keypress               Don't wait for a keypress after each test"
-	echo "         --summary                     Show the summary of system check results"
-	echo "                                       (This is the default)"
-	echo "         --syslog [facility.priority]  Log the check start and finish times to syslog"
-	echo "                                       (Default level is $SYSLOG_DFLT_PRIO)"
-	echo "         --tmpdir <directory>          Use the specified temporary directory"
-	echo "         --update                      Check for updates to database files"
-	echo "   --vl, --verbose-logging             Use verbose logging (on by default)"
-	echo "     -V, --version                     Display the version number, then exit"
-	echo "         --versioncheck                Check for latest version of program"
-	echo "     -x, --autox                       Automatically detect if X is in use"
-	echo "     -X, --no-autox                    Do not automatically detect if X is in use"
-	echo ""
+	echo $ECHOOPT "Current options are:"
+	echo $ECHOOPT "         --append-log                  Append to the logfile, do not overwrite"
+	echo $ECHOOPT "         --bindir <directory>...       Use the specified command directories"
+	echo $ECHOOPT "     -c, --check                       Check the local system"
+	echo $ECHOOPT "  --cs2, --color-set2                  Use the second color set for output"
+	echo $ECHOOPT "         --configfile <file>           Use the specified configuration file"
+	echo $ECHOOPT "         --cronjob                     Run as a cron job"
+	echo $ECHOOPT "                                       (implies -c, --sk and --nocolors options)"
+	echo $ECHOOPT "         --dbdir <directory>           Use the specified database directory"
+	echo $ECHOOPT "         --debug                       Debug mode"
+	echo $ECHOOPT "                                       (Do not use unless asked to do so)"
+	echo $ECHOOPT "         --disable <test>[,<test>...]  Disable specific tests"
+	echo $ECHOOPT "                                       (Default is to disable no tests)"
+	echo $ECHOOPT "         --display-logfile             Display the logfile at the end"
+	echo $ECHOOPT "         --enable  <test>[,<test>...]  Enable specific tests"
+	echo $ECHOOPT "                                       (Default is to enable all tests)"
+	echo $ECHOOPT "         --hash {MD5 | SHA1 | NONE |   Use the specified file hash function"
+	echo $ECHOOPT "                 <command>}            (Default is SHA1)"
+	echo $ECHOOPT "     -h, --help                        Display this help menu, then exit"
+	echo $ECHOOPT " --lang, --language <language>         Specify the language to use"
+	echo $ECHOOPT "                                       (Default is English)"
+	echo $ECHOOPT "         --list [tests | languages |   List the available test names, languages,"
+	echo $ECHOOPT "                 rootkits]             or checked for rootkits, then exit"
+	echo $ECHOOPT "     -l, --logfile [file]              Write to a logfile"
+	echo $ECHOOPT "                                       (Default is $DFLT_LOGFILE)"
+	echo $ECHOOPT "         --noappend-log                Do not append to the logfile, overwrite it"
+	echo $ECHOOPT "         --nocolors                    Use black and white output"
+	echo $ECHOOPT "         --nolog                       Do not write to a logfile"
+	echo $ECHOOPT "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
+	echo $ECHOOPT "   --ns, --nosummary                   Do not show the summary of check results"
+	echo $ECHOOPT " --novl, --no-verbose-logging          No verbose logging"
+	echo $ECHOOPT "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain or"
+	echo $ECHOOPT "                   NONE}               verify file hash values. (Default is NONE)"
+	echo $ECHOOPT "         --propupd                     Update the file properties database"
+	echo $ECHOOPT "     -q, --quiet                       Quiet mode (no output at all)"
+	echo $ECHOOPT "  --rwo, --report-warnings-only        Show only warning messages"
+	echo $ECHOOPT "     -r, --rootdir <directory>         Use the specified root directory"
+	echo $ECHOOPT "   --sk, --skip-keypress               Don't wait for a keypress after each test"
+	echo $ECHOOPT "         --summary                     Show the summary of system check results"
+	echo $ECHOOPT "                                       (This is the default)"
+	echo $ECHOOPT "         --syslog [facility.priority]  Log the check start and finish times to syslog"
+	echo $ECHOOPT "                                       (Default level is $SYSLOG_DFLT_PRIO)"
+	echo $ECHOOPT "         --tmpdir <directory>          Use the specified temporary directory"
+	echo $ECHOOPT "         --update                      Check for updates to database files"
+	echo $ECHOOPT "   --vl, --verbose-logging             Use verbose logging (on by default)"
+	echo $ECHOOPT "     -V, --version                     Display the version number, then exit"
+	echo $ECHOOPT "         --versioncheck                Check for latest version of program"
+	echo $ECHOOPT "     -x, --autox                       Automatically detect if X is in use"
+	echo $ECHOOPT "     -X, --no-autox                    Do not automatically detect if X is in use"
+	echo $ECHOOPT ""
 
 	return
 }
@@ -10911,7 +10858,7 @@ KSYMS_FILE=""
 CMD_LINE="$0 $*"
 
 # Create a spaced-separated PATH variable.
-SPACEDPATH=`echo ${PATH} | tr ':' ' ' 2>/dev/null`
+SPACEDPATH=`echo ${PATH} | tr ':' ' '`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
@@ -11045,6 +10992,11 @@ SUSPSCAN_DEBUG=0
 # SELinux runcon usage as determined by get_if_prelinked.
 USE_RUNCON=0
 SELINUX_ENABLED=0
+
+# These get set if any network ports are to be whitelisted.
+PORT_WHITELIST=""
+PORT_WHITELIST_PATH=""
+PORT_WHITELIST_ALL_TRUSTED=0
 
 # The O/S 'release' file location.
 OS_VERSION_FILE=""
@@ -11357,11 +11309,6 @@ while [ $# -ge 1 ]; do
 			FOUND=1
 			;;
 		esac
-
-		if [ $FOUND -eq 0 ]; then
-			echo "No syslog level specified."
-			exit 1
-		fi
 		;;
 	--tmpdir)
 		case "$2" in
@@ -11779,7 +11726,7 @@ fi
 HOST_NAME=`hostname 2>/dev/null`
 test -z "${HOST_NAME}" && HOST_NAME=`uname -n 2>/dev/null`
 test -z "${HOST_NAME}" && HOST_NAME="${HOSTNAME}"
-HOST_NAME=`echo ${HOST_NAME} | cut -d'.' -f1`
+HOST_NAME=`echo ${HOST_NAME} | cut -d. -f1`
 
 
 ######################################################################

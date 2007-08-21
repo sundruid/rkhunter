@@ -1,4 +1,4 @@
-Version:2007081401
+Version:2007082201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -473,12 +473,16 @@ NETWORK_PORTS_START:Performing check for backdoor ports
 NETWORK_PORTS_FILE_MISSING:All backdoor port checks skipped.
 NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) is missing or empty.
 NETWORK_PORTS_FILE_MISSING:If it has been deleted, then you will need to run 'rkhunter --update'.
-NETWORK_PORTS_FILE_NO_NETSTAT:All backdoor port checks skipped.
-NETWORK_PORTS_FILE_NO_NETSTAT:Unable to find the 'netstat' command
+NETWORK_PORTS_UNKNOWN_NETSTAT:All backdoor port checks skipped.
+NETWORK_PORTS_UNKNOWN_NETSTAT:Unknown netstat command format with this O/S.
+NETWORK_PORTS_DISABLE_PATHS:Disabling pathnames and '*' in PORT_WHITELIST setting: no 'lsof' command present.
+NETWORK_PORTS_ENABLE_TRUSTED:Trusted pathnames are enabled for port whitelisting.
 NETWORK_PORTS:Checking for $1 port $2
-NETWORK_PORTS_WHITELIST:Network $1 port $2 is being used: it is whitelisted.
-NETWORK_PORTS_FOUND:Network $1 port $2 is being used. Possible rootkit: $3
-NETWORK_PORTS_FOUND:Run the 'netstat -an' command to check this.
+NETWORK_PORTS_PATH_WHITELIST:Network $1 port $2 is being used by $3: the pathname is whitelisted.
+NETWORK_PORTS_TRUSTED_WHITELIST:Network $1 port $2 is being used by $3: the pathname is trusted.
+NETWORK_PORTS_PORT_WHITELIST:Network $1 port $2 is being used: the port is whitelisted.
+NETWORK_PORTS_FOUND:Network $1 port $2 is being used${3}. Possible rootkit: $4
+NETWORK_PORTS_FOUND:Use the 'lsof -i' or 'netstat -an' command to check this.
 NETWORK_INTERFACE_START:Performing checks on the network interfaces
 NETWORK_PROMISC_CHECK:Checking for promiscuous interfaces
 NETWORK_PROMISC_NO_IFCONFIG:Promiscuous network interface check skipped - unable to find the 'ifconfig' command.

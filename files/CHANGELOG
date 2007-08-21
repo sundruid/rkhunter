@@ -136,6 +136,10 @@
  - Added a file size check to the file properties checks. This will only occur
    for non-prelinked files, files not part of a package, or packaged files
    when the RPM package manager is being used.
+ - Network ports listed in the backdoorports.dat file can now be whitelisted.
+   Specific protocol/port pairs, or pathnames to allowed executables, may be
+   used. Additionally, an asterisk may be used to indicate that trusted
+   pathnames will be allowed. The configuration file has more details about this.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -147,7 +151,7 @@
  - Added BINDIR and ROOTDIR options to the config file.
  - Split out the README file in to README and FAQ files.
  - Solaris will now use the bash shell if available.
- - Expanded the command PATH used to include the /opt/sfw and usr/sfw
+ - Expanded the command PATH used to include the /opt/sfw and /usr/sfw
    directories for Solaris users.
  - Expanded the command PATH used to include the /usr/pkg directory for
    NetBSD users.
@@ -184,8 +188,10 @@
  - Included the /usr/share/man directories when looking for hidden files.
  - Check for symbol entries in kallsyms file if ksyms does not exist.
  - Enabled sockstat/netstat test for all BSD variants (not just FreeBSD).
- - Enabled backdoor port test for all BSD variants (not just FreeBSD), and
-   for Mac's.
+ - Enabled backdoor port test for all systems which have either the 'lsof'
+   or 'netstat' command. However, if the netstat syntax is not understood
+   on the O/S, then an error is shown. (The user can configure the test to
+   be disabled to avoid the error.)
  - The TMPDIR configuration option and --tmpdir command-line option cannot
    be set to /tmp or /var/tmp because files will be copied and left there.
    It cannot be set to /etc either because files will be deleted from there.
