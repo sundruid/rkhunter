@@ -266,7 +266,7 @@ A.   You can create a cronjob script like this:
 
           ( /usr/local/bin/rkhunter --versioncheck --nocolors
             /usr/local/bin/rkhunter --update --nocolors
-            /usr/local/bin/rkhunter --cronjob --rwo --nomow
+            /usr/local/bin/rkhunter --cronjob --rwo
           ) | /bin/mail -s 'rkhunter Daily Run' root
 
      For Linux systems, if the script is saved in the
@@ -276,7 +276,7 @@ A.   You can create a cronjob script like this:
      Alternatively, the rkhunter command can be added directly to
      your root crontab. For example:
 
-        30 5 * * * </path>/rkhunter --cronjob --rwo --nomow <more options>
+        30 5 * * * </path>/rkhunter --cronjob --rwo <more options>
 
      Rootkit Hunter will now run every day at 5:30 (AM).
 

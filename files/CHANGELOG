@@ -98,7 +98,7 @@
    in the rkhunter configuration file. Also, enabled inetd and xinetd
    services can now be whitelisted.
  - Added support for Solaris 10 inetd mechanism (inetadm).
- - The directory containing the SSH configuration file can be specified
+ - The directory containing the SSH configuration file can now be specified
    in the rkhunter config file.
  - The pathname to the syslog configuration file can now be specified
    in the rkhunter config file.
@@ -140,6 +140,11 @@
    Specific protocol/port pairs, or pathnames to allowed executables, may be
    used. Additionally, an asterisk may be used to indicate that trusted
    pathnames will be allowed. The configuration file has more details about this.
+ - The O/S 'release' file pathname may now be configured. This option should only
+   be necessary for those systems on which rkhunter cannot automatically
+   determine the O/S name or version.
+ - Rootkit files and directories, including those with spaces, may now be
+   whitelisted in the configuration file.
 
  Changes:
  - Improved command-line and config file option checking.
@@ -169,7 +174,7 @@
  - The previous 'known good' hash check now also checks the files inode, uid,
    gid, permissions and modification date/time, for any changes. The latter
    is only for non-prelinked systems. As before, in all cases, the file hash
-   is checked.
+   is checked. (This is now the file properties check.)
  - Improved the O/S detection mechanism. Rather than requiring users to send
    us details, rkhunter actively looks at the 'release' file(s) to find the
    O/S name. Included support for some lesser-known Linuxes - GoboLinux,
@@ -314,6 +319,7 @@
    regardless of whether this was true or not.
  - The hidden files and directories check was not working correctly for
    Gentoo users.
+ - Small bug in T0rn rootkit file list.
 
  --
 

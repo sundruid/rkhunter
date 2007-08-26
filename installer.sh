@@ -85,7 +85,7 @@ esac
 
 
 showHelp() { # Show help / version
-	echo $ECHOOPT "${INSTALLER_NAME}"
+	echo $ECHOOPT "${INSTALLER_NAME} ${INSTALLER_VERSION}"
 	echo $ECHOOPT "Usage: $0 <parameters>"
 	echo $ECHOOPT ""
 	echo $ECHOOPT "Ordered valid parameters:"
@@ -103,6 +103,7 @@ showHelp() { # Show help / version
 	echo $ECHOOPT "--install        : Install according to chosen layout."
 	echo $ECHOOPT "--show           : Show chosen layout."
 	echo $ECHOOPT "--remove         : Uninstall according to chosen layout."
+	echo $ECHOOPT "--version        : Show the installer version."
 
 	exit 1
 }
@@ -793,7 +794,8 @@ while [ $# -ge 1 ]; do
 		exit 0
 		;;
 	*)
-		echo "Wrong option \""${1}"\" given, exiting."
+		echo "Unknown option \"${1}\" given."
+		echo ""
 		showHelp
 		;;
 	esac

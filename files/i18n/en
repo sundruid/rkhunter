@@ -1,4 +1,4 @@
-Version:2007082201
+Version:2007082601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -18,7 +18,6 @@ MSG_TYPE_WARNING:Warning
 # This is the list of message results.
 #
 MSG_RESULT_OK:OK
-MSG_RESULT_BAD:BAD
 MSG_RESULT_SKIPPED:Skipped
 MSG_RESULT_WARNING:Warning
 MSG_RESULT_FOUND:Found
@@ -244,6 +243,7 @@ FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
 
 FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
 FILE_PROP_WL:Found file '$1': it is whitelisted for the '$2' check.
+FILE_PROP_WL_DIR:Found directory '$1': it is whitelisted for the '$2' check.
 FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the rkhunter.dat file.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1

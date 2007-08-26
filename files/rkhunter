@@ -522,17 +522,7 @@ get_option() {
 	esac
 
 
-	#
-	# If the option is in the configuration file, but has no value,
-	# then give an error message.
-	#
-
-	if [ -z "${OPTVAR}" ]; then
-		echo "Invalid ${OPTV} configuration option - no value specified." >&2
-		exit 1
-	else
-		echo "${OPTVAR}"
-	fi
+	echo "${OPTVAR}"
 
 	return 0
 }
@@ -786,8 +776,20 @@ scanrootkit() {
 		RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
 		if [ -f "${RKHTMPVAR}" ]; then
-			SCAN_STATUS=1
-			FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
+			#
+			# We first check to see if the file is whitelisted. Note that we use
+			# the un-translated file name. This allows us to check for filenames
+			# with spaces, but without causing problems for our space-delimited test.
+			#
+
+			RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+
+			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR3} \"`" ]; then
+				display --to LOG --type INFO FILE_PROP_WL "${RKHTMPVAR}" rootkit
+			else
+				SCAN_STATUS=1
+				FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
+			fi
 
 			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -806,8 +808,20 @@ scanrootkit() {
 		RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
 		if [ -d "${RKHTMPVAR}" ]; then
-			SCAN_STATUS=1
-			DIR_FOUND="${DIR_FOUND} ${RKHTMPVAR2}"
+			#
+			# We first check to see if the directory is whitelisted. Note that we use
+			# the un-translated directory name. This allows us to check for directory
+			# names with spaces, but without causing problems for our space-delimited test.
+			#
+
+			RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+
+			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${RKHTMPVAR3} \"`" ]; then
+				display --to LOG --type INFO FILE_PROP_WL_DIR "${RKHTMPVAR}" rootkit
+			else
+				SCAN_STATUS=1
+				DIR_FOUND="${DIR_FOUND} ${RKHTMPVAR2}"
+			fi
 
 			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHTMPVAR}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -1010,7 +1024,10 @@ get_installdir_option() {
 
 	RKHINSTALLDIR=`get_option 1 single INSTALLDIR` || exit 1
 
-	if [ ! -d "${RKHINSTALLDIR}" ]; then
+	if [ -z "${RKHINSTALLDIR}" ]; then
+		echo "Invalid INSTALLDIR configuration option - no installation directory specified."
+		exit 1
+	elif [ ! -d "${RKHINSTALLDIR}" ]; then
 		echo "Installation directory does not exist: ${RKHINSTALLDIR}"
 		exit 1
 	elif [ ! -r "${RKHINSTALLDIR}" ]; then
@@ -1502,10 +1519,8 @@ get_rootdir_option() {
 get_mailonwarn_option() {
 
 	#
-	# Get the option from the configuration file, and do a simple
-	# check on whether it is empty or a space. We cannot use the
-	# 'get_option' function here because this option may well
-	# contain quote characters.
+	# Get the option from the configuration file. If it is set,
+	# then we get the MAIL_CMD option as well.
 	#
 
 	MAILONWARNING=`get_option 2 single MAIL-ON-WARNING` || exit 1
@@ -2423,6 +2438,65 @@ get_rc_options() {
 }
 
 
+get_rtkt_whitelist_options() {
+
+	#
+	# This function gets any whitelisted rootkit files
+	# and directories from the configuration file.
+	# There are no defaults.
+	#
+
+	RTKT_FILE_WHITELIST=`get_option 2 single RTKT_FILE_WHITELIST` || exit 1
+
+	if [ -n "${RTKT_FILE_WHITELIST}" ]; then
+		#
+		# Check that the given files are useable.
+		#
+
+		FOUND=0
+
+		for RKHTMPVAR2 in ${RTKT_FILE_WHITELIST}; do
+			RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
+
+			if [ ! -f "${RKHTMPVAR}" ]; then
+				FOUND=1
+				echo "Whitelisted rootkit file does not exist: ${RKHTMPVAR2}"
+			fi
+		done
+
+		test $FOUND -eq 1 && exit 1
+
+		RTKT_FILE_WHITELIST=" ${RTKT_FILE_WHITELIST} "
+	fi
+
+
+	RTKT_DIR_WHITELIST=`get_option 2 single RTKT_DIR_WHITELIST` || exit 1
+
+	if [ -n "${RTKT_DIR_WHITELIST}" ]; then
+		#
+		# Check that the given directories are useable.
+		#
+
+		FOUND=0
+
+		for RKHTMPVAR2 in ${RTKT_DIR_WHITELIST}; do
+			RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
+
+			if [ ! -d "${RKHTMPVAR}" ]; then
+				FOUND=1
+				echo "Whitelisted rootkit directory does not exist: ${RKHTMPVAR2}"
+			fi
+		done
+
+		test $FOUND -eq 1 && exit 1
+
+		RTKT_DIR_WHITELIST=" ${RTKT_DIR_WHITELIST} "
+	fi
+
+	return
+}
+
+
 get_mirror_options() {
 
 	#
@@ -2585,6 +2659,8 @@ get_configfile_options() {
 		get_scan_mode_dev_option
 
 		get_rc_options
+
+		get_rtkt_whitelist_options
 
 		check_test hashes && HASH_CHECK_ENABLED=1
 		check_test attributes && HASH_CHECK_ENABLED=1
@@ -3812,8 +3888,8 @@ do_system_check_initialisation() {
 
 
 	# CiNIK Worm (Slapper.B variant)
-	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
 	CINIK_FILES="${RKHROOTDIR}/tmp/.cinik"
+	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
 
 
 	# Danny-Boy's Abuse Kit
@@ -3932,7 +4008,7 @@ do_system_check_initialisation() {
 		       ${RKHROOTDIR}/usr/lib/.libigno/pkunsec
 		       ${RKHROOTDIR}/usr/lib/.libigno/.igno/psybnc/psybnc"
 	IGNOKIT_DIRS="${RKHROOTDIR}/usr/lib/.libigno
-		      ${RKHROOTDIR}/usr/lib/.libigno/.igno/"
+		      ${RKHROOTDIR}/usr/lib/.libigno/.igno"
 
 
 	# ImperalsS-FBRK (FreeBSD Rootkit)
@@ -4133,7 +4209,7 @@ do_system_check_initialisation() {
 			${RKHROOTDIR}/usr/man/man5/..%/.dir/nscd
 			${RKHROOTDIR}/usr/man/man5/..%/.dir/alpd
 			${RKHROOTDIR}/etc/rc.d/rc.local%"
-	SHUTDOWN_DIRS="${RKHROOTDIR}/usr/man/man5/..%/.dir/
+	SHUTDOWN_DIRS="${RKHROOTDIR}/usr/man/man5/..%/.dir
 		       ${RKHROOTDIR}/usr/man/man5/..%/.dir/scannah
 		       ${RKHROOTDIR}/etc/rc.d/rc0.d/..%/.dir"
 
@@ -4262,7 +4338,7 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT"
 
 
-	# Torn (and misc) Rootkit
+	# T0rn (and misc) Rootkit
 	TORN_FILES="${RKHROOTDIR}/dev/.lib/lib/lib/t0rns
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/du
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/ls
@@ -4286,22 +4362,21 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/name
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/getip.sh
 		    ${RKHROOTDIR}/usr/info/.torn/sh*
-		    ${RKHROOTDIR}/usr/src/.puta/
 		    ${RKHROOTDIR}/usr/src/.puta/.1addr
 		    ${RKHROOTDIR}/usr/src/.puta/.1file
 		    ${RKHROOTDIR}/usr/src/.puta/.1proc
 		    ${RKHROOTDIR}/usr/src/.puta/.1logz
-		    ${RKHROOTDIR}/usr/info/.t0rn/"
-	TORN_DIRS="${RKHROOTDIR}/dev/.lib/
-		   ${RKHROOTDIR}/dev/.lib/lib/
-		   ${RKHROOTDIR}/dev/.lib/lib/lib/
-		   ${RKHROOTDIR}/dev/.lib/lib/lib/dev/
-		   ${RKHROOTDIR}/dev/.lib/lib/scan/
-		   ${RKHROOTDIR}/usr/src/.puta/
-		   ${RKHROOTDIR}/usr/man/man1/man1/
-		   ${RKHROOTDIR}/usr/man/man1/man1/lib/
-		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/
-		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.backup/"
+		    ${RKHROOTDIR}/usr/info/.t0rn"
+	TORN_DIRS="${RKHROOTDIR}/dev/.lib
+		   ${RKHROOTDIR}/dev/.lib/lib
+		   ${RKHROOTDIR}/dev/.lib/lib/lib
+		   ${RKHROOTDIR}/dev/.lib/lib/lib/dev
+		   ${RKHROOTDIR}/dev/.lib/lib/scan
+		   ${RKHROOTDIR}/usr/src/.puta
+		   ${RKHROOTDIR}/usr/man/man1/man1
+		   ${RKHROOTDIR}/usr/man/man1/man1/lib
+		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib
+		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.backup"
 
 
 	# Trojanit Kit Rootkit
@@ -4708,13 +4783,13 @@ file_properties_check() {
 	# values checked against their previous value, which is stored
 	# in the rkhunter.dat file. Other checks work on the current
 	# file, and do not use any previously stored value (for example,
-	# the immutable bit check).
+	# the immutable-bit check).
 	#
 
 	#
 	# Each test will set the variable TEST_RESULT, and use it to
 	# display the actual result. Typically a null string indicates
-	# 'OK', and anything else is 'BAD'.
+	# 'OK', and anything else is a 'Warning'.
 	#
 
 	TEST_RESULT=""
@@ -4804,8 +4879,9 @@ file_properties_check() {
 	# perform all the file checks. If the user has not
 	# disabled any test, and a command is missing, then
 	# we must let them know that without marking each file
-	# test as 'BAD' (because that could hide a real problem).
-	# We include checks on the rkhunter.dat file as well.
+	# test as a 'Warning' (because that could hide a real
+	# problem). We include checks on the rkhunter.dat file
+	# as well.
 	#
 
 	RKHTMPVAR=""
@@ -5055,7 +5131,7 @@ file_properties_check() {
 			# We first need to test if the file exists or not,
 			# and if the file is listed in the rkhunter.dat
 			# file or not. This can indicate files that have
-			# appeared or disappeared on the system.
+			# appeared on or disappeared from the system.
 			#
 
 			if [ -f "${DIR}/${FNAME}" ]; then
@@ -5082,7 +5158,7 @@ file_properties_check() {
 					if [ -n "${RKHLINE}" ]; then
 						PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-						display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result BAD --color RED NAME "${DIR}/${FNAME}"
+						display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${DIR}/${FNAME}"
 						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${DIR}/${FNAME}"
 					fi
 
@@ -6606,7 +6682,9 @@ rootkit_file_dir_checks() {
 				FOUNDINDIR="NOT_FOUND"
 
 				for FNAME in `${FIND_CMD} "${RKHROOTDIR}${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
-					if `grep -i 'sinar' ${FNAME} >/dev/null 2>&1`; then
+					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAME} \"`" ]; then
+						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" rootkit
+					elif `grep -i 'sinar' ${FNAME} >/dev/null 2>&1`; then
 						FOUND=1
 						FOUNDINDIR="FOUND"
 						SINARFILES="${SINARFILES} ${FNAME}"
@@ -6805,11 +6883,18 @@ possible_rootkit_file_dir_checks() {
 		case "${TYPE}" in
 		dir)
 			if [ -d "${FILE}" ]; then
-				FOUND=1
-				FOUNDDIRS="${FOUNDDIRS}%${FILE}:${INFO}"
+				RKHTMPVAR2=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
-				if [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
+				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+					display --to LOG --type INFO FILE_PROP_WL_DIR "${FILE}" possible_rkt_files
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
+				else
+					FOUND=1
+					FOUNDDIRS="${FOUNDDIRS}%${FILE}:${INFO}"
+
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
+					fi
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
@@ -6817,11 +6902,18 @@ possible_rootkit_file_dir_checks() {
 			;;
 		file)
 			if [ -f "${FILE}" ]; then
-				FOUND=1
-				FOUNDFILES="${FOUNDFILES}%${FILE}:${INFO}"
+				RKHTMPVAR2=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
-				if [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+					display --to LOG --type INFO FILE_PROP_WL "${FILE}" possible_rkt_files
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
+				else
+					FOUND=1
+					FOUNDFILES="${FOUNDFILES}%${FILE}:${INFO}"
+
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
+					fi
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
@@ -7360,12 +7452,16 @@ ${PROC} ${PID} ${FNAME}"
 
 	for FILE in ${LOGIN_BACKDOOR_FILES}; do
 		if [ -e "${FILE}" ]; then
-			FOUND=1
-			FOUNDFILES="${FOUNDFILES} ${FILE}"
+			RKHTMPVAR=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FILE}"
+			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+				display --to LOG --type INFO FILE_PROP_WL "${FILE}" other_malware
+			else
+				FOUND=1
+				FOUNDFILES="${FOUNDFILES} ${FILE}"
 			fi
+
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FILE}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FILE}"
 		fi
@@ -7400,12 +7496,16 @@ ${PROC} ${PID} ${FNAME}"
 
 	for DIR in ${SUSPICIOUS_DIRS}; do
 		if [ -d "${DIR}" ]; then
-			FOUND=1
-			FOUNDDIRS="${FOUNDDIRS} ${DIR}"
+			RKHTMPVAR=`echo "${DIR}" | sed -e 's/\./\\\./g'`
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${DIR}"
+			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+				display --to LOG --type INFO FILE_PROP_WL_DIR "${DIR}" other_malware
+			else
+				FOUND=1
+				FOUNDDIRS="${FOUNDDIRS} ${DIR}"
 			fi
+
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${DIR}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${DIR}"
 		fi
@@ -7459,12 +7559,16 @@ ${PROC} ${PID} ${FNAME}"
 
 	for FNAME in ${SNIFFER_FILES}; do
 		if [ -f "${FNAME}" ]; then
-			FOUND=1
-			FOUNDFILES="${FOUNDFILES} ${FNAME}"
+			RKHTMPVAR=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FNAME}"
+			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+				display --to LOG --type INFO FILE_PROP_WL "${FNAME}" other_malware
+			else
+				FOUND=1
+				FOUNDFILES="${FOUNDFILES} ${FNAME}"
 			fi
+
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FNAME}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FNAME}"
 		fi
@@ -11001,6 +11105,10 @@ PORT_WHITELIST_ALL_TRUSTED=0
 # The O/S 'release' file location.
 OS_VERSION_FILE=""
 
+# By default no rootkit files or directories are whitelisted.
+RTKT_DIR_WHITELIST=""
+RTKT_FILE_WHITELIST=""
+
 
 ######################################################################
 #
@@ -11306,7 +11414,6 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			USE_SYSLOG="$1"
-			FOUND=1
 			;;
 		esac
 		;;
