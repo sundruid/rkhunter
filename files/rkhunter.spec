@@ -63,7 +63,8 @@ sh ./installer.sh --layout RPM --install
 %{__mkdir} -p "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily"
 %{__cat} > "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily/01-rkhunter" <<EOF
 #!/bin/sh
-%{_bindir}/rkhunter --cronjob --rwo | /bin/mail -s 'rkhunter Daily Run' root
+( %{_bindir}/rkhunter --cronjob --update --rwo && echo "" ) | /bin/mail -s "Rkhunter daily run on `uname -n`" root
+exit 0
 EOF
 %{__chmod} a+rwx,g-w,o-rwx ${RPM_BUILD_ROOT}%{_sysconfdir}/cron.daily/01-rkhunter
 

@@ -260,25 +260,71 @@ A.   Some distributions, for example Red Hat and OpenBSD, do patch
 
 3.3) How can I automatically run Rootkit Hunter every day?
 
-A.   You can create a cronjob script like this:
+A.   There are several ways that rkhunter can be run via cron. However,
+     it must be remembered that cron will automatically email any output
+     produced by the program to the root user. Secondly, when the rkhunter
+     '--cronjob' option is used, the program will generally not produce
+     any output. It is, therefore, necessary to tell rkhunter what output
+     should be shown. Typically this will just be any warning messages,
+     and this can be achieved by using the '--rwo' (report warnings only)
+     option.
+
+     For the first example, the rkhunter command could be added directly
+     to the root crontab:
+
+          30 5 * * * /usr/local/bin/rkhunter --cronjob --update --rwo
+
+     This would run rkhunter at 5:30 (AM) every day. If no output is
+     produced by rkhunter, then nothing is emailed to root. Any output
+     this is produced, which would only be warning messages, is
+     automatically emailed to root by the cron process.
+
+     Note that the '--update' option has been included. Rkhunter will
+     first perform any updates required to its data files, and then
+     perform the system checks. This option can be omitted, but it is
+     suggested that the option is used regularly to ensure that the
+     rkhunter data files are kept up todate.
+
+     If it is wished that all the normal output of rkhunter, as seen when
+     running rkhunter from the command-line, is emailed to root, then this
+     is possible. The '--cronjob' option should be replaced by
+     '-sk --nocolors'.
+
+     The next example is of a cronjob script. For Linux systems this
+     script could be put in to the /etc/cron.daily directory, so that
+     it will be automatically run every day.
+
+     The script might look like this:
 
           #!/bin/sh
 
-          ( /usr/local/bin/rkhunter --versioncheck --nocolors
-            /usr/local/bin/rkhunter --update --nocolors
-            /usr/local/bin/rkhunter --cronjob --rwo
-          ) | /bin/mail -s 'rkhunter Daily Run' root
+          ( /usr/local/bin/rkhunter --cronjob --update --rwo && echo "" ) \
+            | /bin/mail -s "Rkhunter daily run on `uname -n`" root
 
-     For Linux systems, if the script is saved in the
-     /etc/cron.daily directory, then the system will automatically
-     run it once per day.
+          exit 0
 
-     Alternatively, the rkhunter command can be added directly to
-     your root crontab. For example:
+     Because we are piping any output through to the mail command, it is
+     required to use 'echo ""' when there are no warnings. Without this,
+     the mail command would issue its own warning about there being no
+     message body.
 
-        30 5 * * * </path>/rkhunter --cronjob --rwo <more options>
+     If it is wished to include the date in the output, then something
+     like this could be used instead:
 
-     Rootkit Hunter will now run every day at 5:30 (AM).
+          #!/bin/sh
+
+          ( date; /usr/local/bin/rkhunter --cronjob --update --rwo ) \
+            | /bin/mail -s "Rkhunter daily run on `uname -n`" root
+
+          exit 0
+
+     Finally, it is possible to run rkhunter in quiet-mode, whereby no
+     output will be produced at all. However, if the return code indicates
+     that warnings were found, then we get cron to mail the root user.
+     For example:
+
+          30 5 * * * /usr/local/bin/rkhunter --cronjob --update --quiet \
+                     || echo "Rkhunter daily run on `uname -n` has produced warning messages"
 
 
 3.4) What is the meaning of the test names?
