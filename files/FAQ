@@ -326,6 +326,16 @@ A.   There are several ways that rkhunter can be run via cron. However,
           30 5 * * * /usr/local/bin/rkhunter --cronjob --update --quiet \
                      || echo "Rkhunter daily run on `uname -n` has produced warning messages"
 
+     An alternative to the above example would be to use:
+
+          30 5 * * * /usr/local/bin/rkhunter --cronjob --update --quiet
+
+     and then simply set the MAIL-ON-WARNING option in the configuration
+     file with the root email address. This way, rkhunter produces no
+     output, and so nothing is emailed to root by cron. However, if any
+     warnings are found, then a notice message is emailed to root by
+     rkhunter itself.
+
 
 3.4) What is the meaning of the test names?
 

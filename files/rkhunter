@@ -10289,12 +10289,12 @@ do_system_check() {
 
 
 		if [ -n "${USE_SYSLOG}" ]; then
-			${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Please inspect this machine, because it may be infected"
+			${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Please inspect this machine, because it may be infected."
 		fi
 
 
 		if [ -n "${MAILONWARNING}" ]; then
-			eval "echo 'Please inspect this machine, because it may be infected' | ${MAIL_CMD} ${MAILONWARNING}"
+			eval "echo 'Please inspect this machine, because it may be infected.' | ${MAIL_CMD} ${MAILONWARNING}"
 		fi
 
 		RET_CODE=1
