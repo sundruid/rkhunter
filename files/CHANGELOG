@@ -21,7 +21,7 @@
 
  New:
  - Created an ACKNOWLEDGMENTS file.
- - Added configuration file option MAIL_CMD when report-on-warning used.
+ - Added configuration file option MAIL_CMD when MAIL-ON-WARNING is used.
    This can specify the 'mail' command to use and the subject line.
  - The log file can be appended to. This can be set in the config file or
    by using the --append-log command line option.
