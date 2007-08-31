@@ -2994,9 +2994,9 @@ rkh_dat_set_file_properties() {
 					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-						FILE_IS_PKGD=1
 						FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
-						SYSHASH=`grep " ${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+						SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
 				elif [ "${PKGMGR}" = "BSD" ]; then
 					#
@@ -3011,9 +3011,9 @@ rkh_dat_set_file_properties() {
 						# and then get the hash value.
 						#
 
-						FILE_IS_PKGD=1
 						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
+						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
 				fi
 
@@ -5283,18 +5283,19 @@ file_properties_check() {
 						PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
 						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-							FILE_IS_PKGD=1
-
 							FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
-							SYSHASH=`grep ' ${FILENAME}$' /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+							SYSHASH=`egrep "( |\./)${FILENAME}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
 
-							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							if [ -n "${SYSHASH}" ]; then
+								FILE_IS_PKGD=1
+								RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
-								PKGMGR_VERIFY_RESULT="5"
+								if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+									PKGMGR_VERIFY_RESULT="5"
 
-								if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
-									DEPENDENCY_ERR=1
+									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+										DEPENDENCY_ERR=1
+									fi
 								fi
 							fi
 						fi
@@ -5311,18 +5312,19 @@ file_properties_check() {
 							# pathname, and then get the hash value.
 							#
 
-							FILE_IS_PKGD=1
-
 							FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
 							SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
 
-							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							if [ -n "${SYSHASH}" ]; then
+								FILE_IS_PKGD=1
+								RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
-								PKGMGR_VERIFY_RESULT="5"
+								if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+									PKGMGR_VERIFY_RESULT="5"
 
-								if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
-									DEPENDENCY_ERR=1
+									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+										DEPENDENCY_ERR=1
+									fi
 								fi
 							fi
 						fi
