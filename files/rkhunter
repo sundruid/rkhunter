@@ -6016,7 +6016,7 @@ suspscan() {
 
 				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1| cat -v | cut -d' ' -f2-`
 				# Adding "text" to the egrep below widens scope at the expense of more false positives and extending running time:
-				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|reloc|shell|libr|data|obj'`" ]; then
+				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
 					FOUND=1
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0
 
