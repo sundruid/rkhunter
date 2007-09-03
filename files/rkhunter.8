@@ -267,6 +267,11 @@ tests, the user will be prompted to press the \fIreturn\fP key in order to
 continue. This option disables that feature, and \fBrkhunter\fP will run until
 all the tests have completed.
 
+If this option has not been given, and the user is prompted to press the
+\fIreturn\fP key, a single '\fIs\fP' character, in upper\- or lowercase, may be
+given followed by the \fIreturn\fP key. \fBrkhunter\fP will then continue
+the tests without prompting the user again (as if this option had been given).
+
 .IP \fB\-\-summary\fP
 This option will cause the summary of test results to be displayed. This is
 the default.

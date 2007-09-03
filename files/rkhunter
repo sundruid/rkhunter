@@ -445,6 +445,8 @@ keypresspause() {
 	if [ $SKIP_KEY_PRESS -eq 0 -a $QUIET -eq 0 ]; then
 		display --to SCREEN --type PLAIN --nl PRESSENTER
 		read RKHTMPVAR
+
+		test "${RKHTMPVAR}" = "s" -o "${RKHTMPVAR}" = "S" && SKIP_KEY_PRESS=1
 	fi
 
 	return
@@ -2949,8 +2951,9 @@ rkh_dat_set_file_properties() {
 				#
 
 				PKGNAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+				ERRCODE=$?
 
-				if [ $? -eq 0 ]; then
+				if [ $ERRCODE -eq 0 ]; then
 					#
 					# Okay we have a package name.
 					#
@@ -2958,8 +2961,9 @@ rkh_dat_set_file_properties() {
 					FILE_IS_PKGD=1
 
 					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+					ERRCODE=$?
 
-					if [ $? -eq 0 ]; then
+					if [ $ERRCODE -eq 0 ]; then
 						#
 						# If multiple versions of the same package
 						# have been installed, we use the last one.
@@ -2982,6 +2986,8 @@ rkh_dat_set_file_properties() {
 
 						FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
 						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
+					else
+						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
 					fi
 				fi
 			fi
@@ -3164,11 +3170,12 @@ do_prop_update() {
 
 	cp -f -p ${DB_PATH}/rkhunter.dat ${DB_PATH}/rkhunter.dat.old >/dev/null 2>&1
 	cp -f ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
-	RKHTMPVAR=$?
+	ERRCODE=$?
 
-	if [ $RKHTMPVAR -ne 0 ]; then
+	if [ $ERRCODE -ne 0 ]; then
 		RET_CODE=1
-		display --to SCREEN+LOG --type WARNING PROPUPD_ERROR $RKHTMPVAR
+		display --to LOG --type INFO CMD_ERROR "cp ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat" $ERRCODE
+		display --to SCREEN+LOG --type WARNING PROPUPD_ERROR $ERRCODE
 	else
 		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
@@ -3481,8 +3488,9 @@ do_i18n_update() {
 	#
 
 	download_file "${MIRROR}" "/i18n/i18n.ver" "${RKHUPD_FILE}"
+	ERRCODE=$?
 
-	if [ $? -eq 0 ]; then
+	if [ $ERRCODE -eq 0 ]; then
 		#
 		# Check that we have some version numbers. There
 		# should always be at least one, for the English
@@ -3539,22 +3547,21 @@ do_i18n_update() {
 
 			if [ $PROG_VERS -lt $LATEST_VERS ]; then
 				download_file "${MIRROR}" "/i18n/${LANGFILE}" "${RKHUPD_FILE}"
+				ERRCODE=$?
 
-				if [ $? -eq 0 ]; then
+				if [ $ERRCODE -eq 0 ]; then
 					test $RET_CODE -eq 0 && RET_CODE=2
-
-					display --to LOG --type INFO VERSIONCHECK_UPDT_AVAIL
 
 					cat ${RKHUPD_FILE} >${DB_PATH}/i18n/${LANGFILE}
 
+					display --to LOG --type INFO VERSIONCHECK_UPDT_AVAIL
 					display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result UPD UPDATE_CHECKING_FILE "i18n/${LANGFILE}"
 				else
 					RET_CODE=1
 					UPD_ERROR=1
 
-					display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n/${LANGFILE}"
-
 					display --to LOG --type WARNING UPDATE_DOWNLOAD_FAIL "i18n/${LANGFILE}"
+					display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n/${LANGFILE}"
 				fi
 
 				rm -f ${RKHUPD_FILE} >/dev/null 2>&1
@@ -3651,6 +3658,7 @@ do_update() {
 		#
 
 		download_file "${MIRROR}" "/${UPDFILE}" "${RKHUPD_FILE}"
+		ERRCODE=$?
 
 
 		#
@@ -3658,7 +3666,7 @@ do_update() {
 		# file version numbers.
 		#
 
-		if [ $? -eq 0 ]; then
+		if [ $ERRCODE -eq 0 ]; then
 			LATEST_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE} | tail -1 | cut -d: -f2`
 
 			test -z "${LATEST_VERS}" && LATEST_VERS=0
@@ -3691,9 +3699,8 @@ do_update() {
 			RET_CODE=1
 			UPD_ERROR=1
 
-			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
-
 			display --to LOG --type WARNING UPDATE_DOWNLOAD_FAIL "${UPDFILE}"
+			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
 		fi
 
 		rm -f ${RKHUPD_FILE} >/dev/null 2>&1
@@ -3764,8 +3771,9 @@ do_versioncheck() {
 	#
 
 	download_file "${MIRROR}" "/rkhunter_latest.dat" "${RKHVC_FILE}"
+	ERRCODE=$?
 
-	if [ $? -eq 0 ]; then
+	if [ $ERRCODE -eq 0 ]; then
 		LATESTVERSION=`cat ${RKHVC_FILE} 2>/dev/null`
 
 		#
@@ -3792,8 +3800,8 @@ do_versioncheck() {
 	else
 		RET_CODE=1
 
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 VERSIONCHECK_LATEST_FAIL
 		display --to LOG --type WARNING VERSIONCHECK_FAIL_ALL
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 VERSIONCHECK_LATEST_FAIL
 	fi
 
 	rm -f ${RKHVC_FILE} >/dev/null 2>&1
@@ -5195,8 +5203,9 @@ file_properties_check() {
 					#
 
 					PKGNAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+					ERRCODE=$?
 
-					if [ $? -eq 0 ]; then
+					if [ $ERRCODE -eq 0 ]; then
 						#
 						# Okay we have a package name. Is it in the list
 						# of packages we have already tested as verified?
@@ -5237,8 +5246,9 @@ file_properties_check() {
 						#
 
 						RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+						ERRCODE=$?
 
-						if [ $? -eq 0 ]; then
+						if [ $ERRCODE -eq 0 ]; then
 							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
 
 							FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
@@ -5263,6 +5273,7 @@ file_properties_check() {
 							#
 
 							FDATA="::::::"
+							display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
 						fi
 					fi
 				fi
@@ -6059,7 +6070,9 @@ suspscan() {
 						esac
 
 						grep -i ${SUSPSCAN_TERM} ${FILENAME} >/dev/null 2>&1
-						if [ $? -eq 0 ]; then
+						ERRCODE=$?
+
+						if [ $ERRCODE -eq 0 ]; then
 							#
 							# Use hitlist to find relationship with other terms and influence multiplier. Examples:
 							# {opcode,jmpcode} + {disclosure,privat,kernel}
@@ -6090,11 +6103,9 @@ suspscan() {
 							SUSPSCAN_STRINGS="${SUSPSCAN_STRINGS} ${SUSPSCAN_TERM}"
 
 							SUSPSCAN_CLASS_PREV="$SUSPSCAN_CLASS"
-
 						fi
 
 						SUSPSCAN_NUM=`expr ${SUSPSCAN_NUM} + 1`
-
 					done
 
 					# Yes, this is not set!

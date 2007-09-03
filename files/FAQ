@@ -253,9 +253,12 @@ A.   Some distributions, for example Red Hat and OpenBSD, do patch
      old versions of software. However, Rootkit Hunter thinks it is
      an old version, and so sees it as being unsecure.
 
+     It is possible to whitelist specific applications and their
+     version number. The configuration file contains more details.
+
      If you wish you can skip the application version check by adding
      the 'apps' test name to the DISABLE_TESTS option in your
-     rkhunter.conf file.
+     rkhunter.conf configuration file.
 
 
 3.3) How can I automatically run Rootkit Hunter every day?
@@ -373,9 +376,8 @@ A.   The first run of rkhunter after an installation will usually give
 
      Once these changes have been made, then re-run rkhunter and no
      warnings should appear. Obviously warning messages from other
-     checks indicate that something is wrong, and should be
-     investigated. The logfile will contain further information about
-     each warning message.
+     checks indicate that something else is wrong, and so should be
+     investigated.
 
      NOTE: When using the '--propupd' option it is the users
            responsibility to ensure that the files on their system are
@@ -385,6 +387,12 @@ A.   The first run of rkhunter after an installation will usually give
            systems, it must be remembered that the package manager itself
            uses files stored on the system. Those files may have been
            tampered with.
+
+     The logfile will contain further information about each warning
+     message. Once the reason for the warning has been found, and you
+     believe that rkhunter has given a false-positive result, then
+     looking in the configuration file may show you that the relevant
+     item can be whitelisted.
 
 
 3.8) When I used the '--propupd' option, Rootkit Hunter told me

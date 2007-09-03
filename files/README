@@ -99,31 +99,21 @@ be installed into '/usr/local/lib/rkhunter/scripts', or, if using an
 x86_64 system, into '/usr/local/lib64/rkhunter/scripts'. All directories,
 except 'lib64', will be created where necessary.
 
-Before running RKH you will need to fill the hash database by running
-the following command:
+Before running RKH you will need to fill the file properties database by
+running the following command:
 
     rkhunter --propupd
 
 Note that if you want to use the package management tools provided by 
 your distribution you will need to select a package manager. In the case
-of using RPM your command will be:
+of using RPM your command would be:
 
     rkhunter --propupd --pkgmgr RPM
 
-See more options running the command: 
 
-    rkhunter --help
-
-
-Now to run RKH, as root simply enter the following command:
+To run RKH, as root, simply enter the following command:
 
     rkhunter --check
-
-Note that if you want to use the package management tools provided by 
-your distribution you will need to select a package manager. In the case
-of using dpkg your command will be:
-
-    rkhunter --propupd --pkgmgr DPKG
 
 
 By default, the log file '/var/log/rkhunter.log' will be created. It
