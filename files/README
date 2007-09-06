@@ -86,8 +86,9 @@ called 'rkhunter.conf', into the '/etc' directory or where
 you chose using the --layout switch. Please edit the configuration 
 file according to your own system requirements. If the installer 
 encounters an existing rkhunter.conf, it will not be overwritten.
-Please inspect the new configuration file and copy over any changes
-to the existing configuration file.
+Instead the installer creates a new configuration file, but with
+a unique number as its suffix. Please inspect the new configuration
+file and copy over any changes to the existing configuration file.
 
 The main RKH script will be installed into the '/usr/local/bin'
 directory or where you chose using the --layout switch. Man pages will 
@@ -184,17 +185,26 @@ installer using:
     ./installer.sh --layout /usr --remove
 
 Note: the installer will not remove files that were installed using RPM
-(use the "rpm" command to remove the package), or when a custom layout
-was chosen. However, a standalone uninstallation, specified by using
-'--layout custom .', will remove the whole installation directory (the
-'files' sub-directory).
+(use the "rpm" command to remove the package).
 
-If you chose a custom layout, for example '/opt', then you can run the
-installer to show where the files were installed:
+For a standalone uninstallation, specified by using '--layout custom .',
+the installer will remove the whole installation directory (the 'files'
+sub-directory).
+
+During uninstallation, the installer will remove the initial configuration
+file. However, if RKH was installed more than once, then any additional
+configuration files are not removed. These may be removed manually.
+
+When installing RKH, some directories may have been created. However,
+RKH is unaware of this when being uninstalled. As such, and especially
+when having used a custom installation, some directories may be
+emptied of files, but the directories themselves may remain. Again,
+these can be removed manually if wished.
+
+In order to see where RKH installed its files during installation, the
+'--show' option can be used. For example:
 
     ./installer.sh --layout custom /opt --show
-
-You can then manually remove the files.
 
 
 USING TEST NAMES
