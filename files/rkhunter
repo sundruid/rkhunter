@@ -7259,7 +7259,7 @@ malware_checks() {
 							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
 						fi
 
-						test -n "${RKHTMPVAR}" && PROC="${RKHTMPVAR}"
+						test -n "${RKHTMPVAR}" && PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
 					fi
 
 					#
@@ -8584,7 +8584,7 @@ do_network_interface_checks() {
 			NAME=""
 
 			if [ -n "${READLINK_CMD}" -a -h "/proc/$PID/exe" ]; then
-				NAME=`${READLINK_CMD} -f /proc/$PID/exe`
+				NAME=`${READLINK_CMD} -f /proc/$PID/exe | cut -d' ' -f1`
 			elif [ -f "/proc/$PID/status" ]; then
 				NAME=`grep '^Name:.' /proc/$PID/status | sed -e 's/^Name:.//'`
 			fi
