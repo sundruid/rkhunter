@@ -5965,7 +5965,7 @@ suspscan() {
 	FOUNDDIRS=""
 	FILENAME="${SUSPSCAN_TEMP}/suspscan.$$.strings"
 
-	rm -f ${SUSPSCAN_TEMP}/suspscan.$$.strings >/dev/null 2>&1
+	rm -f ${FILENAME} >/dev/null 2>&1
 
 	for DIR in ${SUSPSCAN_DIRS}; do
 		SUSPSCAN_DIR="${RKHROOTDIR}${DIR}"
@@ -6143,13 +6143,16 @@ suspscan() {
 		fi # test dir exists
 	done # outer loop dirs
 
+	rm -f ${FILENAME} >/dev/null 2>&1
+
+
 	#
 	# Now display the results.
 	#
 
 	# Cruel hack due to looping
 
-	FOUNDDIRS=`grep '.score:.*contains' "${RKHLOGFILE}" | head -1`
+	FOUNDDIRS=`grep '.score:.*contains' "${RKHLOGFILE}" | head -n 1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else

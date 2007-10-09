@@ -32,6 +32,9 @@
  Bugfixes:
  - Scanning the /dev directory in LAZY mode corrupted the pathname being
    tested. Handle filenames with spaces correctly.
+ - During the test of files in /dev, MAKEDEV was not being automatically
+   whitelisted if it exists as an actual file (not a symlink).
+ - Ensure the suspscan test removes any files it creates.
 
  -- 
 
