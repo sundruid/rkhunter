@@ -27,7 +27,7 @@
 
  Bugfixes:
  - Scanning the /dev directory in LAZY mode corrupted the pathname being
-   tested.
+   tested. Handle filenames with spaces correctly.
 
  -- 
 

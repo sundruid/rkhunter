@@ -6029,7 +6029,8 @@ suspscan() {
 				# Adding "text" to the egrep below widens scope at the expense of more false positives and extending running time:
 				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
 					FOUND=1
-					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0
+					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
+					SUSPSCAN_STRINGS=""
 
 					$STRINGS_CMD -n 10 "${SUSPSCAN_ITEM}" >${FILENAME} 2>&1
 
@@ -11104,7 +11105,6 @@ MIRRORS_MODE=0
 
 # By default suspscan verbose logging should be initialised and off.
 SUSPSCAN_DEBUG=0
-SUSPSCAN_HITCOUNT=0
 
 # SELinux runcon usage as determined by get_if_prelinked.
 USE_RUNCON=0
