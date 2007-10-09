@@ -2723,7 +2723,7 @@ rkh_dat_set_version() {
 		OLDDATE=`echo "${OLDVER}" | cut -c1-8`
 		OLDVER=`echo "${OLDVER}" | cut -c9-10`
 
-		if [ "${OLDVER}" = "99" -o "${OLDDATE}" != "${TODAY}" ]; then
+		if [ "${OLDVER}" = "99" -o "${OLDDATE}" != "${TODAY}" -o -z "${OLDVER}" -o -n "`echo \"${OLDVER}\" | grep '[^0-9]'`" ]; then
 			NEWVER="00"
 		else
 			NEWVER=`expr ${OLDVER} + 1`
@@ -9514,11 +9514,11 @@ do_dev_whitelist_check() {
 	#
 
 
-	FNAME=`${FILE_CMD} ${RKHTMPVAR} | cat -v | tr '	' ' ' | tr -s ' ' | egrep -v ' (character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV)'`
+	FNAME=`${FILE_CMD} "${RKHTMPVAR}" | cat -v | tr '	' ' ' | egrep -v ' (character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV)'`
 
 	test -z "${FNAME}" && return
 
-	FILE=`echo "${FNAME}" | cut -d' ' -f1 | sed -e "s/^${RKHROOTDIR}//" | sed -e 's/:$//'`
+	FILE=`echo "${FNAME}" | cut -d: -f1 | sed -e "s/^${RKHROOTDIR}//"`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FILE} \"`" ]; then
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"
@@ -9584,7 +9584,6 @@ do_filesystem_check() {
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			for RKHTMPVAR in ${RKHROOTDIR}/dev/*; do
-				RKHTMPVAR="${RKHROOTDIR}/dev/${RKHTMPVAR}"
 				do_dev_whitelist_check
 			done
 		else
@@ -11105,6 +11104,7 @@ MIRRORS_MODE=0
 
 # By default suspscan verbose logging should be initialised and off.
 SUSPSCAN_DEBUG=0
+SUSPSCAN_HITCOUNT=0
 
 # SELinux runcon usage as determined by get_if_prelinked.
 USE_RUNCON=0

@@ -23,10 +23,11 @@
  - 
 
  Changes:
- - 
+ -
 
  Bugfixes:
- - 
+ - Scanning the /dev directory in LAZY mode corrupted the pathname being
+   tested.
 
  -- 
 
