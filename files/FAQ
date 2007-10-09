@@ -291,7 +291,7 @@ A.   There are several ways that rkhunter can be run via cron. However,
      If it is wished that all the normal output of rkhunter, as seen when
      running rkhunter from the command-line, is emailed to root, then this
      is possible. The '--cronjob' option should be replaced by
-     '-sk --nocolors'.
+     '--sk --nocolors --check'.
 
      The next example is of a cronjob script. For Linux systems this
      script could be put in to the /etc/cron.daily directory, so that
