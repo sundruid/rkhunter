@@ -9515,7 +9515,7 @@ do_dev_whitelist_check() {
 	#
 
 
-	FNAME=`${FILE_CMD} "${RKHTMPVAR}" | cat -v | tr '	' ' ' | egrep -v ' (character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|MAKEDEV)'`
+	FNAME=`${FILE_CMD} "${RKHTMPVAR}" | cat -v | tr '	' ' ' | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`
 
 	test -z "${FNAME}" && return
 
