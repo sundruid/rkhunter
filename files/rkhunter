@@ -1087,7 +1087,7 @@ get_language_option() {
 			RKHLANGUPDT=1
 		else
 			echo "The language specified is not available: ${LANGUAGE}"
-			echo "Use the '--list languages' option to see the list of available languages."
+			echo "Use the command 'rkhunter --lang en --list languages' to see the list of available languages."
 			exit 1
 		fi
 	elif [ ! -s "${DB_PATH}/i18n/en" ]; then

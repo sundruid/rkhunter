@@ -23,7 +23,9 @@
  - 
 
  Changes:
- -
+ - Enhanced the 'unsupported language' error message so that the user is
+   told exactly what command to run in order to see the list of supported
+   languages. Added a similar comment in the configuration file.
 
  Bugfixes:
  - Scanning the /dev directory in LAZY mode corrupted the pathname being
