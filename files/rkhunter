@@ -9826,7 +9826,7 @@ do_app_checks() {
 	#   application%description%version%if known bad%whole version number
 	#
 	# A version number of '-1' means the application was not found.
-	# A 'known bad' number of '-1' means the application is whitelisted.
+	# An 'if known bad' number of '-1' means the application is whitelisted.
 	#
 
 	APPS_COUNT=0
@@ -9886,19 +9886,19 @@ ${APPLICATION}%${APPLICATION_DESC}%-1"
 
 		case "${APPLICATION}" in
 		exim)
-			WHOLE_VERSION=`${APP_CMD_FOUND} -bV 2>&1`
+			WHOLE_VERSION=`${APP_CMD_FOUND} -bV 2>/dev/null`
 			VERSION=`echo "${WHOLE_VERSION}" | grep 'Exim version' | awk '{ print $3 }'`
 			;;
 		gpg)
-			WHOLE_VERSION=`${APP_CMD_FOUND} --version --homedir / 2>&1`
+			WHOLE_VERSION=`${APP_CMD_FOUND} --version --homedir / 2>/dev/null`
 			VERSION=`echo "${WHOLE_VERSION}" | grep 'GnuPG' | awk '{ print $3 }'`
 			;;
 		httpd)
-			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
 			VERSION=`echo "${WHOLE_VERSION}" | grep 'Apache' | cut -d' ' -f3 | cut -d'/' -f2`
 			;;
 		named)
-			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
 			VERSION=`echo "${WHOLE_VERSION}" | egrep 'named|BIND' | grep -v '/' | awk '{ print $2 }'`
 
 			if [ -n "`echo \"${VERSION}\" | grep '-'`" ]; then
@@ -9910,16 +9910,16 @@ ${APPLICATION}%${APPLICATION_DESC}%-1"
 			fi
 			;;
 		openssl)
-			WHOLE_VERSION=`${APP_CMD_FOUND} version 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | grep 'OpenSSL' | cut -d' ' -f2`
+			WHOLE_VERSION=`${APP_CMD_FOUND} version 2>/dev/null`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'OpenSSL [0-9]' | cut -d' ' -f2`
 			;;
 		php)
-			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | grep '^PHP ' | awk '{ print $2 }' | cut -d'-' -f1`
+			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
+			VERSION=`echo "${WHOLE_VERSION}" | grep '^PHP [0-9]' | awk '{ print $2 }' | cut -d'-' -f1`
 			;;
 		procmail)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | grep 'procmail v' | awk '{ print $2 }' | sed -e 's/^v//'`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'procmail v[0-9]' | awk '{ print $2 }' | sed -e 's/^v//'`
 			;;
 		proftpd)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
@@ -9927,7 +9927,7 @@ ${APPLICATION}%${APPLICATION_DESC}%-1"
 			;;
 		sshd)
 			WHOLE_VERSION=`${APP_CMD_FOUND} -t -d 2>&1`
-			VERSION=`echo "${WHOLE_VERSION}" | grep "sshd version OpenSSH" | sed -e 's/^.*sshd version OpenSSH_//' | cut -d' ' -f1`
+			VERSION=`echo "${WHOLE_VERSION}" | grep 'sshd version OpenSSH' | sed -e 's/^.*sshd version OpenSSH_//' | cut -d' ' -f1`
 
 			if [ -n "`echo \"${VERSION}\" | grep '+'`" ]; then
 				VERSION=`echo "${VERSION}" | cut -d'+' -f1`
@@ -10000,7 +10000,10 @@ ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 			else
 				ISBAD=`echo "${RKHTMPVAR}" | cut -d% -f4`
 
-				if [ $ISBAD -eq -1 ]; then
+				if [ -n "`echo \"${ISBAD}\" | grep '[^-0-9]'`" ]; then
+					display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
+					display --to LOG --type INFO APPS_CHECK_VERSION_UNKNOWN "${APPLICATION}"
+				elif [ $ISBAD -eq -1 ]; then
 					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
 					display --to LOG --type INFO APPS_CHECK_VERSION_WL "${APPLICATION}" "${VERSION}"
 				elif [ $ISBAD -eq 1 ]; then
