@@ -482,7 +482,7 @@ A.   The first thing would be to verify that the update is the cause
      proper verification of the files using a file integrity checker
      or your distributions package management tools.
 
-     Alteratively, you can use the '--pkgmgr' command-line option, or
+     Alternatively, you can use the '--pkgmgr' command-line option, or
      the PKGMGR option in the configuration file, to tell RKH to obtain
      its file properties information from the package manager database.
      See the README file for more information about the package manager

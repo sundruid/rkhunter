@@ -11918,13 +11918,15 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO CONFIG_TMPDIR "${RKHTMPDIR}"
 
-	if [ $NOMOW -eq 1 ]; then
-		display --to LOG --type INFO CONFIG_MOW_DISABLED
-	else
-		if [ -z "${MAILONWARNING}" ]; then
-			display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
+	if [ $CHECK -eq 1 ]; then
+		if [ $NOMOW -eq 1 ]; then
+			display --to LOG --type INFO CONFIG_MOW_DISABLED
 		else
-			display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
+			if [ -z "${MAILONWARNING}" ]; then
+				display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
+			else
+				display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
+			fi
 		fi
 	fi
 
