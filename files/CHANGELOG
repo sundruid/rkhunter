@@ -20,7 +20,10 @@
  * 1.3.1 (xx/xx/2007)
 
  New:
- - 
+ - Application names, in the application check, can now be completely
+   whitelisted. Previously only specific versions were whitelisted, and
+   RKH had to run the application to find the version. By whitelisting
+   the application completely, RKH does not have to run it.
 
  Changes:
  - Improved the 'unsupported language' error message so that the user is
@@ -40,6 +43,7 @@
  - Root equivalent and passwordless account names are now shown correctly.
    Previously, names which contained spaces, for example if the account had
    been manually commented out, were only shown up to the first space character.
+ - Whitelisted passwordless account names are now logged.
 
  -- 
 

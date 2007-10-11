@@ -253,11 +253,12 @@ A.   Some distributions, for example Red Hat and OpenBSD, do patch
      old versions of software. However, Rootkit Hunter thinks it is
      an old version, and so sees it as being unsecure.
 
-     It is possible to whitelist specific applications and their
-     version number. The configuration file contains more details.
+     It is possible to whitelist specific applications, or specific
+     versions of an application. The configuration file contains more
+     details about this.
 
-     If you wish you can skip the application version check by adding
-     the 'apps' test name to the DISABLE_TESTS option in your
+     If you wish you can skip the application version check completely
+     by adding the 'apps' test name to the DISABLE_TESTS option in your
      rkhunter.conf configuration file.
 
 

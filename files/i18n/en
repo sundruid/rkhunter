@@ -1,4 +1,4 @@
-Version:2007101101
+Version:2007101102
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -463,6 +463,7 @@ APPS_DAT_MISSING:The file of unsecure application versions (programs_bad.dat) is
 APPS_DAT_MISSING:If it has been deleted, then you will need to run 'rkhunter --update'.
 APPS_NOT_FOUND:Application '$1' not found.
 APPS_CHECK:Checking version of $1
+APPS_CHECK_WL:Found application '$1': it is whitelisted.
 APPS_CHECK_VERSION_UNKNOWN:Unable to obtain version number for '$1'.
 APPS_CHECK_VERSION_FOUND:Application '$1' version '$2' found.
 APPS_CHECK_VERSION_WL:Found application '$1' version '$2': this version is whitelisted.
