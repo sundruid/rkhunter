@@ -24,6 +24,7 @@
    whitelisted. Previously only specific versions were whitelisted, and
    RKH had to run the application to find the version. By whitelisting
    the application completely, RKH does not have to run it.
+ - Add support for the socklog (syslog) daemon.
 
  Changes:
  - Improved the 'unsupported language' error message so that the user is

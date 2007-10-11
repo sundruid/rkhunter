@@ -9435,7 +9435,7 @@ do_system_config_files_check() {
 	#
 
 	SYSLOG_SEEN=0
-	METALOG_SEEN=0
+	METALOG_SEEN=0; SOCKLOG_SEEN=0
 
 	if [ -n "${PS_CMD}" ]; then
 		PS_ARGS="ax"
@@ -9457,8 +9457,17 @@ do_system_config_files_check() {
 				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
 				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING
 			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-				display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING
+				RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'socklog( |$)' | grep -v 'egrep'`
+
+				if [ -n "${RKHTMPVAR}" ]; then
+					SOCKLOG_SEEN=1
+
+					display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING
+				else
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+					display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING
+				fi
 			fi
 		fi
 	else
@@ -9487,7 +9496,7 @@ do_system_config_files_check() {
 	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
 		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "syslog" "${SYSLOG_CONFIG_FILE}"
-	elif [ $METALOG_SEEN -eq 1 ]; then
+	elif [ $METALOG_SEEN -eq 1 -o $SOCKLOG_SEEN -eq 1 ]; then
 		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
 	elif [ $SYSLOG_SEEN -eq 1 ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"

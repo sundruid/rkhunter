@@ -1,4 +1,4 @@
-Version:2007101102
+Version:2007101103
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -440,6 +440,7 @@ SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The default value may be '2,1', to allow the u
 SYSTEM_CONFIGS_SYSLOG:Checking for running syslog daemon
 SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:The syslog daemon is not running.
 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:The syslog daemon is not running, but a metalog daemon has been found.
+SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING:The syslog daemon is not running, but a socklog daemon has been found.
 SYSTEM_CONFIGS_SYSLOG_NO_FILE:The syslog daemon is running, but no configuration file can be found.
 SYSTEM_CONFIGS_SYSLOG_REMOTE:Checking if syslog remote logging is allowed
 SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog configuration file allows remote logging: $1
