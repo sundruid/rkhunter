@@ -37,9 +37,9 @@
  - Ensure the suspscan test removes any files it creates.
  - The MAIL-ON-WARNING configuration file option and the --no-verbose-logging
    command-line option, are now only logged if the system is being checked.
- - Root equivalent account names are now shown correctly. Previously, names
-   which contained spaces, for example if the account had been manually
-   commented out, were only shown up to the first space character.
+ - Root equivalent and passwordless account names are now shown correctly.
+   Previously, names which contained spaces, for example if the account had
+   been manually commented out, were only shown up to the first space character.
 
  -- 
 

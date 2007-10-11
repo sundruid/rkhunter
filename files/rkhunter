@@ -478,6 +478,11 @@ get_option() {
 	#
 	# The function will output the final modified option.
 	#
+	# NOTE: This function is currently implemented such that if it returns
+	# a non-zero code, then RKH will exit at the relevant point with a
+	# return code of 1. However, the function does not currently return a
+	# non-zero code at any time.
+	#
 
 	OPTTYPE="$1"
 	OPTMULTI="$2"
@@ -8958,29 +8963,25 @@ do_group_accounts_check() {
 	#
 
 	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
-		UID_LIST=""
-
-		RKHTMPVAR=`grep '^[^:]*:[^:]*:0:' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`
-
-
 		#
-		# We need to remove the whitelisted UID 0 accounts
-		# from the above list.
+		# We need to remove any whitelisted UID 0 accounts.
 		#
 
 		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || exit 1
 		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
+		UID_LIST=""
+
 		IFS=$IFSNL
 
-		for RKHTMPVAR2 in ${RKHTMPVAR}; do
-			RKHUSERID=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`; do
+			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
 
 			if [ -z "`echo \"${UID0_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
 				UID_LIST="${UID_LIST}
-${RKHTMPVAR2}"
-			elif [ "${RKHTMPVAR2}" != "root" ]; then
-				display --to LOG --type INFO ACCOUNTS_UID0_WL "${RKHTMPVAR2}"
+${RKHTMPVAR}"
+			elif [ "${RKHTMPVAR}" != "root" ]; then
+				display --to LOG --type INFO ACCOUNTS_UID0_WL "${RKHTMPVAR}"
 			fi
 		done
 
@@ -9054,6 +9055,8 @@ ${RKHTMPVAR2}"
 
 		UID_LIST=""
 
+		IFS=$IFSNL
+
 		for RKHTMPVAR in `grep '^[^:]*::' ${SHADOW_FILE} | cut -d: -f1`; do
 			# Ignore any NIS/YP entries
 			test "${RKHTMPVAR}" = "+" && continue
@@ -9061,9 +9064,14 @@ ${RKHTMPVAR2}"
 			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
 
 			if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
-				UID_LIST="${UID_LIST} ${RKHTMPVAR}"
+				UID_LIST="${UID_LIST}
+${RKHTMPVAR}"
+			else
+				display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
 			fi
 		done
+
+		IFS=$RKHIFS
 
 
 		#
@@ -9075,9 +9083,14 @@ ${RKHTMPVAR2}"
 		else
 			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
 
+			IFS=$IFSNL
+
 			for RKHTMPVAR in ${UID_LIST}; do
+				test -z "${RKHTMPVAR}" && continue
 				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "${RKHTMPVAR}"
 			done
+
+			IFS=$RKHIFS
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
