@@ -8971,15 +8971,20 @@ do_group_accounts_check() {
 		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || exit 1
 		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
+		IFS=$IFSNL
+
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
 			RKHUSERID=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
 
 			if [ -z "`echo \"${UID0_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
-				UID_LIST="${UID_LIST} ${RKHTMPVAR2}"
+				UID_LIST="${UID_LIST}
+${RKHTMPVAR2}"
 			elif [ "${RKHTMPVAR2}" != "root" ]; then
 				display --to LOG --type INFO ACCOUNTS_UID0_WL "${RKHTMPVAR2}"
 			fi
 		done
+
+		IFS=$RKHIFS
 
 
 		#
@@ -8991,9 +8996,14 @@ do_group_accounts_check() {
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
 
+			IFS=$IFSNL
+
 			for RKHTMPVAR in ${UID_LIST}; do
+				test -z "${RKHTMPVAR}" && continue
 				display --to LOG --type WARNING ACCOUNTS_UID0_FOUND "${RKHTMPVAR}"
 			done
+
+			IFS=$RKHIFS
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
@@ -12121,8 +12131,6 @@ fi
 if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	display --to LOG --type INFO ENABLED_TESTS "${ENABLE_TESTS}"
 	display --to LOG --type INFO DISABLED_TESTS "${DISABLE_TESTS}"
-
-	test $VERBOSE_LOGGING -eq 0 && display --to LOG --type INFO CONFIG_NO_VL
 fi
 
 if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
@@ -12150,6 +12158,8 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 fi
 
 if [ $CHECK -eq 1 ]; then
+	test $VERBOSE_LOGGING -eq 0 && display --to LOG --type INFO CONFIG_NO_VL
+
 	test -n "${RC_FILE}" && display --to LOG --type INFO CONFIG_LOCAL_RC_FILE "${RKHROOTDIR}${RC_FILE}"
 
 	test -n "${RC_DIR}" && display --to LOG --type INFO CONFIG_LOCAL_RC_DIR "${RKHROOTDIR}${RC_DIR}"
