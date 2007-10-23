@@ -291,8 +291,8 @@ A.   There are several ways that rkhunter can be run via cron. However,
 
      If it is wished that all the normal output of rkhunter, as seen when
      running rkhunter from the command-line, is emailed to root, then this
-     is possible. The '--cronjob' option should be replaced by
-     '--sk --nocolors --check'.
+     is possible. The '--rwo' option should be removed, and the '--cronjob'
+     option replaced by '--sk --nocolors --check'.
 
      The next example is of a cronjob script. For Linux systems this
      script could be put in to the /etc/cron.daily directory, so that
@@ -339,6 +339,11 @@ A.   There are several ways that rkhunter can be run via cron. However,
      output, and so nothing is emailed to root by cron. However, if any
      warnings are found, then a notice message is emailed to root by
      rkhunter itself.
+
+     Note: The '--quiet' option in the above two examples is not actually
+     necessary, but was included for clarity. The '--cronjob' option assumes
+     the '--quiet' option, and so, as mentioned above, when rkhunter is run
+     with the '--cronjob' option no output is generally produced.
 
 
 3.4) What is the meaning of the test names?
