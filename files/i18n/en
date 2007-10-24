@@ -1,4 +1,4 @@
-Version:2007101103
+Version:2007102501
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -450,7 +450,7 @@ FILESYSTEM_START:Performing filesystem checks
 FILESYSTEM_DEV_CHECK:Checking /dev for suspicious file types
 FILESYSTEM_DEV_CHECK_NO_DEV:/dev does not exist.
 FILESYSTEM_DEV_FILE_WL:Found file '$1': it is whitelisted.
-FILESYSTEM_DEV_FILE_FOUND:Suspicious files found in ${1}:
+FILESYSTEM_DEV_FILE_FOUND:Suspicious file types found in ${1}:
 FILESYSTEM_HIDDEN_DIR_WL:Found hidden directory '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_FILE_WL:Found hidden file '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories

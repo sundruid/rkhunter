@@ -45,6 +45,7 @@
    Previously, names which contained spaces, for example if the account had
    been manually commented out, were only shown up to the first space character.
  - Whitelisted passwordless account names are now logged.
+ - Suspscan warnings were being ignored by the rkhunter summary and return code.
 
  -- 
 
