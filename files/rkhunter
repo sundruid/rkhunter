@@ -55,12 +55,15 @@ if [ "$1" = "--debug" ]; then
 fi
 
 case "${OPERATING_SYSTEM}" in
-AIX|OpenBSD|SunOS)
+AIX|OpenBSD|SunOS|IRIX|IRIX64)
 	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'
 		ECHOOPT="--"
 		MYSHELL=ksh
+	elif [ "${OPERATING_SYSTEM}" = "IRIX" -o "${OPERATING_SYSTEM}" = "IRIX64" ]; then
+		ECHOOPT=""
+		MYSHELL=sh
 	else
 		ECHOOPT="-e"
 		MYSHELL=bash
@@ -2860,6 +2863,9 @@ rkh_dat_get_os_info() {
 	AIX)
 		ARCH=`uname -p 2>/dev/null`
 		OSNAME="IBM AIX `oslevel 2>/dev/null`"
+		;;
+	IRIX|IRIX64)
+		OSNAME="${OPERATING_SYSTEM} `uname -r 2>/dev/null`"
 		;;
 	esac
 

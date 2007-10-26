@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.6"
+INSTALLER_VERSION="1.2.7"
 INSTALLER_COPYRIGHT="Copyright 2003-2007, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -51,11 +51,13 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 fi
 
 case "${OPERATING_SYSTEM}" in
-AIX|OpenBSD|SunOS)
+AIX|OpenBSD|SunOS|IRIX|IRIX64)
 	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'
 		ECHOOPT="--"
+	elif [ "${OPERATING_SYSTEM}" = "IRIX" -o "${OPERATING_SYSTEM}" = "IRIX64" ]; then
+		ECHOOPT=""
 	else
 		ECHOOPT="-e"
 	fi
@@ -787,7 +789,10 @@ while [ $# -ge 1 ]; do
 				 selectTemplate $RKHINST_LAYOUT
 				 doInstall
 				 ;;
-			*)	echo "No action given, exiting."
+			"")	echo "No action given, exiting."
+				exit 1
+				;;
+			*)	echo "Unknown action given, exiting: $action"
 				exit 1
 				;;
 		esac
