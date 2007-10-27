@@ -25,6 +25,7 @@
    RKH had to run the application to find the version. By whitelisting
    the application completely, RKH does not have to run it.
  - Added support for the socklog (syslog) daemon.
+ - Added support for IRIX/IRIX64 systems.
 
  Changes:
  - Improved the 'unsupported language' error message so that the user is
@@ -46,6 +47,9 @@
    been manually commented out, were only shown up to the first space character.
  - Whitelisted passwordless account names are now logged.
  - Suspscan warnings were being ignored by the rkhunter summary and return code.
+ - Corrected obtaining process names in Solaris for the network ports and
+   deleted files tests. Previously they did not report the name correctly, if
+   at all.
 
  -- 
 

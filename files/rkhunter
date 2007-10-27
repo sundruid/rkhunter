@@ -7217,30 +7217,7 @@ malware_checks() {
 
 		if [ -n "${LSOF_CMD}" ]; then
 			FOUND=0
-			SOL_PROC=0
-			WHITEPROC=""; BLACKPROC=""; SOLARISX=""
-
-
-			#
-			# If we are running Solaris 10, then see if
-			# we have the command pathname available.
-			#
-			# Solaris 10 and above should have the 'a.out'
-			# file present. We use the PID of 1 here since
-			# it should exist on all systems.
-			#
-			# If we are running Solaris 10 (or above), then
-			# we add the '-X' option to the 'lsof' command
-			# in order to get the deleted files.
-			#
-
-			if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
-				if [ -h "/proc/1/path/a.out" ]; then
-					SOLARISX='-X'
-					test -n "${READLINK_CMD}" && SOL_PROC=1
-				fi
-			fi
-
+			WHITEPROC=""; BLACKPROC=""
 
 			DELE_FILES=`${LSOF_CMD} -n -l -w ${SOLARISX} | grep '(dele' | head -n 1`
 
@@ -7251,11 +7228,12 @@ malware_checks() {
 
 				IFS=$IFSNL
 
-				for LINE in `${LSOF_CMD} -n -l -w $SOLARISX | grep '(dele'`; do
-					PROC=`echo "$LINE" | awk '{ print $1 }'`
-					PID=`echo "$LINE" | awk '{ print $2 }'`
-					NODE=`echo "$LINE" | awk '{ print $8 }'`
-					FNAME=`echo "$LINE" | awk '{ print $9 }'`
+				for LINE in `${LSOF_CMD} -wnl ${SOLARISX} | grep '(dele'`; do
+					PROC=""
+
+					PID=`echo "${LINE}" | awk '{ print $2 }'`
+					NODE=`echo "${LINE}" | awk '{ print $8 }'`
+					FNAME=`echo "${LINE}" | awk '{ print $9 }'`
 
 					#
 					# Skip any PID's we have already seen.
@@ -7277,6 +7255,16 @@ malware_checks() {
 						fi
 
 						test -n "${RKHTMPVAR}" && PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+					fi
+
+					if [ -z "${PROC}" ]; then
+						if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+							PROC=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+						else
+							PROC=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+						fi
+
+						test -z "${PROC}" && PROC=`echo "${LINE}" | awk '{ print $1 }'`
 					fi
 
 					#
@@ -8365,9 +8353,32 @@ do_network_port_checks() {
 			IFS=$RKHIFS
 
 			for PID in `${LSOF_CMD} -wnl -i ${PROTO}:${PORT} | grep -v '^COMMAND' | awk '{ print $2 }'`; do
+				FNAME=""
 				PID_SEEN=1
 
-				FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+				#
+				# Try and get the running process name.
+				#
+
+				if [ -n "${READLINK_CMD}" ]; then
+					RKHTMPVAR=""
+
+					if [ $SOL_PROC -eq 1 ]; then
+						test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
+					elif [ "${OPERATING_SYSTEM}" != "SunOS" -o -h "/proc/${PID}/exe" ]; then
+						test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
+					fi
+
+					test -n "${RKHTMPVAR}" && FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+				fi
+
+				if [ -z "${FNAME}" ]; then
+					if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+						FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+					else
+						FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+					fi
+				fi
 
 				if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
 					FOUND="${FNAME}"
@@ -10190,6 +10201,37 @@ do_system_check() {
 	display --to LOG --type PLAIN --nl CHECK_START
 
 	do_system_check_initialisation
+
+
+	#
+	# Next, for Solaris we see if we are running Solaris 10 or not.
+	# This can be useful to know in some of the tests since we will
+	# use different mechanisms on Solaris 10 from those on Solaris
+	# 9 and before.
+	#
+
+	SOL_PROC=0
+	SOLARISX=""
+
+	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+		#
+		# If we are running Solaris 10, then see if we have the
+		# command pathname available.
+		#
+		# Solaris 10 and above should have the 'a.out' file
+		# present. We use the PID of 1 here since it should exist
+		# on all systems.
+		#
+		# If we are running Solaris 10 (or above), then we add
+		# the '-X' option to the 'lsof' command in order to get
+		# the deleted files.
+		#
+
+		if [ -h "/proc/1/path/a.out" ]; then
+			SOLARISX='-X'
+			test -n "${READLINK_CMD}" && SOL_PROC=1
+		fi
+	fi
 
 
 	#
