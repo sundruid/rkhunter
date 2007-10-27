@@ -1331,6 +1331,8 @@ add_extra_dirs() {
 
 		test -d /sw/bin && EXTRA_DIRS="${EXTRA_DIRS} /sw/bin"
 		test -d /sw/sbin && EXTRA_DIRS="${EXTRA_DIRS} /sw/sbin"
+	elif [ "${OPERATING_SYSTEM}" = "IRIX" -o "${OPERATING_SYSTEM}" = "IRIX64" ]; then
+		test -d /usr/etc && EXTRA_DIRS="${EXTRA_DIRS} /usr/etc"
 	elif [ -f "/etc/GoboLinuxVersion" ]; then
 		#
 		# We have no other easy way of detecting GoboLinux.
@@ -8505,13 +8507,17 @@ do_network_interface_checks() {
 		if [ -n "${IFCONFIG_CMD}" ]; then
 			PROMISCSCAN1=""; PROMISCSCAN2=""
 
-			if [ "${OPERATING_SYSTEM}" = "OpenBSD" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
+			case "${OPERATING_SYSTEM}" in
+			OpenBSD|AIX)
 				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep -v 'pflog' | grep 'PROMISC'`
-			elif [ $BSDOS -eq 1 -o "${OPERATING_SYSTEM}" = "SunOS" ]; then
+				;;
+			*BSD|SunOS|IRIX|IRIX64)
 				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep 'PROMISC'`
-			else
+				;;
+			*)
 				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | grep 'PROMISC'`
-			fi
+				;;
+			esac
 
 			if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 				if [ -n "${IP_CMD}" ]; then
@@ -10570,7 +10576,7 @@ set_file_prop_dirs_files() {
 	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
 	    chkconfig chmod chown chroot cp cron csh curl cut date depmod df
 	    diff dirname dmesg dpkg dpkg-query du echo ed egrep elinks env fgrep
-	    file find GET grep groupadd groupdel groupmod groups grpck head id
+	    file find fuser GET grep groupadd groupdel groupmod groups grpck head id
 	    ifconfig ifdown ifstatus ifup inetd init insmod ip kallsyms kill
 	    killall ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
