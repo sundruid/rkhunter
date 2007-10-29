@@ -1299,19 +1299,17 @@ add_extra_dirs() {
 
 	EXTRA_DIRS=""
 
-	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	if [ $SUNOS -eq 1 ]; then
 		#
 		# Add in some other directories, and those which
 		# contain the Sun 'companion' software.
 		#
 
 		test -d /usr/sfw && EXTRA_DIRS="${EXTRA_DIRS} /usr/sfw/bin /usr/sfw/sbin /usr/sfw/libexec"
-
 		test -d /opt/sfw && EXTRA_DIRS="${EXTRA_DIRS} /opt/sfw/bin /opt/sfw/sbin /opt/sfw/libexec"
-
 		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
-
 		test -d /usr/ccs/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/ccs/bin"
+		test -d /usr/ucb && EXTRA_DIRS="${EXTRA_DIRS} /usr/ucb"
 
 
 		#
@@ -1331,8 +1329,10 @@ add_extra_dirs() {
 
 		test -d /sw/bin && EXTRA_DIRS="${EXTRA_DIRS} /sw/bin"
 		test -d /sw/sbin && EXTRA_DIRS="${EXTRA_DIRS} /sw/sbin"
-	elif [ "${OPERATING_SYSTEM}" = "IRIX" -o "${OPERATING_SYSTEM}" = "IRIX64" ]; then
-		test -d /usr/etc && EXTRA_DIRS="${EXTRA_DIRS} /usr/etc"
+	elif [ $IRIXOS -eq 1 ]; then
+		test -d /usr/ucb && EXTRA_DIRS="${EXTRA_DIRS} /usr/ucb"
+		test -d /usr/freeware/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/freeware/bin"
+		test -d /usr/freeware/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/freeware/sbin"
 	elif [ -f "/etc/GoboLinuxVersion" ]; then
 		#
 		# We have no other easy way of detecting GoboLinux.
@@ -1386,11 +1386,11 @@ get_bindir_option() {
 
 
 			#
-			# Under SunOS /bin is a link to /usr/bin, so
+			# Under some OS's /bin is a link to /usr/bin, so
 			# there is no need to look in it.
 			#
 
-			if [ "${OPERATING_SYSTEM}" = "SunOS" -o "${OPERATING_SYSTEM}" = "AIX" ]; then
+			if [ $SUNOS -eq 1 -o $IRIXOS -eq 1 -o "${OPERATING_SYSTEM}" = "AIX" ]; then
 				if [ -h /bin ]; then
 					RKHB=""
 
@@ -6695,7 +6695,7 @@ rootkit_file_dir_checks() {
 
 	# SInAR Rootkit
 
-	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	if [ $SUNOS -eq 1 ]; then
 		FOUND=0
 		SINARFILES=""
 
@@ -7252,7 +7252,7 @@ malware_checks() {
 
 						if [ $SOL_PROC -eq 1 ]; then
 							test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
-						elif [ "${OPERATING_SYSTEM}" != "SunOS" -o -h "/proc/${PID}/exe" ]; then
+						elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
 							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
 						fi
 
@@ -7260,7 +7260,7 @@ malware_checks() {
 					fi
 
 					if [ -z "${PROC}" ]; then
-						if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+						if [ $SUNOS -eq 1 ]; then
 							PROC=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
 						else
 							PROC=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
@@ -7766,7 +7766,7 @@ trojan_checks() {
 	# command can be used on these later Solaris versions.
 	#
 
-	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	if [ $SUNOS -eq 1 ]; then
 		INETADM_CMD=`find_cmd inetadm`
 
 		test -n "${INETADM_CMD}" && sol10_inetd
@@ -8303,7 +8303,7 @@ do_network_port_checks() {
 		return
 	elif [ -z "${LSOF_CMD}" ]; then
 		case "${OPERATING_SYSTEM}" in
-		*BSD|Linux|AIX|SunOS|Darwin)
+		*BSD|Linux|AIX|SunOS|Darwin|IRIX|IRIX64)
 			#
 			# We can only use pathnames if we have the 'lsof' command.
 			#
@@ -8367,7 +8367,7 @@ do_network_port_checks() {
 
 					if [ $SOL_PROC -eq 1 ]; then
 						test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
-					elif [ "${OPERATING_SYSTEM}" != "SunOS" -o -h "/proc/${PID}/exe" ]; then
+					elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
 						test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
 					fi
 
@@ -8375,7 +8375,7 @@ do_network_port_checks() {
 				fi
 
 				if [ -z "${FNAME}" ]; then
-					if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+					if [ $SUNOS -eq 1 ]; then
 						FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
 					else
 						FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
@@ -8399,7 +8399,7 @@ do_network_port_checks() {
 			Linux)
 				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
 				;;
-			*BSD|Darwin)
+			*BSD|Darwin|IRIX|IRIX64)
 				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
 				;;
 			AIX)
@@ -9465,7 +9465,7 @@ do_system_config_files_check() {
 	if [ -n "${PS_CMD}" ]; then
 		PS_ARGS="ax"
 
-		test "${OPERATING_SYSTEM}" = "SunOS" && PS_ARGS="-ef"
+		test $SUNOS -eq 1 -o $IRIXOS -eq 1 && PS_ARGS="-ef"
 
 		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep '(syslogd|syslog-ng)( |$)' | grep -v 'egrep'`
 
@@ -10219,7 +10219,7 @@ do_system_check() {
 	SOL_PROC=0
 	SOLARISX=""
 
-	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	if [ $SUNOS -eq 1 ]; then
 		#
 		# If we are running Solaris 10, then see if we have the
 		# command pathname available.
@@ -10593,7 +10593,7 @@ set_file_prop_dirs_files() {
 	# We add in some extra commands to check depending on the O/S.
 	#
 
-	if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	if [ $SUNOS -eq 1 ]; then
 		PROP_FILE_LIST="${PROP_FILE_LIST} gbasename gcat gchmod gchown
 		    gdate gdirname gecho gfind gfile ggroups ghead gid glocate
 		    gmd5sum gsize gtail gtest gtouch guname gusers inetadm truss"
@@ -11034,14 +11034,21 @@ SKIP_KEY_PRESS=0
 # Is this the Gentoo operating system?
 GENTOO=0
 
-# Is this a *BSD operating system?
+# Set the O/S type if necessary.
+BSDOS=0
+SUNOS=0
+IRIXOS=0
+
 case "${OPERATING_SYSTEM}" in
 *BSD)
 	BSDOS=1
 	HASH_FLD_IDX=4
 	;;
-*)
-	BSDOS=0
+SunOS)
+	SUNOS=1
+	;;
+IRIX|IRIX64)
+	IRIXOS=1
 	;;
 esac
 
@@ -11596,7 +11603,7 @@ done
 # help and version command-line options are valid.
 #
 
-if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+if [ $SUNOS -eq 1 ]; then
 	test -x "/usr/xpg4/bin/id" && ID_CMD="/usr/xpg4/bin/id"
 fi
 
