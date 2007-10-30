@@ -1,4 +1,4 @@
-Version:2007102502
+Version:2007103001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -25,6 +25,7 @@ MSG_RESULT_NOT_FOUND:Not found
 MSG_RESULT_NONE_FOUND:None found
 MSG_RESULT_ALLOWED:Allowed
 MSG_RESULT_NOT_ALLOWED:Not allowed
+MSG_RESULT_UNSET:Not set
 
 MSG_RESULT_UPD:Updated
 MSG_RESULT_NO_UPD:No update
@@ -60,8 +61,8 @@ CONFIG_NO_MAIL_ON_WARN:No mail-on-warning address configured
 CONFIG_MOW_DISABLED:Disabling use of mail-on-warning at users request
 CONFIG_MAIL_ON_WARN:Emailing warnings to '$1' using command '$2'
 CONFIG_SSH_ROOT:Rkhunter option ALLOW_SSH_ROOT_USER set to '$1'.
-CONFIG_SSH_PROTV1:Rkhunter option set to allow SSH protocol version 1
-CONFIG_X_AUTO:X will automatically be detected
+CONFIG_SSH_PROTV1:Rkhunter option ALLOW_SSH_PROT_V1 set to '$1'.
+CONFIG_X_AUTO:X will be automatically detected
 CONFIG_CLRSET2:Using second color set
 CONFIG_NO_SHOW_SUMMARY:Disabling system check summary at users request
 CONFIG_SCAN_MODE_DEV:SCAN_MODE_DEV set to '$1'
@@ -434,9 +435,9 @@ SYSTEM_CONFIGS_SSH_ROOT_FOUND2:Rkhunter configuration option 'ALLOW_SSH_ROOT_USE
 SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND:The SSH configuration option 'PermitRootLogin' has not been set.
 SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND:The default value may be 'yes', to allow root access.
 SYSTEM_CONFIGS_SSH_PROTO:Checking if SSH protocol v1 is allowed
-SYSTEM_CONFIGS_SSH_PROTO_FOUND:SSH protocol v1 has been enabled in the SSH configuration file ($1).
+SYSTEM_CONFIGS_SSH_PROTO_FOUND:SSH protocol version 1 has been enabled in the SSH configuration file ($1).
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The SSH configuration option 'Protocol' has not been set.
-SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The default value may be '2,1', to allow the use of protocol v1.
+SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The default value may be '2,1', to allow the use of protocol version 1.
 SYSTEM_CONFIGS_SYSLOG:Checking for running syslog daemon
 SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:The syslog daemon is not running.
 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:The syslog daemon is not running, but a metalog daemon has been found.

@@ -45,7 +45,7 @@ if [ "$1" = "--debug" ]; then
 		if [ -f "/tmp/rkhunter-debug" -a ! -h "/tmp/rkhunter-debug" ]; then
 			rm -f /tmp/rkhunter-debug >/dev/null 2>&1
 		else
-			echo "Cannot use '--debug' option. /tmp/rkhunter-debug already exists, and it is not a file."
+			echo "Cannot use '--debug' option. /tmp/rkhunter-debug already exists, but it is not a file."
 			exit 1
 		fi
 	fi
@@ -1333,6 +1333,7 @@ add_extra_dirs() {
 		test -d /usr/ucb && EXTRA_DIRS="${EXTRA_DIRS} /usr/ucb"
 		test -d /usr/freeware/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/freeware/bin"
 		test -d /usr/freeware/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/freeware/sbin"
+		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
 	elif [ -f "/etc/GoboLinuxVersion" ]; then
 		#
 		# We have no other easy way of detecting GoboLinux.
@@ -1681,8 +1682,8 @@ get_ssh_options() {
 	ALLOW_SSH_PROT_V1=`get_option 1 single ALLOW_SSH_PROT_V1` || exit 1
 
 	if [ -n "${ALLOW_SSH_PROT_V1}" ]; then
-		if [ "${ALLOW_SSH_PROT_V1}" != "0" -a "${ALLOW_SSH_PROT_V1}" != "1" ]; then
-			echo "Invalid ALLOW_SSH_PROT_V1 configuration option: not a number: ${ALLOW_SSH_PROT_V1}"
+		if [ "${ALLOW_SSH_PROT_V1}" != "0" -a "${ALLOW_SSH_PROT_V1}" != "1" -a "${ALLOW_SSH_PROT_V1}" != "2" ]; then
+			echo "Invalid ALLOW_SSH_PROT_V1 configuration option: not a valid number: ${ALLOW_SSH_PROT_V1}"
 			exit 1
 		fi
 	else
@@ -9386,7 +9387,7 @@ do_system_config_files_check() {
 		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "SSH" "${SSH_CONFIG_FILE}"
 
 		display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
-		test $ALLOW_SSH_PROT_V1 -eq 1 && display --to LOG --type INFO CONFIG_SSH_PROTV1
+		display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
 
 
 		#
@@ -9416,6 +9417,8 @@ do_system_config_files_check() {
 			fi
 		elif [ "${ALLOW_SSH_ROOT_USER}" = "yes" ]; then
 			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+		elif [ "${ALLOW_SSH_ROOT_USER}" = "unset" ]; then
+			display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
 			display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND
@@ -9445,7 +9448,9 @@ do_system_config_files_check() {
 				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_FOUND "${SSH_CONFIG_FILE}"
 			fi
 		elif [ $ALLOW_SSH_PROT_V1 -eq 1 ]; then
-			display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+		elif [ $ALLOW_SSH_PROT_V1 -eq 2 ]; then
+			display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
 			display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND

@@ -20,10 +20,6 @@
  * 1.3.1 (xx/xx/2007)
 
  New:
- - Application names, in the application check, can now be completely
-   whitelisted. Previously only specific versions were whitelisted, and
-   RKH had to run the application to find the version. By whitelisting
-   the application completely, RKH does not have to run it.
  - Added support for the socklog (syslog) daemon.
  - Added support for IRIX/IRIX64 systems.
 
@@ -33,10 +29,19 @@
    languages. Added a similar comment in the configuration file.
  - Errors from applications during the application version check are mostly
    now ignored. Improved checking that a valid version has been found.
+ - The ALLOW_SSH_ROOT_USER and ALLOW_SSH_PROT_V1 options in the configuration
+   file can now be set to 'unset' and '2' respectively. These values indicate
+   that the SSH configuration file have no specific value set for the
+   corresponding SSH option ('PermitRootLogin' and 'Protocol'). RKH will show
+   the test result in green and as 'Not set'.
+ - Application names, in the application check, can now be completely
+   whitelisted. Previously only specific versions were whitelisted, and
+   RKH had to run the application to find the version. By whitelisting
+   the application completely, RKH does not have to run it.
 
  Bugfixes:
  - Scanning the /dev directory in LAZY mode corrupted the pathname being
-   tested. Handle filenames with spaces correctly.
+   tested. Also RKH now handles filenames (in /dev) with spaces correctly.
  - During the test of files in /dev, MAKEDEV was not being automatically
    whitelisted if it exists as an actual file (not a symlink).
  - Ensure the suspscan test removes any files it creates.

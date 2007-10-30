@@ -39,6 +39,8 @@ The latest version of this FAQ can be found at the RKH web site.
         getting warning messages. Why is that?
    3.8) When I used the '--propupd' option, Rootkit Hunter told me
         I had some missing hashes. What does this mean?
+   3.9) I run rkhunter in cron and in the emailed output I get some
+        strange characters. Why is this?
 
 
  4. ERROR AND WARNING MESSAGES
@@ -414,6 +416,29 @@ A.   Your system probably uses prelinking (the log file will say if
      then you can try using 'prelink <file>' to correct it. The
      'prelink' command above should then work. Re-run RKH with the
      '--propupd' option to ensure that all the hash values are recorded.
+
+
+3.9) I run rkhunter in cron and in the emailed output I get some strange
+     characters. Why is this?
+
+A.   The problem only occurs when the '--update' or '--versioncheck'
+     options are used, and does not occur when rkhunter is run from
+     the command-line. It also does not occur if the '--cronjob' option
+     is used in cron.
+
+     The emailed output probably looks something like this:
+
+           [1;33mChecking rkhunter data files...[0;39m
+           Checking file mirrors.dat[34C[ [1;32mNo update[0;39m ]
+
+     The 'strange' characters are ANSI color codes and escape sequences,
+     and this is why the problem does not occur if rkhunter is run from
+     the command-line. The terminal correctly interprets the codes, but
+     cron cannot do this.
+
+     The solution is to use the '--nocolors' option in your cron job.
+     The '--cronjob' option assumes '--nocolors', which is why the
+     problem does not occur when '--cronjob' is used.
 
 
 ===========================================================
