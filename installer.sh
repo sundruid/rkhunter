@@ -51,7 +51,7 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 fi
 
 case "${OPERATING_SYSTEM}" in
-AIX|OpenBSD|SunOS|IRIX|IRIX64)
+AIX|OpenBSD|SunOS|IRIX*)
 	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'

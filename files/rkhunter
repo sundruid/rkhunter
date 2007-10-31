@@ -55,7 +55,7 @@ if [ "$1" = "--debug" ]; then
 fi
 
 case "${OPERATING_SYSTEM}" in
-AIX|OpenBSD|SunOS|IRIX|IRIX64)
+AIX|OpenBSD|SunOS|IRIX*)
 	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'
@@ -1309,6 +1309,7 @@ add_extra_dirs() {
 		test -d /opt/sfw && EXTRA_DIRS="${EXTRA_DIRS} /opt/sfw/bin /opt/sfw/sbin /opt/sfw/libexec"
 		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
 		test -d /usr/ccs/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/ccs/bin"
+		test -d /usr/5bin -a ! -h /usr/5bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/5bin"
 		test -d /usr/ucb && EXTRA_DIRS="${EXTRA_DIRS} /usr/ucb"
 
 
@@ -2867,7 +2868,7 @@ rkh_dat_get_os_info() {
 		ARCH=`uname -p 2>/dev/null`
 		OSNAME="IBM AIX `oslevel 2>/dev/null`"
 		;;
-	IRIX|IRIX64)
+	IRIX*)
 		OSNAME="${OPERATING_SYSTEM} `uname -r 2>/dev/null`"
 		;;
 	esac
@@ -8304,7 +8305,7 @@ do_network_port_checks() {
 		return
 	elif [ -z "${LSOF_CMD}" ]; then
 		case "${OPERATING_SYSTEM}" in
-		*BSD|Linux|AIX|SunOS|Darwin|IRIX|IRIX64)
+		*BSD|Linux|AIX|SunOS|Darwin|IRIX*)
 			#
 			# We can only use pathnames if we have the 'lsof' command.
 			#
@@ -8400,7 +8401,7 @@ do_network_port_checks() {
 			Linux)
 				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
 				;;
-			*BSD|Darwin|IRIX|IRIX64)
+			*BSD|Darwin|IRIX*)
 				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
 				;;
 			AIX)
@@ -8512,7 +8513,7 @@ do_network_interface_checks() {
 			OpenBSD|AIX)
 				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep -v 'pflog' | grep 'PROMISC'`
 				;;
-			*BSD|SunOS|IRIX|IRIX64)
+			*BSD|SunOS|IRIX*)
 				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep 'PROMISC'`
 				;;
 			*)
@@ -9965,7 +9966,7 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 			case "${APPLICATION}" in
 			exim)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -bV 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep 'Exim version' | awk '{ print $3 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^Exim version [0-9]' | awk '{ print $3 }'`
 				;;
 			gpg)
 				WHOLE_VERSION=`${APP_CMD_FOUND} --version --homedir / 2>/dev/null`
@@ -9973,11 +9974,11 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				;;
 			httpd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep 'Apache' | cut -d' ' -f3 | cut -d'/' -f2`
+				VERSION=`echo "${WHOLE_VERSION}" | grep -i '^Server version:[ 	][ 	]*Apache/[0-9]' | cut -d' ' -f3 | cut -d'/' -f2`
 				;;
 			named)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | egrep 'named|BIND' | grep -v '/' | awk '{ print $2 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | egrep '^(named|BIND)[ 	][ 	]*[0-9]' | grep -v '/' | awk '{ print $2 }'`
 
 				if [ -n "`echo \"${VERSION}\" | grep '-'`" ]; then
 					VERSION=`echo "${VERSION}" | cut -d'-' -f1`
@@ -9989,19 +9990,19 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				;;
 			openssl)
 				WHOLE_VERSION=`${APP_CMD_FOUND} version 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep 'OpenSSL [0-9]' | cut -d' ' -f2`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^OpenSSL[ 	][ 	]*[0-9]' | cut -d' ' -f2`
 				;;
 			php)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep '^PHP [0-9]' | awk '{ print $2 }' | cut -d'-' -f1`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^PHP[ 	][ 	]*[0-9]' | awk '{ print $2 }' | cut -d'-' -f1`
 				;;
 			procmail)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-				VERSION=`echo "${WHOLE_VERSION}" | grep 'procmail v[0-9]' | awk '{ print $2 }' | sed -e 's/^v//'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^procmail[ 	][ 	]*v[0-9]' | awk '{ print $2 }' | sed -e 's/^v//'`
 				;;
 			proftpd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-				VERSION=`echo "${WHOLE_VERSION}" | awk '{ print $4 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep 'ProFTPD[ 	][ 	]*Version[ 	][ 	]*[0-9]' | awk '{ print $4 }'`
 				;;
 			sshd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -t -d 2>&1`
@@ -11052,7 +11053,7 @@ case "${OPERATING_SYSTEM}" in
 SunOS)
 	SUNOS=1
 	;;
-IRIX|IRIX64)
+IRIX*)
 	IRIXOS=1
 	;;
 esac
