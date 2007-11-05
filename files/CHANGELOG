@@ -22,6 +22,11 @@
  New:
  - Added support for the socklog (syslog) daemon.
  - Added support for IRIX/IRIX64 systems.
+ - If the user wishes to force RKH to use the 'stat' or 'readlink'
+   supplied scripts, then this can be set in the configuration file.
+   The options STAT_CMD and READLINK_CMD, respectively, can be given
+   the value of BUILTIN to achieve this. For the 'stat' script, perl
+   must be present.
 
  Changes:
  - Improved the 'unsupported language' error message so that the user is
@@ -55,6 +60,7 @@
  - Corrected obtaining process names in Solaris for the network ports and
    deleted files tests. Previously they did not report the name correctly, if
    at all.
+ - Use of the '--debug' option with the Korn shell was not working completely.
 
  -- 
 

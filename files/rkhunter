@@ -50,8 +50,12 @@ if [ "$1" = "--debug" ]; then
 		fi
 	fi
 
+	DEBUG_OPT=1
+
 	exec 1>/tmp/rkhunter-debug 2>&1
 	set -x
+else
+	DEBUG_OPT=0
 fi
 
 case "${OPERATING_SYSTEM}" in
@@ -938,9 +942,11 @@ check_commands() {
 	# These commands are not 'required', so nothing happens if the
 	# command is not found. The commands can be defined in the
 	# configuration file, and a value of 'DISABLED' will cause a
-	# command to not exist. We have to handle the 'stat' command
-	# in a special way so that the perl module does not get used
-	# if the command is to be disabled.
+	# command to not exist. A value of 'BUILTIN' may be used for
+	# the 'stat' and 'readlink' commands, to indicate that the
+	# supplied scripts should be used. We have to handle the 'stat'
+	# command in a special way so that the perl module does not get
+	# used if the command is to be disabled.
 	#
 
 	for CMD in ${CMDLIST}; do
@@ -956,11 +962,11 @@ check_commands() {
 		CFG_CMD=`get_option 2 single "${RKHTMPVAR}"` || exit 1
 
 		if [ -n "${CFG_CMD}" ]; then
-			if [ "${CFG_CMD}" = "DISABLED" ]; then
+			if [ "${CFG_CMD}" = "DISABLED" -o "${CFG_CMD}" = "BUILTIN" ]; then
 				eval ${RKHTMPVAR}=\"${CFG_CMD}\"
 			else
 				#
-				# check that the command is executable.
+				# Check that the command is executable.
 				#
 
 				MCMD=`echo "${CFG_CMD}" | cut -d' ' -f1`
@@ -984,16 +990,27 @@ check_commands() {
 
 
 	#
-	# If we cannot find a stat command, then see if we can use the
-	# supplied perl script.
+	# If we cannot find a 'stat' command, or the supplied script is to
+	# be used, then we must check to see if perl is available. If it is,
+	# then the supplied 'stat' script can be used.
 	#
 
-	if [ -z "${STAT_CMD}" -a -n "${PERL_CMD}" ]; then
-		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl File::stat Getopt::Long 2>&1 | grep 'NOT'`
+	if [ -n "${PERL_CMD}" -a "${PERL_CMD}" != "DISABLED" ]; then
+		if [ -z "${STAT_CMD}" -o "${STAT_CMD}" = "BUILTIN" ]; then
+			if [ -r "${SCRIPT_PATH}/check_modules.pl" ]; then
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl File::stat Getopt::Long 2>&1 | grep 'NOT installed'`
+			else
+				MOD_INSTALLED="module not found"
+			fi
 
-		if [ -z "${MOD_INSTALLED}" ]; then
-			STAT_CMD="${PERL_CMD} ${SCRIPT_PATH}/stat.pl"
+			if [ -z "${MOD_INSTALLED}" -a -r "${SCRIPT_PATH}/stat.pl" ]; then
+				STAT_CMD="${PERL_CMD} ${SCRIPT_PATH}/stat.pl"
+			else
+				STAT_CMD=""
+			fi
 		fi
+	elif [ "${STAT_CMD}" = "BUILTIN" ]; then
+		STAT_CMD=""
 	fi
 
 
@@ -1002,10 +1019,14 @@ check_commands() {
 	# the '-f' option, then we must use the supplied shell script.
 	#
 
-	if [ -z "${READLINK_CMD}" ]; then
-		READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
+	if [ -z "${READLINK_CMD}" -o "${READLINK_CMD}" = "BUILTIN" ]; then
+		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
 	elif [ -n "`${READLINK_CMD} -f ${SCRIPT_PATH}/readlink.sh 2>&1 >/dev/null`" ]; then
-		READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
+		if [ -x "${SCRIPT_PATH}/readlink.sh" ]; then
+			READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
+		else
+			READLINK_CMD=""
+		fi
 	fi
 
 
@@ -1018,7 +1039,7 @@ check_commands() {
 		RKHTMPVAR="${RKHTMPVAR}_CMD"
 		RKHTMPVAR2=`eval echo "\\$${RKHTMPVAR}"`
 
-		test "${RKHTMPVAR2}" = "DISABLED" && eval ${RKHTMPVAR}=\"\"
+		test "${RKHTMPVAR2}" = "DISABLED" -o "${RKHTMPVAR2}" = "BUILTIN" && eval ${RKHTMPVAR}=\"\"
 	done
 
 	return
@@ -3067,7 +3088,10 @@ rkh_dat_set_file_properties() {
 
 
 			if [ -n "${SCMD}" ]; then
-				test -z "${FDATA}" && FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+				if [ -z "${FDATA}" ]; then
+					FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
+					test -z "${FDATA}" && FDATA="::::::"
+				fi
 			else
 				FDATA="::::::"
 			fi
@@ -3502,7 +3526,7 @@ do_i18n_update() {
 	# number against the installed file.
 	#
 
-	download_file "${MIRROR}" "/i18n/i18n.ver" "${RKHUPD_FILE}"
+	download_file "${MIRROR}" "/i18n/${PROGRAM_version}/i18n.ver" "${RKHUPD_FILE}"
 	ERRCODE=$?
 
 	if [ $ERRCODE -eq 0 ]; then
@@ -3522,7 +3546,7 @@ do_i18n_update() {
 			RET_CODE=1
 			UPD_ERROR=1
 
-			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n"
+			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n versions"
 
 			display --to LOG --type WARNING UPDATE_I18N_NO_VERS
 
@@ -3561,7 +3585,7 @@ do_i18n_update() {
 
 
 			if [ $PROG_VERS -lt $LATEST_VERS ]; then
-				download_file "${MIRROR}" "/i18n/${LANGFILE}" "${RKHUPD_FILE}"
+				download_file "${MIRROR}" "/i18n/${PROGRAM_version}/${LANGFILE}" "${RKHUPD_FILE}"
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -3588,7 +3612,7 @@ do_i18n_update() {
 		RET_CODE=1
 		UPD_ERROR=1
 
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n versions"
 
 		display --to LOG --type WARNING UPDATE_DOWNLOAD_FAIL "i18n.ver"
 	fi
@@ -10932,7 +10956,19 @@ help() {
 
 
 #
-# First we initialise variables used throughout the program.
+# Unfortunately, for the Korn shell if we are debugging then
+# we need to enable tracing in each of the functions.
+#
+
+if [ $DEBUG_OPT -eq 1 -a "${MYSHELL}" = "ksh" ]; then
+	typeset +f | while read RKHTMPVAR; do
+		typeset -ft ${RKHTMPVAR}
+	done
+fi
+
+
+#
+# Initialise the variables used throughout the program.
 #
 
 PROGRAM_NAME="Rootkit Hunter"

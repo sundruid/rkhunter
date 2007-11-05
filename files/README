@@ -370,14 +370,51 @@ which is accessible by the clients. So in the above example, the rkhunter
 data files would have been placed in the 'rkhunter_data' directory. The
 required files consist of the '.dat' files supplied with rkhunter, and which
 will have been installed in the database directory. For a default
-installation this would have been in '/var/lib/rkhunter/db'. Additionally,
-the directory must have an 'i18n' sub-directory which contains all the
-current language translation files. Again, the database directory will
-already have had the 'i18n' sub-directory installed in to it. Finally, if
-the '--versioncheck' option is to be supported with the local mirror, then
-the directory, 'rkhunter_data' in the above example, must contain a file
-called 'rkhunter_latest.dat'. This file must contain the current rkhunter
-version number (for example, '1.3.0') and no other text.
+installation this would have been in '/var/lib/rkhunter/db'.
+
+Additionally, the mirror directory must have an 'i18n' sub-directory which
+contains all the current language translation files for the various versions
+of rkhunter. Each version is put into its own sub-directory. So, for example,
+there would be a '1.3.1' sub-directory, a '1.3.2' sub-directory and so on,
+all within the 'i18n' directory. Again, the database directory will already
+have had the 'i18n' sub-directory installed in to it, but it will only
+contain the language files for the current version of rkhunter. There are
+no version sub-directories installed by default. As such, the mirror will
+need to have the various version sub-directories created, and the relevant
+language files put in to them, for the versions of rkhunter that the mirror
+is required to support. If a client tries to access the language files for a
+version of rkhunter that is not supported by the mirror, then the download
+will fail. Depending on how the client is configured, another, possibly
+remote, mirror may be tried, or rkhunter will give a warning.
+
+Within each rkhunter version sub-directory of the 'i18n' directory, it is
+necessary to have a file called 'i18n.ver'. This file simply contains a list
+of the available language files, and their version numbers. For example:
+
+      cn:2007061401
+      en:2007102501
+
+So, as an example, the mirror file structure will need to look similar
+to this:
+
+                      rkhunter_data
+                            ||
+                            ||
+     ===============================================
+     ||               ||              ||          ||
+ mirrors.dat  rkhunter_latest.dat    i18n    suspscan.dat
+                                      ||
+                                      ||
+                  1.3.1 ============ 1.3.2 ============ 1.3.3
+                  / | \              / | \              / | \
+                 /  |  \            /  |  \            /  |  \
+               cn  en  i18n.ver   cn  en  i18n.ver   cn  en  i18n.ver
+
+
+Finally, if the '--versioncheck' option is to be supported with the local
+mirror, then the directory, 'rkhunter_data' in the above example, must
+contain a file called 'rkhunter_latest.dat'. This file must contain the
+current rkhunter version number (for example, '1.3.0') and no other text.
 
 It is possible to similarly define 'remote' mirrors, which begin with the
 text 'remote='. At present though there is no real difference between a
