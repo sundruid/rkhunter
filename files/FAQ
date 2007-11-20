@@ -423,8 +423,8 @@ A.   Your system probably uses prelinking (the log file will say if
 
 A.   The problem only occurs when the '--update' or '--versioncheck'
      options are used, and does not occur when rkhunter is run from
-     the command-line. It also does not occur if the '--cronjob' option
-     is used in cron.
+     the command-line. It also does not occur if the '--cronjob' or
+     '--quiet' options are used in cron.
 
      The emailed output probably looks something like this:
 

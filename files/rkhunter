@@ -3564,7 +3564,11 @@ do_i18n_update() {
 			LATEST_VERS=`echo "${FNAME}" | cut -d: -f2`
 
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
-				PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} | tail -1 | cut -d: -f2`
+				PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail -1 | cut -d: -f2`
+
+				if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
+					PROG_VERS=`head -n 1 ${DB_PATH}/i18n/${LANGFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
+				fi
 
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
@@ -3674,6 +3678,10 @@ do_update() {
 		if [ -s "${DB_PATH}/${UPDFILE}" ]; then
 			PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/${UPDFILE} | tail -1 | cut -d: -f2`
 
+			if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
+				PROG_VERS=`head -n 1 ${DB_PATH}/${UPDFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
+			fi
+
 			if [ -z "${PROG_VERS}" ]; then
 				PROG_VERS=0
 				display --to LOG --type INFO UPDATE_FILE_NO_VERS "${UPDFILE}"
@@ -3708,7 +3716,11 @@ do_update() {
 		if [ $ERRCODE -eq 0 ]; then
 			LATEST_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE} | tail -1 | cut -d: -f2`
 
-			test -z "${LATEST_VERS}" && LATEST_VERS=0
+			if [ -z "${LATEST_VERS}" ]; then
+				LATEST_VERS=0
+			elif [ -z "`echo \"${LATEST_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
+				LATEST_VERS=0
+			fi
 
 
 			display --to LOG --type INFO VERSIONCHECK_CURRENT "${PROG_VERS}"
@@ -9538,7 +9550,7 @@ do_system_config_files_check() {
 	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
 		RKHTMPVAR="${SYSLOG_CONFIG_FILE}"
 	else
-		RKHTMPVAR="/etc/syslog.conf /etc/syslog-ng/syslog-ng.conf"
+		RKHTMPVAR="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf"
 	fi
 
 	for FILE in ${RKHTMPVAR}; do
@@ -9568,7 +9580,7 @@ do_system_config_files_check() {
 	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
 		test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
 
-		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep '/syslog\.conf$'`" ]; then
+		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | egrep '/r?syslog\.conf$'`" ]; then
 			RKHTMPVAR=`grep '^[^#].*[ 	]@.' ${SYSLOG_CONFIG_FILE}`
 		else
 			#
@@ -10612,8 +10624,8 @@ set_file_prop_dirs_files() {
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
 	    newsyslog nologin passwd perl pkgdb pkg_info prelink ps pstree pwck
-	    pwd readlink rkhunter rmmod rpm runcon runlevel sed sestatus sh sha1
-	    sha1sum size skdet slocate sockstat sort stat strace strings su sudo
+	    pwd readlink rkhunter rmmod rpm rsyslogd runcon runlevel sed sestatus sh
+	    sha1 sha1sum size skdet slocate sockstat sort stat strace strings su sudo
 	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname unhide
 	    uniq useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"
