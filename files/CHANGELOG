@@ -17,7 +17,7 @@
 
  -- 
 
- * 1.3.1 (xx/xx/2007)
+ * 1.3.1 (xx/xx/2008)
 
  New:
  - Added support for the socklog (syslog) daemon.
@@ -43,6 +43,8 @@
    whitelisted. Previously only specific versions were whitelisted, and
    RKH had to run the application to find the version. By whitelisting
    the application completely, RKH does not have to run it.
+ - The use of the 'pflog' network interface is now checked for on all *BSD
+   systems (not just OpenBSD).
 
  Bugfixes:
  - Scanning the /dev directory in LAZY mode corrupted the pathname being
@@ -60,7 +62,8 @@
  - Corrected obtaining process names in Solaris for the network ports and
    deleted files tests. Previously they did not report the name correctly, if
    at all.
- - Use of the '--debug' option with the Korn shell was not working completely.
+ - Use of the '--debug' option with the Korn shell was not working correctly.
+ - Reset the SIGPIPE handler to its default to avoid pipe output errors.
 
  -- 
 

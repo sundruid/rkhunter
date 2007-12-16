@@ -8546,10 +8546,10 @@ do_network_interface_checks() {
 			PROMISCSCAN1=""; PROMISCSCAN2=""
 
 			case "${OPERATING_SYSTEM}" in
-			OpenBSD|AIX)
+			*BSD|AIX)
 				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep -v 'pflog' | grep 'PROMISC'`
 				;;
-			*BSD|SunOS|IRIX*)
+			SunOS|IRIX*)
 				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep 'PROMISC'`
 				;;
 			*)
@@ -10977,6 +10977,13 @@ if [ $DEBUG_OPT -eq 1 -a "${MYSHELL}" = "ksh" ]; then
 		typeset -ft ${RKHTMPVAR}
 	done
 fi
+
+#
+# We reset the SIGPIPE signal to its default
+# to try and avoid any output write errors.
+#
+
+trap - 13 >/dev/null 2>&1
 
 
 #
