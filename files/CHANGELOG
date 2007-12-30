@@ -65,6 +65,8 @@
    at all.
  - Use of the '--debug' option with the Korn shell was not working correctly.
  - Reset the SIGPIPE handler to its default to avoid pipe output errors.
+ - Language files may contain backticks. These are now escaped during
+   processing.
 
  -- 
 

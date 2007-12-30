@@ -11988,7 +11988,7 @@ for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
 
 	if [ "${LANGUAGE}" != "en" ]; then
 		RKHTMPVAR=`grep "^${TYPE}:" ${DB_PATH}/i18n/${LANGUAGE} 2>/dev/null`
-		test -n "${RKHTMPVAR}" && LINE="${RKHTMPVAR}"
+		test -n "${RKHTMPVAR}" && LINE=`echo "${RKHTMPVAR}" | sed 's/\`/\\\\\`/g'`
 	fi
 
 	RKHTMPVAR=`echo "${LINE}" | cut -d: -f2-`
