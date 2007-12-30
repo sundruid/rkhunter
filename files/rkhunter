@@ -327,6 +327,8 @@ display() {
 				echo "Error: Invalid display - language keyword cannot be found: Display line: ${DISPLAY_LINE}"
 				return
 			fi
+		else
+			LINE1=`echo "${LINE1}" | sed -e 's/\`/\\\\\`/g'`
 		fi
 
 		test -n "${LINE1}" && LINE1=`eval "echo \"${LINE1}\" | sed -e 's/;/\\;/g'"`
@@ -11988,7 +11990,7 @@ for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
 
 	if [ "${LANGUAGE}" != "en" ]; then
 		RKHTMPVAR=`grep "^${TYPE}:" ${DB_PATH}/i18n/${LANGUAGE} 2>/dev/null`
-		test -n "${RKHTMPVAR}" && LINE=`echo "${RKHTMPVAR}" | sed 's/\`/\\\\\`/g'`
+		test -n "${RKHTMPVAR}" && LINE=`echo "${RKHTMPVAR}" | sed -e 's/\`/\\\\\`/g'`
 	fi
 
 	RKHTMPVAR=`echo "${LINE}" | cut -d: -f2-`
