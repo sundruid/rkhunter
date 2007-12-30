@@ -45,6 +45,7 @@
    the application completely, RKH does not have to run it.
  - The use of the 'pflog' network interface is now checked for on all *BSD
    systems (not just OpenBSD).
+ - Allow i18n language filenames to contain characters other than just letters.
 
  Bugfixes:
  - Scanning the /dev directory in LAZY mode corrupted the pathname being

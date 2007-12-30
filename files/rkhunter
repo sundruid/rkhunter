@@ -3538,7 +3538,7 @@ do_i18n_update() {
 		# downloading the language files.
 		#
 
-		FOUNDFILES=`grep '^[a-zA-Z][a-zA-Z]*:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE}`
+		FOUNDFILES=`grep '^[a-zA-Z][a-zA-Z0-9._-]*:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE}`
 
 		rm -f ${RKHUPD_FILE} >/dev/null 2>&1
 
