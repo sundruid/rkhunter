@@ -67,6 +67,8 @@
  - Reset the SIGPIPE handler to its default to avoid pipe output errors.
  - Language files may contain backticks. These are now escaped during
    processing.
+ - Unset the MANPATH in the spec file to allow the RPM to be built on
+   OpenSuSE systems.
 
  -- 
 

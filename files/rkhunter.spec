@@ -56,6 +56,9 @@ Rootkit Hunter is released as a GPL licensed project and free for everyone to us
 %build
 
 %install
+MANPATH=""
+export MANPATH
+
 sh ./installer.sh --layout RPM --install
 
 
