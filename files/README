@@ -33,7 +33,7 @@ Please note RKH has some requirements:
 3) A tool should be present with which to download file updates. 
    Currently wget, curl, (e)links, lynx and GET are supported. If your
    system does not allow the possibility to install one of these 
-   applications, but does run perl, you can use "bget" available from 
+   applications, but does run perl, you can use 'bget' available from 
    http://www.cpan.org/authors/id/E/EL/ELIJAH/. If you use another 
    generic method of updating RKH then please let us know.
 
@@ -53,8 +53,10 @@ ROOTKIT HUNTER INSTALLATION
 ===========================
 
 Unpacking the tar file should produce a single directory called
-'rkhunter'. Within this directory is the installation script called
-'installer.sh'.
+'rkhunter-<version>'. Where '<version>' is the version number of rkhunter
+being installed. For example, the rkhunter-1.3.0.tar.gz tar file will produce
+the 'rkhunter-1.3.0' directory when unpacked. Within this directory is the
+installation script called 'installer.sh'.
 
 To perform a default installation of RKH simply unpack the tarball and,
 as root, run the installation script:
@@ -72,12 +74,12 @@ As an another example, to install all files beneath /opt, run:
 
     ./installer.sh --layout custom /opt --install
 
-To show where files are installed using the "oldschool" layout
+To show where files are installed using the 'oldschool' layout
 run:
 
     ./installer.sh --layout oldschool --show
 
-The layout named "RPM" may not be chosen since it is used solely
+The layout named 'RPM' may not be chosen since it is used solely
 for installing RKH using RPM.
 
 
@@ -185,7 +187,7 @@ installer using:
     ./installer.sh --layout /usr --remove
 
 Note: the installer will not remove files that were installed using RPM
-(use the "rpm" command to remove the package).
+(use the 'rpm' command to remove the package).
 
 For a standalone uninstallation, specified by using '--layout custom .',
 the installer will remove the whole installation directory (the 'files'
@@ -238,7 +240,7 @@ to disable no tests. For this purpose the enable options can use the special
 test name 'all', and the disable options can use the name 'none'. To specify
 more than one test name, specify them as a comma-separated list. For example:
 
-    rkhunter --enable "rootkits,hashes"
+    rkhunter --enable 'rootkits,hashes'
 
 Note that in the above example no disabled test list was specified. As such, it
 will default to the program default value - '--disable none'. If multiple use
@@ -271,7 +273,7 @@ previous example, '--disable none' will have been assumed.
 If a combination of enabled and disabled tests are specified, then RKH will
 disable a test if it is specified in the enable list. So, for example:
 
-    rkhunter --enable "rootkits,deleted_files" --disable malware
+    rkhunter --enable 'rootkits,deleted_files' --disable malware
 
 In this example the 'malware' test is disabled because it is part of the
 'rootkits' test. The fact that the 'deleted_files' test is specified to be
@@ -463,7 +465,7 @@ try and resolve the problem themselves. This can be done by first
 checking the FAQ file, which is present in your installation if the
 distributed tarball is used as source. The FAQ will contain answers 
 to many common problems. The latest version of the FAQ can always be 
-found at RKH's project pages on SourceForge, in the "Documentation" 
+found at RKH's project pages on SourceForge, in the 'Documentation' 
 section.
 
 If the problem has occurred directly after upgrading RKH, then please
