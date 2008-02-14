@@ -60,7 +60,7 @@ To perform a default installation of RKH simply unpack the tarball and,
 as root, run the installation script:
 
     tar zxf rkhunter-<version>.tar.gz
-    cd rkhunter
+    cd rkhunter-<version>
     ./installer.sh --layout default --install
 
 RKH installation supports custom layouts. To show some examples
@@ -176,7 +176,7 @@ tarball, and then run the installer with the --remove option. If RKH
 was installed using a default installation, then run:
 
     tar zxf rkhunter-<version>.tar.gz
-    cd rkhunter
+    cd rkhunter-<version>
     ./installer.sh --layout default --remove
 
 If you chose a different layout, for example '/usr', then run the
@@ -315,12 +315,13 @@ Typically the file properties are obtained using commands such as 'stat',
 'file', 'md5sum' and 'prelink'. However, it is also possible to specify that
 RKH should get whatever values it can by using a package manager. This can be
 done by using the '--pkgmgr' command-line option, or the 'PKGMGR' configuration
-file option. When the RPM package manager is specified, during the file properties
-check the results from the RPM verification command are used as the test results.
-For the other package managers, the values from the package manager database are
-compared against the current values for the files. By using a package manager,
-it is possible to avoid some false-positive reports that a file has changed when
-in fact it has been automatically updated by the system.
+file option. When the RPM package manager is specified, during the file
+properties check the results from the RPM verification command are used as the
+test results. For the other package managers, the values from the package
+manager database are compared against the current values for the files. By
+using a package manager, it is possible to avoid some false-positive reports
+that a file has changed when in fact it has been automatically updated by the
+system.
 
 The currently available package managers are 'RPM' for RedHat/RPM-based
 systems, 'DPKG' for Debian-based systems, and 'BSD' for *BSD systems. It is
