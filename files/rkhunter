@@ -6030,7 +6030,7 @@ suspscan() {
 				display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIR_CHECK "${SUSPSCAN_DIR}"
 			fi
 
-			$FIND_CMD "${SUSPSCAN_DIR}" -type f -o -type l | while read SUSPSCAN_ITEM; do
+			$FIND_CMD "${SUSPSCAN_DIR}" -type f -o -type l 2>/dev/null | while read SUSPSCAN_ITEM; do
 				#
 				# If the file is a link, then find
 				# what it points to.
@@ -6078,7 +6078,7 @@ suspscan() {
 				# Finally, test the file type.
 				#
 
-				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1| cat -v | cut -d' ' -f2-`
+				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | cat -v | cut -d' ' -f2-`
 				# Adding "text" to the egrep below widens scope at the expense of more false positives and extending running time:
 				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
 					FOUND=1
@@ -8188,7 +8188,7 @@ linux_specific_checks() {
 	#
 
 	if [ -d "${LKMPATH}" -a -n "${FIND_CMD}" ]; then
-		for FNAME in `${FIND_CMD} ${LKMPATH} -type f -name "*.o"`; do
+		for FNAME in `${FIND_CMD} ${LKMPATH} -type f -name "*.o" 2>/dev/null`; do
 			for RKHTMPVAR in ${LKM_NAMES}; do
 				if [ -n "`echo ${FNAME} | grep \"/${RKHTMPVAR}\$\"`" ]; then
 					FOUND=1
@@ -8927,7 +8927,7 @@ ${RKHROOTDIR}${FNAME}"
 			RCSTRINGS=`echo "${RCSTRINGS}" | sed -e 's/^ //'`
 
 
-			for FILE in `${FIND_CMD} ${DIR} -type f -a ! -type l`; do
+			for FILE in `${FIND_CMD} ${DIR} -type f -a ! -type l 2>/dev/null`; do
 				for STRING in ${RCSTRINGS}; do
 					if [ -n "`grep "${STRING}" ${FILE} | grep -v '^#'`" ]; then
 						FOUND=1
@@ -9692,7 +9692,7 @@ do_filesystem_check() {
 				do_dev_whitelist_check
 			done
 		else
-			for RKHTMPVAR in `${FIND_CMD} ${RKHROOTDIR}/dev ! -type d`; do
+			for RKHTMPVAR in `${FIND_CMD} ${RKHROOTDIR}/dev ! -type d 2>/dev/null`; do
 				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
 			done
 		fi
@@ -9753,7 +9753,7 @@ do_filesystem_check() {
 
 	for DIR in ${LONGSEARCHDIRS}; do
 		if [ -d ${DIR} ]; then
-			RKHTMPVAR=`${FIND_CMD} ${DIR} -name ".*"`
+			RKHTMPVAR=`${FIND_CMD} ${DIR} -name ".*" 2>/dev/null`
 			LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
 		fi
 	done
@@ -9789,7 +9789,11 @@ do_filesystem_check() {
 			test ! -s "${FNAME}" -a -n "`echo \"${FNAME}\" | grep '/\.keep$'`" && continue
 		fi
 
-		FTYPE=`${FILE_CMD} ${FNAME} | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
+		if [ -f "${FNAME}" ]; then
+			FTYPE=`${FILE_CMD} ${FNAME} | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
+		else
+			continue
+		fi
 
 		test -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
 
