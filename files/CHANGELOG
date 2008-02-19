@@ -69,6 +69,8 @@
    processing.
  - Unset the MANPATH in the spec file to allow the RPM to be built on
    OpenSuSE systems.
+ - The hidden files/directories test would try and run even if no 'file'
+   command was present.
 
  -- 
 

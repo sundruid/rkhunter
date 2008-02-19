@@ -9689,11 +9689,11 @@ do_filesystem_check() {
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			for RKHTMPVAR in ${RKHROOTDIR}/dev/*; do
-				do_dev_whitelist_check
+				test -s "${RKHTMPVAR}" && do_dev_whitelist_check
 			done
 		else
-			for RKHTMPVAR in `${FIND_CMD} ${RKHROOTDIR}/dev ! -type d 2>/dev/null`; do
-				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
+			for RKHTMPVAR in `${FIND_CMD} ${RKHROOTDIR}/dev ! -type d -a ! -type l 2>/dev/null`; do
+				test -s "${RKHTMPVAR}" -a -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
 			done
 		fi
 
@@ -9723,13 +9723,21 @@ do_filesystem_check() {
 
 	#
 	# Now we check various directories for hidden files and
-	# directories.
+	# directories. We must have the 'file' command for this
+	# test to run.
 	#
 	# First we look in two sets of directories. One set we search
 	# recursively, using 'find', the other set we only search to
 	# one-level. If we have no 'find' command, then all the
 	# directories are only searched to one-level.
 	#
+
+	if [ -z "${FILE_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_HIDDEN_CHECK
+		display --to LOG --type INFO NOT_FOUND_CMD "file"
+		return
+	fi
+
 
 	FOUNDDIRS=""
 	FOUNDFILES=""
@@ -9747,14 +9755,14 @@ do_filesystem_check() {
 	for DIR in ${SHORTSEARCHDIRS}; do
 		if [ -d ${DIR} ]; then
 			RKHTMPVAR=`ls -1d ${DIR}/.* | egrep -v '/\.\.?$'`
-			LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
+			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
 		fi
 	done
 
 	for DIR in ${LONGSEARCHDIRS}; do
 		if [ -d ${DIR} ]; then
 			RKHTMPVAR=`${FIND_CMD} ${DIR} -name ".*" 2>/dev/null`
-			LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
+			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
 		fi
 	done
 
@@ -9766,17 +9774,19 @@ do_filesystem_check() {
 	ALLOWHIDDENDIRS=" "
 	ALLOWHIDDENFILES=" "
 
-	for DIR in `get_option 1 multi ALLOWHIDDENDIR`; do
-		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
-	done
+	if [ -n "${LOOKINDIRS}" ]; then
+		for DIR in `get_option 1 multi ALLOWHIDDENDIR`; do
+			ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
+		done
 
-	ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
+		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
 
-	for FNAME in `get_option 1 multi ALLOWHIDDENFILE`; do
-		ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
-	done
+		for FNAME in `get_option 1 multi ALLOWHIDDENFILE`; do
+			ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
+		done
 
-	ALLOWHIDDENFILES="${ALLOWHIDDENFILES} "
+		ALLOWHIDDENFILES="${ALLOWHIDDENFILES} "
+	fi
 
 
 	#
