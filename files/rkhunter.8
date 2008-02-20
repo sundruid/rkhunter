@@ -179,7 +179,7 @@ option is used, and \fB\-\-propupd\fP is not specified, then the
 \fB\-\-check\fP command option is assumed. If only one test name, other than
 \fIall\fP, is given, then the \fB\-\-skip\-keypress\fP option is also assumed.
 Read the README file for more information about test names. By default all
-tests are enabled.
+tests are enabled. All tests will be listed below under TESTS.
 
 .IP "\fB\-\-hash {MD5 | SHA1 | NONE | <command>}\fP"
 Both the file properties check and the \fB\-\-propupd\fP command option will
@@ -307,6 +307,52 @@ is to try and detect X.
 .IP "\fB\-X, \-\-no\-autox\fP"
 This option prevents \fBrkhunter\fP from automatically detecting if the X
 Window system is being used. See the \fB\-\-autox\fP option.
+
+
+.SH TESTS
+
+.IP "\fBadditional_rkts\fP" 
+This test is for SHORT_EXPLANATION. It works as part of GROUP. Corresponding 
+configuration file entries: ONE=one, TWO=two and for white-listing 
+THREE=three,three. Simple globbing (/dev/shm/file-*) works.
+
+
+.IP \fBall\fP
+.IP \fBapps\fP
+.IP \fBattributes\fP
+.IP \fBdeleted_files\fP
+.IP \fBfilesystem\fP
+.IP \fBgroup_accounts\fP
+.IP \fBgroup_changes\fP
+.IP \fBhashes\fP
+.IP \fBhidden_procs\fP
+.IP \fBimmutable known_rkts\fP
+.IP \fBlocal_host\fP
+.IP \fBmalware\fP
+.IP \fBnetwork\fP
+.IP \fBnone\fP
+.IP \fBos_specific\fP
+.IP \fBother_malware\fP
+.IP \fBpacket_cap_apps\fP
+.IP \fBpasswd_changes\fP
+.IP \fBports\fP
+.IP \fBpossible_rkt_files\fP
+.IP \fBpossible_rkts\fP
+.IP \fBpossible_rkt_strings\fP
+.IP \fBpromisc\fP
+.IP \fBproperties\fP
+.IP \fBrootkits\fP
+.IP \fBrunning_procs\fP
+.IP \fBscripts\fP
+.IP \fBshared_libs\fP
+.IP \fBshared_libs_path\fP
+.IP \fBstartup_files\fP
+.IP \fBstartup_malware\fP
+.IP \fBstrings\fP
+.IP \fBsuspscan\fP
+.IP \fBsystem_commands\fP
+.IP \fBsystem_configs trojans\fP
+
 
 .SH FILES
 (For a default installation)
