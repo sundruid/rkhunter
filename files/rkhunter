@@ -6674,9 +6674,7 @@ rootkit_file_dir_checks() {
 	FOUND=0
 
 	if [ -n "${KSYMS_FILE}" ]; then
-		if `egrep -i 'adore|sebek' ${KSYMS_FILE} >/dev/null 2>&1`; then
-			FOUND=1
-		fi
+		egrep -i 'adore|sebek' ${KSYMS_FILE} >/dev/null 2>&1 && FOUND=1
 	fi
 
 	if [ $FOUND -eq 0 ]; then
@@ -8165,6 +8163,7 @@ linux_specific_checks() {
 
 	if [ -z "${RKHROOTDIR}" ]; then
 		LKMPATH="/lib/modules/`uname -r 2>/dev/null`"
+		test ! -d "${LKMPATH}" && LKMPATH="/lib/modules"
 	else
 		LKMPATH="${RKHROOTDIR}/lib/modules"
 	fi
@@ -9685,7 +9684,13 @@ do_filesystem_check() {
 		ALLOWDEVFILES=" "
 
 		if [ $BSDOS -eq 1 ]; then
-			test -n "`mount 2>/dev/null | egrep '^fdesc(fs)? .*type fdesc'`" && FDESCFS=1
+			RKHTMPVAR=`find_cmd mount`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				test -n "`${RKHTMPVAR} 2>/dev/null | egrep '^fdesc(fs)? .*type fdesc'`" && FDESCFS=1
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD "mount"
+			fi
 		fi
 
 		for FNAME in `get_option 1 multi ALLOWDEVFILE`; do
