@@ -20,7 +20,7 @@
  * 1.3.1 (xx/xx/2008)
 
  New:
- - Added support for the socklog (syslog) daemon.
+ - Added support for the socklog and rsyslog (syslog) daemons.
  - Added support for IRIX/IRIX64 systems.
  - If the user wishes to force RKH to use the 'stat' or 'readlink'
    supplied scripts, then this can be set in the configuration file.
@@ -71,6 +71,7 @@
    OpenSuSE systems.
  - The hidden files/directories test would try and run even if no 'file'
    command was present.
+ - Cater for *BSD systems using the fdesc/fdescfs filesystem on /dev/fd.
 
  -- 
 

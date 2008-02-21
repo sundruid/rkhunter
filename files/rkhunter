@@ -9619,7 +9619,7 @@ do_dev_whitelist_check() {
 	#
 
 
-	FNAME=`${FILE_CMD} "${RKHTMPVAR}" | cat -v | tr '	' ' ' | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`
+	FNAME=`${FILE_CMD} "${RKHTMPVAR}" 2>/dev/null | cat -v | tr '	' ' ' | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`
 
 	test -z "${FNAME}" && return
 
@@ -9675,10 +9675,18 @@ do_filesystem_check() {
 		# picked up in the next check.
 		# Note2: Filenames can contain a colon (:), so we need to
 		# be careful in separating the filename from the file type.
+		# Note3: We have to cater for *BSD systems which may have
+		# fdesc/fdescfs mounted. If it is, then we must skip over
+		# any detected file descriptors.
 		#
 
+		FDESCFS=0
 		FOUNDFILES=""
 		ALLOWDEVFILES=" "
+
+		if [ $BSDOS -eq 1 ]; then
+			test -n "`mount 2>/dev/null | egrep '^fdesc(fs)? .*type fdesc'`" && FDESCFS=1
+		fi
 
 		for FNAME in `get_option 1 multi ALLOWDEVFILE`; do
 			ALLOWDEVFILES="${ALLOWDEVFILES} ${FNAME}"
@@ -9689,11 +9697,23 @@ do_filesystem_check() {
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			for RKHTMPVAR in ${RKHROOTDIR}/dev/*; do
-				test -s "${RKHTMPVAR}" && do_dev_whitelist_check
+				test -s "${RKHTMPVAR}" -a ! -d "${RKHTMPVAR}" -a ! -h "${RKHTMPVAR}" || continue
+
+				if [ $FDESCFS -eq 1 ]; then
+					test -n "`echo \"${RKHTMPVAR}\" | egrep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*(/|$)\"`" && continue
+				fi
+
+				do_dev_whitelist_check
 			done
 		else
 			for RKHTMPVAR in `${FIND_CMD} ${RKHROOTDIR}/dev ! -type d -a ! -type l 2>/dev/null`; do
-				test -s "${RKHTMPVAR}" -a -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
+				test -s "${RKHTMPVAR}" || continue
+
+				if [ $FDESCFS -eq 1 ]; then
+					test -n "`echo \"${RKHTMPVAR}\" | egrep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*(/|$)\"`" && continue
+				fi
+
+				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
 			done
 		fi
 
@@ -9754,7 +9774,7 @@ do_filesystem_check() {
 
 	for DIR in ${SHORTSEARCHDIRS}; do
 		if [ -d ${DIR} ]; then
-			RKHTMPVAR=`ls -1d ${DIR}/.* | egrep -v '/\.\.?$'`
+			RKHTMPVAR=`ls -1d ${DIR}/.* 2>/dev/null | egrep -v '/\.\.?$'`
 			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
 		fi
 	done
@@ -9799,13 +9819,17 @@ do_filesystem_check() {
 			test ! -s "${FNAME}" -a -n "`echo \"${FNAME}\" | grep '/\.keep$'`" && continue
 		fi
 
+		if [ $FDESCFS -eq 1 ]; then
+			test -n "`echo \"${FNAME}\" | egrep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*(/|$)\"`" && continue
+		fi
+
 		if [ -f "${FNAME}" ]; then
-			FTYPE=`${FILE_CMD} ${FNAME} | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
+			FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
 		else
 			continue
 		fi
 
-		test -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
+		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
 
 
 		FILE=`echo "${FNAME}" | sed -e "s/^${RKHROOTDIR}//"`
