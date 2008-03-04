@@ -9622,7 +9622,7 @@ do_dev_whitelist_check() {
 
 	test -z "${FNAME}" && return
 
-	FILE=`echo "${FNAME}" | cut -d: -f1 | sed -e "s/^${RKHROOTDIR}//"`
+	FILE=`echo "${FNAME}" | cut -d: -f1 | sed -e "s:^${RKHROOTDIR}::"`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FILE} \"`" ]; then
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"
@@ -9837,7 +9837,7 @@ do_filesystem_check() {
 		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
 
 
-		FILE=`echo "${FNAME}" | sed -e "s/^${RKHROOTDIR}//"`
+		FILE=`echo "${FNAME}" | sed -e "s:^${RKHROOTDIR}::"`
 
 		if [ "${FTYPE}" = "directory" ]; then
 			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \" ${FILE} \"`" ]; then
@@ -12129,7 +12129,7 @@ if [ $NOLOG -eq 0 ]; then
 	display --to LOG --type INFO CONFIG_BINDIR "${SPACEDPATH} ${BINPATHS}"
 
 	if [ -z "${RKHROOTDIR}" ]; then
-		display --to LOG --type INFO CONFIG_ROOTDIR "/"
+		display --to LOG --type INFO CONFIG_ROOTDIR_DFLT
 	else
 		display --to LOG --type INFO CONFIG_ROOTDIR "${RKHROOTDIR}"
 	fi

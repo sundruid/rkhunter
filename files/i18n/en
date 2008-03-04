@@ -1,4 +1,4 @@
-Version:2007103001
+Version:2008030301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -56,6 +56,7 @@ CONFIG_DBDIR:Using '$1' as the database directory
 CONFIG_SCRIPTDIR:Using '$1' as the support script directory
 CONFIG_BINDIR:Using '$1' as the command directories
 CONFIG_ROOTDIR:Using '$1' as the root directory
+CONFIG_ROOTDIR_DFLT:Using '/' as the root directory by default
 CONFIG_TMPDIR:Using '$1' as the temporary directory
 CONFIG_NO_MAIL_ON_WARN:No mail-on-warning address configured
 CONFIG_MOW_DISABLED:Disabling use of mail-on-warning at users request
