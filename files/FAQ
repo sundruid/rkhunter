@@ -339,8 +339,8 @@ A.   There are several ways that rkhunter can be run via cron. However,
      and then simply set the MAIL-ON-WARNING option in the configuration
      file with the root email address. This way, rkhunter produces no
      output, and so nothing is emailed to root by cron. However, if any
-     warnings are found, then a notice message is emailed to root by
-     rkhunter itself.
+     warnings are found during the system check, then a notice message is
+     emailed to root by rkhunter itself.
 
      Note: The '--quiet' option in the above two examples is not actually
      necessary, but was included for clarity. The '--cronjob' option assumes

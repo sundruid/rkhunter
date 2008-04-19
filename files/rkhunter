@@ -475,7 +475,7 @@ get_option() {
 	# the option can occur on one or more lines in the configuration
 	# file. The third argument is the option name.
 	#
-	# There are currently three types defined:
+	# There are currently two types defined:
 	#
 	# Type 1: A number, single word or pathname.
 	# Type 2: A space-separated word list.
@@ -1154,6 +1154,7 @@ get_logfile_option() {
 		RKHLOGFILE=`get_option 1 single LOGFILE` || exit 1
 
 		if [ -z "${RKHLOGFILE}" ]; then
+			RET_CODE=1
 			RKHLOGFILE="${DFLT_LOGFILE}"
 			echo "Default logfile will be used (${RKHLOGFILE})."
 		fi
@@ -1236,6 +1237,7 @@ get_tmpdir_option() {
 		RKHTMPDIR=`get_option 1 single TMPDIR` || exit 1
 
 		if [ -z "${RKHTMPDIR}" ]; then
+			RET_CODE=1
 			RKHTMPDIR="${RKHINSTALLDIR}/lib/rkhunter/tmp"
 			echo "Default temporary directory will be used (${RKHTMPDIR})."
 		fi
@@ -1287,6 +1289,7 @@ get_dbdir_option() {
 		DB_PATH=`get_option 1 single DBDIR` || exit 1
 
 		if [ -z "${DB_PATH}" ]; then
+			RET_CODE=1
 			DB_PATH="${RKHINSTALLDIR}/lib/rkhunter/db"
 			echo "Default database directory will be used (${DB_PATH})."
 		fi
@@ -1591,6 +1594,9 @@ get_mailonwarn_option() {
 			echo "Invalid MAIL_CMD configuration option - command '${MCMD}' is non-existent or not executable."
 			exit 1
 		fi
+	elif [ -z "`grep \"^MAIL-ON-WARNING=\" ${CONFIGFILE}`" ]; then
+		RET_CODE=1
+		echo "No MAIL-ON-WARNING option has been configured."
 	fi
 
 	return
@@ -12139,12 +12145,10 @@ if [ $NOLOG -eq 0 ]; then
 	if [ $CHECK -eq 1 ]; then
 		if [ $NOMOW -eq 1 ]; then
 			display --to LOG --type INFO CONFIG_MOW_DISABLED
+		elif [ -z "${MAILONWARNING}" ]; then
+			display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
 		else
-			if [ -z "${MAILONWARNING}" ]; then
-				display --to LOG --type INFO CONFIG_NO_MAIL_ON_WARN
-			else
-				display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
-			fi
+			display --to LOG --type INFO CONFIG_MAIL_ON_WARN "${MAILONWARNING}" "${MAIL_CMD}"
 		fi
 	fi
 

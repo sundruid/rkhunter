@@ -22,6 +22,9 @@
  New:
 
  Changes:
+ - The MAIL-ON-WARNING option must now exist in the configuration file. This
+   avoids it being accidentally misspelt, and rkhunter then not notifying the
+   user of any warnings.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.
