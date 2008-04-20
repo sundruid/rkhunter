@@ -121,9 +121,10 @@ program defaults, unless explicitly stated as the configuration file default.
 .PP
 
 .IP \fB\-\-appendlog\fP
-By default a new log file will be created when \fBrkhunter\fP runs. This option
-tells \fBrkhunter\fP to append to the existing log file. If the log file does
-not exist, then it will be created.
+By default a new log file will be created when \fBrkhunter\fP runs, and the
+previous log file will be renamed by having \fI.old\fP appended to its name.
+This option tells \fBrkhunter\fP to append to the existing log file. If the
+log file does not exist, then it will be created.
 
 .IP "\fB\-\-bindir <directory>...\fP"
 This option tells \fBrkhunter\fP which directories to look in to find the
