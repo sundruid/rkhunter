@@ -4083,6 +4083,13 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/dev/fd/.99"
 
 
+	# Intoxonia-NG Rootkit
+	KSYMS_INTOXONIA="funces
+			ixinit
+			tricks
+			kernel_unlink"
+
+
 	# Irix Rootkit (for Irix 6.x)
 	IRIXRK_DIRS="${RKHROOTDIR}/dev/pts/01
 		     ${RKHROOTDIR}/dev/pts/01/backup
@@ -6494,6 +6501,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${IMPFRB_FILES}
 	SCAN_DIRS=${IMPFRB_DIRS}
 	SCAN_KSYMS=${IMPFRB_KSYMS}
+	scanrootkit
+
+	# Intoxonia-NG Rootkit
+
+	SCAN_ROOTKIT="Intoxonia-NG Rootkit"
+	SCAN_FILES=${INTOXONIA_FILES}
+	SCAN_DIRS=${INTOXONIA_DIRS}
+	SCAN_KSYMS=${KSYMS_INTOXONIA}
 	scanrootkit
 
 	# Irix Rootkit
