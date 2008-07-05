@@ -39,7 +39,10 @@ test -z "${PWD_CMD}" -o ! -x "${PWD_CMD}" && PWD_CMD="pwd"
 #
 
 if [ -z "`echo \"${LINKNAME}\" | grep '/'`" ]; then
-	LINKNAME="`${PWD_CMD}`/${LINKNAME}"
+	DIR=`${PWD_CMD}`
+	test "${DIR}" = "/" && DIR=""
+
+	LINKNAME="${DIR}/${LINKNAME}"
 fi
 
 
@@ -58,6 +61,23 @@ else
 
 	FNAME=`echo "${LINKNAME}" | sed -e 's:^.*/\([^/]*\)$:\1:'`
 	DIR=`echo "${LINKNAME}" | sed -e 's:/[^/]*$::'`
+
+
+	# Check if it is a top-level name.
+
+	if [ -z "${DIR}" ]; then
+		if [ ! -e "${LINKNAME}" ]; then
+			DIR="${LINKNAME}"
+		else
+			DIR="/"
+		fi
+	fi
+
+	if [ ! -d "${DIR}" ]; then
+		echo "Directory ${DIR} does not exist." >&2
+		echo "${LINKNAME}"
+		exit
+	fi
 fi
 
 
@@ -83,13 +103,16 @@ fi
 # Now we loop round while we have a link.
 #
 
+RKHLINKCOUNT=0
+ORIGLINK="${LINKNAME}"
+
 while test -h "${DIR}/${FNAME}"; do
 	#
 	# Get the link directory, and the target.
 	#
 
 	LINKNAME="${DIR}"
-	FNAME=`ls -ld ${DIR}/${FNAME} | awk '{ print $NF }'`
+	FNAME=`ls -ld "${DIR}/${FNAME}" | awk '{ print $NF }'`
 
 
 	#
@@ -115,6 +138,14 @@ while test -h "${DIR}/${FNAME}"; do
 	DIR=`echo "${LINKNAME}" | sed -e 's:/[^/]*$::'`
 
 	DIR=`cd ${DIR}; ${PWD_CMD}`
+
+	RKHLINKCOUNT=`expr ${RKHLINKCOUNT} + 1`
+
+	if [ ${RKHLINKCOUNT} -ge 64 ]; then
+		echo "Too many levels of symbolic links (${RKHLINKCOUNT}): ${ORIGLINK}" >&2
+		echo "${ORIGLINK}"
+		exit
+	fi
 done
 
 
@@ -127,7 +158,7 @@ done
 FNAME=`echo "${LINKNAME}" | sed -e 's:^.*/\([^/]*\)$:\1:'`
 DIR=`echo "${LINKNAME}" | sed -e 's:/[^/]*$::'`
 
-DIR=`cd ${DIR}; ${PWD_CMD}`
+test -n "${DIR}" && DIR=`cd ${DIR}; ${PWD_CMD}`
 
 echo "${DIR}/${FNAME}"
 

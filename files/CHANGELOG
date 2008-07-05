@@ -20,6 +20,7 @@
  * 1.3.4 (xx/xx/2008)
 
  New:
+ - Added Intoxonia-NG rootkit check.
 
  Changes:
  - The MAIL-ON-WARNING option must now exist in the configuration file. This
@@ -28,6 +29,9 @@
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.
+ - Added an infinite-loop check to the readlink.sh supplied script - only 64 levels
+   of symbolic links are allowed now. Also cater better for top-level names and
+   links, and file names with spaces.
 
  -- 
 
