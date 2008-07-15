@@ -4084,7 +4084,7 @@ do_system_check_initialisation() {
 
 
 	# Intoxonia-NG Rootkit
-	KSYMS_INTOXONIA="funces
+	INTOXONIA_KSYMS="funces
 			ixinit
 			tricks
 			kernel_unlink"
@@ -4498,6 +4498,12 @@ do_system_check_initialisation() {
 	VCKIT_DIRS="${RKHROOTDIR}/usr/include/linux/modules/lib.so
 		    ${RKHROOTDIR}/usr/include/linux/modules/lib.so/bin"
 
+	# Vampire Rootkit
+	VAMPIRE_KSYMS="sys_call_table
+			new_getdents
+			old_getdents
+			should_hide_file_name
+			should_hide_task_name"	
 
 	# Volc Rootkit
 	VOLC_DIRS="${RKHROOTDIR}/var/spool/.recent
@@ -6508,7 +6514,7 @@ rootkit_file_dir_checks() {
 	SCAN_ROOTKIT="Intoxonia-NG Rootkit"
 	SCAN_FILES=${INTOXONIA_FILES}
 	SCAN_DIRS=${INTOXONIA_DIRS}
-	SCAN_KSYMS=${KSYMS_INTOXONIA}
+	SCAN_KSYMS=${INTOXONIA_KSYMS}
 	scanrootkit
 
 	# Irix Rootkit
@@ -6902,6 +6908,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${URK_FILES}
 	SCAN_DIRS=${URK_DIRS}
 	SCAN_KSYMS=${URK_KSYMS}
+	scanrootkit
+
+	# Vampire Rootkit
+
+	SCAN_ROOTKIT="Vampire Rootkit"
+	SCAN_FILES=${VAMPIRE_FILES}
+	SCAN_DIRS=${VAMPIRE_DIRS}
+	SCAN_KSYMS=${VAMPIRE_KSYMS}
 	scanrootkit
 
 	# VcKit Rootkit
