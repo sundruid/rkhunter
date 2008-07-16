@@ -4087,7 +4087,10 @@ do_system_check_initialisation() {
 	INTOXONIA_KSYMS="funces
 			ixinit
 			tricks
-			kernel_unlink"
+			kernel_unlink
+			rootme
+			hide_module
+			find_sys_call_tbl"
 
 
 	# Irix Rootkit (for Irix 6.x)
@@ -4499,8 +4502,7 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/usr/include/linux/modules/lib.so/bin"
 
 	# Vampire Rootkit
-	VAMPIRE_KSYMS="sys_call_table
-			new_getdents
+	VAMPIRE_KSYMS="new_getdents
 			old_getdents
 			should_hide_file_name
 			should_hide_task_name"	
