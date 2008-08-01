@@ -1302,9 +1302,6 @@ get_dbdir_option() {
 	if [ ! -d "${DB_PATH}" ]; then
 		echo "Database directory does not exist: ${DB_PATH}"
 		exit 1
-	elif [ ! -w "${DB_PATH}" ]; then
-		echo "Database directory is not writable: ${DB_PATH}"
-		exit 1
 	elif [ ! -r "${DB_PATH}" ]; then
 		echo "Database directory is not readable: ${DB_PATH}"
 		exit 1
@@ -3138,7 +3135,16 @@ do_prop_update() {
 	display --to LOG --type INFO --nl PROPUPD_START
 
 	#
-	# First we need to get a temporary file name to use.
+	# First check that the database directory is writable
+	#
+
+	if [ ! -w "${DB_PATH}" ]; then
+		echo "Database directory is not writable: ${DB_PATH}"
+		exit 1
+	fi
+
+	#
+	# We need to get a temporary file name to use.
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.dat"
@@ -3646,6 +3652,14 @@ do_update() {
 
 	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl UPDATE_START
 
+	#
+	# First check that the database directory is writable
+	#
+
+	if [ ! -w "${DB_PATH}" ]; then
+		echo "Database directory is not writable: ${DB_PATH}"
+		exit 1
+	fi
 
 	#
 	# First we need to get a temporary file name to use.
