@@ -155,7 +155,10 @@ with this option.
 .IP "\fB\-\-dbdir <directory>\fP"
 The installation process will automatically configure where the data files are
 stored for \fBrkhunter\fP. However, if necessary, this option can be used
-to specify a different directory.
+to specify a different directory. The directory can be read-only, after installation,
+provided that neither of the \fB\-\-update\fP or \fB\-\-propupd\fP options are
+specified, and that the \fB\-\-versioncheck\fP option is not specified if
+ROTATE_MIRRORS is set to 1 in the configuration file.
 
 .IP \fB\-\-debug\fP
 This is a special option mainly for the developers. It produces no output on

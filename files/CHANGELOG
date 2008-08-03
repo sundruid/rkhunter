@@ -20,16 +20,21 @@
  * 1.3.4 (xx/xx/2008)
 
  New:
- - Added Intoxonia-NG rootkit check.
+ - Added IntoXonia-NG rootkit check.
+ - Added Vampire rootkit check.
 
  Changes:
  - The MAIL-ON-WARNING option must now exist in the configuration file. This
    avoids it being accidentally misspelt, and rkhunter then not notifying the
    user of any warnings.
+ - The DBDIR directory can now be read-only, after installation, provided that
+   neither of the '--propupd' or '--update' options are specified, and that the
+   '--versioncheck' option is not specified if ROTATE_MIRRORS is set to 1 in the
+   configuration file.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.
- - Added an infinite-loop check to the readlink.sh supplied script - only 64 levels
+ - Added an infinite loop check to the readlink.sh supplied script - only 64 levels
    of symbolic links are allowed now. Also cater better for top-level names and
    links, and file names with spaces.
 

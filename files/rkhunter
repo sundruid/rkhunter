@@ -1296,7 +1296,7 @@ get_dbdir_option() {
 	fi
 
 	#
-	# Now check that the given option is useable.
+	# Now check that the given option is usable.
 	#
 
 	if [ ! -d "${DB_PATH}" ]; then
@@ -1305,6 +1305,11 @@ get_dbdir_option() {
 	elif [ ! -r "${DB_PATH}" ]; then
 		echo "Database directory is not readable: ${DB_PATH}"
 		exit 1
+	elif [ $PROP_UPDATE -eq 1 -o $UPDATE -eq 1 ]; then
+		if [ ! -w "${DB_PATH}" ]; then
+			echo "Database directory is not writable: ${DB_PATH}"
+			exit 1
+		fi
 	fi
 
 	return
@@ -2542,6 +2547,8 @@ get_mirror_options() {
 	#
 	# This function gets the mirror file options.
 	#
+
+	#
 	# First we see if the mirrors.dat file
 	# should be rotated when it is used.
 	#
@@ -2555,6 +2562,17 @@ get_mirror_options() {
 		fi
 	else
 		ROTATE_MIRRORS=1
+	fi
+
+	#
+	# Now check that the mirror file is writable if necessary.
+	#
+
+	if [ $VERSIONCHECK -eq 1 -a $ROTATE_MIRRORS -eq 1 ]; then
+		if [ ! -w "${DB_PATH}" ]; then
+			echo "Database directory is not writable: ${DB_PATH}"
+			exit 1
+		fi
 	fi
 
 
@@ -3134,17 +3152,9 @@ do_prop_update() {
 
 	display --to LOG --type INFO --nl PROPUPD_START
 
-	#
-	# First check that the database directory is writable
-	#
-
-	if [ ! -w "${DB_PATH}" ]; then
-		echo "Database directory is not writable: ${DB_PATH}"
-		exit 1
-	fi
 
 	#
-	# We need to get a temporary file name to use.
+	# First we need to get a temporary file name to use.
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.dat"
@@ -3652,14 +3662,6 @@ do_update() {
 
 	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl UPDATE_START
 
-	#
-	# First check that the database directory is writable
-	#
-
-	if [ ! -w "${DB_PATH}" ]; then
-		echo "Database directory is not writable: ${DB_PATH}"
-		exit 1
-	fi
 
 	#
 	# First we need to get a temporary file name to use.
@@ -4097,7 +4099,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/dev/fd/.99"
 
 
-	# Intoxonia-NG Rootkit
+	# IntoXonia-NG Rootkit
 	INTOXONIA_KSYMS="funces
 			ixinit
 			tricks
@@ -6525,9 +6527,9 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${IMPFRB_KSYMS}
 	scanrootkit
 
-	# Intoxonia-NG Rootkit
+	# IntoXonia-NG Rootkit
 
-	SCAN_ROOTKIT="Intoxonia-NG Rootkit"
+	SCAN_ROOTKIT="IntoXonia-NG Rootkit"
 	SCAN_FILES=${INTOXONIA_FILES}
 	SCAN_DIRS=${INTOXONIA_DIRS}
 	SCAN_KSYMS=${INTOXONIA_KSYMS}
@@ -11312,12 +11314,12 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient (ark),
   Balaur, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), Danny-Boy'"'"'s Abuse Kit,
   Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD,
-  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, Irix, Kitko,
+  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
   Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
   Optic Kit (Tux), Oz, Phalanx, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
   RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin,
   Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
-  TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, VcKit, Volc, X-Org SunOS,
+  TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, X-Org SunOS,
   zaRwT.KiT'
 
 # The program defaults of which tests to perform will be set later.
