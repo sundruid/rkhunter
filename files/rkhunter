@@ -2568,7 +2568,7 @@ get_mirror_options() {
 
 	if [ $VERSIONCHECK -eq 1 -a $ROTATE_MIRRORS -eq 1 ]; then
 		if [ ! -w "${DB_PATH}/mirrors.dat" ]; then
-			echo "Mirror file is not writable: ${DB_PATH}"
+			echo "Mirror file is not writable: ${DB_PATH}/mirrors.dat"
 			exit 1
 		fi
 	fi
