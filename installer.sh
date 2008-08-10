@@ -24,7 +24,7 @@ of the GNU General Public License. See LICENSE for details.
 "
 
 APPNAME="rkhunter"
-APPVERSION="1.3.2"
+APPVERSION="1.3.3"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
@@ -267,7 +267,7 @@ RKHINST_MAN_FILES="${APPNAME}.8"
 # Additions we need to be aware / take care of:
 # any /contrib/ files which should include any RH*L/alike ones:
 # Additions we need to be aware / take care of wrt RH*L/alike:
-# /etc/cron.daily/01-rkhunter (different versions of cronjob)
+# /etc/cron.daily/rkhunter (different versions of cronjob)
 # /etc/sysconfig/rkhunter (config for cronjob)
 # /etc/logrotate.d/rkhunter
 

@@ -1161,7 +1161,7 @@ get_logfile_option() {
 	fi
 
 	#
-	# Now check that the given option is useable.
+	# Now check that the given option is usable.
 	#
 
 	if [ "${RKHLOGFILE}" = "/dev/null" ]; then
@@ -1244,7 +1244,7 @@ get_tmpdir_option() {
 	fi
 
 	#
-	# Now check that the given option is useable.
+	# Now check that the given option is usable.
 	#
 
 	if [ ! -d "${RKHTMPDIR}" ]; then
@@ -1476,7 +1476,7 @@ get_scriptdir_option() {
 	fi
 
 	#
-	# Now check that the given option is useable.
+	# Now check that the given option is usable.
 	#
 
 	if [ ! -d "${SCRIPT_PATH}" ]; then
@@ -1541,7 +1541,7 @@ get_rootdir_option() {
 	fi
 
 	#
-	# Now check that the given option is useable.
+	# Now check that the given option is usable.
 	#
 
 	if [ -n "${RKHROOTDIR}" ]; then
@@ -2427,55 +2427,53 @@ get_scan_mode_dev_option() {
 }
 
 
-get_rc_options() {
+get_startup_paths_option() {
 
 	#
-	# This function gets some of the system startup 'rc'
-	# files and directories from the configuration file.
-	# There are no defaults.
+	# This function gets the system startup files and directories
+	# from the configuration file. There are no defaults.
+	#
+	# For backward compatability we still check for the old options
+	# of LOCAL_RC_PATH and SYSTEM_RC_DIR.
 	#
 
-	RC_FILE=`get_option 2 single LOCAL_RC_PATH` || exit 1
+	STARTUP_PATHS=`get_option 2 single STARTUP_PATHS` || exit 1
 
-	if [ -n "${RC_FILE}" ]; then
+	RKHTMPVAR=`get_option 2 single LOCAL_RC_PATH` || exit 1
+	test -n "${RKHTMPVAR}" && STARTUP_PATHS="${STARTUP_PATHS} ${RKHTMPVAR}"
+
+	RKHTMPVAR=`get_option 1 single SYSTEM_RC_DIR` || exit 1
+	test -n "${RKHTMPVAR}" && STARTUP_PATHS="${STARTUP_PATHS} ${RKHTMPVAR}"
+
+	if [ -n "${STARTUP_PATHS}" ]; then
 		#
-		# Check that the given files are useable.
-		#
-
-		for RKHTMPVAR in ${RC_FILE}; do
-			if [ ! -f "${RKHROOTDIR}${RKHTMPVAR}" ]; then
-				echo "Local system startup file does not exist: ${RKHROOTDIR}${RKHTMPVAR}"
-				exit 1
-			elif [ -h "${RKHROOTDIR}${RKHTMPVAR}" ]; then
-				echo "Local system startup file is a symbolic link: ${RKHROOTDIR}${RKHTMPVAR}"
-				exit 1
-			elif [ ! -r "${RKHROOTDIR}${RKHTMPVAR}" ]; then
-				echo "Local system startup file is not readable: ${RKHROOTDIR}${RKHTMPVAR}"
-				exit 1
-			elif [ ! -s "${RKHROOTDIR}${RKHTMPVAR}" ]; then
-				echo "Local system startup file is empty: ${RKHROOTDIR}${RKHTMPVAR}"
-				exit 1
-			fi
-		done
-	fi
-
-
-	RC_DIR=`get_option 1 single SYSTEM_RC_DIR` || exit 1
-
-	if [ -n "${RC_DIR}" ]; then
-		#
-		# Check that the given directory is useable.
+		# First see if we have any startup files or not.
 		#
 
-		if [ ! -d "${RKHROOTDIR}${RC_DIR}" ]; then
-			echo "Local system startup directory does not exist: ${RKHROOTDIR}${RC_DIR}"
-			exit 1
-		elif [ -h "${RKHROOTDIR}${RC_DIR}" ]; then
-			echo "Local system startup directory is a symbolic link: ${RKHROOTDIR}${RC_DIR}"
-			exit 1
-		elif [ ! -r "${RKHROOTDIR}${RC_DIR}" ]; then
-			echo "Local system startup directory is not readable: ${RKHROOTDIR}${RC_DIR}"
-			exit 1
+		if [ -n "`echo \"${STARTUP_PATHS}\" | grep -i '^none$'`" ]; then
+			STARTUP_PATHS="NONE"
+		else
+			#
+			# Check that the given files and directories are usable.
+			#
+
+			for FNAME in ${STARTUP_PATHS}; do
+				test -f "${FNAME}" && RKHTMPVAR="file" || RKHTMPVAR="directory"
+
+				if [ ! -e "${FNAME}" ]; then
+					echo "System startup file does not exist: ${FNAME}"
+					exit 1
+				elif [ -h "${FNAME}" ]; then
+					echo "System startup ${RKHTMPVAR} is a symbolic link: ${FNAME}"
+					exit 1
+				elif [ ! -r "${FNAME}" ]; then
+					echo "System startup ${RKHTMPVAR} is not readable: ${FNAME}"
+					exit 1
+				elif [ ! -s "${FNAME}" ]; then
+					echo "System startup file is empty: ${FNAME}"
+					exit 1
+				fi
+			done
 		fi
 	fi
 
@@ -2495,7 +2493,7 @@ get_rtkt_whitelist_options() {
 
 	if [ -n "${RTKT_FILE_WHITELIST}" ]; then
 		#
-		# Check that the given files are useable.
+		# Check that the given files are usable.
 		#
 
 		FOUND=0
@@ -2519,7 +2517,7 @@ get_rtkt_whitelist_options() {
 
 	if [ -n "${RTKT_DIR_WHITELIST}" ]; then
 		#
-		# Check that the given directories are useable.
+		# Check that the given directories are usable.
 		#
 
 		FOUND=0
@@ -2569,8 +2567,8 @@ get_mirror_options() {
 	#
 
 	if [ $VERSIONCHECK -eq 1 -a $ROTATE_MIRRORS -eq 1 ]; then
-		if [ ! -w "${DB_PATH}" ]; then
-			echo "Database directory is not writable: ${DB_PATH}"
+		if [ ! -w "${DB_PATH}/mirrors.dat" ]; then
+			echo "Mirror file is not writable: ${DB_PATH}"
 			exit 1
 		fi
 	fi
@@ -2625,7 +2623,7 @@ get_os_version_option() {
 
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		#
-		# Check that the given file is useable.
+		# Check that the given file is usable.
 		#
 
 		if [ ! -f "${RKHROOTDIR}${OS_VERSION_FILE}" ]; then
@@ -2716,7 +2714,7 @@ get_configfile_options() {
 
 		get_scan_mode_dev_option
 
-		get_rc_options
+		get_startup_paths_option
 
 		get_rtkt_whitelist_options
 
@@ -3151,7 +3149,6 @@ do_prop_update() {
 	#
 
 	display --to LOG --type INFO --nl PROPUPD_START
-
 
 	#
 	# First we need to get a temporary file name to use.
@@ -4642,13 +4639,12 @@ do_system_check_initialisation() {
 
 
 	# System startup file pathnames
-	RCLOCATIONS="/etc/rc.local
-		     /etc/rc.d/rc.local
+	RCLOCATIONS="/etc/rc.d
+		     /etc/rc.local
+		     /usr/local/etc/rc.d
 		     /usr/local/etc/rc.local
-		     /usr/local/etc/rc.d/rc.local
 		     /etc/conf.d/local.start
-		     /etc/init.d/boot.local
-		     /etc/rc.d/rc.sysinit
+		     /etc/init.d
 		     /etc/inittab"
 
 
@@ -7093,6 +7089,63 @@ possible_rootkit_file_dir_checks() {
 }
 
 
+get_rc_paths() {
+
+	#
+	# This function gets a list of the system startup files.
+	# Directories are searched for files.
+	#
+	# This functions will set the variable RC_PATHS.
+	#
+
+	RC_PATHS=""
+	RKHTMPVAR2=""
+
+	if [ -n "${STARTUP_PATHS}" ]; then
+		RKHTMPVAR="${STARTUP_PATHS}"
+	else
+		RKHTMPVAR="${RCLOCATIONS}"
+	fi
+
+
+	for DIR in ${RKHTMPVAR}; do
+		DIR="${RKHROOTDIR}${DIR}"
+
+		test -h "${DIR}" && continue
+
+		if [ -f "${DIR}" ]; then
+			RC_PATHS="${RC_PATHS} ${DIR}"
+			RKHTMPVAR2="${RKHTMPVAR2} ${DIR}"
+		elif [ -d "${DIR}" ]; then
+			RKHTMPVAR2="${RKHTMPVAR2} ${DIR}"
+
+			if [ -n "${FIND_CMD}" ]; then
+				for FNAME in `${FIND_CMD} ${DIR} -type f -a ! -type l 2>/dev/null`; do
+					RC_PATHS="${RC_PATHS}
+${FNAME}"
+				done
+			else
+				for FNAME in ${DIR}/*; do
+					test -f "${FNAME}" -a ! -h "${FNAME}" && RC_PATHS="${RC_PATHS}
+${FNAME}"
+				done
+			fi
+		fi
+	done
+
+	if [ $STARTUP_PATHS_LOGGED -eq 0 ]; then
+		STARTUP_PATHS_LOGGED=1
+
+		test -z "${RKHTMPVAR2}" && RKHTMPVAR2="${RKHTMPVAR}"
+
+		RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/^ //'`
+		display --to LOG --type INFO CONFIG_STARTUP_PATHS "${RKHTMPVAR2}"
+	fi
+
+	return
+}
+
+
 possible_rootkit_string_checks() {
 
 	#
@@ -7112,44 +7165,29 @@ possible_rootkit_string_checks() {
 	fi
 
 	#
-	# First check to see if we have a 'strings' command.
+	# First check to see that we can run the test.
 	#
 
 	if [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 ROOTKIT_POSS_STRINGS
 		display --to LOG --type INFO NOT_FOUND_CMD "strings"
 		return
+	elif [ "${STARTUP_PATHS}" = "NONE" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color GREEN --screen-indent 4 ROOTKIT_POSS_STRINGS
+		display --to LOG --type INFO STARTUP_NONE_GIVEN
+		return
 	fi
 
 
 	#
-	# Set and check that the local system 'rc' file is okay.
+	# Now get and check that the system startup files are okay.
 	#
 
-	RC_PATHS=""
+	get_rc_paths
 
-	if [ -n "${RC_FILE}" ]; then
-		FILENAMES="${RC_FILE}"
-	else
-		FILENAMES="${RCLOCATIONS}"
-	fi
-
-	for FNAME in ${FILENAMES}; do
-		if [ -f "${RKHROOTDIR}${FNAME}" -a ! -h "${RKHROOTDIR}${FNAME}" ]; then
-			RC_PATHS="${RC_PATHS}
-${RKHROOTDIR}${FNAME}"
-		fi
-	done
-
-	if [ -n "${RC_PATHS}" ]; then
-		if [ -z "${RC_FILE}" ]; then
-			for FNAME in ${RC_PATHS}; do
-				display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
-			done
-		fi
-	else
+	if [ -z "${RC_PATHS}" ]; then
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 ROOTKIT_POSS_STRINGS
-		display --to LOG --type PLAIN --log-indent 9 STARTUP_CHECK_SYSTEM_RC_NONE
+		display --to LOG --type PLAIN --log-indent 9 STARTUP_CHECK_NO_RC_FILES
 		return
 	fi
 
@@ -7262,7 +7300,6 @@ additional_rootkit_checks() {
 
 	#
 	# This function performs additional rootkit checks.
-	# These include checks for possible rootkits.
 	#
 
 	if `check_test additional_rkts`; then
@@ -8835,39 +8872,29 @@ do_system_startup_file_checks() {
 		return
 	fi
 
-
 	#
-	# Next, check that a local startup file exists. This will be some
-	# sort of 'rc' file. We check if the user has set a pathname in
-	# the config file, and use that or the default list.
+	# First check to see that we can run the test.
 	#
 
-	RC_PATHS=""
-
-	if [ -n "${RC_FILE}" ]; then
-		FILENAMES="${RC_FILE}"
-	else
-		FILENAMES="${RCLOCATIONS}"
+	if [ "${STARTUP_PATHS}" = "NONE" ]; then
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result SKIPPED --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_EXIST
+		display --to LOG --type INFO STARTUP_NONE_GIVEN
+		return
 	fi
 
-	for FNAME in ${FILENAMES}; do
-		if [ -f "${RKHROOTDIR}${FNAME}" -a ! -h "${RKHROOTDIR}${FNAME}" ]; then
-			RC_PATHS="${RC_PATHS}
-${RKHROOTDIR}${FNAME}"
-		fi
-	done
+
+	#
+	# Now get and check that the system startup files are okay.
+	#
+
+	get_rc_paths
 
 	if [ -n "${RC_PATHS}" ]; then
-		if [ -z "${RC_FILE}" ]; then
-			for FNAME in ${RC_PATHS}; do
-				display --to LOG --type INFO STARTUP_FOUND_LOCAL_RC_FILE "${FNAME}"
-			done
-		fi
-
-		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_EXIST
 	else
-		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_LOCAL_RC_FILE
-		display --to LOG --type WARNING STARTUP_NO_LOCAL_RC_FILE
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_EXIST
+		display --to LOG --type WARNING STARTUP_CHECK_NO_RC_FILES
+		return
 	fi
 
 
@@ -8875,171 +8902,67 @@ ${RKHROOTDIR}${FNAME}"
 	# Next we check all the startup files for any suspicious
 	# strings in them.
 	#
-	# First check the local startup files.
+
+	FOUND=0
+	FOUNDSTRINGS=""
+
+	#
+	# Since we are going to be checking a lot of files
+	# for strings that are static, we may as well do
+	# some pre-processing of the string, and then we
+	# only need to spend time if a string is found.
 	#
 
-	if [ -n "${RC_PATHS}" ]; then
-		FOUND=0
-		FOUNDSTRINGS=""
+	RCSTRINGS=""
 
-		IFS=$IFSNL
+	IFS=$IFSNL
 
-		for FNAME in ${RC_PATHS}; do
-			for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
-				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-				STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
-				STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
-				INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
+	for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
+		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
+		STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
+		STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
+		RCSTRINGS="${RCSTRINGS} ${STRING}"
+		INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
+	done
 
-				if [ -n "`grep "${STRING}" ${FNAME} | grep -v '^#'`" ]; then
-					FOUND=1
-					FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${STR}:${INFO}"
-				fi
-			done
+	IFS=$RKHIFS
+
+	RCSTRINGS=`echo "${RCSTRINGS}" | sed -e 's/^ //'`
+
+
+	for FNAME in ${RC_PATHS}; do
+		for STRING in ${RCSTRINGS}; do
+			if [ -n "`grep "${STRING}" ${FNAME} | egrep -v '^[ 	]*#'`" ]; then
+				FOUND=1
+				FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${STR}:${INFO}"
+			fi
+		done
+	done
+
+
+	#
+	# Now display the results.
+	#
+
+	if [ $FOUND -eq 0 ]; then
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_MALWARE
+	else
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_MALWARE
+
+		IFS="%"
+
+		for RKHTMPVAR in ${FOUNDSTRINGS}; do
+			STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
+
+			test -z "${STRING}" && continue
+
+			FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
+			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
+
+			display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FNAME}" "${INFO}"
 		done
 
 		IFS=$RKHIFS
-
-
-		#
-		# Now display the results.
-		#
-
-		if [ $FOUND -eq 0 ]; then
-			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 STARTUP_CHECK_LOCAL_RC
-		else
-			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_CHECK_LOCAL_RC
-
-			IFS="%"
-
-			for RKHTMPVAR in ${FOUNDSTRINGS}; do
-				STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
-
-				test -z "${STRING}" && continue
-
-				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
-				INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
-
-				display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FNAME}" "${INFO}"
-			done
-
-			IFS=$RKHIFS
-		fi
-	else
-		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 STARTUP_CHECK_LOCAL_RC
-		display --to LOG --type WARNING STARTUP_NO_LOCAL_RC_FILE
-	fi
-
-
-	#
-	# Next check the system startup files.
-	# We look in either /etc/rc.d, /etc/init.d or the directory
-	# specified in the config file.
-	#
-
-	if [ -n "${FIND_CMD}" ]; then
-		DIR=""
-
-		if [ -n "${RC_DIR}" ]; then
-			DIR="${RKHROOTDIR}${RC_DIR}"
-		elif [ -d "${RKHROOTDIR}/etc/rc.d" ]; then
-			DIR="${RKHROOTDIR}/etc/rc.d"
-		elif [ -d "${RKHROOTDIR}/etc/init.d" ]; then
-			DIR="${RKHROOTDIR}/etc/init.d"
-		fi
-
-
-		if [ -n "${DIR}" ]; then
-			FOUND=0
-			FOUNDSTRINGS=""
-
-			test -z "${RC_DIR}" && display --to LOG --type INFO STARTUP_CHECK_SYSTEM_RC_FOUND "${DIR}"
-
-
-			#
-			# Since we are going to be checking a lot of files
-			# for strings that are static, we may as well do
-			# some pre-processing of the string, and then we
-			# only need to spend time if a string is found.
-			#
-
-			RCSTRINGS=""
-
-			IFS=$IFSNL
-
-			for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
-				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-				STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
-				STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
-				RCSTRINGS="${RCSTRINGS} ${STRING}"
-			done
-
-			IFS=$RKHIFS
-
-			RCSTRINGS=`echo "${RCSTRINGS}" | sed -e 's/^ //'`
-
-
-			for FILE in `${FIND_CMD} ${DIR} -type f -a ! -type l 2>/dev/null`; do
-				for STRING in ${RCSTRINGS}; do
-					if [ -n "`grep "${STRING}" ${FILE} | grep -v '^#'`" ]; then
-						FOUND=1
-						FOUNDSTRINGS="${FOUNDSTRINGS}%${FILE}:${STRING}"
-					fi
-				done
-			done
-
-
-			#
-			# Now display the results.
-			#
-
-			if [ $FOUND -eq 0 ]; then
-				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
-			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
-
-				IFS="%"
-
-				for RKHTMPVAR in ${FOUNDSTRINGS}; do
-					FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
-
-					test -z "${FILE}" && continue
-
-					STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
-					STRING=`echo "${STRING}" | sed -e 's/\\\././g'`
-
-					#
-					# Having obtained the original string,
-					# we now need to find the original
-					# information about it.
-					#
-
-					IFS=$IFSNL
-
-					for RKHTMPVAR2 in ${RCLOCAL_STRINGS}; do
-						RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/^[ 	]*//'`
-						STR=`echo "${RKHTMPVAR2}" | cut -d: -f1`
-
-						if [ "${STR}" = "${STRING}" ]; then
-							INFO=`echo "${RKHTMPVAR2}" | cut -d: -f2`
-							break
-						fi
-					done
-
-					IFS="%"
-
-					display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FILE}" "${INFO}"
-				done
-
-				IFS=$RKHIFS
-			fi
-		else
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
-			display --to LOG --type WARNING STARTUP_CHECK_SYSTEM_RC_NONE
-		fi
-	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 STARTUP_CHECK_SYSTEM_RC
-		display --to LOG --type INFO NOT_FOUND_CMD "find"
 	fi
 
 	return
@@ -11354,9 +11277,9 @@ IFSNL="
 "
 IFS=$RKHIFS
 
-# No defaults set for the'rc' local system startup files and directory.
-RC_DIR=""
-RC_FILE=""
+# No default set for the system startup files and directories.
+STARTUP_PATHS=""
+STARTUP_PATHS_LOGGED=0
 
 # Set a default for the inetd configuration file.
 INETD_CONF_PATH="/etc/inetd.conf"
@@ -12418,10 +12341,6 @@ fi
 
 if [ $CHECK -eq 1 ]; then
 	test $VERBOSE_LOGGING -eq 0 && display --to LOG --type INFO CONFIG_NO_VL
-
-	test -n "${RC_FILE}" && display --to LOG --type INFO CONFIG_LOCAL_RC_FILE "${RKHROOTDIR}${RC_FILE}"
-
-	test -n "${RC_DIR}" && display --to LOG --type INFO CONFIG_LOCAL_RC_DIR "${RKHROOTDIR}${RC_DIR}"
 
 	if [ -n "${KSYMS_FILE}" ]; then
 		display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"

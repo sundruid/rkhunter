@@ -1,4 +1,4 @@
-Version:2008030301
+Version:2008081001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -70,8 +70,7 @@ CONFIG_SCAN_MODE_DEV:SCAN_MODE_DEV set to '$1'
 CONFIG_NO_VL:Disabling verbose logging at users request
 CONFIG_XINETD_PATH:Using $1 configuration file '$2'
 CONFIG_SOL10_INETD:Using Solaris 10 and later inetd mechanism
-CONFIG_LOCAL_RC_DIR:Using system startup directory: $1
-CONFIG_LOCAL_RC_FILE:Using local startup file(s): $1
+CONFIG_STARTUP_PATHS:Using system startup paths: $1
 CONFIG_ROTATE_MIRRORS:The mirrors file will be rotated
 CONFIG_NO_ROTATE_MIRRORS:The mirrors file will not be rotated
 CONFIG_UPDATE_MIRRORS:The mirrors file will be updated
@@ -391,13 +390,10 @@ CHECK_LOCALHOST:Checking the local host...
 STARTUP_FILES_START:Performing system boot checks
 STARTUP_HOSTNAME:Checking for local host name
 STARTUP_NO_HOSTNAME:No host name found.
-STARTUP_LOCAL_RC_FILE:Checking for local startup files
-STARTUP_FOUND_LOCAL_RC_FILE:Found local startup file: $1
-STARTUP_NO_LOCAL_RC_FILE:No local startup files found.
-STARTUP_CHECK_LOCAL_RC:Checking local startup files for malware
-STARTUP_CHECK_SYSTEM_RC:Checking system startup files for malware
-STARTUP_CHECK_SYSTEM_RC_FOUND:Found system startup directory: $1
-STARTUP_CHECK_SYSTEM_RC_NONE:No system startup files found.
+STARTUP_CHECK_FILES_EXIST:Checking for system startup files
+STARTUP_NONE_GIVEN:User specified 'NONE' for startup file pathnames
+STARTUP_CHECK_FILES_MALWARE:Checking system startup files for malware
+STARTUP_CHECK_NO_RC_FILES:No system startup files found.
 
 ACCOUNTS_START:Performing group and account checks
 ACCOUNTS_PWD_FILE_CHECK:Checking for passwd file
@@ -518,7 +514,7 @@ SUSPSCAN_NO_DIRS:No directories specified: using defaults ($1)
 SUSPSCAN_TEMP:Temporary directory to use: $1
 SUSPSCAN_NO_TEMP:No temporary directory specified: using default ($1)
 SUSPSCAN_TEMP_NOT_EXIST:The suspscan temporary directory does not exist: $1
-SUSPSCAN_TEMP_NO_WRITE:The suspscan temporary directory is not writeable: $1
+SUSPSCAN_TEMP_NO_WRITE:The suspscan temporary directory is not writable: $1
 SUSPSCAN_SIZE:Maximum file size to check (in bytes): '$1'
 SUSPSCAN_NO_SIZE:No maximum file size specified: using default ($1)
 SUSPSCAN_SIZE_INVALID:The suspscan maximum file size is invalid: $1

@@ -31,6 +31,12 @@
    neither of the '--propupd' or '--update' options are specified, and that the
    '--versioncheck' option is not specified if ROTATE_MIRRORS is set to 1 in the
    configuration file.
+ - Renamed the cron job file created by the RPM spec file from '01-rkhunter' to
+   'rkhunter'. This will then run 'rkhunter' after a prelink cron job (if one exists),
+   and avoid some of the 'run prelink' errors.
+ - The system startup file and directory tests have now been merged. The configuration
+   file options LOCAL_RC_PATH and SYSTEM_RC_DIR have been replaced by the
+   STARTUP_PATHS option, but, for compatability, they will still be recognised.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.

@@ -6,7 +6,7 @@
 #%%dump
 
 %define name rkhunter
-%define ver 1.3.2
+%define ver 1.3.3
 %define rel 1
 %define epoch 0
 
@@ -64,12 +64,12 @@ sh ./installer.sh --layout RPM --install
 
 # Make a cron.daily file to mail us the reports
 %{__mkdir} -p "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily"
-%{__cat} > "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily/01-rkhunter" <<EOF
+%{__cat} > "${RPM_BUILD_ROOT}/%{_sysconfdir}/cron.daily/rkhunter" <<EOF
 #!/bin/sh
 ( %{_bindir}/rkhunter --cronjob --update --rwo && echo "" ) | /bin/mail -s "Rkhunter daily run on `uname -n`" root
 exit 0
 EOF
-%{__chmod} a+rwx,g-w,o-rwx ${RPM_BUILD_ROOT}%{_sysconfdir}/cron.daily/01-rkhunter
+%{__chmod} a+rwx,g-w,o-rwx ${RPM_BUILD_ROOT}%{_sysconfdir}/cron.daily/rkhunter
 
 
 %post
@@ -115,10 +115,14 @@ fi
 %attr(750,root,root) %dir %{_var}/lib/%{name}/db/i18n
 %attr(640,root,root) %{_var}/lib/%{name}/db/i18n/*
 %attr(750,root,root) %dir %{_var}/lib/%{name}/tmp
-%{_sysconfdir}/cron.daily/01-rkhunter
+%{_sysconfdir}/cron.daily/rkhunter
 
 
 %changelog
+* Sun Aug 09 2008 jhorne - 1.3.3
+- Renamed cron.daily file from '01-rkhunter' to 'rkhunter' so
+  that it will run after a prelink cron job (if it exists).
+
 * Sun Feb 11 2007 unSpawn - pre-1.3.0
 - Sync spec with fixes, installer and CVS
 
