@@ -7114,7 +7114,8 @@ get_rc_paths() {
 		test -h "${DIR}" && continue
 
 		if [ -f "${DIR}" ]; then
-			RC_PATHS="${RC_PATHS} ${DIR}"
+			RC_PATHS="${RC_PATHS}
+${DIR}"
 			RKHTMPVAR2="${RKHTMPVAR2} ${DIR}"
 		elif [ -d "${DIR}" ]; then
 			RKHTMPVAR2="${RKHTMPVAR2} ${DIR}"
