@@ -9611,7 +9611,7 @@ do_system_config_files_check() {
 		test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
 
 		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | egrep '/r?syslog\.conf$'`" ]; then
-			RKHTMPVAR=`grep '^[^#].*[ 	]@.' ${SYSLOG_CONFIG_FILE}`
+			RKHTMPVAR=`egrep '^[^#].*[ 	](@|:omrelp:).' ${SYSLOG_CONFIG_FILE}`
 		else
 			#
 			# For syslog-ng we must look for a destination

@@ -44,6 +44,7 @@
  - Added an infinite loop check to the readlink.sh supplied script - only 64 levels
    of symbolic links are allowed now. Also cater better for top-level names and
    links, and file names with spaces.
+ - Improved the rsyslog remote logging check.
 
  -- 
 
