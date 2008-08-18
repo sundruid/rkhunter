@@ -1,4 +1,4 @@
-Version:2008081001
+Version:2008081701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -403,6 +403,7 @@ ACCOUNTS_UID0:Checking for root equivalent (UID 0) accounts
 ACCOUNTS_UID0_WL:Found root equivalent account '$1': it is whitelisted.
 ACCOUNTS_UID0_FOUND:Account '$1' is root equivalent (UID = 0)
 ACCOUNTS_SHADOW_FILE:Found shadow file: $1
+ACCOUNTS_SHADOW_TCB:Found TCB shadow file directory: $1
 ACCOUNTS_PWDLESS:Checking for passwordless accounts
 ACCOUNTS_PWDLESS_WL:Found passwordless account '$1': it is whitelisted.
 ACCOUNTS_PWDLESS_FOUND:Found passwordless account: $1

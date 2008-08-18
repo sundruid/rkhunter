@@ -2081,6 +2081,47 @@ get_ports_option() {
 }
 
 
+get_shadow_file_option() {
+
+	#
+	# Get the option from the configuration file. We also cater
+	# for cases such as BSD systems and users of TCB shadow files.
+	# If the shadow file itself does not exist, then we look in
+	# the password file to see if it contains the passwords.
+	#
+
+	SHADOW_FILE=`get_option 1 single PASSWORD_FILE` || exit 1
+
+	if [ -n "${SHADOW_FILE}" ]; then
+		if [ -s "${RKHROOTDIR}${SHADOW_FILE}" ]; then
+			SHADOW_FILE="${RKHROOTDIR}${SHADOW_FILE}"
+		else
+			SHADOW_FILE=""
+		fi
+	elif [ -s "${RKHROOTDIR}/etc/shadow" ]; then
+		SHADOW_FILE="${RKHROOTDIR}/etc/shadow"
+	elif [ $BSDOS -eq 1 -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
+		SHADOW_FILE="${RKHROOTDIR}/etc/master.passwd"
+	elif [ -f "${RKHROOTDIR}/etc/tcb/root/shadow" ]; then
+		HAVE_TCB_SHADOW=1
+	elif [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+		#
+		# If the passwords are stored in the passwd file, then
+		# it should contain at least 3 non-colon characters in the
+		# second field. Checking for 3 characters allows for normal
+		# shadow entries such as 'x', '!!' or '*'. It is assumed
+		# that at least one account will have a password.
+		#
+
+		if [ -n "`grep '^[^:]*:[^:][^:][^:]' ${RKHROOTDIR}/etc/passwd`" ]; then
+			SHADOW_FILE="${RKHROOTDIR}/etc/passwd"
+		fi
+	fi
+
+	return
+}
+
+
 get_if_prelinked() {
 
 	#
@@ -2724,6 +2765,8 @@ get_configfile_options() {
 		check_test trojans && get_xinetd_option
 
 		check_test ports && get_ports_option
+
+		check_test group_accounts && get_shadow_file_option
 	fi
 
 
@@ -9054,38 +9097,17 @@ ${RKHTMPVAR}"
 
 
 	#
-	# Now check for any passwordless accounts. We must, however,
-	# first find where the passwords are kept. If the user has
-	# provided this in the config file, then we use that.
+	# Now check for any passwordless accounts. For TCB shadow
+	# files we have to do a little more work, and loop through
+	# all the shadow files in the /etc/tcb directory.
 	#
 
-	SHADOW_FILE=`get_option 1 single PASSWORD_FILE` || exit 1
-
-	test -n "${SHADOW_FILE}" -a ! -s "${RKHROOTDIR}${SHADOW_FILE}" && SHADOW_FILE=""
-
-	if [ -n "${SHADOW_FILE}" ]; then
-		SHADOW_FILE="${RKHROOTDIR}${SHADOW_FILE}"
-	elif [ -s "${RKHROOTDIR}/etc/shadow" ]; then
-		SHADOW_FILE="${RKHROOTDIR}/etc/shadow"
-	elif [ $BSDOS -eq 1 -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
-		SHADOW_FILE="${RKHROOTDIR}/etc/master.passwd"
-	elif [ -s "${RKHROOTDIR}/etc/passwd" ]; then
-		#
-		# If the passwords are stored in the passwd file, then
-		# it should contain at least 3 non-colon characters in the
-		# second field. Checking for 3 characters allows for normal
-		# shadow entries such as 'x', '!!' or '*'. It is assumed
-		# that at least one account will have a password.
-		#
-
-		if [ -n "`grep '^[^:]*:[^:][^:][^:]' ${RKHROOTDIR}/etc/passwd`" ]; then
-			SHADOW_FILE="${RKHROOTDIR}/etc/passwd"
+	if [ -n "${SHADOW_FILE}" -o $HAVE_TCB_SHADOW -eq 1 ]; then
+		if [ -n "${SHADOW_FILE}" ]; then
+			display --to LOG --type INFO ACCOUNTS_SHADOW_FILE "${SHADOW_FILE}"
+		else
+			display --to LOG --type INFO ACCOUNTS_SHADOW_TCB "${RKHROOTDIR}/etc/tcb"
 		fi
-	fi
-
-
-	if [ -n "${SHADOW_FILE}" ]; then
-		display --to LOG --type INFO ACCOUNTS_SHADOW_FILE "${SHADOW_FILE}"
 
 		#
 		# We need to remove any whitelisted passwordless accounts.
@@ -9096,20 +9118,50 @@ ${RKHTMPVAR}"
 
 		UID_LIST=""
 
+		#
+		# We have do a bit of a kludge here. We need a loop in order to
+		# cater for TCB shadow files in /etc/tcb. But at the same time
+		# we only want to execute the loop once for non-TCB systems. To
+		# do this we loop through either /etc or /etc/tcb. However, for
+		# /etc we only execute the loop once because the grep statement
+		# will have the exact shadow filename in SHADOW_FILE. For TCB
+		# systems, SHADOW_FILE is set for each individual shadow file as
+		# it pass round the loop.
+		#
+
+		if [ $HAVE_TCB_SHADOW -eq 1 ]; then
+			RKHTMPVAR2="${RKHROOTDIR}/etc/tcb"
+		else
+			RKHTMPVAR2="${RKHROOTDIR}/etc"
+		fi
+
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*::' ${SHADOW_FILE} | cut -d: -f1`; do
-			# Ignore any NIS/YP entries
-			test "${RKHTMPVAR}" = "+" && continue
-
-			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
-
-			if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
-				UID_LIST="${UID_LIST}
-${RKHTMPVAR}"
-			else
-				display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+		for DIR in ${RKHTMPVAR2}/*; do
+			if [ $HAVE_TCB_SHADOW -eq 1 ]; then
+				if [ -f "${DIR}/shadow" ]; then
+					SHADOW_FILE="${DIR}/shadow"
+				else
+					continue
+				fi
 			fi
+
+			for RKHTMPVAR in `grep '^[^:]*::' ${SHADOW_FILE} | cut -d: -f1`; do
+				# Ignore any NIS/YP entries
+				test "${RKHTMPVAR}" = "+" && continue
+
+				RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
+
+				if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
+					UID_LIST="${UID_LIST}
+${RKHTMPVAR}"
+					test $HAVE_TCB_SHADOW -eq 1 && UID_LIST="${UID_LIST} (${SHADOW_FILE})"
+				else
+					display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+				fi
+			done
+
+			test $HAVE_TCB_SHADOW -eq 0 && break
 		done
 
 		IFS=$RKHIFS
@@ -11315,6 +11367,10 @@ SELINUX_ENABLED=0
 PORT_WHITELIST=""
 PORT_WHITELIST_PATH=""
 PORT_WHITELIST_ALL_TRUSTED=0
+
+# This will be set to the shadow file location if required.
+SHADOW_FILE=""
+HAVE_TCB_SHADOW=0
 
 # The O/S 'release' file location.
 OS_VERSION_FILE=""

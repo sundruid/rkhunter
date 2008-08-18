@@ -22,6 +22,7 @@
  New:
  - Added IntoXonia-NG rootkit check.
  - Added Vampire rootkit check.
+ - Added support for TCB shadow files.
 
  Changes:
  - The MAIL-ON-WARNING option must now exist in the configuration file. This
