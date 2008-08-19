@@ -1,4 +1,4 @@
-Version:2008081701
+Version:2008081901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -337,6 +337,7 @@ ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND:Hidden processes found: $1
 ROOTKIT_MALWARE_DELETED_FILES:Checking running processes for deleted files
 ROOTKIT_MALWARE_DELETED_FILES_FOUND:The following processes are using deleted files:
 ROOTKIT_MALWARE_DELETED_FILES_FOUND_DATA:Process: $1    PID: $2    File: $3
+ROOTKIT_MALWARE_DELETED_FILES_WL:Found process '$1' using file '$2': it is whitelisted.
 ROOTKIT_MALWARE_LOGIN_BDOOR:Checking for login backdoors
 ROOTKIT_MALWARE_LOGIN_BDOOR_LOG:Performing check for login backdoors
 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK:Checking for '$1'

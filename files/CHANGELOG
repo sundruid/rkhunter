@@ -38,6 +38,10 @@
  - The system startup file and directory tests have now been merged. The configuration
    file options LOCAL_RC_PATH and SYSTEM_RC_DIR have been replaced by the
    STARTUP_PATHS option, but, for compatability, they will still be recognised.
+ - The ALLOWPROCDELFILE configuration option, used to whitelist specific processes
+   from the deleted files test, can now be followed by a colon-separated list
+   of pathnames. The given process will then only be whitelisted if it is using
+   one of the given pathnames.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.

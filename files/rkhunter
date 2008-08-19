@@ -7393,7 +7393,7 @@ malware_checks() {
 			FOUND=0
 			WHITEPROC=""; BLACKPROC=""
 
-			DELE_FILES=`${LSOF_CMD} -n -l -w ${SOLARISX} | grep '(dele' | head -n 1`
+			DELE_FILES=`${LSOF_CMD} -wnl ${SOLARISX} | grep '(dele' | head -n 1`
 
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
@@ -7464,10 +7464,27 @@ malware_checks() {
 					#
 
 					PROCWHITELISTED=0
+					PROCDELFILES_GIVEN=0
 
 					for RKHTMPVAR in $ALLOWPROCDELFILES; do
-						if [ "${PROC}" = "${RKHTMPVAR}" ]; then
-							PROCWHITELISTED=1
+						PROCDELFILES_GIVEN=0
+
+						if [ -n "`echo \"${RKHTMPVAR}\" | grep ':/'`" ]; then
+							PROCDELFILES_GIVEN=1
+							RKHTMPVAR2=`echo "${RKHTMPVAR}" | cut -d: -f1`
+						else
+							RKHTMPVAR2="${RKHTMPVAR}"
+						fi
+
+						if [ "${PROC}" = "${RKHTMPVAR2}" ]; then
+							if [ $PROCDELFILES_GIVEN -eq 1 ]; then
+								if [ -n "`echo \"${RKHTMPVAR}\" | egrep \":${FNAME}(:|$)\"`" ]; then
+									PROCWHITELISTED=1
+								fi
+							else
+								PROCWHITELISTED=1
+							fi
+
 							break
 						fi
 					done
@@ -7475,7 +7492,11 @@ malware_checks() {
 					test -z "${READLINK_CMD}" && PROC="\"${PROC}\""
 
 					if [ $PROCWHITELISTED -eq 1 ]; then
-						if [ -z "`echo \"${WHITEPROC}\" | egrep \"${PROC}( |$)\"`" ]; then
+						if [ $PROCDELFILES_GIVEN -eq 1 ]; then
+							if [ -z "`echo \"${WHITEPROC}\" | egrep \"${PROC}:${FNAME}( |$)\"`" ]; then
+								WHITEPROC="${WHITEPROC} ${PROC}:${FNAME}"
+							fi
+						elif [ -z "`echo \"${WHITEPROC}\" | egrep \"${PROC}( |$)\"`" ]; then
 							WHITEPROC="${WHITEPROC} ${PROC}"
 						fi
 					else
@@ -7519,7 +7540,14 @@ ${PROC} ${PID} ${FNAME}"
 			IFS=$RKHIFS
 
 			for RKHTMPVAR in $WHITEPROC; do
-				display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${RKHTMPVAR}"
+				if [ -n "`echo \"${RKHTMPVAR}\" | grep ':/'`" ]; then
+					PROC=`echo "${RKHTMPVAR}" | cut -d: -f1`
+					FNAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
+
+					display --to LOG --type INFO ROOTKIT_MALWARE_DELETED_FILES_WL "${PROC}" "${FNAME}"
+				else
+					display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${RKHTMPVAR}"
+				fi
 			done
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
