@@ -4276,12 +4276,13 @@ do_system_check_initialisation() {
 	OZ_DIRS="${RKHROOTDIR}/dev/.oz"
 
 
-	# PHALANX Rootkit
+	# Phalanx Rootkit
 	PHALANX_FILES="${RKHROOTDIR}/usr/share/.home.ph1/cb
 		       ${RKHROOTDIR}/etc/host.ph1
 		       ${RKHROOTDIR}/bin/host.ph1
 		       ${RKHROOTDIR}/usr/share/.home.ph1/phalanx"
 	PHALANX_DIRS="${RKHROOTDIR}/usr/share/.home.ph1"
+
 
 	# Phalanx2 Rootkit
 	PHALANX2_FILES="${RKHROOTDIR}/etc/khubd.p2/.p2rc
@@ -6678,8 +6679,8 @@ rootkit_file_dir_checks() {
 
 	SCAN_ROOTKIT="Phalanx Rootkit"
 	SCAN_FILES=${PHALANX_FILES}
-	SCAN_DIRS="${PHALANX_DIRS}"
-	SCAN_KSYMS="${PHALANX_KSYMS}"
+	SCAN_DIRS=${PHALANX_DIRS}
+	SCAN_KSYMS=${PHALANX_KSYMS}
 	scanrootkit
 
 	# Phalanx Rootkit (strings)
@@ -6722,12 +6723,13 @@ rootkit_file_dir_checks() {
 	SCAN_ROOTKIT="Phalanx2 Rootkit"
 	SCAN_FILES=${PHALANX2_FILES}
 	SCAN_DIRS=${PHALANX2_DIRS}
+	SCAN_KSYMS=${PHALANX2_KSYMS}
 	scanrootkit
 
 	# Phalanx2 Rootkit (extended tests)
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-		SCAN_ROOTKIT="Phalanx2 Rootkit extended tests"
+		SCAN_ROOTKIT="Phalanx2 Rootkit (extended tests)"
 
 		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
@@ -6737,9 +6739,8 @@ rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 		fi
 
-		if `cd /etc/khubd.p2 >/dev/null 2>&1`; then
-
-			ROOTKIT_PHALANX2_TEST=`expr ${ROOTKIT_PHALANX2_TEST} + 1`
+		if `cd ${RKHROOTDIR}/etc/khubd.p2 >/dev/null 2>&1`; then
+			ROOTKIT_PHALANX2_TEST=1
 
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/khubd.p2"
@@ -6747,61 +6748,50 @@ rootkit_file_dir_checks() {
 
 			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${RKHROOTDIR}/etc/khubd.p2"
-
-		else
-
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/khubd.p2"
-			fi
-
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-
+		elif [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/khubd.p2"
 		fi
 
-		if `cd /etc/lolzz.p2 >/dev/null 2>&1`; then
-
-			ROOTKIT_PHALANX2_TEST=`expr ${ROOTKIT_PHALANX2_TEST} + 1`
-
+		if `cd ${RKHROOTDIR}/etc/lolzz.p2 >/dev/null 2>&1`; then
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/lolzz.p2"
 			fi
 
-			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${RKHROOTDIR}/etc/lolzz.p2"
-
-		else
-
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "Phalanx2 /etc/lolzz.p2"
-			fi
-
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-
-		fi
-
-		if `grep -q '^/dev/root.*ext[23]' /proc/mounts`; then 
-
-			if [ `ls -ld /etc 2>/dev/null | awk -F' ' '/^d/ {print $2}' | head -1` -ne `stat -c %h /etc 2>/dev/null` ]; then
-
-				ROOTKIT_PHALANX2_TEST=`expr ${ROOTKIT_PHALANX2_TEST} + 1`
-
-				if [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_INODE_COUNT "/etc"
-				fi
+			if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
+				ROOTKIT_PHALANX2_TEST=1
 
 				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_INODE_COUNT_FAIL "/etc"
-
 			fi
 
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${RKHROOTDIR}/etc/lolzz.p2"
+		elif [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/lolzz.p2"
 		fi
 
-		if [ $ROOTKIT_PHALANX2_TEST -gt 0 ]; then
+		if `grep -q '^/dev/root .* ext[23] ' /proc/mounts`; then 
+			if [ `ls -ld /etc 2>/dev/null | awk -F' ' '/^d/ {print $2}' | head -1` -ne `stat -c %h /etc 2>/dev/null` ]; then
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_FILES_DIRS_INODE_COUNT "/etc"
+				fi
 
+				if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
+					ROOTKIT_PHALANX2_TEST=1
+
+					display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				fi
+
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_INODE_COUNT_FAIL "/etc"
+			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_FILES_DIRS_INODE_COUNT "/etc"
+			fi
+		fi
+
+		if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+		else
+			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
-
 		fi
-
 	fi
 
 	# Portacelo Rootkit
