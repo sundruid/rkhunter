@@ -305,6 +305,8 @@ ROOTKIT_FILES_DIRS_STR_FOUND:Found string '$1' in file '$2'
 ROOTKIT_FILES_DIRS_NOFILE:The file '$1' does not exist!
 ROOTKIT_FILES_DIRS_SINAR_DIR:Checking in '$1'
 ROOTKIT_FILES_DIRS_SINAR:Found SInAR in: $1
+ROOTKIT_FILES_DIRS_INODE_COUNT:Checking inode count of '$1'
+ROOTKIT_FILES_DIRS_INODE_COUNT_FAIL:Inode count of '$1' failed.
 
 ROOTKIT_ADD_START:Performing additional rootkit checks
 ROOTKIT_ADD_SUCKIT:Suckit Rookit additional checks
