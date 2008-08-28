@@ -1,4 +1,4 @@
-Version:2008082701
+Version:2008082801
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -305,16 +305,18 @@ ROOTKIT_FILES_DIRS_STR_FOUND:Found string '$1' in file '$2'
 ROOTKIT_FILES_DIRS_NOFILE:The file '$1' does not exist!
 ROOTKIT_FILES_DIRS_SINAR_DIR:Checking in '$1'
 ROOTKIT_FILES_DIRS_SINAR:Found SInAR in: $1
-ROOTKIT_FILES_DIRS_INODE_COUNT:Checking inode count of '$1'
-ROOTKIT_FILES_DIRS_INODE_COUNT_FAIL:Inode count of '$1' failed.
+
+ROOTKIT_LINK_COUNT:Checking hard link count on '$1'
+ROOTKIT_LINK_COUNT_FAIL:Hard link count from '$1' command: $2
+ROOTKIT_LINK_COUNT_CMDERR:Error from '$1' command when checking '$2'
+
+ROOTKIT_PHALANX2_LINK_COUNT_FAIL:Hard link check on '$1' failed
 
 ROOTKIT_ADD_START:Performing additional rootkit checks
 ROOTKIT_ADD_SUCKIT:Suckit Rookit additional checks
 ROOTKIT_ADD_SUCKIT_LOG:Performing Suckit Rookit additional checks
-ROOTKIT_ADD_SUCKIT_LINK:Checking /sbin/init link count
-ROOTKIT_ADD_SUCKIT_LINK_NOCMD:Checking /sbin/init link count: no 'stat' command found
-ROOTKIT_ADD_SUCKIT_LINK_ERR:Checking /sbin/init link count: error from 'stat' command
-ROOTKIT_ADD_SUCKIT_LINK_FOUND:Checking /sbin/init link count: count is $1, it should be 1
+ROOTKIT_ADD_SUCKIT_LINK_NOCMD:Checking '/sbin/init' link count: no 'stat' command found
+ROOTKIT_ADD_SUCKIT_LINK_FOUND:Checking '/sbin/init' link count: count is $1, it should be 1
 ROOTKIT_ADD_SUCKIT_EXT:Checking for hidden file extensions
 ROOTKIT_ADD_SUCKIT_EXT_FOUND:Checking for hidden file extensions: found: $1
 ROOTKIT_ADD_SUCKIT_SKDET:Running skdet command
