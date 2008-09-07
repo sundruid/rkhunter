@@ -41,6 +41,9 @@ The latest version of this FAQ can be found at the RKH web site.
         I had some missing hashes. What does this mean?
    3.9) I run rkhunter in cron and in the emailed output I get some
         strange characters. Why is this?
+   3.10) When I used the '--propupd' option, Rootkit Hunter told me
+         that it had found more files than it was searching for. How
+         is this possible?
 
 
  4. ERROR AND WARNING MESSAGES
@@ -439,6 +442,27 @@ A.   The problem only occurs when the '--update' or '--versioncheck'
      The solution is to use the '--nocolors' option in your cron job.
      The '--cronjob' option assumes '--nocolors', which is why the
      problem does not occur when '--cronjob' is used.
+
+
+3.10) When I used the '--propupd' option, Rootkit Hunter told me
+      that it had found more files than it was searching for. How
+      is this possible?
+
+A.    The output from rkhunter probably shows something like this:
+
+           File updated: searched for 149 files, found 171
+
+      When rkhunter collects file property information about files
+      (commands), it uses generic file names - for example, 'awk'
+      and 'sed'. As such, if these files exist in more than one
+      directory that is being searched, then it will have found two
+      files but only have been looking for one. Secondly, some files
+      are symbolic (soft) links to another file. In this instance
+      rkhunter will record both the link itself, and the file that
+      it points to. So, again two files have been found. It is,
+      therefore, quite possible on some systems for rkhunter to find
+      more files than it says it is looking for. It simply indicates
+      that rkhunter has found some files more than once.
 
 
 ===========================================================
