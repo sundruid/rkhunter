@@ -2982,7 +2982,7 @@ rkh_dat_set_file_properties() {
 	# files to be checked. The format in the rkhunter.dat file is:
 	#
 	#     File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
-	#          <file size>:<date/time modified>
+	#          <file size>:<date/time modified>:<package name>
 	#
 	# The format is actually governed by the stat.pl file, and the
 	# output it produces. Changing the order of options does not
@@ -3037,6 +3037,7 @@ rkh_dat_set_file_properties() {
 
 			FDATA=""
 			SYSHASH=""
+			PKGNAME=""
 			RPM_QUERY_RESULT=""
 			FILE_IS_PKGD=0
 
@@ -3050,7 +3051,7 @@ rkh_dat_set_file_properties() {
 				# First see if the file belongs to a package.
 				#
 
-				PKGNAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+				PKGNAME=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -3059,6 +3060,7 @@ rkh_dat_set_file_properties() {
 					#
 
 					FILE_IS_PKGD=1
+					PKGNAME=`echo "${PKGNAME}" | tail -1`
 
 					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 					ERRCODE=$?
@@ -3085,10 +3087,12 @@ rkh_dat_set_file_properties() {
 						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
 
 						FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
-						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
+						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 					else
 						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
 					fi
+				else
+					PKGNAME=""
 				fi
 			fi
 
@@ -3097,12 +3101,30 @@ rkh_dat_set_file_properties() {
 				if [ "${PKGMGR}" = "RPM" ]; then
 					test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
 				elif [ "${PKGMGR}" = "DPKG" ]; then
-					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+					#
+					# First see if the file is part of a known package.
+					#
 
-					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-						FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
-						SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
-						test -n "${SYSHASH}" && FILE_IS_PKGD=1
+					RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
+					ERRCODE=$?
+
+					if [ $ERRCODE -eq 0 ]; then
+						#
+						# Now we sort out the base part of the package name.
+						#
+
+						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
+
+						#
+						# Next strip of the leading '/' from the pathname,
+						# and then get the hash value.
+						#
+
+						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+							FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
+							SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
+							test -n "${SYSHASH}" && FILE_IS_PKGD=1
+						fi
 					fi
 				elif [ "${PKGMGR}" = "BSD" ]; then
 					#
@@ -3110,10 +3132,17 @@ rkh_dat_set_file_properties() {
 					#
 
 					RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+					ERRCODE=$?
 
-					if [ -n "${RKHTMPVAR}" ]; then
+					if [ $ERRCODE -eq 0 ]; then
 						#
-						# Next strip of the '/usr/pkg' from the pathname,
+						# Now we sort out the base part of the package name.
+						#
+
+						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
+
+						#
+						# Next strip of the leading '/usr/pkg' from the pathname,
 						# and then get the hash value.
 						#
 
@@ -3153,14 +3182,14 @@ rkh_dat_set_file_properties() {
 
 			if [ -n "${SCMD}" ]; then
 				if [ -z "${FDATA}" ]; then
-					FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
-					test -z "${FDATA}" && FDATA="::::::"
+					FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
+					test -z "${FDATA}" && FDATA=":::::"
 				fi
 			else
-				FDATA="::::::"
+				FDATA=":::::"
 			fi
 
-			echo "File:${FILENAME}:${SYSHASH}:${FDATA}" >>${RKHDAT_FILE}
+			echo "File:${FILENAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_FILE}
 		done
 
 		display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $DIR_FILE_COUNT "${DIR}"

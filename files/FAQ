@@ -459,7 +459,7 @@ A.    The output from rkhunter probably shows something like this:
       files but only have been looking for one. Secondly, some files
       are symbolic (soft) links to another file. In this instance
       rkhunter will record both the link itself, and the file that
-      it points to. So, again two files have been found. It is,
+      it points to. So, again, two files have been found. It is,
       therefore, quite possible on some systems for rkhunter to find
       more files than it says it is looking for. It simply indicates
       that rkhunter has found some files more than once.
