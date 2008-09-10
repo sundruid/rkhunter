@@ -4,8 +4,9 @@
 .SH NAME
 rkhunter \- RootKit Hunter
 .SH SYNOPSIS
-\fBrkhunter\fP {--check | --update | --propupd | --versioncheck |
-          --list [tests | languages | rootkits]
+\fBrkhunter\fP {--check | --update | --versioncheck |
+          --propupd [{filename | directory | package name},...] |
+          --list [{tests | {lang | languages} | rootkits},...] |
           --version | --help} [options]
 
 .SH DESCRIPTION
@@ -59,11 +60,23 @@ installed.
 
 .IP
 
-.IP \fB\-\-propupd\fP
+.IP "\fB\-\-propupd [{filename | directory | package name},...]\fP"
 One of the checks \fBrkhunter\fP performs is to compare various current file
 properties of various commands, against those it has previously stored. This
 command option causes \fBrkhunter\fP to update its data file of stored values
 with the current values.
+
+If the \fIfilename\fP option is used, then it must either be a full pathname,
+or a plain file name (for example, 'awk'). When used, then only the entry in
+the file properties database for that file will be updated. If the
+\fIdirectory\fP option is used, then only those files listed in the database
+that are in the given directory will be updated. Similarly, if the
+\fIpackage name\fP option is used, then only those files in the database
+which are part of the specified package will be updated. The package name
+must be the base part of the name, no version numbers should be included - for
+example, 'coreutils'. Package names will, of course, only be stored in the
+file properties database if a package manager is being used.
+If no specific option is given, then the entire database is updated.
 
 \fIWARNING:\fP It is the users responsibility to ensure that the files on the
 system are genuine and from a reliable source. \fBrkhunter\fP can only report
@@ -88,7 +101,7 @@ new version is available.
 
 .IP
 
-.IP "\fB\-\-list [tests | languages | rootkits]\fP"
+.IP "\fB\-\-list [{tests | {lang | languages} | rootkits},...]\fP"
 This command option will list some of the supported capabilities of the
 program, and then exit. The \fItests\fP option lists the currently available
 test names (see the README file for more details about test names). The

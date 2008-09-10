@@ -43,6 +43,10 @@
    from the deleted files test, can now be followed by a colon-separated list
    of pathnames. The given process will then only be whitelisted if it is using
    one of the given pathnames.
+ - The '--propupd' option can now take an optional file, directory or package name
+   after it. The argument can be a list of names. When used, then only the given
+   file names will be updated in the rkhunter.dat file. Hopefully this will make
+   things a bit quicker on slower machines. See the man page for more details.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.

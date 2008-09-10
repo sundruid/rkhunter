@@ -1,4 +1,4 @@
-Version:2008082801
+Version:2008091001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -188,7 +188,9 @@ OSINFO_MSG2:You may need to re-run rkhunter with the '--propupd' option.
 SET_FILE_PROP_START:Getting file properties...
 SET_FILE_PROP_DIR_FILE_COUNT:Found $1 files in $2
 SET_FILE_PROP_FILE_COUNT:File $1: searched for $2 files, found $3
+SET_FILE_PROP_FILE_COUNT_PROPOPT:File $1: searched for $2 files, found $3 of $4
 SET_FILE_PROP_FILE_COUNT_NOHASH:File $1: searched for $2 files, found $3, missing hashes $4
+SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT:File $1: searched for $2 files, found $3 of $4, missing hashes $5
 
 PROPUPD_START:Starting file properties data update...
 PROPUPD_OSINFO_START:Collecting O/S info...

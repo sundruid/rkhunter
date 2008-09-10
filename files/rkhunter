@@ -2995,6 +2995,7 @@ rkh_dat_set_file_properties() {
 	NOHASH_COUNT=0
 	DIR_FILE_COUNT=0
 	PROP_FILE_LIST_COUNT=0
+	PROP_FILE_PROPOPT_COUNT=0
 
 	display --to LOG --type PLAIN SET_FILE_PROP_START
 
@@ -3041,17 +3042,42 @@ rkh_dat_set_file_properties() {
 			RPM_QUERY_RESULT=""
 			FILE_IS_PKGD=0
 
-			FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+
+
+			#
+			# If we are looking for specific files, then just copy the
+			# entries from the current rkhunter.dat file for the files
+			# we aren't looking for. For the ones we do want, we fall
+			# through and process them as before.
+			#
+
+			if [ -n "${PROPUPD_OPT}" ]; then
+				FILENAME="${DIR}/${FNAME}"
+
+				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FILENAME} \"`" ]; then
+					RKHTMPVAR=`grep "^File:${FILENAME}:" ${DB_PATH}/rkhunter.dat`
+
+					if [ -n "${RKHTMPVAR}" ]; then
+						echo "${RKHTMPVAR}" >>${RKHDAT_FILE}
+						continue
+					fi
+				fi
+
+				PROP_FILE_PROPOPT_COUNT=`expr ${PROP_FILE_PROPOPT_COUNT} + 1`
+			else
+				FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+			fi
 
 			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
-			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+
 
 			if [ "${PKGMGR}" = "RPM" ]; then
 				#
 				# First see if the file belongs to a package.
 				#
 
-				PKGNAME=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
+				RKHTMPVAR=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -3060,7 +3086,7 @@ rkh_dat_set_file_properties() {
 					#
 
 					FILE_IS_PKGD=1
-					PKGNAME=`echo "${PKGNAME}" | tail -1`
+					PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
 
 					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 					ERRCODE=$?
@@ -3091,8 +3117,6 @@ rkh_dat_set_file_properties() {
 					else
 						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
 					fi
-				else
-					PKGNAME=""
 				fi
 			fi
 
@@ -3203,10 +3227,19 @@ rkh_dat_set_file_properties() {
 	fi
 
 	if [ $NOHASH_COUNT -eq 0 ]; then
-		display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
+		if [ -n "${PROPUPD_OPT}" ]; then
+			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT
+		else
+			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
+		fi
 	else
 		RET_CODE=1
-		display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+
+		if [ -n "${PROPUPD_OPT}" ]; then
+			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+		else
+			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+		fi
 	fi
 
 	return
@@ -5401,7 +5434,7 @@ file_properties_check() {
 							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
 							else
-								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep " ${FILENAME}:" | grep 'prelink.* dependencies '`" ]; then
+								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \" ${FILENAME}:\" | grep 'prelink.* dependencies '`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 
@@ -10881,9 +10914,12 @@ set_file_prop_dirs_files() {
 	#
 
 	if [ $SUNOS -eq 1 ]; then
-		PROP_FILE_LIST="${PROP_FILE_LIST} gbasename gcat gchmod gchown
-		    gdate gdirname gecho gfind gfile ggroups ghead gid glocate
-		    gmd5sum gsize gtail gtest gtouch guname gusers inetadm truss"
+		PROP_FILE_LIST="${PROP_FILE_LIST} gawk gbasename gcat gchmod gchown
+				gcksum gcp gcut gdate gdiff gdiff3 gdirname gdu gecho
+				gegrep genv gfile gfind ggrep ggroups ghead gid glocate
+				gls gmd5sum gmv gpwd gsed gsize gsort gstrings gsum
+				gtail gtest gtouch guname guniq gusers gwc gwho gwhoami
+				inetadm nawk truss"
 	elif [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
 		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload"
 	fi
@@ -11145,8 +11181,9 @@ help() {
 	#
 
 	echo $ECHOOPT ""
-	echo $ECHOOPT "Usage: rkhunter {--check | --update | --propupd | --versioncheck |"
-	echo $ECHOOPT "                 --list [tests | languages | rootkits] |"
+	echo $ECHOOPT "Usage: rkhunter {--check | --update | --versioncheck |"
+	echo $ECHOOPT "                 --propupd [{filename | directory | package name},...] |"
+	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits},...] |"
 	echo $ECHOOPT "                 --version | --help} [options]"
 	echo $ECHOOPT ""
 
@@ -11183,7 +11220,8 @@ help() {
 	echo $ECHOOPT " --novl, --no-verbose-logging          No verbose logging"
 	echo $ECHOOPT "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain or"
 	echo $ECHOOPT "                   NONE}               verify file hash values. (Default is NONE)"
-	echo $ECHOOPT "         --propupd                     Update the file properties database"
+	echo $ECHOOPT "         --propupd [file | directory | Update the entire file properties database,"
+	echo $ECHOOPT "                    package]...        or just for the specified entries"
 	echo $ECHOOPT "     -q, --quiet                       Quiet mode (no output at all)"
 	echo $ECHOOPT "  --rwo, --report-warnings-only        Show only warning messages"
 	echo $ECHOOPT "     -r, --rootdir <directory>         Use the specified root directory"
@@ -11304,6 +11342,7 @@ MD5_CMD=""
 
 UPDATE=0
 PROP_UPDATE=0
+PROPUPD_OPT=""
 VERSIONCHECK=0
 
 # By default use coloured output.
@@ -11811,6 +11850,17 @@ while [ $# -ge 1 ]; do
 		;;
 	--propupd | --prop-update | --propupdate | --properties-update | --hashupd)
 		PROP_UPDATE=1
+
+		case "$2" in
+		"")
+			;;
+		-*)
+			;;
+		*)
+			shift
+			PROPUPD_OPT="$1"
+			;;
+		esac
 		;;
 	-q | --quiet)
 		QUIET=1
@@ -12105,8 +12155,84 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 
 	#
-	# Set up the file properties checks directories and file names.
+	# Check if the file properties option has been set. If so, then
+	# check that the files and directories are valid. Once that has
+	# been done, we can then set up the file properties check directories
+	# and file names.
 	#
+
+	if [ -n "${PROPUPD_OPT}" ]; then
+		if [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
+			echo "The file properties file does not exist: ${DB_PATH}/rkhunter.dat"
+			exit 1
+		fi
+
+		LEAVE=0
+		RKHTMPVAR=""
+
+		PROPUPD_OPT=`echo "${PROPUPD_OPT}" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+		test "${PROPUPD_OPT}" = " " -o "${PROPUPD_OPT}" = "/" && PROPUPD_OPT=""
+
+		for FNAME in ${PROPUPD_OPT}; do
+			if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
+				# Filename contains ':'
+				LEAVE=1
+				echo "Invalid file or package name specified: ${FNAME}"
+			elif [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
+				# Filename is relative
+				LEAVE=1
+				echo "Relative file or directory name specified: ${FNAME}"
+			elif [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
+				# Filename is absolute
+				RKHTMPVAR2=`grep "^File:${FNAME}:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+
+				if [ -z "${RKHTMPVAR2}" ]; then
+					if [ -d "${FNAME}" ]; then
+						# Filename is a directory
+						RKHTMPVAR2=`grep "^File:${FNAME}/[^:]*:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+
+						if [ -n "${RKHTMPVAR2}" ]; then
+							RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+						else
+							LEAVE=1
+							echo "Directory is not in the \"rkhunter.dat\" file: ${FNAME}"
+						fi
+					else
+						LEAVE=1
+						echo "Filename is not in the \"rkhunter.dat\" file: ${FNAME}"
+					fi
+				else
+					RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+				fi
+			else
+				# Filename could be a package name
+				# The package names are in field 10 in the rkhunter.dat file
+
+				RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAME}:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+
+				if [ -z "${RKHTMPVAR2}" ]; then
+					# Filename is just a plain filename
+					RKHTMPVAR2=`grep "^File:[^:]*/${FNAME}:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+
+					if [ -n "${RKHTMPVAR2}" ]; then
+						RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+					else
+						LEAVE=1
+						echo "File or package name is not in the \"rkhunter.dat\" file: ${FNAME}"
+					fi
+				else
+					RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+				fi
+			fi
+		done
+
+		if [ $LEAVE -eq 0 ]; then
+			PROPUPD_OPT=""
+			test -n "${RKHTMPVAR}" && PROPUPD_OPT=" ${RKHTMPVAR} "
+		else
+			exit 1
+		fi
+	fi
 
 	set_file_prop_dirs_files
 
@@ -12428,9 +12554,9 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			else
 				display --to LOG --type INFO HASH_FUNC_NONE
 			fi
-		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashsha1\.pl$'`" ]; then
+		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashsha1\.pl$'`" ]; then
 			display --to LOG --type INFO HASH_FUNC_PERL 'SHA1'
-		elif [ -n "`echo "${HASH_FUNC}" | grep '/filehashmd5\.pl$'`" ]; then
+		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashmd5\.pl$'`" ]; then
 			display --to LOG --type INFO HASH_FUNC_PERL 'MD5'
 		else
 			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
