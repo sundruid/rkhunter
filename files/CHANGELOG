@@ -46,7 +46,8 @@
  - The '--propupd' option can now take an optional file, directory or package name
    after it. The argument can be a list of names. When used, then only the given
    file names will be updated in the rkhunter.dat file. Hopefully this will make
-   things a bit quicker on slower machines. See the man page for more details.
+   things a bit quicker on slower machines. See the man page for more details. If
+   using a package manager, then you must run 'rkhunter --propupd' first.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.
