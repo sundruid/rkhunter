@@ -1,5 +1,5 @@
 .\" rkhunter - RootKit Hunter
-.TH rkhunter 8 "August, 2008"
+.TH rkhunter 8 "September, 2008"
 
 .SH NAME
 rkhunter \- RootKit Hunter
@@ -75,7 +75,10 @@ that are in the given directory will be updated. Similarly, if the
 which are part of the specified package will be updated. The package name
 must be the base part of the name, no version numbers should be included - for
 example, 'coreutils'. Package names will, of course, only be stored in the
-file properties database if a package manager is being used.
+file properties database if a package manager is being used. If a package
+name is the same as a file name - for example, 'file' could refer to the 'file'
+command or to the RPM 'file' package (which contains the 'file' command) - the
+package name will be used.
 If no specific option is given, then the entire database is updated.
 
 \fIWARNING:\fP It is the users responsibility to ensure that the files on the
