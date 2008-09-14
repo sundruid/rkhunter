@@ -55,6 +55,7 @@
    of symbolic links are allowed now. Also cater better for top-level names and
    links, and file names with spaces.
  - Improved the rsyslog remote logging check.
+ - The wrong error message was shown if the English (en) language file was missing.
 
  -- 
 

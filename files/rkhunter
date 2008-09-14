@@ -507,15 +507,19 @@ get_option() {
 		echo ""
 		return 0
 	else
-		if [ "${OPTMULTI}" = "single" ]; then
+		case "${OPTMULTI}" in
+		single)
 			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
-		elif [ "${OPTMULTI}" = "multi" ]; then
+			;;
+		multi)
 			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | sed -e "s/${OPTV}=//"`
-		else
+			;;
+		*)
 			echo "Error: Invalid multi-line argument in get_option function: $*" >&2
 			# Treat this as a single-line option.
 			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
-		fi
+			;;
+		esac
 	fi
 
 
@@ -1113,7 +1117,7 @@ get_language_option() {
 	# them here.
 	#
 
-	if [ ! -s "${DB_PATH}/i18n/${LANGUAGE}" ]; then
+	if [ ! -s "${DB_PATH}/i18n/${LANGUAGE}" -a "${LANGUAGE}" != "en" ]; then
 		if [ $UPDATE_ONLY -eq 1 ]; then
 			RKHLANGUPDT=1
 		else
@@ -1311,6 +1315,8 @@ get_dbdir_option() {
 			exit 1
 		fi
 	fi
+
+	RKHDAT_FILE="${DB_PATH}/rkhunter.dat"
 
 	return
 }
@@ -2231,7 +2237,7 @@ get_hash_function() {
 		HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/^ //' | sed -e 's/ $//'`
 
 		if [ -z "${HASH_FUNC}" ]; then
-			echo "Invalid --hash option - no hash function given."
+			echo "Invalid --hash option: no hash function given."
 			exit 1
 		elif [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|NONE)$'`" ]; then
 			HASH_FUNC=`echo "${HASH_FUNC}" | tr '[a-z]' '[A-Z]'`
@@ -2311,11 +2317,11 @@ get_hash_function() {
 				HASH_FUNC="${HF} ${HCMD}"
 			fi
 		else
-			echo "Invalid HASH_FUNC configuration option - command '${HCMD}' is non-existent or not executable."
+			echo "Invalid HASH_FUNC configuration option: command '${HCMD}' is non-existent or not executable."
 			exit 1
 		fi
 	else
-		echo "Invalid HASH_FUNC configuration option - option not specified and no hash command or perl modules could be found."
+		echo "Invalid HASH_FUNC configuration option: option not specified and no hash command or perl modules could be found."
 		exit 1
 	fi
 
@@ -2349,7 +2355,7 @@ get_hash_function() {
 		PKGMGR=`echo "${PKGMGR}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${PKGMGR}" ]; then
-			echo "Invalid --pkgmgr option - no package manager given."
+			echo "Invalid --pkgmgr option: no package manager given."
 			exit 1
 		fi
 	else
@@ -2423,7 +2429,7 @@ get_hash_function() {
 		fi
 		;;
 	*)
-		echo "Invalid package manager given - ${PKGMGR}"
+		echo "Invalid package manager given: ${PKGMGR}"
 		exit 1
 		;;
 	esac
@@ -2814,7 +2820,7 @@ rkh_dat_set_version() {
 
 	TODAY=`date +%Y%m%d 2>/dev/null`
 
-	OLDVER=`grep '^[Vv]ersion:' ${DB_PATH}/rkhunter.dat 2>/dev/null | tail -1 | cut -d: -f2`
+	OLDVER=`grep '^[Vv]ersion:' ${RKHDAT_FILE} 2>/dev/null | tail -1 | cut -d: -f2`
 
 	if [ -n "${OLDVER}" ]; then
 		OLDDATE=`echo "${OLDVER}" | cut -c1-8`
@@ -2830,7 +2836,7 @@ rkh_dat_set_version() {
 		NEWVER="00"
 	fi
 
-	echo "Version:${TODAY}${NEWVER}" >>${RKHDAT_FILE}
+	echo "Version:${TODAY}${NEWVER}" >>${RKHDAT_TMPFILE}
 
 	return
 }
@@ -3046,27 +3052,31 @@ rkh_dat_set_file_properties() {
 
 
 			#
-			# If we are looking for specific files, then just copy the
-			# entries from the current rkhunter.dat file for the files
-			# we aren't looking for. For the ones we do want, we fall
-			# through and process them as before.
+			# Test to see if we are looking for specific files or not.
 			#
 
-			if [ -n "${PROPUPD_OPT}" ]; then
+			if [ -z "${PROPUPD_OPT}" ]; then
+				FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+			else
+				#
+				# If we are looking for specific files, then just copy the
+				# entries from the current rkhunter.dat file for the files
+				# we aren't looking for. For the ones we do want, we fall
+				# through and process them as before.
+				#
+
 				FILENAME="${DIR}/${FNAME}"
 
 				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FILENAME} \"`" ]; then
-					RKHTMPVAR=`grep "^File:${FILENAME}:" ${DB_PATH}/rkhunter.dat`
+					RKHTMPVAR=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
 
 					if [ -n "${RKHTMPVAR}" ]; then
-						echo "${RKHTMPVAR}" >>${RKHDAT_FILE}
+						echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
 						continue
 					fi
 				fi
 
 				PROP_FILE_PROPOPT_COUNT=`expr ${PROP_FILE_PROPOPT_COUNT} + 1`
-			else
-				FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
 			fi
 
 			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
@@ -3122,9 +3132,11 @@ rkh_dat_set_file_properties() {
 
 
 			if [ -n "${HCMD}" ]; then
-				if [ "${PKGMGR}" = "RPM" ]; then
+				case "${PKGMGR}" in
+				RPM)
 					test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
-				elif [ "${PKGMGR}" = "DPKG" ]; then
+					;;
+				DPKG)
 					#
 					# First see if the file is part of a known package.
 					#
@@ -3150,7 +3162,8 @@ rkh_dat_set_file_properties() {
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
 					fi
-				elif [ "${PKGMGR}" = "BSD" ]; then
+					;;
+				BSD)
 					#
 					# First see if the file is part of a known package.
 					#
@@ -3174,7 +3187,8 @@ rkh_dat_set_file_properties() {
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
-				fi
+					;;
+				esac
 
 				if [ $FILE_IS_PKGD -eq 0 ]; then
 					if [ "${HCMD}" != "NONE" ]; then
@@ -3204,23 +3218,23 @@ rkh_dat_set_file_properties() {
 			fi
 
 
-			if [ -n "${SCMD}" ]; then
+			if [ -z "${SCMD}" ]; then
+				FDATA=":::::"
+			else
 				if [ -z "${FDATA}" ]; then
 					FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
 					test -z "${FDATA}" && FDATA=":::::"
 				fi
-			else
-				FDATA=":::::"
 			fi
 
-			echo "File:${FILENAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_FILE}
+			echo "File:${FILENAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_TMPFILE}
 		done
 
 		display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $DIR_FILE_COUNT "${DIR}"
 	done
 
 
-	if [ -f ${DB_PATH}/rkhunter.dat ]; then
+	if [ -f ${RKHDAT_FILE} ]; then
 		RKHTMPVAR="updated"
 	else
 		RKHTMPVAR="created"
@@ -3260,9 +3274,9 @@ do_prop_update() {
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.dat"
-	RKHDAT_FILE=$TEMPFILE
+	RKHDAT_TMPFILE=$TEMPFILE
 
-	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_FILE}"
+	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE}"
 
 
 	#
@@ -3282,10 +3296,10 @@ do_prop_update() {
 
 	rkh_dat_get_os_info
 
-	echo "Host:${HOST_NAME}" >>${RKHDAT_FILE}
+	echo "Host:${HOST_NAME}" >>${RKHDAT_TMPFILE}
 
 	if [ -n "${ARCH}" ]; then
-		echo "Arch:${ARCH}" >>${RKHDAT_FILE}
+		echo "Arch:${ARCH}" >>${RKHDAT_TMPFILE}
 		display --to LOG --type INFO PROPUPD_ARCH_FOUND "${ARCH}"
 	fi
 
@@ -3297,32 +3311,32 @@ do_prop_update() {
 	fi
 
 	if [ -n "${OSNAME}" ]; then
-		echo "OS:${OSNAME}" >>${RKHDAT_FILE}
+		echo "OS:${OSNAME}" >>${RKHDAT_TMPFILE}
 		display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${OSNAME}"
 	fi
 
 	if [ $PRELINKED -eq 0 ]; then
-		echo "Prelinked:No" >>${RKHDAT_FILE}
+		echo "Prelinked:No" >>${RKHDAT_TMPFILE}
 	else
-		echo "Prelinked:Yes" >>${RKHDAT_FILE}
+		echo "Prelinked:Yes" >>${RKHDAT_TMPFILE}
 	fi
 
 	if ! `check_test hashes`; then
-		echo "Hash:Disabled" >>${RKHDAT_FILE}
+		echo "Hash:Disabled" >>${RKHDAT_TMPFILE}
 	elif [ -n "${PRELINK_HASH}" ]; then
-		echo "Hash:${PRELINK_HASH}" >>${RKHDAT_FILE}
+		echo "Hash:${PRELINK_HASH}" >>${RKHDAT_TMPFILE}
 	else
-		echo "Hash:${HASH_FUNC}" >>${RKHDAT_FILE}
+		echo "Hash:${HASH_FUNC}" >>${RKHDAT_TMPFILE}
 	fi
 
-	echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_FILE}
+	echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_TMPFILE}
 
 	if ! `check_test attributes`; then
-		echo "Attributes:Disabled" >>${RKHDAT_FILE}
+		echo "Attributes:Disabled" >>${RKHDAT_TMPFILE}
 	elif [ -z "${STAT_CMD}" ]; then
-		echo "Attributes:Nostatcmd" >>${RKHDAT_FILE}
+		echo "Attributes:Nostatcmd" >>${RKHDAT_TMPFILE}
 	else
-		echo "Attributes:Stored" >>${RKHDAT_FILE}
+		echo "Attributes:Stored" >>${RKHDAT_TMPFILE}
 	fi
 
 
@@ -3333,21 +3347,21 @@ do_prop_update() {
 	# Now put the new rkhunter.dat file in place.
 	#
 
-	cp -f -p ${DB_PATH}/rkhunter.dat ${DB_PATH}/rkhunter.dat.old >/dev/null 2>&1
-	cp -f ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
+	cp -f -p ${RKHDAT_FILE} ${RKHDAT_FILE}.old >/dev/null 2>&1
+	cp -f ${RKHDAT_TMPFILE} ${RKHDAT_FILE} >/dev/null 2>&1
 	ERRCODE=$?
 
 	if [ $ERRCODE -ne 0 ]; then
 		RET_CODE=1
-		display --to LOG --type INFO CMD_ERROR "cp ${RKHDAT_FILE} ${DB_PATH}/rkhunter.dat" $ERRCODE
+		display --to LOG --type INFO CMD_ERROR "cp ${RKHDAT_TMPFILE} ${RKHDAT_FILE}" $ERRCODE
 		display --to SCREEN+LOG --type WARNING PROPUPD_ERROR $ERRCODE
 	else
 		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
 
-	chmod 640 ${DB_PATH}/rkhunter.dat >/dev/null 2>&1
+	chmod 640 ${RKHDAT_FILE} >/dev/null 2>&1
 
-	rm -f ${RKHDAT_FILE} >/dev/null 2>&1
+	rm -f ${RKHDAT_TMPFILE} >/dev/null 2>&1
 
 	return
 }
@@ -3376,13 +3390,17 @@ get_next_mirror() {
 	# Return if there are no defined mirrors.
 	#
 
-	if [ $MIRRORS_MODE -eq 0 ]; then
+	case $MIRRORS_MODE in
+	0)
 		MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head -n 1`
-	elif [ $MIRRORS_MODE -eq 1 ]; then
+		;;
+	1)
 		MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head -n 1`
-	elif [ $MIRRORS_MODE -eq 2 ]; then
+		;;
+	2)
 		MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head -n 1`
-	fi
+		;;
+	esac
 
 	if [ -z "${MIRROR}" ]; then
 		display --to LOG --type INFO MIRRORS_NO_MIRRORS "${DB_PATH}/mirrors.dat"
@@ -3398,13 +3416,17 @@ get_next_mirror() {
 	if [ $ROTATE_MIRRORS -eq 0 ]; then
 		N=`expr $TOTAL_MIRRORS - $MIRROR_COUNT`
 
-		if [ $MIRRORS_MODE -eq 0 ]; then
+		case $MIRRORS_MODE in
+		0)
 			MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head -n $N | tail -1 | cut -d= -f2-`
-		elif [ $MIRRORS_MODE -eq 1 ]; then
+			;;
+		1)
 			MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head -n $N | tail -1 | cut -d= -f2-`
-		elif [ $MIRRORS_MODE -eq 2 ]; then
+			;;
+		2)
 			MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head -n $N | tail -1 | cut -d= -f2-`
-		fi
+			;;
+		esac
 
 		return
 	fi
@@ -3509,13 +3531,17 @@ download_file() {
 		# SF mirrors and remote mirrors.
 		#
 
-		if [ $MIRRORS_MODE -eq 0 ]; then
+		case $MIRRORS_MODE in
+		0)
 			MIRROR_COUNT=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
-		elif [ $MIRRORS_MODE -eq 1 ]; then
+			;;
+		1)
 			MIRROR_COUNT=`grep -i '^local=' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
-		elif [ $MIRRORS_MODE -eq 2 ]; then
+			;;
+		2)
 			MIRROR_COUNT=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
-		fi
+			;;
+		esac
 
 		test -z "${MIRROR_COUNT}" && MIRROR_COUNT=0
 	fi
@@ -5105,7 +5131,7 @@ file_properties_check() {
 
 	if [ $SKIP_HASH -eq 0 ]; then
 		# Not sure about this one...!
-		if [ -z "${OLD_PKGMGR}" -a -s "${DB_PATH}/rkhunter.dat" -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) ]; then
+		if [ -z "${OLD_PKGMGR}" -a -s ${RKHDAT_FILE} -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} hash"
 
@@ -5139,16 +5165,20 @@ file_properties_check() {
 		fi
 
 		if [ $PRELINKED -eq 1 ]; then
-			if [ $SKIP_HASH_MSG -eq 1 ]; then
+			case $SKIP_HASH_MSG in
+			1)
 				SKIP_HASH=1
 				RKHTMPVAR="${RKHTMPVAR} prelink"
-			elif [ $SKIP_HASH_MSG -eq 2 ]; then
+				;;
+			2)
 				SKIP_HASH=1
 				RKHTMPVAR="${RKHTMPVAR} sha1"
-			elif [ $SKIP_HASH_MSG -eq 3 ]; then
+				;;
+			3)
 				SKIP_HASH=1
 				RKHTMPVAR="${RKHTMPVAR} libsafe"
-			fi
+				;;
+			esac
 		fi
 
 		if [ $OS_CHANGED -eq 1 -a $SHOWWARNINGSONLY -eq 0 ]; then
@@ -5167,14 +5197,14 @@ file_properties_check() {
 	fi
 
 	if [ $SKIP_ATTR -eq 0 -o $SKIP_HASH -eq 0 ]; then
-		if [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
+		if [ ! -f ${RKHDAT_FILE} ]; then
 			SKIP_HASH=1
 			SKIP_ATTR=1
 			USE_DAT_FILE=0
 			RKHTMPVAR="${RKHTMPVAR} missing"
 		fi
 
-		if [ $USE_DAT_FILE -eq 1 -a ! -s "${DB_PATH}/rkhunter.dat" ]; then
+		if [ $USE_DAT_FILE -eq 1 -a ! -s ${RKHDAT_FILE} ]; then
 			SKIP_HASH=1
 			SKIP_ATTR=1
 			USE_DAT_FILE=0
@@ -5362,7 +5392,7 @@ file_properties_check() {
 
 				FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
 
-				RKHLINE=`grep "^File:${FILENAME}:" ${DB_PATH}/rkhunter.dat`
+				RKHLINE=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
 
 				if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
 					TEST_RESULT="${TEST_RESULT} norkhline"
@@ -5492,9 +5522,10 @@ file_properties_check() {
 					# First we get all the package manager results.
 					#
 
-					if [ "${PKGMGR}" = "RPM" ]; then
-						:
-					elif [ "${PKGMGR}" = "DPKG" ]; then
+					case "${PKGMGR}" in
+					RPM)
+						;;
+					DPKG)
 						PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
 						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
@@ -5514,7 +5545,8 @@ file_properties_check() {
 								fi
 							fi
 						fi
-					elif [ "${PKGMGR}" = "BSD" ]; then
+						;;
+					BSD)
 						#
 						# First see if the file is part of a known package.
 						#
@@ -5543,7 +5575,8 @@ file_properties_check() {
 								fi
 							fi
 						fi
-					fi
+						;;
+					esac
 
 
 					#
@@ -6242,6 +6275,7 @@ suspscan() {
 					# False positives: memory
 					# The list below should be broken out to a .dat file or rkhunter.conf.
 
+#jh - does the next line only execute once?? it has 'tail -1' to restrict it to 1 line it seems
 					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail -1` ; do
 
 						# Break off if the score already exceeds threshold
@@ -6339,7 +6373,7 @@ suspscan() {
 				fi # test file type
 			done # find dir
 
-			# FOUND will always be 0 here because the loop prevents the variable value being exported.
+			# FIXME: FOUND will always be 0 here because the loop prevents the variable value being exported.
 			if [ $VERBOSE_LOGGING -eq 1 -a $FOUND -eq 0 ]; then
 				display --to LOG --type PLAIN --log-indent 6 SUSPSCAN_DIR_CHECK_NO_FILES
 			fi
@@ -8839,18 +8873,23 @@ do_network_port_checks() {
 		# Now display the result.
 		#
 
-		if [ -z "${FOUND}" ]; then
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
-		elif [ "${FOUND}" = "path_whitelisted" ]; then
+		case "${FOUND}" in
+		path_whitelisted)
 			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
-		elif [ "${FOUND}" = "trusted_whitelisted" ]; then
+			;;
+		trusted_whitelisted)
 			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
-		elif [ "${FOUND}" = "port_whitelisted" ]; then
+			;;
+		port_whitelisted)
 			display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
-		else
+			;;
+		"")
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			;;
+		*)
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WARNING --color RED NETWORK_PORTS "${PROTO}" "${PORT}"
 
 			if [ -n "${FNAME}" ]; then
@@ -8858,7 +8897,8 @@ do_network_port_checks() {
 			else
 				display --to LOG --type WARNING NETWORK_PORTS_FOUND "${PROTO}" "${PORT}" "" "${DESCRIPTION}"
 			fi
-		fi
+			;;
+		esac
 	done
 
 	IFS=$RKHIFS
@@ -10767,7 +10807,7 @@ check_os_info() {
 	display --to LOG --type PLAIN --nl OSINFO_START
 
 
-	OLD_HOST=`grep '^Host:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+	OLD_HOST=`grep '^Host:' ${RKHDAT_FILE} | cut -d: -f2-`
 
 	if [ "${HOST_NAME}" != "${OLD_HOST}" ]; then
 		OS_CHANGED=1
@@ -10780,7 +10820,7 @@ check_os_info() {
 	# Next check if the O/S name has changed.
 	#
 
-	OLD_OSNAME=`grep '^OS:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+	OLD_OSNAME=`grep '^OS:' ${RKHDAT_FILE} | cut -d: -f2-`
 
 	if [ "${OSNAME}" != "${OLD_OSNAME}" ]; then
 		OS_CHANGED=1
@@ -10793,7 +10833,7 @@ check_os_info() {
 	# Check if the prelinking status has changed.
 	#
 
-	if [ -z "`grep '^Prelinked:Yes' ${DB_PATH}/rkhunter.dat`" ]; then
+	if [ -z "`grep '^Prelinked:Yes' ${RKHDAT_FILE}`" ]; then
 		OLD_PRELINK=0
 	else
 		OLD_PRELINK=1
@@ -10815,7 +10855,7 @@ check_os_info() {
 	# the sun-type archictures the same as 'sparc'.
 	#
 
-	OLD_ARCH=`grep '^Arch:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+	OLD_ARCH=`grep '^Arch:' ${RKHDAT_FILE} | cut -d: -f2-`
 
 	if [ -n "`echo ${OLD_ARCH} | grep 'i[0-9]86'`" ]; then
 		OLD_ARCH_TYPE="i386"
@@ -11370,6 +11410,18 @@ SKIP_HASH_MSG=0
 # Users can reset this to a new root directory.
 RKHROOTDIR=""
 
+# Users can reset this to a new temporary directory.
+RKHTMPDIR=""
+
+# Users can reset this to a new database directory.
+DB_PATH=""
+
+# Users can reset this to a new configuration file.
+CONFIGFILE=""
+
+# Users can reset this to new command directories.
+BINPATHS=""
+
 # Default 'id' command. Solaris will reset this.
 ID_CMD="id"
 
@@ -11589,6 +11641,9 @@ OS_VERSION_FILE=""
 RTKT_DIR_WHITELIST=""
 RTKT_FILE_WHITELIST=""
 
+# The full pathname of the 'rkhunter.dat' file.
+RKHDAT_FILE=""
+
 
 ######################################################################
 #
@@ -11613,14 +11668,14 @@ fi
 #
 
 while [ $# -ge 1 ]; do
-	FOUND=0
-
 	case "$1" in
 	--append-log | --appendlog)
 		APPEND_LOG=1
 		APPEND_OPT=1
 		;;
 	--bindir)
+		BINPATHS=""
+
 		case "$2" in
 		"")
 			;;
@@ -11629,11 +11684,10 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			BINPATHS="$1"
-			FOUND=1
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${BINPATHS}" ]; then
 			echo "No command directories specified."
 			exit 1
 		fi
@@ -11642,6 +11696,8 @@ while [ $# -ge 1 ]; do
 		CHECK=1
 		;;
 	--configfile)
+		CONFIGFILE=""
+
 		case "$2" in
 		"")
 			;;
@@ -11650,11 +11706,10 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			CONFIGFILE="$1"
-			FOUND=1
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${CONFIGFILE}" ]; then
 			echo "No configuration file specified."
 			exit 1
 		fi
@@ -11669,6 +11724,8 @@ while [ $# -ge 1 ]; do
 		CLRSET2=1
 		;;
 	--dbdir)
+		DB_PATH=""
+
 		case "$2" in
 		"")
 			;;
@@ -11677,11 +11734,10 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			DB_PATH="$1"
-			FOUND=1
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${DB_PATH}" ]; then
 			echo "No database directory specified."
 			exit 1
 		fi
@@ -11693,6 +11749,8 @@ while [ $# -ge 1 ]; do
 		CATLOGFILE=1
 		;;
 	--disable)
+		DISABLE_TESTS=""
+
 		case "$2" in
 		"")
 			;;
@@ -11701,17 +11759,18 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			ENDIS_OPT=1
-			DISABLE_TESTS=$1
-			FOUND=1
+			DISABLE_TESTS="$1"
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${DISABLE_TESTS}" ]; then
 			echo "No tests specified to disable."
 			exit 1
 		fi
 		;;
 	--enable)
+		ENABLE_TESTS=""
+
 		case "$2" in
 		"")
 			;;
@@ -11720,17 +11779,18 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			ENDIS_OPT=1
-			ENABLE_TESTS=$1
-			FOUND=1
+			ENABLE_TESTS="$1"
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${ENABLE_TESTS}" ]; then
 			echo "No tests specified to enable."
 			exit 1
 		fi
 		;;
 	--hash)
+		HASH_FUNC=""
+
 		case "$2" in
 		"")
 			;;
@@ -11739,11 +11799,10 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			HASH_FUNC="$1"
-			FOUND=1
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${HASH_FUNC}" ]; then
 			echo "No hash function specified."
 			exit 1
 		fi
@@ -11767,6 +11826,8 @@ while [ $# -ge 1 ]; do
 		esac
 		;;
 	--lang | --language)
+		LANGUAGE=""
+
 		case "$2" in
 		"")
 			;;
@@ -11775,11 +11836,10 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			LANGUAGE="$1"
-			FOUND=1
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${LANGUAGE}" ]; then
 			echo "No language specified."
 			exit 1
 		fi
@@ -11831,6 +11891,8 @@ while [ $# -ge 1 ]; do
 		SHOW_SUMMARY_OPT=1
 		;;
 	--pkgmgr)
+		PKGMGR=""
+
 		case "$2" in
 		"")
 			;;
@@ -11838,18 +11900,18 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
-			PKGMGR=$1
-			FOUND=1
+			PKGMGR="$1"
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${PKGMGR}" ]; then
 			echo "No package manager specified."
 			exit 1
 		fi
 		;;
 	--propupd | --prop-update | --propupdate | --properties-update | --hashupd)
 		PROP_UPDATE=1
+		PROPUPD_OPT=""
 
 		case "$2" in
 		"")
@@ -11870,6 +11932,8 @@ while [ $# -ge 1 ]; do
 		SHOWWARNINGSONLY=1
 		;;
 	-r | --rootdir)
+		RKHROOTDIR=""
+
 		case "$2" in
 		"")
 			;;
@@ -11878,11 +11942,10 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			RKHROOTDIR="$1"
-			FOUND=1
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${RKHROOTDIR}" ]; then
 			echo "No root directory specified."
 			exit 1
 		fi
@@ -11909,6 +11972,8 @@ while [ $# -ge 1 ]; do
 		esac
 		;;
 	--tmpdir)
+		RKHTMPDIR=""
+
 		case "$2" in
 		"")
 			;;
@@ -11917,11 +11982,10 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			RKHTMPDIR="$1"
-			FOUND=1
 			;;
 		esac
 
-		if [ $FOUND -eq 0 ]; then
+		if [ -z "${RKHTMPDIR}" ]; then
 			echo "No temporary directory specified."
 			exit 1
 		fi
@@ -12061,13 +12125,17 @@ get_configfile_options
 
 if [ -n "${LIST_OPT}" ]; then
 	for RKHTMPVAR in ${LIST_OPT}; do
-		if [ "${RKHTMPVAR}" = "tests" ]; then
+		case "${RKHTMPVAR}" in
+		tests)
 			display_tests
-		elif [ "${RKHTMPVAR}" = "languages" ]; then
+			;;
+		languages)
 			display_languages
-		else
+			;;
+		*)
 			display_rootkits
-		fi
+			;;
+		esac
 	done
 
 	exit 0
@@ -12142,13 +12210,13 @@ fi
 
 
 if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
-	if [ -e "${DB_PATH}/rkhunter.dat" ]; then
-		if [ -h "${DB_PATH}/rkhunter.dat" ]; then
-			echo "The rkhunter.dat file is a symbolic link: ${DB_PATH}/rkhunter.dat"
+	if [ -e ${RKHDAT_FILE} ]; then
+		if [ -h ${RKHDAT_FILE} ]; then
+			echo "The rkhunter.dat file is a symbolic link: ${RKHDAT_FILE}"
 			echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
 			exit 1
-		elif [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
-			echo "The rkhunter.dat file is not a file: ${DB_PATH}/rkhunter.dat"
+		elif [ ! -f ${RKHDAT_FILE} ]; then
+			echo "The rkhunter.dat file is not a file: ${RKHDAT_FILE}"
 			exit 1
 		fi
 	fi
@@ -12162,8 +12230,8 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	#
 
 	if [ -n "${PROPUPD_OPT}" ]; then
-		if [ ! -f "${DB_PATH}/rkhunter.dat" ]; then
-			echo "The file properties file does not exist: ${DB_PATH}/rkhunter.dat"
+		if [ ! -f ${RKHDAT_FILE} ]; then
+			echo "The file properties file does not exist: ${RKHDAT_FILE}"
 			exit 1
 		fi
 
@@ -12184,12 +12252,12 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				echo "Relative file or directory name specified: ${FNAME}"
 			elif [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
 				# Filename is absolute
-				RKHTMPVAR2=`grep "^File:${FNAME}:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+				RKHTMPVAR2=`grep "^File:${FNAME}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 				if [ -z "${RKHTMPVAR2}" ]; then
 					if [ -d "${FNAME}" ]; then
 						# Filename is a directory
-						RKHTMPVAR2=`grep "^File:${FNAME}/[^:]*:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+						RKHTMPVAR2=`grep "^File:${FNAME}/[^:]*:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 						if [ -n "${RKHTMPVAR2}" ]; then
 							RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
@@ -12208,11 +12276,11 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				# Filename could be a package name
 				# The package names are in field 10 in the rkhunter.dat file
 
-				RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAME}:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+				RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAME}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 				if [ -z "${RKHTMPVAR2}" ]; then
 					# Filename is just a plain filename
-					RKHTMPVAR2=`grep "^File:[^:]*/${FNAME}:" ${DB_PATH}/rkhunter.dat 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+					RKHTMPVAR2=`grep "^File:[^:]*/${FNAME}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 					if [ -n "${RKHTMPVAR2}" ]; then
 						RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
@@ -12242,12 +12310,12 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	# hash function and package manager.
 	#
 
-	if [ -s "${DB_PATH}/rkhunter.dat" ]; then
-		OLD_HASH_FUNC=`grep '^Hash:' ${DB_PATH}/rkhunter.dat | cut -d: -f2-`
+	if [ -s ${RKHDAT_FILE} ]; then
+		OLD_HASH_FUNC=`grep '^Hash:' ${RKHDAT_FILE} | cut -d: -f2-`
 
-		OLD_PKGMGR=`grep '^Pkgmgr:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
+		OLD_PKGMGR=`grep '^Pkgmgr:' ${RKHDAT_FILE} | cut -d: -f2`
 
-		OLD_ATTRUPD=`grep '^Attributes:' ${DB_PATH}/rkhunter.dat | cut -d: -f2`
+		OLD_ATTRUPD=`grep '^Attributes:' ${RKHDAT_FILE} | cut -d: -f2`
 	fi
 fi
 
@@ -12430,8 +12498,8 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
 
-	if [ -s "${DB_PATH}/rkhunter.dat" ]; then
-		RKHTMPVAR=`grep '^OS:' ${DB_PATH}/rkhunter.dat 2>/dev/null | sed -e 's/^OS://'`
+	if [ -s ${RKHDAT_FILE} ]; then
+		RKHTMPVAR=`grep '^OS:' ${RKHDAT_FILE} 2>/dev/null | sed -e 's/^OS://'`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${RKHTMPVAR}"
@@ -12563,7 +12631,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 	fi
 
-	if [ -s "${DB_PATH}/rkhunter.dat" ]; then
+	if [ -s ${RKHDAT_FILE} ]; then
 		if [ "${OLD_HASH_FUNC}" = "Disabled" ]; then
 			display --to LOG --type INFO HASH_FUNC_OLD_DISABLED
 		else
@@ -12595,17 +12663,21 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		elif [ -n "${PKGMGR}" ]; then
 			display --to LOG --type INFO HASHUPD_PKGMGR "${PKGMGR}"
 
-			if [ "${PKGMGR}" = "RPM" ]; then
+			case "${PKGMGR}" in
+			RPM)
 				display --to LOG --type INFO FOUND_CMD "rpm" "${RPM_CMD}"
-			elif [ "${PKGMGR}" = "DPKG" ]; then
+				;;
+			DPKG)
 				if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
 					display --to LOG --type INFO FOUND_CMD "dpkg-query" "${DPKG_CMD}"
 				else
 					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
 				fi
-			elif [ "${PKGMGR}" = "BSD" ]; then
+				;;
+			BSD)
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
-			fi
+				;;
+			esac
 		fi
 	fi
 
@@ -12623,9 +12695,11 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		elif [ -n "${PKGMGR}" ]; then
 			display --to LOG --type INFO HASH_PKGMGR "${PKGMGR}"
 
-			if [ "${PKGMGR}" = "RPM" ]; then
+			case "${PKGMGR}" in
+			RPM)
 				display --to LOG --type INFO FOUND_CMD "rpm" "${RPM_CMD}"
-			elif [ "${PKGMGR}" = "DPKG" ]; then
+				;;
+			DPKG)
 				if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
 					display --to LOG --type INFO FOUND_CMD "dpkg-query" "${DPKG_CMD}"
 				else
@@ -12633,10 +12707,12 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				fi
 
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-			elif [ "${PKGMGR}" = "BSD" ]; then
+				;;
+			BSD)
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-			fi
+				;;
+			esac
 		fi
 	fi
 fi
@@ -12734,7 +12810,7 @@ if [ $CHECK -eq 1 ]; then
 	#
 
 	if `check_test properties`; then
-		if [ -s "${DB_PATH}/rkhunter.dat" ]; then
+		if [ -s ${RKHDAT_FILE} ]; then
 			#
 			# We perform a simple check on some of the stored
 			# O/S information, and compare it to the current
