@@ -6263,6 +6263,14 @@ suspscan() {
 				#
 
 				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | cat -v | cut -d' ' -f2-`
+
+				#
+				# We need to check errors from the file command, but not
+				# if they are caused by the file disappearing beneath us.
+				#
+
+				test ! -e "${SUSPSCAN_ITEM}" && continue
+
 				# Adding "text" to the egrep below widens scope at the expense of more false positives and extending running time:
 				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
 					FOUND=1
@@ -6276,6 +6284,7 @@ suspscan() {
 					# The list below should be broken out to a .dat file or rkhunter.conf.
 
 #jh - does the next line only execute once?? it has 'tail -1' to restrict it to 1 line it seems
+#jh - add to FAQ/READMe entries on creating new i18n file; and on testing cvs version using standalone installation
 					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail -1` ; do
 
 						# Break off if the score already exceeds threshold
@@ -8558,6 +8567,7 @@ linux_specific_checks() {
 	# Now do the test.
 	#
 
+#jh - put in check here that the /lib/modules (or whatever) does at least have one file in it. If it odesn;t, may be a vitual system, then we need the user to skip the test.Use rkhtmpvar2 ?
 	if [ -d "${LKMPATH}" -a -n "${FIND_CMD}" ]; then
 		for FNAME in `${FIND_CMD} ${LKMPATH} -type f -name "*.o" 2>/dev/null`; do
 			for RKHTMPVAR in ${LKM_NAMES}; do
@@ -10101,11 +10111,7 @@ do_filesystem_check() {
 			test -n "`echo \"${FNAME}\" | egrep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*(/|$)\"`" && continue
 		fi
 
-		if [ -f "${FNAME}" ]; then
-			FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
-		else
-			continue
-		fi
+		FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
 
 		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
 
