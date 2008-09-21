@@ -97,8 +97,9 @@ A.   Yes, everyone can help in some way. For example:
      Send a copy of an undetected rootkit to us so that it can
      be added and help others;
 
-     Translate RKH messages to your native language. For the
-     template see the standard language file i18n/en.
+     Translate RKH messages to your native language. Details of
+     how to do this are in the README file. For the template
+     see the standard language file i18n/en.
 
      Are you a package maintainer? If so, then please submit
      your changes to us so that everyone can benefit from them;

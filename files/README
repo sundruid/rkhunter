@@ -457,6 +457,42 @@ mirror, of the configured type, listed in the file. If there are no more
 mirrors left, then rkhunter will give a warning message.
 
 
+CREATING A NEW LANGUAGE FILE
+============================
+
+Creating a new language file to work with rkhunter is quite easy - the actual
+translating is the hard part! First, it is necessary to find out where the
+current language files are located. For a default installation this will be
+in the '/var/lib/rkhunter/db/i18n' directory. If this directory does not
+exist, then look in the rkhunter log file (usually located in /var/log) and
+there should be a line similar to 'Using... as the database directory'.
+Within that directory there should be the 'i18n' sub-directory. Once you
+have changed to that directory, you should then see the current language
+files. Next, take a copy of the 'en' language file and name it for your new
+language. We would suggest that you use something similar to the known
+ISO 639 language codes. For example, to create a generic French language
+file, then execute 'cp -p en fr'. Once you have done this, your new language
+file will be recognised by rkhunter. You can check this by using the command
+'rkhunter --list lang'. Note that if you use the 'rkhunter --update' command,
+the new language file will not be touched in any way. Also note that you must
+not remove the 'en' file, rkhunter will not work without it.
+
+The next part is to actually translate the messages. Each language file starts
+with a line containing the version number of that file. The actual messages
+start with a keyword, which must not be changed at all, followed by a colon
+(:), and then the actual message. It is the actual message which you need to
+translate. Some messages may contain variables such as '$1' or '$2'. Again,
+these must not be changed. Once you have translated the messages you can test
+them by using the command 'rkhunter --lang fr ...' - substituting 'fr' for
+whatever name you gave to your language file.
+
+If you want to have your new language translation made available as part of
+rkhunter, then please submit a feature request on the rkhunter SourceForge
+web site. However, please be aware that the language file is a fundamental
+part of rkhunter, and as such is continuously changing. You should endeavour
+to keep your translation up to date with the current version of rkhunter.
+
+
 ROOTKIT HUNTER SUPPORT
 ======================
 
