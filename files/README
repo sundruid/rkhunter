@@ -156,6 +156,82 @@ To run RKH, as root simply enter the following command:
     ./rkhunter --check
 
 
+TESTING RKHUNTER WITHOUT INSTALLING IT
+======================================
+
+It is perfectly understandable that new users may wish to try out rkhunter
+without having to fully install it. Similarly current users may want to
+test a new version of rkhunter, or a CVS version of it, without it affecting
+their current system or current installation of rkhunter. This is all
+perfectly possible, and quite easy, using a standalone installation.
+
+First, as the root user, it is suggested that a separate temporary directory
+is created, and then change to that directory. For example:
+
+       mkdir /tmp/rkh
+       cd /tmp/rkh
+
+It is now necessary to either copy or download a tarball of the version of
+rkhunter that you want to test. (Since you are reading this file, we assume
+you have already downloaded the relevant version.) For users wishing to try
+the latest CVS version, it is possible to download a tarball. For example:
+
+       wget http://rkhunter.sourceforge.net/rkhunter-CVS.tar.gz
+
+Next, it is necessary to extract the files from the tarball. The simplest
+way is to use the 'tar' command, such as:
+
+       tar xzf rkhunter-CVS.tar.gz
+
+Obviously, for official releases, you will need to use the correct tarball
+name. For example:
+
+       tar xzf rkhunter-1.3.2.tar.gz
+
+For users of systems with alternative implementations of 'tar', for example
+Solaris users, you may need to break the extraction process into two steps
+(or use the 'gtar' command if you have it installed). For example:
+
+       gunzip rkhunter-CVS.tar.gz
+       tar xf rkhunter-CVS.tar
+
+The extraction process will create a sub-directory containing all the
+rkhunter files. The sub-directory name will contain the rkhunter version
+number, or, for CVS tarballs, it will simply be called 'rkhunter'.
+Change into this directory:
+
+       cd rkhunter-1.3.2         (for an official release tarball)
+   or  cd rkhunter               (for CVS tarballs)
+
+Now, we can run the installer program as described in the section above
+about standalone installations:
+
+       ./installer.sh --layout custom . --install
+
+Finally change to the 'files' sub-directory:
+
+       cd files
+
+Within here will be all the files that rkhunter requires. The configuration
+file, './rkhunter.conf', will already have been configured for a standalone
+installation. So there is no need to modify it unless you want to. Any
+files created by rkhunter will be within this directory. So, as mentioned
+above, it is perfectly possible to run a check using this installation
+without affecting any other installation of rkhunter that may exist on your
+system. To run a check use this command:
+
+       ./rkhunter --check --sk
+
+A log file (rkhunter.log) will be created, and that too will be within
+this directory.
+
+Once you have finished testing rkhunter, simply delete the entire directory
+it was installed into:
+
+       cd /tmp
+       /bin/rm -rf rkh
+
+
 INSTALLATION INFORMATION FOR x86_64 SYSTEMS
 ===========================================
 
