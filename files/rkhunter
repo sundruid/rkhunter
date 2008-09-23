@@ -1026,14 +1026,12 @@ check_commands() {
 	#
 
 	if [ -z "${READLINK_CMD}" -o "${READLINK_CMD}" = "BUILTIN" ]; then
-		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
+		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
 	elif [ -n "`${READLINK_CMD} -f ${SCRIPT_PATH}/readlink.sh 2>&1 >/dev/null`" ]; then
-		if [ -x "${SCRIPT_PATH}/readlink.sh" ]; then
-			READLINK_CMD="${SCRIPT_PATH}/readlink.sh"
-		else
-			READLINK_CMD=""
-		fi
+		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
 	fi
+
+	test -n "${READLINK_CMD}" && HAVE_READLINK=1
 
 
 	#
@@ -6221,7 +6219,7 @@ suspscan() {
 				#
 
 				if [ -h "${SUSPSCAN_ITEM}" ]; then
-					if [ -n "${READLINK_CMD}" ]; then
+					if [ $HAVE_READLINK -eq 1 ]; then
 						RKHTMPVAR="${SUSPSCAN_ITEM}"
 
 						SUSPSCAN_ITEM=`${READLINK_CMD} -f ${RKHTMPVAR}`
@@ -7636,7 +7634,7 @@ malware_checks() {
 					# Try and get the running process name.
 					#
 
-					if [ -n "${READLINK_CMD}" ]; then
+					if [ $HAVE_READLINK -eq 1 ]; then
 						RKHTMPVAR=""
 
 						if [ $SOL_PROC -eq 1 ]; then
@@ -7706,7 +7704,7 @@ malware_checks() {
 						fi
 					done
 
-					test -z "${READLINK_CMD}" && PROC="\"${PROC}\""
+					test $HAVE_READLINK -eq 0 && PROC="\"${PROC}\""
 
 					if [ $PROCWHITELISTED -eq 1 ]; then
 						if [ $PROCDELFILES_GIVEN -eq 1 ]; then
@@ -8818,7 +8816,7 @@ do_network_port_checks() {
 				# Try and get the running process name.
 				#
 
-				if [ -n "${READLINK_CMD}" ]; then
+				if [ $HAVE_READLINK -eq 1 ]; then
 					RKHTMPVAR=""
 
 					if [ $SOL_PROC -eq 1 ]; then
@@ -9079,7 +9077,7 @@ do_network_interface_checks() {
 		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](${INODE_LIST})[ 	]" | awk '{ print $2 }'`; do
 			NAME=""
 
-			if [ -n "${READLINK_CMD}" -a -h "/proc/$PID/exe" ]; then
+			if [ $HAVE_READLINK -eq 1 -a -h "/proc/$PID/exe" ]; then
 				NAME=`${READLINK_CMD} -f /proc/$PID/exe | cut -d' ' -f1`
 			elif [ -f "/proc/$PID/status" ]; then
 				NAME=`grep '^Name:.' /proc/$PID/status | sed -e 's/^Name:.//'`
@@ -10636,7 +10634,7 @@ do_system_check() {
 
 		if [ -h "/proc/1/path/a.out" ]; then
 			SOLARISX='-X'
-			test -n "${READLINK_CMD}" && SOL_PROC=1
+			test $HAVE_READLINK -eq 1 && SOL_PROC=1
 		fi
 	fi
 
@@ -10952,25 +10950,25 @@ set_file_prop_dirs_files() {
 	PROP_DIR_LIST=""
 
 	for DIR in ${BINPATHS}; do
-		if [ -d "${RKHROOTDIR}${DIR}" ]; then
-			LINKDIR="${RKHROOTDIR}${DIR}"
+		LINKDIR="${RKHROOTDIR}${DIR}"
 
-			if [ -n "${READLINK_CMD}" -a -h "${LINKDIR}" ]; then
-				LINKDIR=`${READLINK_CMD} -f ${LINKDIR}`
+		test ! -d "${LINKDIR}" && continue
 
-				#
-				# If the link target directory does not start
-				# with the RKHROOTDIR, then prepend it.
-				#
+		if [ $HAVE_READLINK -eq 1 -a -h "${LINKDIR}" ]; then
+			LINKDIR=`${READLINK_CMD} -f ${LINKDIR}`
 
-				if [ -z "`echo \"${LINKDIR}\" | grep \"^${RKHROOTDIR}/\"`" ]; then
-					LINKDIR="${RKHROOTDIR}${LINKDIR}"
-				fi
+			#
+			# If the link target directory does not start
+			# with the RKHROOTDIR, then prepend it.
+			#
+
+			if [ -z "`echo \"${LINKDIR}\" | grep \"^${RKHROOTDIR}/\"`" ]; then
+				LINKDIR="${RKHROOTDIR}${LINKDIR}"
 			fi
+		fi
 
-			if [ -z "`echo \"${PROP_DIR_LIST}\" | egrep \"(^| )${LINKDIR}( |$)\"`" ]; then
-				PROP_DIR_LIST="${PROP_DIR_LIST} ${LINKDIR}"
-			fi
+		if [ -z "`echo \"${PROP_DIR_LIST}\" | egrep \"(^| )${LINKDIR}( |$)\"`" ]; then
+			PROP_DIR_LIST="${PROP_DIR_LIST} ${LINKDIR}"
 		fi
 	done
 
@@ -11012,7 +11010,7 @@ set_file_prop_dirs_files() {
 	# the link points to.
 	#
 
-	if [ -n "${READLINK_CMD}" ]; then
+	if [ $HAVE_READLINK -eq 1 ]; then
 		EXTRA_DIRS=""
 		EXTRA_FILES=""
 
@@ -11685,6 +11683,9 @@ RTKT_FILE_WHITELIST=""
 
 # The full pathname of the 'rkhunter.dat' file.
 RKHDAT_FILE=""
+
+# This gets set if we have a working readlink command.
+HAVE_READLINK=0
 
 
 ######################################################################
