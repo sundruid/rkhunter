@@ -48,6 +48,13 @@
    file names will be updated in the rkhunter.dat file. Hopefully this will make
    things a bit quicker on slower machines. See the man page for more details. If
    using a package manager, then you must run 'rkhunter --propupd' first.
+ - The Linux 'os_specific' test has now been split into two separate tests -
+   'loaded_modules' and 'avail_modules'. The tests, however, are the same as
+   before, they check the currently loaded kernel modules and the names of the
+   available modules. A new configuration file option has been added, called
+   MODULES_DIR, so that users can specify which directory, and sub-directories,
+   are checked for bad module names, should rkhunter be unable to work out the
+   correct location.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.

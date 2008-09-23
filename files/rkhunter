@@ -6283,8 +6283,6 @@ suspscan() {
 					# False positives: memory
 					# The list below should be broken out to a .dat file or rkhunter.conf.
 
-#jh - does the next line only execute once?? it has 'tail -1' to restrict it to 1 line it seems
-#jh - add to FAQ/READMe entries on creating new i18n file; and on testing cvs version using standalone installation
 					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail -1` ; do
 
 						# Break off if the score already exceeds threshold
@@ -8480,18 +8478,30 @@ freebsd_specific_checks() {
 }
 
 
-linux_specific_checks() {
+linux_loaded_modules() {
 
 	#
-	# This function performs tests specific to the Linux O/S.
+	# This test checks the currently loaded kernel modules. It verifies
+	# that what is seen by the 'lsmod' command is the same as seen in
+	# the /proc/modules directory.
 	#
 
+	if ! `check_test loaded_modules`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST loaded_modules
+		return
+	fi
 
-	#
-	# First we check the currently loaded kernel modules.
-	#
 
-	if [ -f "${RKHROOTDIR}/proc/modules" -a -n "${LSMOD_CMD}" -a -n "${SORT_CMD}" ]; then
+	if [ ! -f "${RKHROOTDIR}/proc/modules" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+
+		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "${RKHROOTDIR}/proc/modules"
+	elif [ -z "${LSMOD_CMD}" -o -z "${SORT_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+
+		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "lsmod"
+		test -z "${SORT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "sort"
+	else
 		PROC_OUTPUT=`cat ${RKHROOTDIR}/proc/modules | cut -d' ' -f1 | ${SORT_CMD}`
 		LSMOD_OUTPUT=`${LSMOD_CMD} | grep -v 'Size *Used *by' | cut -d' ' -f1 | ${SORT_CMD}`
 
@@ -8513,43 +8523,51 @@ linux_specific_checks() {
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "/proc/modules" "${PROC_OUTPUT}"
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "lsmod" "${LSMOD_OUTPUT}"
 		fi
-	elif [ ! -f "${RKHROOTDIR}/proc/modules" ]; then
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+	fi
 
-		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "${RKHROOTDIR}/proc/modules"
-	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+	return
+}
 
-		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "lsmod"
-		test -z "${SORT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "sort"
+
+linux_avail_modules() {
+
+	#
+	# This test checks the names of the kernel
+	# modules that are available on this system.
+	#
+
+	if ! `check_test avail_modules`; then
+		display --to LOG --type INFO --nl USER_DISABLED_TEST avail_modules
+		return
 	fi
 
 
 	#
-	# Next we check for any known bad modules.
+	# First obtain and log where the modules are kept. This can
+	# be set in the configuration file, but generally rkhunter
+	# will determine the location based on the kernel version.
+	# However, in the case of remote diagnostics the diagnosing
+	# and diagnosed kernel versions may be different. In this
+	# case we simply look in '/lib/modules'.
 	#
 
 	FOUND=0
 	FOUNDFILES=""
+	LKM_PATH=""
 	LKM_NAMES=""
 
+	RKHTMPVAR=`get_option 1 single MODULES_DIR` || exit 1
 
-	#
-	# First obtain and log where the modules are kept. Generally
-	# rkhunter will determine the location based on the kernel
-	# version. However, in the case of remote diagnostics the
-	# diagnosing and diagnosed kernel versions may be different.
-	# In this case we simply look in '/lib/modules'.
-	#
-
-	if [ -z "${RKHROOTDIR}" ]; then
-		LKMPATH="/lib/modules/`uname -r 2>/dev/null`"
-		test ! -d "${LKMPATH}" && LKMPATH="/lib/modules"
+	if [ -n "${RKHTMPVAR}" ]; then
+		LKM_PATH="${RKHTMPVAR}"
+	elif [ -z "${RKHROOTDIR}" ]; then
+		LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
+		test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
 	else
-		LKMPATH="${RKHROOTDIR}/lib/modules"
+		LKM_PATH="${RKHROOTDIR}/lib/modules"
 	fi
 
-	display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKMPATH}"
+	display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKM_PATH}"
 
 
 	#
@@ -8567,9 +8585,20 @@ linux_specific_checks() {
 	# Now do the test.
 	#
 
-#jh - put in check here that the /lib/modules (or whatever) does at least have one file in it. If it odesn;t, may be a vitual system, then we need the user to skip the test.Use rkhtmpvar2 ?
-	if [ -d "${LKMPATH}" -a -n "${FIND_CMD}" ]; then
-		for FNAME in `${FIND_CMD} ${LKMPATH} -type f -name "*.o" 2>/dev/null`; do
+	if [ ! -d "${LKM_PATH}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+
+		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
+	elif [ -z "${FIND_CMD}" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+
+		display --to LOG --type INFO NOT_FOUND_CMD "find"
+	elif [ -z "`ls -1 ${LKM_PATH} 2>/dev/null`" ]; then
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+
+		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
+	else
+		for FNAME in `${FIND_CMD} ${LKM_PATH} -type f -name "*.o" 2>/dev/null`; do
 			for RKHTMPVAR in ${LKM_NAMES}; do
 				if [ -n "`echo ${FNAME} | grep \"/${RKHTMPVAR}\$\"`" ]; then
 					FOUND=1
@@ -8587,18 +8616,24 @@ linux_specific_checks() {
 			for RKHTMPVAR in ${FOUNDFILES}; do
 				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/\\\././g'`
 
-				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_FOUND "${LKMPATH}" "${RKHTMPVAR}"
+				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_FOUND "${LKM_PATH}" "${RKHTMPVAR}"
 			done
 		fi
-	elif [ ! -d "${LKMPATH}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
-
-		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKMPATH}"
-	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
-
-		display --to LOG --type INFO NOT_FOUND_CMD "find"
 	fi
+
+	return
+}
+
+
+linux_specific_checks() {
+
+	#
+	# This function performs tests specific to the Linux O/S.
+	#
+
+	linux_loaded_modules
+
+	linux_avail_modules
 
 	return
 }
@@ -11531,7 +11566,7 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     system_commands shared_libs shared_libs_path running_procs
 	     hidden_procs trojans other_malware os_specific startup_malware
 	     startup_files group_accounts system_configs filesystem suspscan
-	     ports promisc"
+	     ports promisc loaded_modules avail_modules"
 
 # A space-separated list of test 'group names'. This list allows test
 # names to be grouped together. For example, 'system_commands' can include
@@ -11543,13 +11578,14 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:shared_libs_path:immutable:attributes
 	       properties:hashes:scripts:immutable:attributes
 	       shared_libs:shared_libs_path
-	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:other_malware:os_specific:suspscan
+	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:other_malware:os_specific:suspscan:loaded_modules:avail_modules
 	       additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings
 	       possible_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps:ports:promisc
 	       malware:running_procs:hidden_procs:deleted_files:suspscan:other_malware
 	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem
 	       startup_files:startup_malware
+	       os_specific:loaded_modules:avail_modules
 	       group_accounts:passwd_changes:group_changes"
 
 # A comma-separated list of rootkits we check for.

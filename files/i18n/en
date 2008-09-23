@@ -1,4 +1,4 @@
-Version:2008091001
+Version:2008092301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -383,7 +383,7 @@ ROOTKIT_OS_FREEBSD_KLD_FOUND:Found possible FreeBSD KLD backdoor. 'kldstat -v' c
 ROOTKIT_OS_FREEBSD_PKGDB:Checking package database
 ROOTKIT_OS_FREEBSD_PKGDB_NOTOK:The package database seems to have inconsistencies.
 ROOTKIT_OS_FREEBSD_PKGDB_NOTOK:This may not be a security issue, but running 'pkgdb -F' may help diagnose the problem.
-ROOTKIT_OS_LINUX_LKM:Checking kernel module commands
+ROOTKIT_OS_LINUX_LKM:Checking loaded kernel modules
 ROOTKIT_OS_LINUX_LKM_FOUND:Differences found between the lsmod command and the /proc/modules file:
 ROOTKIT_OS_LINUX_LKM_OUTPUT:$1 output: $2
 ROOTKIT_OS_LINUX_LKM_EMPTY:No output found from the lsmod command or the /proc/modules file:
@@ -391,7 +391,7 @@ ROOTKIT_OS_LINUX_LKM_MOD_MISSING:The modules file '$1' is missing.
 ROOTKIT_OS_LINUX_LKMNAMES:Checking kernel module names
 ROOTKIT_OS_LINUX_LKMNAMES_PATH:Using modules pathname of '$1'
 ROOTKIT_OS_LINUX_LKMNAMES_FOUND:Known bad kernel module found in '$1': $2
-ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING:The kernel module directory '$1' is missing.
+ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING:The kernel modules directory '$1' is missing or empty.
 
 CHECK_LOCALHOST:Checking the local host...
 STARTUP_FILES_START:Performing system boot checks

@@ -222,8 +222,11 @@ system. To run a check use this command:
 
        ./rkhunter --check --sk
 
-A log file (rkhunter.log) will be created, and that too will be within
-this directory.
+By default a log file (rkhunter.log) will be created, and that too will be
+within this directory.
+
+NOTE: If the rkhunter '--debug' option is used then this will, by default,
+create a file in the '/tmp' directory, and not within the current directory.
 
 Once you have finished testing rkhunter, simply delete the entire directory
 it was installed into:
