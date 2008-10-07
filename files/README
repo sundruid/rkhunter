@@ -153,7 +153,7 @@ wish, but note the installer has already set the necessary variables.
 
 To run RKH, as root simply enter the following command:
 
-    ./rkhunter --check
+    ./rkhunter --propupd --check --sk
 
 
 TESTING RKHUNTER WITHOUT INSTALLING IT
@@ -220,7 +220,7 @@ above, it is perfectly possible to run a check using this installation
 without affecting any other installation of rkhunter that may exist on your
 system. To run a check use this command:
 
-       ./rkhunter --check --sk
+       ./rkhunter --propupd --check --sk
 
 By default a log file (rkhunter.log) will be created, and that too will be
 within this directory.
