@@ -6,7 +6,7 @@
 #%%dump
 
 %define name rkhunter
-%define ver 1.3.3
+%define ver 1.3.4
 %define rel 1
 %define epoch 0
 
@@ -119,6 +119,9 @@ fi
 
 
 %changelog
+* Wed Dec 10 2008 unSpawn - 1.3.4
+- Spec sync.
+
 * Sun Aug 09 2008 jhorne - 1.3.3
 - Renamed cron.daily file from '01-rkhunter' to 'rkhunter' so
   that it will run after a prelink cron job (if it exists).

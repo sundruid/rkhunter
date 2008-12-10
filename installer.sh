@@ -24,7 +24,7 @@ of the GNU General Public License. See LICENSE for details.
 "
 
 APPNAME="rkhunter"
-APPVERSION="1.3.3"
+APPVERSION="1.3.4"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
@@ -101,6 +101,7 @@ showHelp() { # Show help / version
 	echo $ECHOOPT "                    - oldschool: previous version file locations,"
 	echo $ECHOOPT "                    - custom: supply your own prefix,"
 	echo $ECHOOPT "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
+	echo $ECHOOPT "                    - DEB: for building DEB's. Requires \$DEB_BUILD_ROOT."
 	echo $ECHOOPT "--striproot      : Strip path from custom layout (for package maintainers)."
 	echo $ECHOOPT "--install        : Install according to chosen layout."
 	echo $ECHOOPT "--show           : Show chosen layout."
@@ -138,7 +139,7 @@ showVersion() { echo "${INSTALLER_NAME} ${INSTALLER_VERSION} ${INSTALLER_LICENSE
 
 selectTemplate() { # Take input from the "--installdir parameter"
 case "$1" in
-	/usr|/usr/local|default|custom_*|RPM)
+	/usr|/usr/local|default|custom_*|RPM|DEB)
 		case "$1" in
 			default)
 				PREFIX="/usr/local"
@@ -174,11 +175,18 @@ case "$1" in
 					exit 1
 				fi
 				;;
+			DEB)    if [ -n "${DEB_BUILD_ROOT}" ]; then
+					PREFIX="${DEB_BUILD_ROOT}/usr"
+				else
+					echo "DEB prefix chosen but \$DEB_BUILD_ROOT variable not found, exiting."
+					exit 1
+				fi
+				;;
 			*)	PREFIX="$1"
 				;;
 		esac
 		case "$1" in
-			RPM)
+			RPM|DEB)
 				;;
 			*)
 				if [ "$action" = "install" ]; then
@@ -195,6 +203,8 @@ case "$1" in
 				SYSCONFIGDIR="${PREFIX}/etc"
 				;;
 			RPM)	SYSCONFIGDIR="${RPM_BUILD_ROOT}/etc"
+				;;
+			DEB)    SYSCONFIGDIR="${DEB_BUILD_ROOT}/etc"
 				;;
 			*)	SYSCONFIGDIR="/etc"
 				;;
@@ -215,6 +225,11 @@ case "$1" in
 					LIBDIR="${PREFIX}/lib"
 				fi
 				VARDIR="${RPM_BUILD_ROOT}/var"
+				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+				;;
+			DEB)
+				LIBDIR="${PREFIX}/lib"
+				VARDIR="${DEB_BUILD_ROOT}/var"
 				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
 				;;
 			*)
@@ -246,6 +261,11 @@ if [ "${RKHINST_LAYOUT}" = "oldschool" ]; then
 	RKHINST_DB_DIR="${VARDIR}/${APPNAME}/db"
 	RKHINST_TMP_DIR="${VARDIR}/${APPNAME}/tmp"
 	RKHINST_DOC_DIR="${SHAREDIR}/${APPNAME}/docs"
+elif [ "${RKHINST_LAYOUT}" = "DEB" ]; then
+	RKHINST_DB_DIR="${VARDIR}/lib/${APPNAME}/db"
+	RKHINST_TMP_DIR="${VARDIR}/lib/${APPNAME}/tmp"
+	RKHINST_DOC_DIR="${SHAREDIR}/doc/${APPNAME}"
+	RKHINST_SCRIPT_DIR="${SHAREDIR}/${APPNAME}/scripts"
 else
 	RKHINST_DB_DIR="${VARDIR}/lib/${APPNAME}/db"
 	RKHINST_TMP_DIR="${VARDIR}/lib/${APPNAME}/tmp"
@@ -259,7 +279,11 @@ RKHINST_ETC_FILE="${APPNAME}.conf"
 RKHINST_BIN_FILES="${APPNAME}"
 RKHINST_SCRIPT_FILES="check_modules.pl check_update.sh check_port.pl filehashmd5.pl filehashsha1.pl showfiles.pl stat.pl readlink.sh"
 RKHINST_DB_FILES="backdoorports.dat mirrors.dat os.dat programs_bad.dat programs_good.dat defaulthashes.dat md5blacklist.dat suspscan.dat"
-RKHINST_DOC_FILES="ACKNOWLEDGMENTS CHANGELOG FAQ LICENSE README WISHLIST"
+if [ "${RKHINST_LAYOUT}" = "DEB" ]; then
+	RKHINST_DOC_FILES="ACKNOWLEDGMENTS FAQ README WISHLIST"
+else
+	RKHINST_DOC_FILES="ACKNOWLEDGMENTS CHANGELOG FAQ LICENSE README WISHLIST"
+fi
 RKHINST_MAN_FILES="${APPNAME}.8"
 
 }
@@ -330,7 +354,7 @@ else
 			rm -rf "${dir}"; retValChk
 		done
 		case "${RKHINST_LAYOUT}" in
-		RPM) 
+		RPM|DEB) 
 			;;
 		*)
 			find ./files | while read ITEM; do
@@ -367,7 +391,7 @@ if [ -f "./files/${APPNAME}" ]; then
 		useCVS
 	fi
 	case "${RKHINST_LAYOUT}" in
-	RPM) 
+	RPM|DEB) 
 		;;
 	*)
 		find ./files | while read ITEM; do
@@ -408,7 +432,7 @@ echo "Starting installation/update"
 echo ""
 
 case "${RKHINST_LAYOUT}" in
-		RPM)
+		RPM|DEB)
 			;;
 		*) 
 # Check PREFIX
@@ -544,7 +568,7 @@ done; retValChk
 for FILE in ${RKHINST_BIN_FILES}; do
 	echo $N " Installing ${FILE}: " 
 	case "${RKHINST_LAYOUT}" in
-		RPM)	
+		RPM|DEB)	
 			cp -f ./files/"${FILE}" "${RKHINST_BIN_DIR}/${FILE}"; retValChk
 			;;
 		*)	
@@ -576,7 +600,7 @@ for FILE in ${RKHINST_ETC_FILE}; do
 		echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "TMPDIR=${RKHINST_TMP_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 
-		if [ "${RKHINST_LAYOUT}" != "RPM" ]; then
+		if [ "${RKHINST_LAYOUT}" != "RPM" &&  "${RKHINST_LAYOUT}" != "DEB" ]; then
 			echo " >>> "
 			echo " >>> PLEASE NOTE: inspect for update changes in "${RKHINST_ETC_DIR}/${NEWFILE}""
 			echo " >>> and apply to "${RKHINST_ETC_DIR}/${FILE}" before running Rootkit Hunter."
@@ -593,7 +617,8 @@ for FILE in ${RKHINST_ETC_FILE}; do
 			echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
-		else
+		# Done with a patch during the build process
+		elif [ -z "${DEB_BUILD_ROOT}" ]; then
 			echo "INSTALLDIR=${PREFIX}" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "DBDIR=${RKHINST_DB_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
@@ -613,7 +638,7 @@ fi
 # to avoid warnings when rkhunter is first run.
 
 case "${RKHINST_LAYOUT}" in
-	RPM)	# This is done by a %post section in the spec file.
+	RPM|DEB)	# This is done by a %post section in the spec file / postinst file.
 		;;
 	*)
 		cp -p /etc/passwd ${RKHINST_TMP_DIR} >/dev/null 2>&1
@@ -752,7 +777,7 @@ while [ $# -ge 1 ]; do
 					exit 1
 				fi
 				;;
-			default|oldschool|/usr|/usr/local|RPM)
+			default|oldschool|/usr|/usr/local|RPM|DEB)
 				RKHINST_LAYOUT="$1"
 				;;
 			*)
