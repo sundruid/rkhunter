@@ -3097,17 +3097,21 @@ rkh_dat_set_file_properties() {
 					FILE_IS_PKGD=1
 					PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
 
-					RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
 						#
-						# If multiple versions of the same package
-						# have been installed, we use the last one.
+						# If multiple packages claim the same file, we 
+						# use the last one in the list, except
+						# if we have 64bit as well as 32bit, we prefer
+						# 64bit (this is what RPM does for binaries).
 						#
 
-						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
-
+						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | grep 'x86_64\|ia64' | tail -1`
+						if [ -z "${RPM_QUERY_RESULT}" ]; then
+							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail -1`
+						fi
 						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
 						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
 
@@ -4968,10 +4972,10 @@ shared_libs_check() {
 				for RKHTMPVAR in ${RKHTMPVAR_BIN}; do
 					LD_LIBRARY_PATH="${LD_LIBRARY_PATH_SAVED}"
 					export LD_LIBRARY_PATH
-					RKHTMPVAR_WITH=`${LDD_CMD} ${RKHTMPVAR} 2>&1`
+					RKHTMPVAR_WITH=`${LDD_CMD} ${RKHTMPVAR} | sed -e 's/(0x[0-9a-f]*)/0xHEX/' 2>&1`
 
 					unset LD_LIBRARY_PATH
-					RKHTMPVAR_WITHOUT=`${LDD_CMD} ${RKHTMPVAR} 2>&1`
+					RKHTMPVAR_WITHOUT=`${LDD_CMD} ${RKHTMPVAR} | sed -e 's/(0x[0-9a-f]*)/0xHEX/' 2>&1`
 
 					if [ "${RKHTMPVAR_WITH}" != "${RKHTMPVAR_WITHOUT}" ]; then
 						#
@@ -5339,6 +5343,7 @@ file_properties_check() {
 	if [ $SKIP_ATTR -eq 0 ]; then
 		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || exit 1
 		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || exit 1
+		HASHWHITELIST=`get_option 1 multi HASHWHITELIST` || exit 1
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
@@ -5435,7 +5440,7 @@ file_properties_check() {
 					# First we see if the file is part of a package.
 					#
 
-					PKGNAME=`${RPM_CMD} -qf ${FILENAME} 2>/dev/null`
+					PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --qf '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
@@ -5443,14 +5448,16 @@ file_properties_check() {
 						# Okay we have a package name. Is it in the list
 						# of packages we have already tested as verified?
 						#
-						# If multiple versions of the same package
-						# have been installed, we use the last one.
+						# If multiple packages claim the same file, we use
+						# 64bit over 32bit (on bi-arch platforms), or simply the last one.
 						#
 
 						FILE_IS_PKGD=1
 
-						PKGNAME=`echo "${PKGNAME}" | tail -1`
-
+						PKGNAME=`echo "${PKGNAME_ARCH}" | grep 'x86_64\|ia64' | tail -1`
+						if [ -z "${PKGNAME}" ]; then
+							PKGNAME=`echo "${PKGNAME_ARCH}" | tail -1`
+						fi
 						if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
 							#
 							# No, it isn't in the list. So we verify the package
@@ -5458,7 +5465,7 @@ file_properties_check() {
 							# or get the verification result for the file.
 							#
 
-							PKGMGR_VERIFY_RESULT=`${RPM_CMD} -Vf ${FILENAME} 2>&1`
+							PKGMGR_VERIFY_RESULT=`${RPM_CMD} -V "${PKGNAME}" 2>&1`
 
 							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
@@ -5478,7 +5485,7 @@ file_properties_check() {
 						# information about this file from the package manager database.
 						#
 
-						RPM_QUERY_RESULT=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+						RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FILENAME}\$"`
 						ERRCODE=$?
 
 						if [ $ERRCODE -eq 0 ]; then
@@ -5581,8 +5588,10 @@ file_properties_check() {
 					#
 					# Now see if we need to work out the hash value or not.
 					#
-
-					if [ $FILE_IS_PKGD -eq 1 ]; then
+					if [ -n "${WL_FILE}" ]; then
+						# whitelisted
+						:
+					elif [ $FILE_IS_PKGD -eq 1 ]; then
 						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
 							HASH_TEST_PASSED=1
 						else
