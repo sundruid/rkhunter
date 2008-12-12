@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.7"
+INSTALLER_VERSION="1.2.8"
 INSTALLER_COPYRIGHT="Copyright 2003-2008, Michael Boelen"
 INSTALLER_LICENSE="
 
