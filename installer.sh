@@ -600,7 +600,7 @@ for FILE in ${RKHINST_ETC_FILE}; do
 		echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "TMPDIR=${RKHINST_TMP_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 
-		if [ "${RKHINST_LAYOUT}" != "RPM" &&  "${RKHINST_LAYOUT}" != "DEB" ]; then
+		if [ "${RKHINST_LAYOUT}" != "RPM" -a "${RKHINST_LAYOUT}" != "DEB" ]; then
 			echo " >>> "
 			echo " >>> PLEASE NOTE: inspect for update changes in "${RKHINST_ETC_DIR}/${NEWFILE}""
 			echo " >>> and apply to "${RKHINST_ETC_DIR}/${FILE}" before running Rootkit Hunter."
