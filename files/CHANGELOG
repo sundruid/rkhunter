@@ -64,6 +64,10 @@
  - Improved the rsyslog remote logging check.
  - The wrong error message was shown if the English (en) language file was missing.
  - The hidden files and directories check wasn't checking for directories!
+ - Improved the O/S name detection. Previously the lsb-release file would have
+   preference to any other file. This could result in some gibberish being given as
+   the O/S name, rather than continuing to look for other release files. This has
+   now been fixed.
 
  -- 
 

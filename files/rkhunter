@@ -53,6 +53,7 @@ if [ "$1" = "--debug" ]; then
 	DEBUG_OPT=1
 
 	exec 1>/tmp/rkhunter-debug 2>&1
+	chmod 600 /tmp/rkhunter-debug >/dev/null 2>&1
 	set -x
 else
 	DEBUG_OPT=0
