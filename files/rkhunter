@@ -2868,12 +2868,18 @@ rkh_dat_get_os_info() {
 		REL_FILES="${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/lunar.release ${RKHROOTDIR}/etc/ROCK-VERSION ${RKHROOTDIR}/etc/GoboLinuxVersion ${RKHROOTDIR}/etc/kanotix-version ${RKHROOTDIR}/etc/sidux-version ${RKHROOTDIR}/etc/knoppix-version ${RKHROOTDIR}/etc/zenwalk-version ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
 	fi
 
+	RKH_LSB_SEEN=0
+
 	for FNAME in ${REL_FILES}; do
 		if [ -f "${FNAME}" -a ! -h "${FNAME}" ]; then
 			RELEASE=$FNAME
 
+			RKH_IN_LSB=0
+
 			case "${RELEASE}" in
 			${RKHROOTDIR}/etc/lsb-release)
+				RKH_IN_LSB=1
+				RKH_LSB_SEEN=1
 				OSNAME=`grep '^DISTRIB_DESCRIPTION=' ${RELEASE} | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
 				;;
 			${RKHROOTDIR}/etc/gentoo-release)
@@ -2913,11 +2919,12 @@ rkh_dat_get_os_info() {
 
 			#
 			# If we have a release file but it seems to be blank,
+			# and we are not looking at the LSB release file, then
 			# we take a look for the first non-blank line. We
 			# then, again, strip out any leading blanks and tabs.
 			#
 
-			if [ -z "${OSNAME}" ]; then
+			if [ $RKH_IN_LSB -eq 0 -a -z "${OSNAME}" ]; then
 				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head -n 1 | sed -e 's/^[ 	]*//'`
 			fi
 
@@ -2965,14 +2972,21 @@ rkh_dat_get_os_info() {
 
 	#
 	# If we still have no O/S version information, then as a last
-	# resort we will look to see if an 'issue' file exists. We test
-	# this last because it is not necessarily reliable in providing
-	# the O/S version.
+	# resort we will look to see if an 'issue' file exists or use
+	# whatever is in the LSB release file. We test these last because
+	# they are not necessarily reliable in providing the O/S version.
 	#
 
-	if [ -z "${OSNAME}" -a -f "${RKHROOTDIR}/etc/issue" ]; then
-		OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/issue | head -n 1 | sed -e 's/^[ 	]*//'`
-		test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/issue"
+	if [ -z "${OSNAME}" ]; then
+		if [ -f "${RKHROOTDIR}/etc/issue" ]; then
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/issue | head -n 1 | sed -e 's/^[ 	]*//'`
+			test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/issue"
+		fi
+
+		if [ $RKH_LSB_SEEN -eq 1 -a -z "${OSNAME}" ]; then
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/lsb-release | head -n 1 | sed -e 's/^[ 	]*//'`
+			test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/lsb-release"
+		fi
 	fi
 
 	return
