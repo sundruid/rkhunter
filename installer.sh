@@ -30,6 +30,8 @@ RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
 RKHINST_MODE_RWR="0644"
 RKHINST_LAYOUT=""
+RKHINST_ACTION=""
+RKHINST_ACTION_SEEN=0
 USE_CVS=0
 STRIPROOT=""
 N="-n"
@@ -148,7 +150,7 @@ case "$1" in
 				PREFIX=`echo "${RKHINST_LAYOUT}"|sed "s|custom_||g"`
 				case "${PREFIX}" in
 					.)
-						if [ "$action" = "install" ]; then
+						if [ "${RKHINST_ACTION}" = "install" ]; then
 							echo "Standalone installation into ${PWD}/files"
 						fi
 						;;
@@ -157,7 +159,7 @@ case "$1" in
 						exit 1
 						;;
 					*)
-						if [ "$action" = "install" ]; then
+						if [ "${RKHINST_ACTION}" = "install" ]; then
 							RKHTMPVAR=`echo "${PATH}" | grep "${PREFIX}/bin"`
 							if [ -z "${RKHTMPVAR}" ]; then
 								echo ""
@@ -189,7 +191,7 @@ case "$1" in
 			RPM|DEB)
 				;;
 			*)
-				if [ "$action" = "install" ]; then
+				if [ "${RKHINST_ACTION}" = "install" ]; then
 					if [ ! -d "${PREFIX}" ]; then
 						echo "Bad prefix chosen (non-existent directory), exiting."
 						echo "Perhaps run \"mkdir -p ${PREFIX}\" first?"
@@ -781,7 +783,7 @@ while [ $# -ge 1 ]; do
 				RKHINST_LAYOUT="$1"
 				;;
 			*)
-				echo "Unknown layout given, exiting."
+				echo "Unknown layout given, exiting: $1"
 				exit 1
 				;;
 		esac
@@ -800,8 +802,11 @@ while [ $# -ge 1 ]; do
 			echo "No layout given. The '--layout' option must be specified first."
 			exit 1
 		fi
-		action=`echo $ECHOOPT "$1"|sed "s/-//g"`
-		case "$action" in
+
+		RKHINST_ACTION_SEEN=1
+		RKHINST_ACTION=`echo $ECHOOPT "$1"|sed "s/-//g"`
+
+		case "${RKHINST_ACTION}" in
 			show)	showTemplate $RKHINST_LAYOUT
 				;;
 			remove)	# Clean active window
@@ -817,7 +822,7 @@ while [ $# -ge 1 ]; do
 			"")	echo "No action given, exiting."
 				exit 1
 				;;
-			*)	echo "Unknown action given, exiting: $action"
+			*)	echo "Unknown action given, exiting: ${RKHINST_ACTION}"
 				exit 1
 				;;
 		esac
@@ -831,5 +836,10 @@ while [ $# -ge 1 ]; do
 	esac
 	shift
 done
+
+# We only get here when some installation action was to be taken.
+if [ $RKHINST_ACTION_SEEN -eq 0 ]; then
+	echo "No action given, exiting."
+fi
 
 exit 0
