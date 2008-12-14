@@ -9781,7 +9781,7 @@ do_system_config_files_check() {
 			# Get the value that has been set.
 			#
 
-			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^  ]*\).*$/\1/' | tr '[A-Z]' '[a-z]'`
+			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[A-Z]' '[a-z]'`
 
 			if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
 				test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
@@ -9814,7 +9814,7 @@ do_system_config_files_check() {
 			# Get the value that has been set.
 			#
 
-			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^  ]*\).*$/\1/' | grep '1'`
+			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | grep '1'`
 
 			if [ -z "${RKHTMPVAR2}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
