@@ -9774,14 +9774,14 @@ do_system_config_files_check() {
 		# First we check for allowed root access.
 		#
 
-		RKHTMPVAR=`grep -i '^PermitRootLogin[ 	]' ${SSH_CONFIG_FILE} | tail -1`
+		RKHTMPVAR=`grep -i '^PermitRootLogin[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			#
 			# Get the value that has been set.
 			#
 
-			RKHTMPVAR2=`echo "${RKHTMPVAR}" | awk '{ print $2 }' | tr '[A-Z]' '[a-z]'`
+			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*//;s/[ 	]*$//' | tr '[A-Z]' '[a-z]'`
 
 			if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
 				test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
@@ -9807,14 +9807,14 @@ do_system_config_files_check() {
 		# Next we check to see if protocol version 1 is allowed.
 		#
 
-		RKHTMPVAR=`grep -i '^Protocol[ 	]' ${SSH_CONFIG_FILE} | tail -1`
+		RKHTMPVAR=`grep -i '^Protocol[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			#
 			# Get the value that has been set.
 			#
 
-			RKHTMPVAR2=`echo "${RKHTMPVAR}" | awk '{ print $2 }' | grep '1'`
+			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*//;s/[ 	]*$//' | grep '1'`
 
 			if [ -z "${RKHTMPVAR2}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO

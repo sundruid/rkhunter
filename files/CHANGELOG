@@ -68,6 +68,8 @@
    preference to any other file. This could result in some gibberish being given as
    the O/S name, rather than continuing to look for other release files. This has
    now been fixed.
+ - The tests against the SSH configuration file now accept the key/value pair to be
+   separated by an equals sign as well as spaces and/or tabs.
 
  -- 
 
