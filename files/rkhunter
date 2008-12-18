@@ -3021,15 +3021,20 @@ rkh_dat_set_file_properties() {
 
 	if ! `check_test attributes`; then
 		SCMD=""
+		INODECMD=""
 	elif [ -z "${STAT_CMD}" ]; then
 		SCMD=""
+		INODECMD=""
 	else
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
+			INODECMD="${STAT_CMD} --modeoct --raw --ino"
 		elif [ $BSDOS -eq 1 ]; then
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
+			INODECMD="${STAT_CMD} -f '%i'"
 		else
 			SCMD="${STAT_CMD} --format='%i 0%a %u %g %s %Y:'"
+			INODECMD="${STAT_CMD} --format='%i'"
 		fi
 	fi
 
@@ -3111,7 +3116,7 @@ rkh_dat_set_file_properties() {
 					FILE_IS_PKGD=1
 					PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
 
-					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
@@ -3123,24 +3128,32 @@ rkh_dat_set_file_properties() {
 						#
 
 						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | grep 'x86_64\|ia64' | tail -1`
-						if [ -z "${RPM_QUERY_RESULT}" ]; then
-							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail -1`
-						fi
-						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
+
+						test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail -1`
+
+						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
 						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
 
-						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
 						RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
 
-						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
 						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-						RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+						RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
 
-						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
+						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
 
-						FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
-						FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
+						#
+						# Now get the inode value directly from the disk,
+						# but only if prelinking is not being used.
+						#
+
+						RKHTMPVAR2=""
+
+						test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${DIR}/${FNAME} 2>/dev/null | tr -d ' '`
+
+						FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 					else
 						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
 					fi
@@ -3151,7 +3164,7 @@ rkh_dat_set_file_properties() {
 			if [ -n "${HCMD}" ]; then
 				case "${PKGMGR}" in
 				RPM)
-					test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
+					test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
 					;;
 				DPKG)
 					#
@@ -5328,13 +5341,17 @@ file_properties_check() {
 
 	if [ $SKIP_ATTR -eq 1 ]; then
 		SCMD=""
+		INODECMD=""
 	else
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
+			INODECMD="${STAT_CMD} --modeoct --raw --ino"
 		elif [ $BSDOS -eq 1 ]; then
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
+			INODECMD="${STAT_CMD} -f '%i'"
 		else
 			SCMD="${STAT_CMD} --format='%i 0%a %u %g %s %Y:'"
+			INODECMD="${STAT_CMD} --format='%i'"
 		fi
 	fi
 
@@ -5469,9 +5486,9 @@ file_properties_check() {
 						FILE_IS_PKGD=1
 
 						PKGNAME=`echo "${PKGNAME_ARCH}" | grep 'x86_64\|ia64' | tail -1`
-						if [ -z "${PKGNAME}" ]; then
-							PKGNAME=`echo "${PKGNAME_ARCH}" | tail -1`
-						fi
+
+						test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail -1`
+
 						if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
 							#
 							# No, it isn't in the list. So we verify the package
@@ -5499,36 +5516,46 @@ file_properties_check() {
 						# information about this file from the package manager database.
 						#
 
-						RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEINODES}:%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FILENAME}\$"`
+						RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FILENAME}\$"`
 						ERRCODE=$?
 
 						if [ $ERRCODE -eq 0 ]; then
 							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
 
-							FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f2 | cut -c 3-`"
+							FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
 							FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
 
-							RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+							RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
 							RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
 
-							RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+							RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
 							RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-							RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+							RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
 
-							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
+							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
 
-							FDATA=`echo "${RPM_QUERY_RESULT}" | cut -d: -f1`
-							FDATA="${FDATA}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
+							FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
 						else
 							#
 							# If, for some reason, we cannot get the package information,
 							# then treat it as if it returned all null values.
 							#
 
-							FDATA="::::::"
+							FDATA=":::::"
 							display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
 						fi
+
+						#
+						# Now get the inode value directly from the disk,
+						# but only if prelinking is not being used.
+						#
+
+						RKHTMPVAR2=""
+
+						test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${DIR}/${FNAME} 2>/dev/null | tr -d ' '`
+
+						FDATA="${RKHTMPVAR2}:${FDATA}"
 					fi
 				fi
 
@@ -5740,7 +5767,8 @@ file_properties_check() {
 						# Check the file inode number.
 						#
 
-						if [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
+#jh - this check should be 'if not prelinking or file is a script'
+						if [ $PRELINKED -eq 0 ]; then
 							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
 							SYSINODE=`echo ${FDATA} | cut -d: -f1`
 

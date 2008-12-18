@@ -70,6 +70,11 @@
    now been fixed.
  - The tests against the SSH configuration file now accept the key/value pair to be
    separated by an equals sign as well as spaces and/or tabs.
+ - The file properties inode check did not work correctly when used on non-prelinked
+   systems with the RPM package manager. The test is now only performed when
+   prelinking is not being used, and the inode data is always obtained from the disk.
+   This is a partial fix, as the test should run for scripts regardless of whether
+   prelinking is used or not.
 
  -- 
 
