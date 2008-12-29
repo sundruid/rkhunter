@@ -55,6 +55,7 @@
    MODULES_DIR, so that users can specify which directory, and sub-directories,
    are checked for bad module names, should rkhunter be unable to work out the
    correct location.
+ - The pathname of the debug file, if used, is now written to the log file.
 
  Bugfixes:
  - Cater for when ROOTDIR is explicitly set to '/'.
@@ -75,6 +76,8 @@
    prelinking is not being used, and the inode data is always obtained from the disk.
    This is a partial fix, as the test should run for scripts regardless of whether
    prelinking is used or not.
+ - The debug file is now created with a random name, and the file permissions are
+   set to 600.
 
  -- 
 

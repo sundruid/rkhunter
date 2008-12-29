@@ -41,19 +41,35 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 fi
 
 if [ "$1" = "--debug" ]; then
-	if [ -e "/tmp/rkhunter-debug" ]; then
-		if [ -f "/tmp/rkhunter-debug" -a ! -h "/tmp/rkhunter-debug" ]; then
-			rm -f /tmp/rkhunter-debug >/dev/null 2>&1
+	RKHDEBUGBASE="/tmp/rkhunter-debug"
+
+	#
+	# Ensure we create a random file name.
+	#
+
+	if [ -n "`which mktemp 2>/dev/null | grep '^/'`" ]; then
+		RKHDEBUGFILE=`mktemp ${RKHDEBUGBASE}.XXXXXXXXXX`
+	elif [ -n "$RANDOM" ]; then
+		RKHDEBUGFILE="${RKHDEBUGBASE}.$RANDOM"
+	elif [ -n "`date +%N%s 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
+		RKHDEBUGFILE="${RKHDEBUGBASE}.`date +%N%s%N`"
+	else
+		RKHDEBUGFILE="${RKHDEBUGBASE}.`date +%Y%m%d%H%M%S`"
+	fi
+
+	if [ -e "${RKHDEBUGFILE}" ]; then
+		if [ -f "${RKHDEBUGFILE}" -a ! -h "${RKHDEBUGFILE}" ]; then
+			rm -f ${RKHDEBUGFILE} >/dev/null 2>&1
 		else
-			echo "Cannot use '--debug' option. /tmp/rkhunter-debug already exists, but it is not a file."
+			echo "Cannot use '--debug' option. \"${RKHDEBUGFILE}\" already exists, but it is not a file."
 			exit 1
 		fi
 	fi
 
 	DEBUG_OPT=1
 
-	exec 1>/tmp/rkhunter-debug 2>&1
-	chmod 600 /tmp/rkhunter-debug >/dev/null 2>&1
+	exec 1>${RKHDEBUGFILE} 2>&1
+	chmod 600 ${RKHDEBUGFILE} >/dev/null 2>&1
 	set -x
 else
 	DEBUG_OPT=0
@@ -565,7 +581,7 @@ get_temp_file() {
 
 
 	if [ -n "${MKTEMP_CMD}" ]; then
-		TEMPFILE=`${MKTEMP_CMD} ${TEMPFILE_BASE}.XXXXXX`
+		TEMPFILE=`${MKTEMP_CMD} ${TEMPFILE_BASE}.XXXXXXXXXX`
 	elif [ -n "$RANDOM" ]; then
 		TEMPFILE="${TEMPFILE_BASE}.$RANDOM"
 	elif [ $BSDOS -eq 1 ]; then
@@ -578,7 +594,7 @@ get_temp_file() {
 
 
 	#
-	# Remove the file just in case it does already exist!
+	# Remove the file just in case it already exists!
 	#
 
 	rm -f ${TEMPFILE} >/dev/null 2>&1
@@ -12606,6 +12622,8 @@ if [ $NOLOG -eq 0 ]; then
 	fi
 
 	display --to LOG --type INFO CONFIG_CMDLINE "${CMD_LINE}"
+
+	test $DEBUG_OPT -eq 1 && display --to LOG --type INFO CONFIG_DEBUGFILE "${RKHDEBUGFILE}"
 
 	display --to LOG --type INFO CONFIG_ENVSHELL ${SHELL} ${MYSHELL}
 

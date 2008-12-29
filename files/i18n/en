@@ -1,4 +1,4 @@
-Version:2008092301
+Version:2008122801
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -48,6 +48,7 @@ UNAME:Uname output is '$1'
 
 CONFIG_CHECK_START:Checking configuration file and command-line options...
 CONFIG_CMDLINE:Command line is $1
+CONFIG_DEBUGFILE:Debug file is $1
 CONFIG_ENVSHELL:Environment shell is $1; rkhunter is using $2
 CONFIG_CONFIGFILE:Using configuration file '$1'
 CONFIG_INSTALLDIR:Installation directory is '$1'
