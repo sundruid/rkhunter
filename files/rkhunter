@@ -5783,7 +5783,6 @@ file_properties_check() {
 						# Check the file inode number.
 						#
 
-#jh - this check should be 'if not prelinking or file is a script'
 						if [ $PRELINKED -eq 0 ]; then
 							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
 							SYSINODE=`echo ${FDATA} | cut -d: -f1`
