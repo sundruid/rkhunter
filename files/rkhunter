@@ -3,7 +3,7 @@
 #
 # rkhunter -- Scan the system for rootkits and other known security issues.
 #
-# Copyright (c) 2003-2008, Michael Boelen ( michael AT rootkit DOT nl )
+# Copyright (c) 2003-2009, Michael Boelen ( michael AT rootkit DOT nl )
 #
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -5783,6 +5783,8 @@ file_properties_check() {
 						# Check the file inode number.
 						#
 
+#jh - this check should be 'if not prelinking or file is a script'. Change script stuff and store if file is script in rkhunter.dat.
+#jh - we can then simply check to see if a file has changed to/from being a script. It should avoid users having to whitelist script files. Also store soft links?
 						if [ $PRELINKED -eq 0 ]; then
 							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
 							SYSINODE=`echo ${FDATA} | cut -d: -f1`
@@ -11420,9 +11422,9 @@ trap - 13 >/dev/null 2>&1
 #
 
 PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="1.3.4"
+PROGRAM_version="1.3.5"
 PROGRAM_copyright_owner="Michael Boelen"
-PROGRAM_copyright="Copyright (c) 2003-2008, ${PROGRAM_copyright_owner}"
+PROGRAM_copyright="Copyright (c) 2003-2009, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
 Currently under active development by the ${PROGRAM_NAME} project team.
 Please review your rkhunter.conf before using.

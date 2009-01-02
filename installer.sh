@@ -12,7 +12,7 @@
 
 INSTALLER_NAME="Rootkit Hunter installer"
 INSTALLER_VERSION="1.2.8"
-INSTALLER_COPYRIGHT="Copyright 2003-2008, Michael Boelen"
+INSTALLER_COPYRIGHT="Copyright 2003-2009, Michael Boelen"
 INSTALLER_LICENSE="
 
 Under active development by the Rootkit Hunter project team. For reporting
@@ -24,7 +24,7 @@ of the GNU General Public License. See LICENSE for details.
 "
 
 APPNAME="rkhunter"
-APPVERSION="1.3.4"
+APPVERSION="1.3.5"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
