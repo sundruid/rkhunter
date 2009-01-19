@@ -550,7 +550,7 @@ get_option() {
 		;;
 	2)
 		OPTVAR=`echo "${OPTVAR}" | tr ',' ' ' | tr '	' ' ' | tr -s '	'`
-		OPTVAR=`echo "${OPTVAR}" | sed -e 's/^"\(.*\)"$/\1/' | sed -e "s/^'\(.*\)'$/\1/"`
+		OPTVAR=`echo "${OPTVAR}" | sed -e 's/^"//; s/"$//' | sed -e "s/^'//; s/'$//"`
 		OPTVAR=`echo ${OPTVAR}`
 		;;
 	*)
@@ -1857,7 +1857,7 @@ get_enable_option() {
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${ENABLE_TESTS}" ]; then
 			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | sed -e 's/^ //' | sed -e 's/ $//'`
+			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | sed -e 's/^ //; s/ $//'`
 
 			if [ -z "${ENABLE_TESTS}" ]; then
 				echo "Invalid --enable option - no test names given."
@@ -1960,7 +1960,7 @@ get_disable_option() {
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${DISABLE_TESTS}" ]; then
 			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e 's/^ //' | sed -e 's/ $//'`
+			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e 's/^ //; s/ $//'`
 
 			if [ -z "${DISABLE_TESTS}" ]; then
 				echo "Invalid --disable option - no test names given."
@@ -2249,7 +2249,7 @@ get_hash_function() {
 
 	if [ -n "${HASH_FUNC}" ]; then
 		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
-		HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/^ //' | sed -e 's/ $//'`
+		HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/^ //; s/ $//'`
 
 		if [ -z "${HASH_FUNC}" ]; then
 			echo "Invalid --hash option: no hash function given."
@@ -11300,7 +11300,7 @@ display_rootkits() {
 		KNOWN_ROOTKITS=`echo " ${KNOWN_ROOTKITS}" | tr ',' '\n' | ${SORT_CMD} | tr '\n' ','`
 	fi
 
-	KNOWN_ROOTKITS=`echo "${KNOWN_ROOTKITS}" | sed -e 's/,$//' | sed -e 's/^,*//'`
+	KNOWN_ROOTKITS=`echo "${KNOWN_ROOTKITS}" | sed -e 's/^,*//; s/,$//'`
 
 
 	display --to SCREEN --type PLAIN --nl LIST_RTKTS
