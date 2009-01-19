@@ -11404,8 +11404,10 @@ help() {
 #
 
 if [ $DEBUG_OPT -eq 1 -a "${MYSHELL}" = "ksh" ]; then
-	typeset +f | while read RKHTMPVAR; do
-		typeset -ft ${RKHTMPVAR}
+	RKHTMPVAR=`typeset +f`
+
+	for RKHTMPVAR2 in $RKHTMPVAR; do
+		typeset -ft ${RKHTMPVAR2}
 	done
 fi
 
