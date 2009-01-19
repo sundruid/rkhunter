@@ -10542,7 +10542,7 @@ ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 			else
 				ISBAD=`echo "${RKHTMPVAR}" | cut -d% -f4`
 
-				if [ -n "`echo \"${ISBAD}\" | grep '[^-0-9]'`" ]; then
+				if [ -n "`echo $ECHOOPT \"${ISBAD}\" | grep '[^-0-9]'`" ]; then
 					display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
 					display --to LOG --type INFO APPS_CHECK_VERSION_UNKNOWN "${APPLICATION}"
 				elif [ $ISBAD -eq -2 ]; then
