@@ -550,7 +550,7 @@ get_option() {
 		;;
 	2)
 		OPTVAR=`echo "${OPTVAR}" | tr ',' ' ' | tr '	' ' ' | tr -s '	'`
-		OPTVAR=`echo "${OPTVAR}" | sed -e 's/^"//; s/"$//' | sed -e "s/^'//; s/'$//"`
+		OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
 		OPTVAR=`echo ${OPTVAR}`
 		;;
 	*)
