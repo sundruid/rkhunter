@@ -22,6 +22,8 @@
  New:
 
  Changes:
+ - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
+   only applicable to NetBSD and FreeBSD.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious

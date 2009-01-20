@@ -550,7 +550,18 @@ get_option() {
 		;;
 	2)
 		OPTVAR=`echo "${OPTVAR}" | tr ',' ' ' | tr '	' ' ' | tr -s '	'`
-		OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+
+		#
+		# We must handle the MAIL_CMD option specially because it will
+		# contain quote characters, and we do not want to remove these.
+		#
+
+		if [ "${OPTV}" = "MAIL_CMD" ]; then
+			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ //; s/ $//'`
+		else
+			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+		fi
+
 		OPTVAR=`echo ${OPTVAR}`
 		;;
 	*)
@@ -8711,6 +8722,13 @@ os_specific_checks() {
 	#
 	# This function performs any O/S specific tests.
 	#
+
+	#
+	# There are no specific tests for OpenBSD at present, so we just
+	# return. We do not want to log or display anything.
+	#
+
+	test "${OPERATING_SYSTEM}" = "OpenBSD" && return
 
 	if ! `check_test os_specific`; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST os_specific
