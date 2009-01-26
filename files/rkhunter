@@ -4749,6 +4749,15 @@ do_system_check_initialisation() {
 	ZARWT_DIRS="${RKHROOTDIR}/rk
 		    ${RKHROOTDIR}/dev/rd/s"
 
+	# ZK Rootkit
+	ZK_FILES="${RKHROOTDIR}/usr/share/.zk/zk
+		  ${RKHROOTDIR}/usr/X11R6/.zk/xfs
+		  ${RKHROOTDIR}/usr/X11R6/.zk/echo
+		  ${RKHROOTDIR}/etc/1ssue.net
+		  ${RKHROOTDIR}etc/sysconfig/console/load.zk"
+
+	ZK_DIRS="${RKHROOTDIR}/usr/share/.zk
+		 ${RKHROOTDIR}/usr/X11R6/.zk"
 
 	# Miscellaneous login backdoors
 	LOGIN_BACKDOOR_FILES="${RKHROOTDIR}/bin/.login
@@ -7300,6 +7309,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${ZARWT_FILES}
 	SCAN_DIRS=${ZARWT_DIRS}
 	SCAN_KSYMS=${ZARWT_KSYMS}
+	scanrootkit
+
+	# ZK Rootkit
+
+	SCAN_ROOTKIT="ZK Rootkit"
+	SCAN_FILES=${ZK_FILES}
+	SCAN_DIRS=${ZK_DIRS}
+	SCAN_KSYMS=${ZK_KSYMS}
 	scanrootkit
 
 	return
