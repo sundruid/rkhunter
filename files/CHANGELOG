@@ -32,6 +32,8 @@
  - The debug code only partially worked when using the Korn shell.
  - Fixed the option parsing in the configuration file such that leading
    and trailing whitespace are now correctly removed.
+ - When displaying the list of checked rootkit names, the list was supposed
+   to be sorted.
 
  -- 
 
