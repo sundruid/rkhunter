@@ -20,6 +20,7 @@
  * 1.3.5 (xx/xx/2009)
 
  New:
+ - Added ZK rootkit check.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
