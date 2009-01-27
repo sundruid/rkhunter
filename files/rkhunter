@@ -4754,10 +4754,10 @@ do_system_check_initialisation() {
 		  ${RKHROOTDIR}/usr/X11R6/.zk/xfs
 		  ${RKHROOTDIR}/usr/X11R6/.zk/echo
 		  ${RKHROOTDIR}/etc/1ssue.net
-		  ${RKHROOTDIR}etc/sysconfig/console/load.zk"
-
+		  ${RKHROOTDIR}/etc/sysconfig/console/load.zk"
 	ZK_DIRS="${RKHROOTDIR}/usr/share/.zk
 		 ${RKHROOTDIR}/usr/X11R6/.zk"
+
 
 	# Miscellaneous login backdoors
 	LOGIN_BACKDOOR_FILES="${RKHROOTDIR}/bin/.login
@@ -11331,11 +11331,7 @@ display_rootkits() {
 	# names which rkhunter will check for.
 	#
 
-	if [ -n "${SORT_CMD}" ]; then
-		KNOWN_ROOTKITS=`echo " ${KNOWN_ROOTKITS}" | tr ',' '\n' | ${SORT_CMD} | tr '\n' ','`
-	fi
-
-	KNOWN_ROOTKITS=`echo "${KNOWN_ROOTKITS}" | sed -e 's/^,*//; s/,$//'`
+	KNOWN_ROOTKITS=`echo ${KNOWN_ROOTKITS} | sed -e 's/^,*//; s/,$//'`
 
 
 	display --to SCREEN --type PLAIN --nl LIST_RTKTS
@@ -11704,7 +11700,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient 
   RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin,
   Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
   TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, X-Org SunOS,
-  zaRwT.KiT'
+  zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
