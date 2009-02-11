@@ -21,6 +21,7 @@
 
  New:
  - Added ZK rootkit check.
+ - German translation provided.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
