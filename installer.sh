@@ -104,6 +104,7 @@ showHelp() { # Show help / version
 	echo $ECHOOPT "                    - custom: supply your own prefix,"
 	echo $ECHOOPT "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
 	echo $ECHOOPT "                    - DEB: for building DEB's. Requires \$DEB_BUILD_ROOT."
+	echo $ECHOOPT "                    - TGZ: for building Slackware TGZ's. Requires \$TGZ_BUILD_ROOT."
 	echo $ECHOOPT "--striproot      : Strip path from custom layout (for package maintainers)."
 	echo $ECHOOPT "--install        : Install according to chosen layout."
 	echo $ECHOOPT "--show           : Show chosen layout."
@@ -141,7 +142,7 @@ showVersion() { echo "${INSTALLER_NAME} ${INSTALLER_VERSION} ${INSTALLER_LICENSE
 
 selectTemplate() { # Take input from the "--installdir parameter"
 case "$1" in
-	/usr|/usr/local|default|custom_*|RPM|DEB)
+	/usr|/usr/local|default|custom_*|RPM|DEB|TGZ)
 		case "$1" in
 			default)
 				PREFIX="/usr/local"
@@ -184,11 +185,18 @@ case "$1" in
 					exit 1
 				fi
 				;;
+			TGZ)    if [ -n "${TGZ_BUILD_ROOT}" ]; then
+					PREFIX="${TGZ_BUILD_ROOT}/usr"
+				else
+					echo "TGZ prefix chosen but \$TGZ_BUILD_ROOT variable not found, exiting."
+					exit 1
+				fi
+				;;
 			*)	PREFIX="$1"
 				;;
 		esac
 		case "$1" in
-			RPM|DEB)
+			RPM|DEB|TGZ)
 				;;
 			*)
 				if [ "${RKHINST_ACTION}" = "install" ]; then
@@ -207,6 +215,8 @@ case "$1" in
 			RPM)	SYSCONFIGDIR="${RPM_BUILD_ROOT}/etc"
 				;;
 			DEB)    SYSCONFIGDIR="${DEB_BUILD_ROOT}/etc"
+				;;
+			TGZ)    SYSCONFIGDIR="${TGZ_BUILD_ROOT}/etc"
 				;;
 			*)	SYSCONFIGDIR="/etc"
 				;;
@@ -233,6 +243,15 @@ case "$1" in
 				LIBDIR="${PREFIX}/lib"
 				VARDIR="${DEB_BUILD_ROOT}/var"
 				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+				;;
+			TGZ)
+				if [ "`uname -m`" = "x86_64" ]; then
+					LIBDIR="${PREFIX}/lib64"
+				else
+					LIBDIR="${PREFIX}/lib"
+				fi
+				VARDIR="${TGZ_BUILD_ROOT}/var"
+				SHAREDIR="${PREFIX}"; BINDIR="${PREFIX}/bin"
 				;;
 			*)
 				if [ -d "${PREFIX}/lib64" ]; then
@@ -356,7 +375,7 @@ else
 			rm -rf "${dir}"; retValChk
 		done
 		case "${RKHINST_LAYOUT}" in
-		RPM|DEB) 
+		RPM|DEB|TGZ) 
 			;;
 		*)
 			find ./files | while read ITEM; do
@@ -393,7 +412,7 @@ if [ -f "./files/${APPNAME}" ]; then
 		useCVS
 	fi
 	case "${RKHINST_LAYOUT}" in
-	RPM|DEB) 
+	RPM|DEB|TGZ) 
 		;;
 	*)
 		find ./files | while read ITEM; do
@@ -434,7 +453,7 @@ echo "Starting installation/update"
 echo ""
 
 case "${RKHINST_LAYOUT}" in
-		RPM|DEB)
+		RPM|DEB|TGZ)
 			;;
 		*) 
 # Check PREFIX
@@ -570,7 +589,7 @@ done; retValChk
 for FILE in ${RKHINST_BIN_FILES}; do
 	echo $N " Installing ${FILE}: " 
 	case "${RKHINST_LAYOUT}" in
-		RPM|DEB)	
+		RPM|DEB|TGZ)	
 			cp -f ./files/"${FILE}" "${RKHINST_BIN_DIR}/${FILE}"; retValChk
 			;;
 		*)	
@@ -602,7 +621,7 @@ for FILE in ${RKHINST_ETC_FILE}; do
 		echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "TMPDIR=${RKHINST_TMP_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 
-		if [ "${RKHINST_LAYOUT}" != "RPM" -a "${RKHINST_LAYOUT}" != "DEB" ]; then
+		if [ "${RKHINST_LAYOUT}" != "RPM" -a "${RKHINST_LAYOUT}" != "DEB" -a "${RKHINST_LAYOUT}" != "TGZ" ]; then
 			echo " >>> "
 			echo " >>> PLEASE NOTE: inspect for update changes in "${RKHINST_ETC_DIR}/${NEWFILE}""
 			echo " >>> and apply to "${RKHINST_ETC_DIR}/${FILE}" before running Rootkit Hunter."
@@ -619,6 +638,11 @@ for FILE in ${RKHINST_ETC_FILE}; do
 			echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+		elif [ -n "${TGZ_BUILD_ROOT}" ]; then
+			echo "INSTALLDIR=${PREFIX}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 		# Done with a patch during the build process
 		elif [ -z "${DEB_BUILD_ROOT}" ]; then
 			echo "INSTALLDIR=${PREFIX}" >> "${RKHINST_ETC_DIR}/${FILE}"
@@ -640,7 +664,7 @@ fi
 # to avoid warnings when rkhunter is first run.
 
 case "${RKHINST_LAYOUT}" in
-	RPM|DEB)	# This is done by a %post section in the spec file / postinst file.
+	RPM|DEB|TGZ)	# This is done by a %post section in the spec file / postinst file.
 		;;
 	*)
 		cp -p /etc/passwd ${RKHINST_TMP_DIR} >/dev/null 2>&1
@@ -779,7 +803,7 @@ while [ $# -ge 1 ]; do
 					exit 1
 				fi
 				;;
-			default|oldschool|/usr|/usr/local|RPM|DEB)
+			default|oldschool|/usr|/usr/local|RPM|DEB|TGZ)
 				RKHINST_LAYOUT="$1"
 				;;
 			*)
