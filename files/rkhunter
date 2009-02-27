@@ -3703,7 +3703,7 @@ download_file() {
 				# version number as the first line in them.
 				#
 
-				if [ -z "`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${OUTPUT_FILE} | tail -1`" ]; then
+				if [ -z "`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${OUTPUT_FILE}`" ]; then
 					DNLOADERR=1
 				fi
 			fi
