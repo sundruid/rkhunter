@@ -251,7 +251,7 @@ case "$1" in
 					LIBDIR="${PREFIX}/lib"
 				fi
 				VARDIR="${TGZ_BUILD_ROOT}/var"
-				SHAREDIR="${PREFIX}"; BINDIR="${PREFIX}/bin"
+				SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
 				;;
 			*)
 				if [ -d "${PREFIX}/lib64" ]; then
