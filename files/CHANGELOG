@@ -22,6 +22,9 @@
  New:
  - Added ZK rootkit check.
  - German translation provided.
+ - Added the IGNORE_PRELINK_DEP_ERR option to the configuration file. This
+   option can be used when a persistent prelink dependency error occurs.
+   Further details of its use are in the configuration file.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently

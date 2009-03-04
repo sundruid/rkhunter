@@ -552,7 +552,7 @@ get_option() {
 		OPTVAR=`echo "${OPTVAR}" | tr ',' ' ' | tr '	' ' ' | tr -s '	'`
 
 		#
-		# We must handle the MAIL_CMD option specially because it will
+		# We must handle the MAIL_CMD option specially because it may
 		# contain quote characters, and we do not want to remove these.
 		#
 
@@ -2823,6 +2823,16 @@ get_configfile_options() {
 		get_os_version_option
 	fi
 
+	#
+	# If we are doing a file properties update, then we need to
+	# see if we should be ignoring prelink errors for any files.
+	#
+
+	if [ $PROP_UPDATE -eq 1 ]; then
+		RKHTMPVAR=`get_option 2 single IGNORE_PRELINK_DEP_ERR` || exit 1
+		test -n "${RKHTMPVAR}" && PRELINK_DEP_ERR_CMDS=" ${RKHTMPVAR} "
+	fi
+
 
 	#
 	# Get the mirror file options if necessary.
@@ -3092,6 +3102,7 @@ rkh_dat_set_file_properties() {
 			PKGNAME=""
 			RPM_QUERY_RESULT=""
 			FILE_IS_PKGD=0
+			DEPENDENCY_ERR=0
 
 			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
@@ -3182,74 +3193,88 @@ rkh_dat_set_file_properties() {
 
 						FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 					else
-						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
+						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
 					fi
 				fi
 			fi
 
 
 			if [ -n "${HCMD}" ]; then
-				case "${PKGMGR}" in
-				RPM)
-					test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
-					;;
-				DPKG)
-					#
-					# First see if the file is part of a known package.
-					#
-
-					RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
-					ERRCODE=$?
-
-					if [ $ERRCODE -eq 0 ]; then
+				if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FILENAME} \"`" ]; then
+					FILE_IS_PKGD=1
+					SYSHASH="ignore-prelink-dep-err"
+					display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FILENAME}"
+				else
+					case "${PKGMGR}" in
+					RPM)
+						test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
+						;;
+					DPKG)
 						#
-						# Now we sort out the base part of the package name.
+						# First see if the file is part of a known package.
 						#
 
-						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
+						RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
+						ERRCODE=$?
 
+						if [ $ERRCODE -eq 0 ]; then
+							#
+							# Now we sort out the base part of the package name.
+							#
+
+							PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
+
+							#
+							# Next strip of the leading '/' from the pathname,
+							# and then get the hash value.
+							#
+
+							if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+								FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
+								SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
+								test -n "${SYSHASH}" && FILE_IS_PKGD=1
+							fi
+						fi
+						;;
+					BSD)
 						#
-						# Next strip of the leading '/' from the pathname,
-						# and then get the hash value.
+						# First see if the file is part of a known package.
 						#
 
-						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-							FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
-							SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
+						RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+						ERRCODE=$?
+
+						if [ $ERRCODE -eq 0 ]; then
+							#
+							# Now we sort out the base part of the package name.
+							#
+
+							PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
+
+							#
+							# Next strip of the leading '/usr/pkg' from the pathname,
+							# and then get the hash value.
+							#
+
+							FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+							SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
-					fi
-					;;
-				BSD)
-					#
-					# First see if the file is part of a known package.
-					#
-
-					RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
-					ERRCODE=$?
-
-					if [ $ERRCODE -eq 0 ]; then
-						#
-						# Now we sort out the base part of the package name.
-						#
-
-						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
-
-						#
-						# Next strip of the leading '/usr/pkg' from the pathname,
-						# and then get the hash value.
-						#
-
-						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
-						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
-						test -n "${SYSHASH}" && FILE_IS_PKGD=1
-					fi
-					;;
-				esac
+						;;
+					esac
+				fi
 
 				if [ $FILE_IS_PKGD -eq 0 ]; then
 					if [ "${HCMD}" != "NONE" ]; then
-						SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+						SYSHASH=""
+						RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1`
+
+						if [ -n "`echo \"${RKHTMPVAR}\" | grep 'prelink.* dependencies '`" ]; then
+							DEPENDENCY_ERR=1
+							RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '\n' ':' | sed -e 's/:$//'`
+						else
+							SYSHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f $HASH_FLD_IDX | grep '^[0-9a-fA-F]*$'`
+						fi
 					fi
 
 					if [ -z "${SYSHASH}" ]; then
@@ -3262,11 +3287,9 @@ rkh_dat_set_file_properties() {
 
 							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${DIR}/${FNAME}"
 
-							RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1 | tr '\n' ':' | sed -e 's/:$//'`
-
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
 
-							if [ -n "`echo \"${RKHTMPVAR}\" | grep 'prelink.* dependencies '`" ]; then
+							if [ $DEPENDENCY_ERR -eq 1 ]; then
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
 							fi
 						fi
@@ -4205,9 +4228,11 @@ do_system_check_initialisation() {
 	DUARAWKZ_FILES="${RKHROOTDIR}/usr/bin/duarawkz/loginpass"
 	DUARAWKZ_DIRS="${RKHROOTDIR}/usr/bin/duarawkz"
 
+
 	# ENYE LKM v1.1
 	# Installer default.
 	ENYELKM_FILES="${RKHROOTDIR}/etc/.enyelkmHIDE^IT.ko"
+
 
 	# Flea Linux Rootkit
 	FLEA_FILES="${RKHROOTDIR}/etc/ld.so.hash
@@ -4715,11 +4740,13 @@ do_system_check_initialisation() {
 	VCKIT_DIRS="${RKHROOTDIR}/usr/include/linux/modules/lib.so
 		    ${RKHROOTDIR}/usr/include/linux/modules/lib.so/bin"
 
+
 	# Vampire Rootkit
 	VAMPIRE_KSYMS="new_getdents
 			old_getdents
 			should_hide_file_name
 			should_hide_task_name"	
+
 
 	# Volc Rootkit
 	VOLC_DIRS="${RKHROOTDIR}/var/spool/.recent
@@ -4748,6 +4775,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/rk/tulz"
 	ZARWT_DIRS="${RKHROOTDIR}/rk
 		    ${RKHROOTDIR}/dev/rd/s"
+
 
 	# ZK Rootkit
 	ZK_FILES="${RKHROOTDIR}/usr/share/.zk/zk
@@ -5507,7 +5535,7 @@ file_properties_check() {
 					# First we see if the file is part of a package.
 					#
 
-					PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --qf '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
+					PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
@@ -5537,7 +5565,7 @@ file_properties_check() {
 							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
 							else
-								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \" ${FILENAME}:\" | grep 'prelink.* dependencies '`" ]; then
+								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FILENAME}.* dependencies \"`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 
@@ -5579,7 +5607,7 @@ file_properties_check() {
 							#
 
 							FDATA=":::::"
-							display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat ${FILENAME}" $ERRCODE
+							display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
 						fi
 
 						#
@@ -5665,10 +5693,20 @@ file_properties_check() {
 					#
 					# Now see if we need to work out the hash value or not.
 					#
-					if [ -n "${WL_FILE}" ]; then
-						# whitelisted
-						:
-					elif [ $FILE_IS_PKGD -eq 1 ]; then
+
+					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+
+					if [ $FILE_IS_PKGD -eq 1 ]; then
+						if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
+							if [ $DEPENDENCY_ERR -eq 1 ]; then
+								DEPENDENCY_ERR=0
+								PKGMGR_VERIFY_RESULT=""
+								display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${DIR}/${FNAME}"
+							else
+								PKGMGR_VERIFY_RESULT="5"
+							fi
+						fi
+
 						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
 							HASH_TEST_PASSED=1
 						else
@@ -5683,8 +5721,6 @@ file_properties_check() {
 						# First see if we have a stored hash value.
 						#
 
-						RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
-
 						test -z "${RKHHASH}" && TEST_RESULT="${TEST_RESULT} norkhhash"
 
 						if [ -z "${TEST_RESULT}" ]; then
@@ -5695,7 +5731,12 @@ file_properties_check() {
 
 								if [ -z "${SYSHASH}" ]; then
 									if [ -n "`${HCMD} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
-										DEPENDENCY_ERR=1
+										if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
+											SYSHASH="${RKHHASH}"
+											display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${DIR}/${FNAME}"
+										else
+											DEPENDENCY_ERR=1
+										fi
 									fi
 								fi
 							fi
@@ -6068,6 +6109,10 @@ file_properties_check() {
 						case "${RKHTMPVAR}" in
 						verify:hashchanged)
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
+
+							if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
+								display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "${DIR}/${FNAME}"
+							fi
 							;;
 						verify:permchanged)
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_PERM
@@ -8671,7 +8716,7 @@ linux_avail_modules() {
 	#
 
 	for RKHTMPVAR in ${LKM_BADNAMES}; do
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//' | sed -e 's/\./\\\./g'`
+		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//; s/\./\\\./g'`
 		LKM_NAMES="${LKM_NAMES} ${RKHTMPVAR}"
 	done
 
@@ -11788,6 +11833,9 @@ RKHDAT_FILE=""
 
 # This gets set if we have a working readlink command.
 HAVE_READLINK=0
+
+# By default no commands are to be exempt from dependency errors.
+PRELINK_DEP_ERR_CMDS=""
 
 
 ######################################################################

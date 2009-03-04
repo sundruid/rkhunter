@@ -1,4 +1,4 @@
-Version:2008122801
+Version:2009030101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -256,6 +256,7 @@ FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
 FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.
+FILE_PROP_IGNORE_PRELINK_DEP_ERR:Ignoring prelink dependency error for file '$1'
 FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
 FILE_PROP_SYSHASH:Current hash: $1
 FILE_PROP_RKHHASH:Stored hash : $1
@@ -540,7 +541,7 @@ SUSPSCAN_FILE_SKIPPED_TYPE:File ignored: wrong type: '$1': '$2'
 SUSPSCAN_FILE_SKIPPED_SIZE:File ignored: too big: '$1'
 SUSPSCAN_FILE_LINK_CHANGE:Symbolic link found: '$1' -> '$2'
 
-LIST_TESTS:Available test names:
+LIST_TESTS:Current test names:
 LIST_GROUPED_TESTS:Grouped test names:
-LIST_LANGS:Available languages:
+LIST_LANGS:Current languages:
 LIST_RTKTS:Rootkits checked for:
