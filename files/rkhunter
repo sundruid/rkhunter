@@ -3269,7 +3269,7 @@ rkh_dat_set_file_properties() {
 						SYSHASH=""
 						RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1`
 
-						if [ -n "`echo \"${RKHTMPVAR}\" | grep 'prelink.* dependencies '`" ]; then
+						if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 							DEPENDENCY_ERR=1
 							RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '\n' ':' | sed -e 's/:$//'`
 						else
@@ -5565,7 +5565,7 @@ file_properties_check() {
 							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
 							else
-								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FILENAME}.* dependencies \"`" ]; then
+								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FILENAME}.* dependenc\"`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 
@@ -5650,7 +5650,7 @@ file_properties_check() {
 								if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
 									PKGMGR_VERIFY_RESULT="5"
 
-									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 										DEPENDENCY_ERR=1
 									fi
 								fi
@@ -5680,7 +5680,7 @@ file_properties_check() {
 								if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
 									PKGMGR_VERIFY_RESULT="5"
 
-									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 										DEPENDENCY_ERR=1
 									fi
 								fi
@@ -5730,7 +5730,7 @@ file_properties_check() {
 								SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 								if [ -z "${SYSHASH}" ]; then
-									if [ -n "`${HCMD} ${DIR}/${FNAME} 2>&1 | grep 'prelink.* dependencies '`" ]; then
+									if [ -n "`${HCMD} ${DIR}/${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 										if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
 											SYSHASH="${RKHHASH}"
 											display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${DIR}/${FNAME}"
