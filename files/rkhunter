@@ -4183,6 +4183,17 @@ do_system_check_initialisation() {
 	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
 
 
+	CX Rootkit
+	CXKIT_FILES="${RKHROOTDIR}/usr/lib/ldlibso
+		    ${RKHROOTDIR}/usr/lib/configlibso
+		    ${RKHROOTDIR}/usr/lib/shklibso
+		    ${RKHROOTDIR}/usr/lib/randomlibso
+		    ${RKHROOTDIR}/usr/lib/ldlibstrings.so
+		    ${RKHROOTDIR}/usr/lib/ldlibdu.so
+		    ${RKHROOTDIR}/usr/lib/ldlibns.so
+		    ${RKHROOTDIR}/usr/include/db"
+	CXKIT_DIRS="${RKHROOTDIR}/usr/include/cxk"
+
 	# Danny-Boy's Abuse Kit
 	DANNYBOYS_FILES="${RKHROOTDIR}/dev/mdev
 			 ${RKHROOTDIR}/usr/lib/libX.a"
@@ -4229,9 +4240,10 @@ do_system_check_initialisation() {
 	DUARAWKZ_DIRS="${RKHROOTDIR}/usr/bin/duarawkz"
 
 
-	# ENYE LKM v1.1
+	# ENYE LKM v1.1, v1.2
 	# Installer default.
-	ENYELKM_FILES="${RKHROOTDIR}/etc/.enyelkmHIDE^IT.ko"
+	ENYELKM_FILES="${RKHROOTDIR}/etc/.enyelkmHIDE^IT.ko
+		    ${RKHROOTDIR}/etc/.enyelkmOCULTAR.ko"
 
 
 	# Flea Linux Rootkit
@@ -6700,6 +6712,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${CINIK_FILES}
 	SCAN_DIRS=${CINIK_DIRS}
 	SCAN_KSYMS=${CINIK_KSYMS}
+	scanrootkit
+
+	# CX Rootkit
+
+	SCAN_ROOTKIT="CX Rootkit"
+	SCAN_FILES=${CXKIT_FILES}
+	SCAN_DIRS=${CXKIT_DIRS}
+	SCAN_KSYMS=${CXKIT_KSYMS}
 	scanrootkit
 
 	# Danny-Boy's Abuse Kit
@@ -11737,7 +11757,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), Danny-Boy'"'"'s Abuse Kit,
+  Balaur, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), CX, Danny-Boy'"'"'s Abuse Kit,
   Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
   Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
