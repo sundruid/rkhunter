@@ -4183,7 +4183,7 @@ do_system_check_initialisation() {
 	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
 
 
-	CX Rootkit
+	# CX Rootkit
 	CXKIT_FILES="${RKHROOTDIR}/usr/lib/ldlibso
 		    ${RKHROOTDIR}/usr/lib/configlibso
 		    ${RKHROOTDIR}/usr/lib/shklibso
