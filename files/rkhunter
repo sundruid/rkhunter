@@ -6716,11 +6716,15 @@ rootkit_file_dir_checks() {
 
 	# CX Rootkit
 
-	SCAN_ROOTKIT="CX Rootkit"
-	SCAN_FILES=${CXKIT_FILES}
-	SCAN_DIRS=${CXKIT_DIRS}
-	SCAN_KSYMS=${CXKIT_KSYMS}
-	scanrootkit
+	if [ $SUNOS -eq 1 ]; then
+
+		SCAN_ROOTKIT="CX Rootkit"
+		SCAN_FILES=${CXKIT_FILES}
+		SCAN_DIRS=${CXKIT_DIRS}
+		SCAN_KSYMS=${CXKIT_KSYMS}
+		scanrootkit
+
+	fi
 
 	# Danny-Boy's Abuse Kit
 
