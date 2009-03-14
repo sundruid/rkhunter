@@ -1,4 +1,4 @@
-Version:2009030101
+Version:2009031401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -209,6 +209,10 @@ PROPUPD_WARN:cannot determine what has caused the change, that is for the user t
 
 ENABLED_TESTS:Enabled tests are: $1
 DISABLED_TESTS:Disabled tests are: $1
+
+USER_FILE_LIST:Including user files for file properties check: $1
+USER_CMD_LIST:Including user commands for file properties check: $1
+USER_DIR_LIST:Including user directories for file properties check: $1
 
 KSYMS_FOUND:Found ksym file '$1'
 KSYMS_MISSING:All ksyms and kallsyms checks will be skipped - neither file is present on the system.

@@ -25,10 +25,14 @@
  - Added the IGNORE_PRELINK_DEP_ERR option to the configuration file. This
    option can be used when a persistent prelink dependency error occurs.
    Further details of its use are in the configuration file.
+ - Added CX rootkit check.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
    only applicable to NetBSD and FreeBSD.
+ - Updated the ENYE LKM check.
+ - The '--debug' option no longer needs to be the first option on the
+   command line.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious
@@ -38,6 +42,8 @@
    and trailing whitespace are now correctly removed.
  - When displaying the list of checked rootkit names, the list was supposed
    to be sorted.
+ - If the '--list' option was used more than once with the same argument
+   (e.g. '--list tests --list tests'), it displayed the wrong information.
 
  -- 
 

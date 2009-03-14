@@ -40,7 +40,7 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	fi
 fi
 
-if [ "$1" = "--debug" ]; then
+if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 	RKHDEBUGBASE="/tmp/rkhunter-debug"
 
 	#
@@ -556,9 +556,7 @@ get_option() {
 		# contain quote characters, and we do not want to remove these.
 		#
 
-		if [ "${OPTV}" = "MAIL_CMD" ]; then
-			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ //; s/ $//'`
-		else
+		if [ "${OPTV}" != "MAIL_CMD" ]; then
 			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
 		fi
 
@@ -1197,7 +1195,7 @@ get_logfile_option() {
 	if [ "${RKHLOGFILE}" = "/dev/null" ]; then
 		APPEND_LOG=0
 	else
-		LOGDIR=`echo "${RKHLOGFILE}" | sed -e 's/\/[^/][^/]*$//'`
+		LOGDIR=`echo "${RKHLOGFILE}" | sed -e 's:/[^/][^/]*$::'`
 
 		if [ -z "`echo \"${LOGDIR}\" | grep '/'`" ]; then
 			LOGDIR="."
@@ -1343,6 +1341,7 @@ get_dbdir_option() {
 	fi
 
 	RKHDAT_FILE="${DB_PATH}/rkhunter.dat"
+	RKH_FILEPROP_LIST="${DB_PATH}/rkhunter_prop_list.dat"
 
 	return
 }
@@ -1868,7 +1867,7 @@ get_enable_option() {
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${ENABLE_TESTS}" ]; then
 			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | sed -e 's/^ //; s/ $//'`
+			ENABLE_TESTS=`echo ${ENABLE_TESTS}`
 
 			if [ -z "${ENABLE_TESTS}" ]; then
 				echo "Invalid --enable option - no test names given."
@@ -1927,7 +1926,7 @@ get_enable_option() {
 				break
 			elif [ -z "${GROUP_TESTS}" ]; then
 				continue
-			elif [ -n "`echo \"${GROUP_TESTS}\" | egrep \"(^|:)${TEST_NAME}(:|$)\"`" ]; then
+			elif [ -n "`echo \":${GROUP_TESTS}:\" | grep \":${TEST_NAME}:\"`" ]; then
 				ENABLE_TESTS="${ENABLE_TESTS} ${GROUP_NAME}"
 			fi
 		done
@@ -1938,11 +1937,13 @@ get_enable_option() {
 	# Check that the names we have been given are valid.
 	#
 
+	RKHTMPVAR=" all `echo ${KNOWN_TESTS}` "
+
 	for TEST_NAME in ${ENABLE_TESTS}; do
 		if [ "${TEST_NAME}" = "none" ]; then
 			echo "'none' cannot be used in the enable test list."
 			exit 1
-		elif [ -z "`echo \"all ${KNOWN_TESTS}\" | egrep \"(^| )${TEST_NAME}( |$)\"`" ]; then
+		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
 			echo "Unknown enable test name given: ${TEST_NAME}"
 			exit 1
 		fi
@@ -1971,7 +1972,7 @@ get_disable_option() {
 	if [ $ENDIS_OPT -eq 1 ]; then
 		if [ -n "${DISABLE_TESTS}" ]; then
 			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e 's/^ //; s/ $//'`
+			DISABLE_TESTS=`echo ${DISABLE_TESTS}`
 
 			if [ -z "${DISABLE_TESTS}" ]; then
 				echo "Invalid --disable option - no test names given."
@@ -1999,6 +2000,8 @@ get_disable_option() {
 	# Check that the names we have been given are valid.
 	#
 
+	RKHTMPVAR=" all none `echo ${KNOWN_TESTS}` "
+
 	for TEST_NAME in ${DISABLE_TESTS}; do
 		if [ "${TEST_NAME}" = "all" ]; then
 			echo "'all' cannot be used in the disable test list."
@@ -2006,7 +2009,7 @@ get_disable_option() {
 		elif [ "${TEST_NAME}" = "none" ]; then
 			DISABLE_TESTS="none"
 			break
-		elif [ -z "`echo \"all none ${KNOWN_TESTS}\" | egrep \"(^| )${TEST_NAME}( |$)\"`" ]; then
+		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
 			echo "Unknown disable test name given: ${TEST_NAME}"
 			exit 1
 		fi
@@ -2260,7 +2263,7 @@ get_hash_function() {
 
 	if [ -n "${HASH_FUNC}" ]; then
 		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
-		HASH_FUNC=`echo "${HASH_FUNC}" | sed -e 's/^ //; s/ $//'`
+		HASH_FUNC=`echo ${HASH_FUNC}`
 
 		if [ -z "${HASH_FUNC}" ]; then
 			echo "Invalid --hash option: no hash function given."
@@ -2718,6 +2721,122 @@ get_os_version_option() {
 }
 
 
+get_user_fileprop_list() {
+#jh
+	#
+	# This function gets any user supplied files and directories
+	# for the file properties check and the properties file update.
+	# It stores the different types of files and directories
+	# found in different variables. Only basic syntax checking is
+	# done here, further checking will be done later on.
+	#
+
+	LEAVE=0
+
+	RKHTMPVAR=`get_option 2 multi USER_FILEPROP_FILES_DIRS` || exit 1
+
+	for FNAME in ${RKHTMPVAR}; do
+		#
+		# First check for anything which contains just dots or
+		# forward-slashes. This means that '/' cannot be set.
+		#
+
+		if [ -n "`echo \"${FNAME}\" | grep '^[./]*$'`" ]; then
+			LEAVE=1
+			echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
+			continue
+		fi
+
+
+		#
+		# Next check to see if it is a simple file name.
+		#
+
+		if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+			# Check that it is not a pathname like 'abc/def'.
+
+			if [ -z "`echo \"${FNAME}\" | grep '/'`" ]; then
+				# Check that it hasn't already been set.
+				# If it has, then we just ignore it.
+				if [ -z "`echo \" ${USER_SIMPLE_FILE_LIST} \" | grep \" ${FNAME} \"`" ]; then
+					test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST} ${FNAME}"
+				fi
+			else
+				LEAVE=1
+				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
+			fi
+		else
+			# It's an absolute pathname. This could be a file or a directory.
+
+			RKHTMPVAR2=""
+
+			if [ -f "${FNAME}" ]; then
+				# Check that it hasn't already been set.
+				# If it has, then we just ignore it.
+				test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAME}$\"`" && continue
+
+				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
+
+					if [ -z "${RKHTMPVAR2}" ]; then
+						:
+					elif [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR2}$\"`" ]; then
+						FNAME="${FNAME}
+${RKHTMPVAR2}"
+					fi
+				fi
+
+				#
+				# Anything with a colon (':') in it is not allowed.
+				#
+
+				if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
+					LEAVE=1
+					echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
+				else
+					test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
+${FNAME}"
+				fi
+			elif [ -d "${FNAME}" ]; then
+				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
+
+					if [ -z "${RKHTMPVAR2}" ]; then
+						continue
+					elif [ "${RKHTMPVAR2}" = "/" ]; then
+						LEAVE=1
+						echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
+						continue
+					fi
+
+					FNAME="${RKHTMPVAR2}"
+				fi
+
+				# Check that it hasn't already been set.
+				# If it has, then we just ignore it.
+				if [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${FNAME} \"`" ]; then
+					test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST} ${FNAME}"
+				fi
+			elif [ -h "${FNAME}" ]; then
+				LEAVE=1
+				RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
+				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid link: ${FNAME} -> ${RKHTMPVAR2}"
+			elif [ -e "${FNAME}" ]; then
+				LEAVE=1
+				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Not a file or directory: ${FNAME}"
+			else
+				LEAVE=1
+				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Non-existent file or directory: ${FNAME}"
+			fi
+		fi
+	done
+
+	test $LEAVE -eq 1 && exit 1
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
@@ -2812,8 +2931,10 @@ get_configfile_options() {
 		#
 		# For the file properties check we need to find out if
 		# we are a prelinked system, and if so, then find out
-		# which hash function to use. We also need to find the
-		# 'stat' command.
+		# which hash function to use. Secondly, we need to find
+		# the 'stat' command. Finally, we need to see if the
+		# user has specified any files or directories for the
+		# file properties check.
 		#
 
 		get_if_prelinked
@@ -2821,6 +2942,8 @@ get_configfile_options() {
 		test $SKIP_HASH_MSG -eq 0 && get_hash_function
 
 		get_os_version_option
+
+		get_user_fileprop_list
 	fi
 
 	#
@@ -2948,11 +3071,10 @@ rkh_dat_get_os_info() {
 
 
 			#
-			# Strip out any leading blanks and tabs
-			# from the O/S version.
+			# Strip out any leading blanks and tabs from the O/S version.
 			#
 
-			test -n "${OSNAME}" && OSNAME=`echo "${OSNAME}" | sed -e 's/^[ 	]*//'`
+			test -n "${OSNAME}" && OSNAME=`echo ${OSNAME}`
 
 
 			#
@@ -2963,7 +3085,8 @@ rkh_dat_get_os_info() {
 			#
 
 			if [ $RKH_IN_LSB -eq 0 -a -z "${OSNAME}" ]; then
-				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head -n 1 | sed -e 's/^[ 	]*//'`
+				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head -n 1`
+				OSNAME=`echo ${OSNAME}`
 			fi
 
 			test -n "${OSNAME}" && break
@@ -3017,12 +3140,14 @@ rkh_dat_get_os_info() {
 
 	if [ -z "${OSNAME}" ]; then
 		if [ -f "${RKHROOTDIR}/etc/issue" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/issue | head -n 1 | sed -e 's/^[ 	]*//'`
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/issue | head -n 1`
+			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/issue"
 		fi
 
 		if [ $RKH_LSB_SEEN -eq 1 -a -z "${OSNAME}" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/lsb-release | head -n 1 | sed -e 's/^[ 	]*//'`
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/lsb-release | head -n 1`
+			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/lsb-release"
 		fi
 	fi
@@ -3045,13 +3170,14 @@ rkh_dat_set_file_properties() {
 	# change the order of the output.
 	#
 	# To save time in the loops below, we determine the exact commands
-	# required before entering them.
+	# required before using them.
 	#
 
 	NOHASH_COUNT=0
-	DIR_FILE_COUNT=0
 	PROP_FILE_LIST_COUNT=0
 	PROP_FILE_PROPOPT_COUNT=0
+
+	DIR_FILE_COUNT=""
 
 	display --to LOG --type PLAIN SET_FILE_PROP_START
 
@@ -3088,231 +3214,266 @@ rkh_dat_set_file_properties() {
 
 
 	#
-	# Now loop through the directories looking for the files.
+	# Now loop through the pathnames looking for the files.
 	#
 
-	for DIR in ${PROP_DIR_LIST}; do
-		DIR_FILE_COUNT=0
+	for FNAME in `cat ${RKH_FILEPROP_LIST}`; do
+		test ! -f "${FNAME}" && continue
 
-		for FNAME in ${PROP_FILE_LIST}; do
-			test ! -f "${DIR}/${FNAME}" && continue
+		FDATA=""
+		SYSHASH=""
+		PKGNAME=""
+		RPM_QUERY_RESULT=""
+		FILE_IS_PKGD=0
+		DEPENDENCY_ERR=0
 
-			FDATA=""
-			SYSHASH=""
-			PKGNAME=""
-			RPM_QUERY_RESULT=""
-			FILE_IS_PKGD=0
-			DEPENDENCY_ERR=0
-
-			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+		PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
 
+		#
+		# Test to see if we are looking for specific files or not.
+		#
+
+		if [ -z "${PROPUPD_OPT}" ]; then
+			FILENAME=`echo "${FNAME}" | sed -e "s:^${RDIR}::"`
+		else
 			#
-			# Test to see if we are looking for specific files or not.
+			# If we are looking for specific files, then just copy the
+			# entries from the current rkhunter.dat file for the files
+			# we aren't looking for. For the ones we do want, we fall
+			# through and process them as before.
 			#
 
-			if [ -z "${PROPUPD_OPT}" ]; then
-				FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
-			else
-				#
-				# If we are looking for specific files, then just copy the
-				# entries from the current rkhunter.dat file for the files
-				# we aren't looking for. For the ones we do want, we fall
-				# through and process them as before.
-				#
+			FILENAME="${FNAME}"
 
-				FILENAME="${DIR}/${FNAME}"
+			if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FILENAME} \"`" ]; then
+				RKHTMPVAR=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
 
-				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FILENAME} \"`" ]; then
-					RKHTMPVAR=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
-
-					if [ -n "${RKHTMPVAR}" ]; then
-						echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
-						continue
-					fi
+				if [ -n "${RKHTMPVAR}" ]; then
+					echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
+					continue
 				fi
-
-				PROP_FILE_PROPOPT_COUNT=`expr ${PROP_FILE_PROPOPT_COUNT} + 1`
 			fi
 
-			DIR_FILE_COUNT=`expr ${DIR_FILE_COUNT} + 1`
+			PROP_FILE_PROPOPT_COUNT=`expr ${PROP_FILE_PROPOPT_COUNT} + 1`
+		fi
 
 
-			if [ "${PKGMGR}" = "RPM" ]; then
+		#
+		# Sort out the directory counters.
+		#
+
+		test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FILENAME}` || DIR=`echo "${FILENAME}" | sed -e 's:/[^/]*$::'`
+
+		RKHTMPVAR=`echo "${DIR_FILE_COUNT}" | grep "^${DIR}:"`
+
+		if [ -z "${RKHTMPVAR}" ]; then
+			DIR_FILE_COUNT="${DIR_FILE_COUNT}
+${DIR}:1"
+		else
+			RKHTMPVAR=`echo ${RKHTMPVAR} | cut -d: -f2`
+			RKHTMPVAR=`expr ${RKHTMPVAR} + 1`
+
+			DIR_FILE_COUNT=`echo "${DIR_FILE_COUNT}" | sed -e "s;^\(${DIR}:\).*;\1${RKHTMPVAR};"`
+		fi
+
+
+		#
+		# Now start to get the file info by seeing if we
+		# are using a package manager.
+		#
+
+		if [ "${PKGMGR}" = "RPM" ]; then
+			#
+			# First see if the file belongs to a package.
+			#
+
+			RKHTMPVAR=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
+			ERRCODE=$?
+
+			if [ $ERRCODE -eq 0 ]; then
 				#
-				# First see if the file belongs to a package.
+				# Okay we have a package name.
 				#
 
-				RKHTMPVAR=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
+				FILE_IS_PKGD=1
+				PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
+
+				RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
 					#
-					# Okay we have a package name.
+					# If multiple packages claim the same file, we 
+					# use the last one in the list. However, if we
+					# have 64-bit as well as 32-bit packages, then
+					# we use the 64-bit package in preference (as
+					# this is what RPM does).
 					#
 
-					FILE_IS_PKGD=1
-					PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
+					RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep 'x86_64|ia64' | tail -1`
 
-					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+					test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail -1`
+
+					FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
+					FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
+
+					RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
+					RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
+
+					RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+					RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
+
+					RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+
+					RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+
+					#
+					# Now get the inode value directly from the disk,
+					# but only if prelinking is not being used.
+					#
+
+					RKHTMPVAR2=""
+
+					test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+
+					FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
+				else
+					display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
+				fi
+			fi
+		fi
+
+
+		if [ -n "${HCMD}" ]; then
+			if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FILENAME} \"`" ]; then
+				FILE_IS_PKGD=1
+				SYSHASH="ignore-prelink-dep-err"
+				display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FILENAME}"
+			else
+				case "${PKGMGR}" in
+				RPM)
+					test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
+					;;
+				DPKG)
+					#
+					# First see if the file is part of a known package.
+					#
+
+					RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
 						#
-						# If multiple packages claim the same file, we 
-						# use the last one in the list, except
-						# if we have 64bit as well as 32bit, we prefer
-						# 64bit (this is what RPM does for binaries).
+						# Now we sort out the base part of the package name.
 						#
 
-						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | grep 'x86_64\|ia64' | tail -1`
-
-						test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail -1`
-
-						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
-						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
-
-						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
-						RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
-
-						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
-						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
-
-						RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
-
-						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
 
 						#
-						# Now get the inode value directly from the disk,
-						# but only if prelinking is not being used.
+						# Next strip of the leading '/' from the pathname,
+						# and then get the hash value.
 						#
 
-						RKHTMPVAR2=""
-
-						test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${DIR}/${FNAME} 2>/dev/null | tr -d ' '`
-
-						FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
-					else
-						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
-					fi
-				fi
-			fi
-
-
-			if [ -n "${HCMD}" ]; then
-				if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FILENAME} \"`" ]; then
-					FILE_IS_PKGD=1
-					SYSHASH="ignore-prelink-dep-err"
-					display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FILENAME}"
-				else
-					case "${PKGMGR}" in
-					RPM)
-						test $FILE_IS_PKGD -eq 1 && SYSHASH=`echo "${RPM_QUERY_RESULT}" | cut -d: -f6`
-						;;
-					DPKG)
-						#
-						# First see if the file is part of a known package.
-						#
-
-						RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
-						ERRCODE=$?
-
-						if [ $ERRCODE -eq 0 ]; then
-							#
-							# Now we sort out the base part of the package name.
-							#
-
-							PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
-
-							#
-							# Next strip of the leading '/' from the pathname,
-							# and then get the hash value.
-							#
-
-							if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-								FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
-								SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
-								test -n "${SYSHASH}" && FILE_IS_PKGD=1
-							fi
-						fi
-						;;
-					BSD)
-						#
-						# First see if the file is part of a known package.
-						#
-
-						RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
-						ERRCODE=$?
-
-						if [ $ERRCODE -eq 0 ]; then
-							#
-							# Now we sort out the base part of the package name.
-							#
-
-							PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
-
-							#
-							# Next strip of the leading '/usr/pkg' from the pathname,
-							# and then get the hash value.
-							#
-
-							FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
-							SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
+						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+							FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
+							SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
-						;;
-					esac
+					fi
+					;;
+				BSD)
+					#
+					# First see if the file is part of a known package.
+					#
+
+					RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+					ERRCODE=$?
+
+					if [ $ERRCODE -eq 0 ]; then
+						#
+						# Now we sort out the base part of the package name.
+						#
+
+						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
+
+						#
+						# Next strip of the leading '/usr/pkg' from the pathname,
+						# and then get the hash value.
+						#
+
+						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
+						test -n "${SYSHASH}" && FILE_IS_PKGD=1
+					fi
+					;;
+				esac
+			fi
+
+			if [ $FILE_IS_PKGD -eq 0 ]; then
+				if [ "${HCMD}" != "NONE" ]; then
+					SYSHASH=""
+					RKHTMPVAR=`${HCMD} ${FNAME} 2>&1`
+
+					if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+						DEPENDENCY_ERR=1
+						RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '\n' ':' | sed -e 's/:$//'`
+					else
+						SYSHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f $HASH_FLD_IDX | grep '^[0-9a-fA-F]*$'`
+					fi
 				fi
 
-				if [ $FILE_IS_PKGD -eq 0 ]; then
-					if [ "${HCMD}" != "NONE" ]; then
-						SYSHASH=""
-						RKHTMPVAR=`${HCMD} ${DIR}/${FNAME} 2>&1`
-
-						if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
-							DEPENDENCY_ERR=1
-							RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '\n' ':' | sed -e 's/:$//'`
-						else
-							SYSHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f $HASH_FLD_IDX | grep '^[0-9a-fA-F]*$'`
+				if [ -z "${SYSHASH}" ]; then
+					if [ "${HCMD}" = "NONE" ]; then
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "${FNAME}"
 						fi
-					fi
+					else
+						NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
 
-					if [ -z "${SYSHASH}" ]; then
-						if [ "${HCMD}" = "NONE" ]; then
-							if [ $VERBOSE_LOGGING -eq 1 ]; then
-								display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "${DIR}/${FNAME}"
-							fi
-						else
-							NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
+						display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${FNAME}"
 
-							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${DIR}/${FNAME}"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
 
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
-
-							if [ $DEPENDENCY_ERR -eq 1 ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
-							fi
+						if [ $DEPENDENCY_ERR -eq 1 ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${FNAME}"
 						fi
 					fi
 				fi
 			fi
+		fi
 
 
-			if [ -z "${SCMD}" ]; then
-				FDATA=":::::"
-			else
-				if [ -z "${FDATA}" ]; then
-					FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
-					test -z "${FDATA}" && FDATA=":::::"
-				fi
+		if [ -z "${SCMD}" ]; then
+			FDATA=":::::"
+		else
+			if [ -z "${FDATA}" ]; then
+				FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
+				test -z "${FDATA}" && FDATA=":::::"
 			fi
+		fi
 
-			echo "File:${FILENAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_TMPFILE}
-		done
-
-		display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $DIR_FILE_COUNT "${DIR}"
+		echo "File:${FILENAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_TMPFILE}
 	done
 
+
+	#
+	# Display the number of files found in the directories.
+	#
+
+	for DIR in ${DIR_FILE_COUNT}; do
+		test -z "${DIR}" && continue
+
+		RKHTMPVAR=`echo $DIR | cut -d: -f1`
+		RKHTMPVAR2=`echo $DIR | cut -d: -f2`
+
+		display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $RKHTMPVAR2 "${RKHTMPVAR}"
+	done
+
+
+	#
+	# finally put the new file in place.
+	#
 
 	if [ -f ${RKHDAT_FILE} ]; then
 		RKHTMPVAR="updated"
@@ -3334,6 +3495,40 @@ rkh_dat_set_file_properties() {
 		else
 			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT
 		fi
+	fi
+
+	return
+}
+
+
+create_rkh_file_prop_list() {
+
+	#
+	# This function creates the file of pathnames
+	# used for the file properties check.
+	#
+
+	rm -f ${RKH_FILEPROP_LIST} >/dev/null 2>&1
+
+#jh - got here
+	for DIR in ${PROP_DIR_LIST}; do
+		for FNAME in ${PROP_FILE_LIST}; do
+			echo "${DIR}/${FNAME}" >>${RKH_FILEPROP_LIST}
+		done
+	done
+
+	chmod 640 ${RKH_FILEPROP_LIST} >/dev/null 2>&1
+
+
+	#
+	# Now we add any user specified absolute
+	# pathnames to be included in the list.
+	#
+
+	if [ -n "${USER_FILE_LIST}" ]; then
+		for FNAME in ${USER_FILE_LIST}; do
+			test -z "`grep \"^${FNAME}$\" ${RKH_FILEPROP_LIST} 2>/dev/null`" && echo "${FNAME}" >>${RKH_FILEPROP_LIST}
+		done
 	fi
 
 	return
@@ -3419,6 +3614,18 @@ do_prop_update() {
 		echo "Attributes:Stored" >>${RKHDAT_TMPFILE}
 	fi
 
+
+	#
+	# Before we get the actual file properties we need
+	# to write out the current list of pathnames.
+	#
+
+	create_rkh_file_prop_list
+
+
+	#
+	# Next get the file properties.
+	#
 
 	rkh_dat_set_file_properties
 
@@ -4185,14 +4392,15 @@ do_system_check_initialisation() {
 
 	# CX Rootkit
 	CXKIT_FILES="${RKHROOTDIR}/usr/lib/ldlibso
-		    ${RKHROOTDIR}/usr/lib/configlibso
-		    ${RKHROOTDIR}/usr/lib/shklibso
-		    ${RKHROOTDIR}/usr/lib/randomlibso
-		    ${RKHROOTDIR}/usr/lib/ldlibstrings.so
-		    ${RKHROOTDIR}/usr/lib/ldlibdu.so
-		    ${RKHROOTDIR}/usr/lib/ldlibns.so
-		    ${RKHROOTDIR}/usr/include/db"
+		     ${RKHROOTDIR}/usr/lib/configlibso
+		     ${RKHROOTDIR}/usr/lib/shklibso
+		     ${RKHROOTDIR}/usr/lib/randomlibso
+		     ${RKHROOTDIR}/usr/lib/ldlibstrings.so
+		     ${RKHROOTDIR}/usr/lib/ldlibdu.so
+		     ${RKHROOTDIR}/usr/lib/ldlibns.so
+		     ${RKHROOTDIR}/usr/include/db"
 	CXKIT_DIRS="${RKHROOTDIR}/usr/include/cxk"
+
 
 	# Danny-Boy's Abuse Kit
 	DANNYBOYS_FILES="${RKHROOTDIR}/dev/mdev
@@ -4243,7 +4451,7 @@ do_system_check_initialisation() {
 	# ENYE LKM v1.1, v1.2
 	# Installer default.
 	ENYELKM_FILES="${RKHROOTDIR}/etc/.enyelkmHIDE^IT.ko
-		    ${RKHROOTDIR}/etc/.enyelkmOCULTAR.ko"
+		       ${RKHROOTDIR}/etc/.enyelkmOCULTAR.ko"
 
 
 	# Flea Linux Rootkit
@@ -4959,7 +5167,7 @@ strings_check() {
 	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
 
 	for STRING in ${STRINGS_INTEGRITY}; do
-		STRING=`echo "${STRING}" | sed -e "s/^${RDIR}//"`
+		STRING=`echo "${STRING}" | sed -e "s:^${RDIR}::"`
 
 		STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
 		STRING_SEEN=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
@@ -5450,7 +5658,6 @@ file_properties_check() {
 	if [ $SKIP_ATTR -eq 0 ]; then
 		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || exit 1
 		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || exit 1
-		HASHWHITELIST=`get_option 1 multi HASHWHITELIST` || exit 1
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
@@ -5463,757 +5670,771 @@ file_properties_check() {
 
 
 	#
+	# Next we have to create the list of pathnames for the
+	# properties checks. We need to recreate it because the
+	# root PATH may have changed, and so there may be more
+	# directories to be checked. However, if we have just run
+	# the '--propupd' option, then we can skip this.
+	#
+
+	test $PROP_UPDATE -eq 0 && create_rkh_file_prop_list
+
+
+	#
 	# Now loop through each of the files and
 	# perform the tests on each one.
 	#
 
+#jh - the file prop check
 	VERIFIED_PKG_LIST=""
 
-	for DIR in ${PROP_DIR_LIST}; do
-		for FNAME in ${PROP_FILE_LIST}; do
-			TEST_RESULT=""
-			WHITELIST_RESULT=""
+	for FNAME in `cat ${RKH_FILEPROP_LIST}`; do
+		TEST_RESULT=""
+		WHITELIST_RESULT=""
 
-			FILE_IS_PKGD=0
-			DEPENDENCY_ERR=0
-			HASH_TEST_PASSED=0
-			SIZE_TEST_PASSED=0
+		FILE_IS_PKGD=0
+		DEPENDENCY_ERR=0
+		HASH_TEST_PASSED=0
+		SIZE_TEST_PASSED=0
 
 
+		#
+		# We first need to test if the file exists or not,
+		# and if the file is listed in the rkhunter.dat
+		# file or not. This can indicate files that have
+		# appeared on or disappeared from the system.
+		#
+
+		if [ -f "${FNAME}" ]; then
+			FILE_EXISTS=1
+			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+		else
+			FILE_EXISTS=0
+		fi
+
+		if [ $USE_DAT_FILE -eq 1 ]; then
 			#
-			# We first need to test if the file exists or not,
-			# and if the file is listed in the rkhunter.dat
-			# file or not. This can indicate files that have
-			# appeared on or disappeared from the system.
+			# When checking the filename against the rkhunter.dat
+			# file, we must use the real filename and not one with
+			# the root directory.
 			#
 
-			if [ -f "${DIR}/${FNAME}" ]; then
-				FILE_EXISTS=1
-				PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
-			else
-				FILE_EXISTS=0
-			fi
+			FILENAME=`echo "${FNAME}" | sed -e "s:^${RDIR}::"`
 
-			if [ $USE_DAT_FILE -eq 1 ]; then
-				#
-				# When checking the filename against the rkhunter.dat
-				# file, we must use the real filename and not one with
-				# the root directory.
-				#
+			RKHLINE=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
 
-				FILENAME=`echo "${DIR}/${FNAME}" | sed -e "s/^${RDIR}//"`
+			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
+				TEST_RESULT="${TEST_RESULT} norkhline"
+			elif [ $FILE_EXISTS -eq 0 ]; then
+				if [ -n "${RKHLINE}" ]; then
+					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-				RKHLINE=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
-
-				if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
-					TEST_RESULT="${TEST_RESULT} norkhline"
-				elif [ $FILE_EXISTS -eq 0 ]; then
-					if [ -n "${RKHLINE}" ]; then
-						PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
-
-						display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${DIR}/${FNAME}"
-						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${DIR}/${FNAME}"
-					fi
-
-					continue
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${FNAME}"
+					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${FNAME}"
 				fi
-			elif [ $FILE_EXISTS -eq 1 ]; then
-				RKHLINE=""
-			else
+
 				continue
 			fi
+		elif [ $FILE_EXISTS -eq 1 ]; then
+			RKHLINE=""
+		else
+			continue
+		fi
+
+
+		#
+		# Start the tests.
+		#
+
+		if [ $USE_DAT_FILE -eq 1 -a -n "${RKHLINE}" ]; then
+			FDATA=""
+			RPM_QUERY_RESULT=""
+			PKGMGR_VERIFY_RESULT=""
 
 
 			#
-			# Start the tests.
+			# Because the RPM package manager can verify most
+			# of the tests we are doing, we obtain the verified
+			# data now. The other package managers, at present,
+			# only provide the MD5 checksum. As such we simply
+			# handle them within the hash test.
 			#
 
-			if [ $USE_DAT_FILE -eq 1 -a -n "${RKHLINE}" ]; then
-				FDATA=""
-				RPM_QUERY_RESULT=""
-				PKGMGR_VERIFY_RESULT=""
-
-
+			if [ "${PKGMGR}" = "RPM" ]; then
 				#
-				# Because the RPM package manager can verify most
-				# of the tests we are doing, we obtain the verified
-				# data now. The other package managers, at present,
-				# only provide the MD5 checksum. As such we simply
-				# handle them within the hash test.
+				# First we see if the file is part of a package.
 				#
 
-				if [ "${PKGMGR}" = "RPM" ]; then
+				PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
+				ERRCODE=$?
+
+				if [ $ERRCODE -eq 0 ]; then
 					#
-					# First we see if the file is part of a package.
+					# Okay we have a package name. Is it in the list
+					# of packages we have already tested as verified?
+					#
+					# If multiple packages claim the same file, we use
+					# 64-bit over 32-bit, or simply the last one.
 					#
 
-					PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
+					FILE_IS_PKGD=1
+
+					PKGNAME=`echo "${PKGNAME_ARCH}" | egrep 'x86_64|ia64' | tail -1`
+
+					test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail -1`
+
+					if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
+						#
+						# No, it isn't in the list. So we verify the package
+						# and either add it to the list if it verifies okay,
+						# or get the verification result for the file.
+						#
+
+						PKGMGR_VERIFY_RESULT=`${RPM_CMD} -V "${PKGNAME}" 2>&1`
+
+						if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+							VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
+						else
+							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FILENAME}.* dependenc\"`" ]; then
+								DEPENDENCY_ERR=1
+							fi
+
+							PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
+						fi
+					fi
+
+
+					#
+					# The package manager check does not verify all the items
+					# we check. So we still need to dig out the rest of the
+					# information about this file from the package manager database.
+					#
+
+					RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FILENAME}\$"`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
-						#
-						# Okay we have a package name. Is it in the list
-						# of packages we have already tested as verified?
-						#
-						# If multiple packages claim the same file, we use
-						# 64bit over 32bit (on bi-arch platforms), or simply the last one.
-						#
+						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
 
-						FILE_IS_PKGD=1
+						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
+						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
 
-						PKGNAME=`echo "${PKGNAME_ARCH}" | grep 'x86_64\|ia64' | tail -1`
+						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
+						RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
 
-						test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail -1`
+						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-						if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
-							#
-							# No, it isn't in the list. So we verify the package
-							# and either add it to the list if it verifies okay,
-							# or get the verification result for the file.
-							#
+						RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
 
-							PKGMGR_VERIFY_RESULT=`${RPM_CMD} -V "${PKGNAME}" 2>&1`
+						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
 
-							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
-							else
-								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FILENAME}.* dependenc\"`" ]; then
-									DEPENDENCY_ERR=1
-								fi
-
-								PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
-							fi
-						fi
-
-
-						#
-						# The package manager check does not verify all the items
-						# we check. So we still need to dig out the rest of the
-						# information about this file from the package manager database.
-						#
-
-						RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FILENAME}\$"`
-						ERRCODE=$?
-
-						if [ $ERRCODE -eq 0 ]; then
-							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
-
-							FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
-							FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
-
-							RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
-							RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
-
-							RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
-							RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
-
-							RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
-
-							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
-
-							FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
-						else
-							#
-							# If, for some reason, we cannot get the package information,
-							# then treat it as if it returned all null values.
-							#
-
-							FDATA=":::::"
-							display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
-						fi
-
-						#
-						# Now get the inode value directly from the disk,
-						# but only if prelinking is not being used.
-						#
-
-						RKHTMPVAR2=""
-
-						test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${DIR}/${FNAME} 2>/dev/null | tr -d ' '`
-
-						FDATA="${RKHTMPVAR2}:${FDATA}"
-					fi
-				fi
-
-
-				#
-				# Do the file hash value check.
-				#
-
-				if [ $SKIP_HASH -eq 0 ]; then
-					#
-					# First we get all the package manager results.
-					#
-
-					case "${PKGMGR}" in
-					RPM)
-						;;
-					DPKG)
-						PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
-
-						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-							FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
-							SYSHASH=`egrep "( |\./)${FILENAME}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
-
-							if [ -n "${SYSHASH}" ]; then
-								FILE_IS_PKGD=1
-								RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
-
-								if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
-									PKGMGR_VERIFY_RESULT="5"
-
-									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
-										DEPENDENCY_ERR=1
-									fi
-								fi
-							fi
-						fi
-						;;
-					BSD)
-						#
-						# First see if the file is part of a known package.
-						#
-
-						PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
-
-						if [ -n "${PKGNAME}" ]; then
-							#
-							# Next strip of the '/usr/pkg' from the
-							# pathname, and then get the hash value.
-							#
-
-							FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
-							SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
-
-							if [ -n "${SYSHASH}" ]; then
-								FILE_IS_PKGD=1
-								RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
-
-								if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
-									PKGMGR_VERIFY_RESULT="5"
-
-									if [ -n "`${PKGMGR_MD5_HASH} ${DIR}/${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
-										DEPENDENCY_ERR=1
-									fi
-								fi
-							fi
-						fi
-						;;
-					esac
-
-
-					#
-					# Now see if we need to work out the hash value or not.
-					#
-
-					RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
-
-					if [ $FILE_IS_PKGD -eq 1 ]; then
-						if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
-							if [ $DEPENDENCY_ERR -eq 1 ]; then
-								DEPENDENCY_ERR=0
-								PKGMGR_VERIFY_RESULT=""
-								display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${DIR}/${FNAME}"
-							else
-								PKGMGR_VERIFY_RESULT="5"
-							fi
-						fi
-
-						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
-							HASH_TEST_PASSED=1
-						else
-							TEST_RESULT="${TEST_RESULT} verify:hashchanged"
-						fi
+						FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
 					else
 						#
-						# The file is not part of a package. So we need
-						# to compare the on-disk hash value against the
-						# value in the rkhunter.dat file.
-						#
-						# First see if we have a stored hash value.
+						# If, for some reason, we cannot get the package information,
+						# then treat it as if it returned all null values.
 						#
 
-						test -z "${RKHHASH}" && TEST_RESULT="${TEST_RESULT} norkhhash"
-
-						if [ -z "${TEST_RESULT}" ]; then
-							if [ "${HCMD}" = "NONE" ]; then
-								SYSHASH=""
-							else
-								SYSHASH=`${HCMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
-
-								if [ -z "${SYSHASH}" ]; then
-									if [ -n "`${HCMD} ${DIR}/${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
-										if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
-											SYSHASH="${RKHHASH}"
-											display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${DIR}/${FNAME}"
-										else
-											DEPENDENCY_ERR=1
-										fi
-									fi
-								fi
-							fi
-
-							test "${RKHHASH}" != "${SYSHASH}" && TEST_RESULT="${TEST_RESULT} hashchanged"
-						fi
+						FDATA=":::::"
+						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
 					fi
 
-
 					#
-					# Because the BSD and DPKG package managers only provide the
-					# MD5 checksum, we can assume that any file which is part of
-					# a package after this test must be an RPM file.
+					# Now get the inode value directly from the disk,
+					# but only if prelinking is not being used.
 					#
 
-					test "${PKGMGR}" != "RPM" && FILE_IS_PKGD=0
-				fi
+					RKHTMPVAR2=""
 
+					test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
 
-				#
-				# Do the file attributes checks.
-				#
-				# This checks the files permissions, and the uid/gid.
-				# The file permissions are also checked to see if 'w'
-				# has been allowed for all users. If prelinking is not
-				# in use then the inode, file size, and modification
-				# date-time are checked as well.
-				#
-
-				if [ $SKIP_ATTR -eq 0 ]; then
-					#
-					# First check to see if the file is whitelisted here,
-					# just the once. It is better than checking after
-					# each individual attribute test.
-					#
-
-					WL_FILE=""
-
-					for WHITELISTFILE in ${ATTRWHITELIST}; do
-						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
-							WL_FILE="whitelisted"
-							WHITELIST_RESULT="${WHITELIST_RESULT} attr"
-							break
-						fi
-					done
-
-					test -z "${FDATA}" && FDATA=`eval ${SCMD} ${DIR}/${FNAME} 2>/dev/null | tr ' ' ':'`
-
-					if [ -z "${WL_FILE}" -a -n "${FDATA}" ]; then
-						#
-						# Check the file permissions.
-						#
-
-						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'M|(^.\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
-						else
-							RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
-							SYSPERM=`echo ${FDATA} | cut -d: -f2`
-
-							if [ -n "${RKHPERM}" ]; then
-								test "${RKHPERM}" != "${SYSPERM}" && TEST_RESULT="${TEST_RESULT} permchanged"
-							else
-								TEST_RESULT="${TEST_RESULT} norkhperm"
-							fi
-						fi
-
-
-						#
-						# Check the file user-id.
-						#
-
-						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'U|(^.....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
-						else
-							RKHUID=`echo ${RKHLINE} | cut -d: -f6`
-							SYSUID=`echo ${FDATA} | cut -d: -f3`
-
-							if [ -n "${RKHUID}" ]; then
-								test "${RKHUID}" != "${SYSUID}" && TEST_RESULT="${TEST_RESULT} uidchanged"
-							else
-								TEST_RESULT="${TEST_RESULT} norkhuid"
-							fi
-						fi
-
-
-						#
-						# Check the file group-id.
-						#
-
-						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'G|(^......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
-						else
-							RKHGID=`echo ${RKHLINE} | cut -d: -f7`
-							SYSGID=`echo ${FDATA} | cut -d: -f4`
-
-							if [ -n "${RKHGID}" ]; then
-								test "${RKHGID}" != "${SYSGID}" && TEST_RESULT="${TEST_RESULT} gidchanged"
-							else
-								TEST_RESULT="${TEST_RESULT} norkhgid"
-							fi
-						fi
-
-
-						#
-						# Check the file inode number.
-						#
-
-#jh - this check should be 'if not prelinking or file is a script'. Change script stuff and store if file is script in rkhunter.dat.
-#jh - we can then simply check to see if a file has changed to/from being a script. It should avoid users having to whitelist script files. Also store soft links?
-						if [ $PRELINKED -eq 0 ]; then
-							RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
-							SYSINODE=`echo ${FDATA} | cut -d: -f1`
-
-							if [ -n "${RKHINODE}" ]; then
-								test "${RKHINODE}" != "${SYSINODE}" && TEST_RESULT="${TEST_RESULT} inodechanged"
-							else
-								TEST_RESULT="${TEST_RESULT} norkhinode"
-							fi
-						fi
-
-
-						#
-						# Check the file size.
-						#
-
-						if [ $FILE_IS_PKGD -eq 1 ]; then
-							if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep 'S|(^\?)'`" ]; then
-								SIZE_TEST_PASSED=1
-							else
-								TEST_RESULT="${TEST_RESULT} verify:sizechanged"
-							fi
-						elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
-							RKHSIZE=`echo ${RKHLINE} | cut -d: -f8`
-							SYSSIZE=`echo ${FDATA} | cut -d: -f5`
-
-							if [ -n "${RKHSIZE}" ]; then
-								if [ "${RKHSIZE}" = "${SYSSIZE}" ]; then
-									SIZE_TEST_PASSED=1
-								else
-									TEST_RESULT="${TEST_RESULT} sizechanged"
-								fi
-							else
-								TEST_RESULT="${TEST_RESULT} norkhsize"
-							fi
-						fi
-
-
-						#
-						# Check the file modification date-time.
-						#
-
-						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'T|(^.......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
-						elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
-							RKHDTM=`echo ${RKHLINE} | cut -d: -f9`
-							SYSDTM=`echo ${FDATA} | cut -d: -f6`
-
-							if [ -n "${RKHDTM}" ]; then
-								test "${RKHDTM}" != "${SYSDTM}" && TEST_RESULT="${TEST_RESULT} dtmchanged"
-							else
-								TEST_RESULT="${TEST_RESULT} norkhdtm"
-							fi
-						fi
-					elif [ -z "${WL_FILE}" ]; then
-						TEST_RESULT="${TEST_RESULT} sysattrunavail"
-					fi
-
-
-					#
-					# Check the file permissions here to see if the 'other' permission
-					# contains a 'w'. The check is against the octal value. Symbolic
-					# links are ignored.
-					#
-
-					if [ ! -h "${DIR}/${FNAME}" -a $FILE_IS_PKGD -eq 0 ]; then
-						WL_FILE=""
-
-						for WHITELISTFILE in ${WRITEWHITELIST}; do
-							if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
-								WL_FILE="whitelisted"
-								WHITELIST_RESULT="${WHITELIST_RESULT} write"
-								break
-							fi
-						done
-
-						if [ -z "${WL_FILE}" ]; then
-							SYSPERM=`echo ${FDATA} | cut -d: -f2`
-
-							if [ -n "`echo ${SYSPERM} | grep '[2367]\$'`" ]; then
-								TEST_RESULT="${TEST_RESULT} write"
-							elif [ -z "${SYSPERM}" ]; then
-								TEST_RESULT="${TEST_RESULT} syspermunavail"
-							fi
-						fi
-					fi
+					FDATA="${RKHTMPVAR2}:${FDATA}"
 				fi
 			fi
 
 
 			#
-			# We can now carry out the tests which do not
-			# require the rkhunter.dat file.
+			# Do the file hash value check.
 			#
 
-			#
-			# Do the file immutable-bit check.
-			#
-
-			if [ $SKIP_IMMUT -eq 0 ]; then
+			if [ $SKIP_HASH -eq 0 ]; then
 				#
-				# Test if the file is whitelisted.
+				# First we get all the package manager results.
+				#
+
+				case "${PKGMGR}" in
+				RPM)
+					;;
+				DPKG)
+					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+
+					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+						FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
+						SYSHASH=`egrep "( |\./)${FILENAME}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+
+						if [ -n "${SYSHASH}" ]; then
+							FILE_IS_PKGD=1
+							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+								PKGMGR_VERIFY_RESULT="5"
+
+								if [ -n "`${PKGMGR_MD5_HASH} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+									DEPENDENCY_ERR=1
+								fi
+							fi
+						fi
+					fi
+					;;
+				BSD)
+					#
+					# First see if the file is part of a known package.
+					#
+
+					PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+
+					if [ -n "${PKGNAME}" ]; then
+						#
+						# Next strip of the '/usr/pkg' from the
+						# pathname, and then get the hash value.
+						#
+
+						FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
+
+						if [ -n "${SYSHASH}" ]; then
+							FILE_IS_PKGD=1
+							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+								PKGMGR_VERIFY_RESULT="5"
+
+								if [ -n "`${PKGMGR_MD5_HASH} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+									DEPENDENCY_ERR=1
+								fi
+							fi
+						fi
+					fi
+					;;
+				esac
+
+
+				#
+				# Now see if we need to work out the hash value or not.
+				#
+
+				RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+
+				if [ $FILE_IS_PKGD -eq 1 ]; then
+					if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
+						if [ $DEPENDENCY_ERR -eq 1 ]; then
+							DEPENDENCY_ERR=0
+							PKGMGR_VERIFY_RESULT=""
+							display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FNAME}"
+						else
+							PKGMGR_VERIFY_RESULT="5"
+						fi
+					fi
+
+					if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
+						HASH_TEST_PASSED=1
+					else
+						TEST_RESULT="${TEST_RESULT} verify:hashchanged"
+					fi
+				else
+					#
+					# The file is not part of a package. So we need
+					# to compare the on-disk hash value against the
+					# value in the rkhunter.dat file.
+					#
+					# First see if we have a stored hash value.
+					#
+
+					test -z "${RKHHASH}" && TEST_RESULT="${TEST_RESULT} norkhhash"
+
+					if [ -z "${TEST_RESULT}" ]; then
+						if [ "${HCMD}" = "NONE" ]; then
+							SYSHASH=""
+						else
+							SYSHASH=`${HCMD} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+							if [ -z "${SYSHASH}" ]; then
+								if [ -n "`${HCMD} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+									if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
+										SYSHASH="${RKHHASH}"
+										display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FNAME}"
+									else
+										DEPENDENCY_ERR=1
+									fi
+								fi
+							fi
+						fi
+
+						test "${RKHHASH}" != "${SYSHASH}" && TEST_RESULT="${TEST_RESULT} hashchanged"
+					fi
+				fi
+
+
+				#
+				# Because the BSD and DPKG package managers only provide the
+				# MD5 checksum, we can assume that any file which is part of
+				# a package after this test must be an RPM file.
+				#
+
+				test "${PKGMGR}" != "RPM" && FILE_IS_PKGD=0
+			fi
+
+
+			#
+			# Do the file attributes checks.
+			#
+			# This checks the files permissions, and the uid/gid.
+			# The file permissions are also checked to see if 'w'
+			# has been allowed for all users. If prelinking is not
+			# in use then the inode, file size, and modification
+			# date-time are checked as well.
+			#
+
+			if [ $SKIP_ATTR -eq 0 ]; then
+				#
+				# First check to see if the file is whitelisted here,
+				# just the once. It is better than checking after
+				# each individual attribute test.
 				#
 
 				WL_FILE=""
-				RKHTMPVAR=""
 
-				for WHITELISTFILE in ${IMMUTWHITELIST}; do
-					if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+				for WHITELISTFILE in ${ATTRWHITELIST}; do
+					if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
 						WL_FILE="whitelisted"
-						WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
+						WHITELIST_RESULT="${WHITELIST_RESULT} attr"
 						break
 					fi
 				done
 
-				if [ -z "${WL_FILE}" ]; then
-					if [ $BSDOS -eq 0 ]; then
-						RKHTMPVAR=`${LSATTR_CMD} ${DIR}/${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+				test -z "${FDATA}" && FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':'`
+
+				if [ -z "${WL_FILE}" -a -n "${FDATA}" ]; then
+					#
+					# Check the file permissions.
+					#
+
+					if [ $FILE_IS_PKGD -eq 1 ]; then
+						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'M|(^.\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
 					else
-						RKHTMPVAR=`ls -lno ${DIR}/${FNAME} 2>/dev/null | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
+						SYSPERM=`echo ${FDATA} | cut -d: -f2`
+
+						if [ -n "${RKHPERM}" ]; then
+							test "${RKHPERM}" != "${SYSPERM}" && TEST_RESULT="${TEST_RESULT} permchanged"
+						else
+							TEST_RESULT="${TEST_RESULT} norkhperm"
+						fi
 					fi
 
-					test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} immutable"
+
+					#
+					# Check the file user-id.
+					#
+
+					if [ $FILE_IS_PKGD -eq 1 ]; then
+						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'U|(^.....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
+					else
+						RKHUID=`echo ${RKHLINE} | cut -d: -f6`
+						SYSUID=`echo ${FDATA} | cut -d: -f3`
+
+						if [ -n "${RKHUID}" ]; then
+							test "${RKHUID}" != "${SYSUID}" && TEST_RESULT="${TEST_RESULT} uidchanged"
+						else
+							TEST_RESULT="${TEST_RESULT} norkhuid"
+						fi
+					fi
+
+
+					#
+					# Check the file group-id.
+					#
+
+					if [ $FILE_IS_PKGD -eq 1 ]; then
+						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'G|(^......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
+					else
+						RKHGID=`echo ${RKHLINE} | cut -d: -f7`
+						SYSGID=`echo ${FDATA} | cut -d: -f4`
+
+						if [ -n "${RKHGID}" ]; then
+							test "${RKHGID}" != "${SYSGID}" && TEST_RESULT="${TEST_RESULT} gidchanged"
+						else
+							TEST_RESULT="${TEST_RESULT} norkhgid"
+						fi
+					fi
+
+
+					#
+					# Check the file inode number.
+					#
+
+#jh - this check should be 'if not prelinking or file is a script'. Change script stuff and store if file is script in rkhunter.dat.
+#jh - we can then simply check to see if a file has changed to/from being a script. It should avoid users having to whitelist script files. Also store soft links?
+					if [ $PRELINKED -eq 0 ]; then
+						RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
+						SYSINODE=`echo ${FDATA} | cut -d: -f1`
+
+						if [ -n "${RKHINODE}" ]; then
+							test "${RKHINODE}" != "${SYSINODE}" && TEST_RESULT="${TEST_RESULT} inodechanged"
+						else
+							TEST_RESULT="${TEST_RESULT} norkhinode"
+						fi
+					fi
+
+
+					#
+					# Check the file size.
+					#
+
+					if [ $FILE_IS_PKGD -eq 1 ]; then
+						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep 'S|(^\?)'`" ]; then
+							SIZE_TEST_PASSED=1
+						else
+							TEST_RESULT="${TEST_RESULT} verify:sizechanged"
+						fi
+					elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
+						RKHSIZE=`echo ${RKHLINE} | cut -d: -f8`
+						SYSSIZE=`echo ${FDATA} | cut -d: -f5`
+
+						if [ -n "${RKHSIZE}" ]; then
+							if [ "${RKHSIZE}" = "${SYSSIZE}" ]; then
+								SIZE_TEST_PASSED=1
+							else
+								TEST_RESULT="${TEST_RESULT} sizechanged"
+							fi
+						else
+							TEST_RESULT="${TEST_RESULT} norkhsize"
+						fi
+					fi
+
+
+					#
+					# Check the file modification date-time.
+					#
+
+					if [ $FILE_IS_PKGD -eq 1 ]; then
+						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'T|(^.......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
+					elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
+						RKHDTM=`echo ${RKHLINE} | cut -d: -f9`
+						SYSDTM=`echo ${FDATA} | cut -d: -f6`
+
+						if [ -n "${RKHDTM}" ]; then
+							test "${RKHDTM}" != "${SYSDTM}" && TEST_RESULT="${TEST_RESULT} dtmchanged"
+						else
+							TEST_RESULT="${TEST_RESULT} norkhdtm"
+						fi
+					fi
+				elif [ -z "${WL_FILE}" ]; then
+					TEST_RESULT="${TEST_RESULT} sysattrunavail"
 				fi
-			fi
 
 
-			#
-			# Do the file script replacement check.
-			#
-
-			if [ $SKIP_SCRIPT -eq 0 ]; then
 				#
-				# If we are using a package manager, and both the hash test
-				# and the file size test have passed, then we skip the script
-				# replacement check. The assumption is that to change a file
-				# with one value remaining the same is possible, but to change
-				# it such that both are the same is improbable. It would also
-				# require the package manager database having being corrupted
-				# as well.
+				# Check the file permissions here to see if the 'other' permission
+				# contains a 'w'. The check is against the octal value. Symbolic
+				# links are ignored.
 				#
 
-				if [ $HASH_TEST_PASSED -eq 0 -o $SIZE_TEST_PASSED -eq 0 ]; then
-					#
-					# See if the file is whitelisted.
-					#
-
+				if [ ! -h "${FNAME}" -a $FILE_IS_PKGD -eq 0 ]; then
 					WL_FILE=""
-					SYSSCRIPT=""
 
-					for WHITELISTFILE in ${SCRIPTWHITELIST}; do
-						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${DIR}/${FNAME}" ]; then
+					for WHITELISTFILE in ${WRITEWHITELIST}; do
+						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
 							WL_FILE="whitelisted"
-							WHITELIST_RESULT="${WHITELIST_RESULT} script"
+							WHITELIST_RESULT="${WHITELIST_RESULT} write"
 							break
 						fi
 					done
 
 					if [ -z "${WL_FILE}" ]; then
-						if [ "${FNAME}" = "rkhunter" ]; then
-							SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i -v 'shell script( |$)'`
-						else
-							SYSSCRIPT=`${FILE_CMD} ${DIR}/${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
-						fi
+						SYSPERM=`echo ${FDATA} | cut -d: -f2`
 
-						test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
+						if [ -n "`echo ${SYSPERM} | grep '[2367]\$'`" ]; then
+							TEST_RESULT="${TEST_RESULT} write"
+						elif [ -z "${SYSPERM}" ]; then
+							TEST_RESULT="${TEST_RESULT} syspermunavail"
+						fi
 					fi
 				fi
 			fi
+		fi
 
 
+		#
+		# We can now carry out the tests which do not
+		# require the rkhunter.dat file.
+		#
+
+		#
+		# Do the file immutable-bit check.
+		#
+
+		if [ $SKIP_IMMUT -eq 0 ]; then
 			#
-			# Now output the results.
+			# Test if the file is whitelisted.
 			#
 
-			if [ -z "${TEST_RESULT}" ]; then
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN NAME "${DIR}/${FNAME}"
-			else
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${DIR}/${FNAME}"
+			WL_FILE=""
+			RKHTMPVAR=""
 
-				PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
+			for WHITELISTFILE in ${IMMUTWHITELIST}; do
+				if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
+					WL_FILE="whitelisted"
+					WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
+					break
+				fi
+			done
 
-				RKHTMPVAR2=0
-				RKHTMPVAR3=0
-				for RKHTMPVAR in ${TEST_RESULT}; do
+			if [ -z "${WL_FILE}" ]; then
+				if [ $BSDOS -eq 0 ]; then
+					RKHTMPVAR=`${LSATTR_CMD} ${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+				else
+					RKHTMPVAR=`ls -lno ${FNAME} 2>/dev/null | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+				fi
+
+				test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} immutable"
+			fi
+		fi
+
+
+		#
+		# Do the file script replacement check.
+		#
+
+		if [ $SKIP_SCRIPT -eq 0 ]; then
+			#
+			# If we are using a package manager, and both the hash test
+			# and the file size test have passed, then we skip the script
+			# replacement check. The assumption is that to change a file
+			# with one value remaining the same is possible, but to change
+			# it such that both are the same is improbable. It would also
+			# require the package manager database having being corrupted
+			# as well.
+			#
+
+			if [ $HASH_TEST_PASSED -eq 0 -o $SIZE_TEST_PASSED -eq 0 ]; then
+				#
+				# See if the file is whitelisted.
+				#
+
+				WL_FILE=""
+				SYSSCRIPT=""
+
+				for WHITELISTFILE in ${SCRIPTWHITELIST}; do
+					if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
+						WL_FILE="whitelisted"
+						WHITELIST_RESULT="${WHITELIST_RESULT} script"
+						break
+					fi
+				done
+
+				if [ -z "${WL_FILE}" ]; then
+					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
+
+					if [ "${RKHTMPVAR}" = "rkhunter" ]; then
+						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i -v 'shell script( |$)'`
+					else
+						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
+					fi
+
+					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
+				fi
+			fi
+		fi
+
+
+		#
+		# Now output the results.
+		#
+
+		if [ -z "${TEST_RESULT}" ]; then
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN NAME "${FNAME}"
+		else
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${FNAME}"
+
+			PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
+
+			RKHTMPVAR2=0
+			RKHTMPVAR3=0
+			for RKHTMPVAR in ${TEST_RESULT}; do
+				case "${RKHTMPVAR}" in
+				hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged)
+					if [ $RKHTMPVAR2 -eq 0 ]; then
+						RKHTMPVAR2=1
+						display --to LOG --type WARNING FILE_PROP_CHANGED
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${FNAME}"
+					fi
+
 					case "${RKHTMPVAR}" in
-					hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged)
-						if [ $RKHTMPVAR2 -eq 0 ]; then
-							RKHTMPVAR2=1
-							display --to LOG --type WARNING FILE_PROP_CHANGED
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${DIR}/${FNAME}"
-						fi
-
-						case "${RKHTMPVAR}" in
-						hashchanged)
-							if [ -z "${SYSHASH}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_UNAVAIL
-							else
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH "${SYSHASH}"
-							fi
-
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH "${RKHHASH}"
-
-							test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
-							;;
-						permchanged)
-							if [ -z "${SYSPERM}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_PERM_UNAVAIL "${RKHPERM}"
-							else
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_PERM "${SYSPERM}" "${RKHPERM}"
-							fi
-							;;
-						uidchanged)
-							if [ -z "${SYSUID}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_UID_UNAVAIL "${RKHUID}"
-							else
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_UID "${SYSUID}" "${RKHUID}"
-							fi
-							;;
-						gidchanged)
-							if [ -z "${SYSGID}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_GID_UNAVAIL "${RKHGID}"
-							else
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_GID "${SYSGID}" "${RKHGID}"
-							fi
-							;;
-						inodechanged)
-							if [ -z "${SYSINODE}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_INODE_UNAVAIL "${RKHINODE}"
-							else
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_INODE "${SYSINODE}" "${RKHINODE}"
-							fi
-							;;
-						sizechanged)
-							if [ -z "${SYSSIZE}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SIZE_UNAVAIL "${RKHSIZE}"
-							else
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SIZE "${SYSSIZE}" "${RKHSIZE}"
-							fi
-							;;
-						dtmchanged)
-							if [ -z "${SYSDTM}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM_UNAVAIL
-							else
-								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM "${SYSDTM}"
-							fi
-
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM}"
-							;;
-						esac
-						;;
-					verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged|verify:sizechanged|verify:dtmchanged)
-						if [ $RKHTMPVAR3 -eq 0 ]; then
-							RKHTMPVAR3=1
-							display --to LOG --type WARNING FILE_PROP_VRFY
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${DIR}/${FNAME}"
-
-							test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${DIR}/${FNAME}"
-						fi
-
-						case "${RKHTMPVAR}" in
-						verify:hashchanged)
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
-
-							if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
-								display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "${DIR}/${FNAME}"
-							fi
-							;;
-						verify:permchanged)
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_PERM
-							;;
-						verify:uidchanged)
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_UID
-							;;
-						verify:gidchanged)
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_GID
-							;;
-						verify:sizechanged)
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_SIZE
-							;;
-						verify:dtmchanged)
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM
-							;;
-						esac
-						;;
-					norkhline)
-						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "${DIR}/${FNAME}"
-						;;
-					norkhhash)
-						display --to LOG --type WARNING FILE_PROP_NO_RKHHASH "${DIR}/${FNAME}"
-						;;
-					norkhperm)
-						display --to LOG --type WARNING FILE_PROP_NO_RKHPERM "${DIR}/${FNAME}"
-						;;
-					norkhuid)
-						display --to LOG --type WARNING FILE_PROP_NO_RKHUID "${DIR}/${FNAME}"
-						;;
-					norkhgid)
-						display --to LOG --type WARNING FILE_PROP_NO_RKHGID "${DIR}/${FNAME}"
-						;;
-					norkhinode)
-						display --to LOG --type WARNING FILE_PROP_NO_RKHINODE "${DIR}/${FNAME}"
-						;;
-					norkhsize)
-						display --to LOG --type WARNING FILE_PROP_NO_RKHSIZE "${DIR}/${FNAME}"
-						;;
-					norkhdtm)
-						display --to LOG --type WARNING FILE_PROP_NO_RKHDTM "${DIR}/${FNAME}"
-						;;
-					sysattrunavail)
-						display --to LOG --type WARNING FILE_PROP_NO_SYSATTR "${DIR}/${FNAME}"
-						;;
-					write)
-						display --to LOG --type WARNING FILE_PROP_WRITE "${DIR}/${FNAME}"
-						;;
-					syspermunavail)
-						display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "${DIR}/${FNAME}"
-						;;
-					immutable)
-						display --to LOG --type WARNING FILE_PROP_IMMUT "${DIR}/${FNAME}"
-						;;
-					script)
-						if [ "${FNAME}" = "rkhunter" ]; then
-							display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "${DIR}/${FNAME}" "${SYSSCRIPT}"
+					hashchanged)
+						if [ -z "${SYSHASH}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_UNAVAIL
 						else
-							display --to LOG --type WARNING FILE_PROP_SCRIPT "${DIR}/${FNAME}" "${SYSSCRIPT}"
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH "${SYSHASH}"
+						fi
+
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH "${RKHHASH}"
+
+						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${FNAME}"
+						;;
+					permchanged)
+						if [ -z "${SYSPERM}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_PERM_UNAVAIL "${RKHPERM}"
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_PERM "${SYSPERM}" "${RKHPERM}"
 						fi
 						;;
-					esac
-				done
-			fi
+					uidchanged)
+						if [ -z "${SYSUID}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_UID_UNAVAIL "${RKHUID}"
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_UID "${SYSUID}" "${RKHUID}"
+						fi
+						;;
+					gidchanged)
+						if [ -z "${SYSGID}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_GID_UNAVAIL "${RKHGID}"
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_GID "${SYSGID}" "${RKHGID}"
+						fi
+						;;
+					inodechanged)
+						if [ -z "${SYSINODE}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_INODE_UNAVAIL "${RKHINODE}"
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_INODE "${SYSINODE}" "${RKHINODE}"
+						fi
+						;;
+					sizechanged)
+						if [ -z "${SYSSIZE}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SIZE_UNAVAIL "${RKHSIZE}"
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SIZE "${SYSSIZE}" "${RKHSIZE}"
+						fi
+						;;
+					dtmchanged)
+						if [ -z "${SYSDTM}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM_UNAVAIL
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM "${SYSDTM}"
+						fi
 
-			if [ -n "${WHITELIST_RESULT}" ]; then
-				for WL_FILE in ${WHITELIST_RESULT}; do
-					case "${WL_FILE}" in
-					hash)
-						RKHTMPVAR="file hash"
-						;;
-					attr)
-						RKHTMPVAR="file attributes"
-						;;
-					write)
-						RKHTMPVAR="file write permission"
-						;;
-					immutable)
-						RKHTMPVAR="file immutable-bit"
-						;;
-					script)
-						RKHTMPVAR="script replacement"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM}"
 						;;
 					esac
+					;;
+				verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged|verify:sizechanged|verify:dtmchanged)
+					if [ $RKHTMPVAR3 -eq 0 ]; then
+						RKHTMPVAR3=1
+						display --to LOG --type WARNING FILE_PROP_VRFY
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${FNAME}"
 
-					display --to LOG --type INFO FILE_PROP_WL "${DIR}/${FNAME}" "${RKHTMPVAR}"
-				done
-			fi
-		done
+						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${FNAME}"
+					fi
+
+					case "${RKHTMPVAR}" in
+					verify:hashchanged)
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
+
+						if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
+							display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FNAME}"
+						fi
+						;;
+					verify:permchanged)
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_PERM
+						;;
+					verify:uidchanged)
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_UID
+						;;
+					verify:gidchanged)
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_GID
+						;;
+					verify:sizechanged)
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_SIZE
+						;;
+					verify:dtmchanged)
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM
+						;;
+					esac
+					;;
+				norkhline)
+					display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "${FNAME}"
+					;;
+				norkhhash)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHHASH "${FNAME}"
+					;;
+				norkhperm)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHPERM "${FNAME}"
+					;;
+				norkhuid)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHUID "${FNAME}"
+					;;
+				norkhgid)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHGID "${FNAME}"
+					;;
+				norkhinode)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHINODE "${FNAME}"
+					;;
+				norkhsize)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHSIZE "${FNAME}"
+					;;
+				norkhdtm)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHDTM "${FNAME}"
+					;;
+				sysattrunavail)
+					display --to LOG --type WARNING FILE_PROP_NO_SYSATTR "${FNAME}"
+					;;
+				write)
+					display --to LOG --type WARNING FILE_PROP_WRITE "${FNAME}"
+					;;
+				syspermunavail)
+					display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "${FNAME}"
+					;;
+				immutable)
+					display --to LOG --type WARNING FILE_PROP_IMMUT "${FNAME}"
+					;;
+				script)
+					test -n "${BASENAME_CMD}" && RKHTMPVAR4=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR4=`echo "${FNAME}" | sed -e 's:^.*/::'`
+
+					if [ "${RKHTMPVAR4}" = "rkhunter" ]; then
+						display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "${FNAME}" "${SYSSCRIPT}"
+					else
+						display --to LOG --type WARNING FILE_PROP_SCRIPT "${FNAME}" "${SYSSCRIPT}"
+					fi
+					;;
+				esac
+			done
+		fi
+
+		if [ -n "${WHITELIST_RESULT}" ]; then
+			for WL_FILE in ${WHITELIST_RESULT}; do
+				case "${WL_FILE}" in
+				hash)
+					RKHTMPVAR="file hash"
+					;;
+				attr)
+					RKHTMPVAR="file attributes"
+					;;
+				write)
+					RKHTMPVAR="file write permission"
+					;;
+				immutable)
+					RKHTMPVAR="file immutable-bit"
+					;;
+				script)
+					RKHTMPVAR="script replacement"
+					;;
+				esac
+
+				display --to LOG --type INFO FILE_PROP_WL "${FNAME}" "${RKHTMPVAR}"
+			done
+		fi
 	done
 
 	return
@@ -6717,13 +6938,11 @@ rootkit_file_dir_checks() {
 	# CX Rootkit
 
 	if [ $SUNOS -eq 1 ]; then
-
 		SCAN_ROOTKIT="CX Rootkit"
 		SCAN_FILES=${CXKIT_FILES}
 		SCAN_DIRS=${CXKIT_DIRS}
 		SCAN_KSYMS=${CXKIT_KSYMS}
 		scanrootkit
-
 	fi
 
 	# Danny-Boy's Abuse Kit
@@ -7413,15 +7632,17 @@ possible_rootkit_file_dir_checks() {
 	FOUND=0
 	FOUNDFILES=""
 	FOUNDDIRS=""
+
 	IFS=$IFSNL
 
 	for RKHTMPVAR in ${FILESCAN}; do
 		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-		TYPE=`echo "${RKHTMPVAR}" | cut -d: -f1`
-		FILE=`echo "${RKHTMPVAR}" | cut -d: -f2`
-		INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
+		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
+
+		TYPE=`echo ${RKHTMPVAR} | cut -d: -f1`
+		FILE=`echo ${RKHTMPVAR} | cut -d: -f2`
+		INFO=`echo ${RKHTMPVAR} | cut -d: -f3`
 
 		case "${TYPE}" in
 		dir)
@@ -7563,7 +7784,7 @@ ${FNAME}"
 
 		test -z "${RKHTMPVAR2}" && RKHTMPVAR2="${RKHTMPVAR}"
 
-		RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/^ //'`
+		RKHTMPVAR2=`echo ${RKHTMPVAR2}`
 		display --to LOG --type INFO CONFIG_STARTUP_PATHS "${RKHTMPVAR2}"
 	fi
 
@@ -7619,17 +7840,19 @@ possible_rootkit_string_checks() {
 
 	FOUND=0
 	FOUNDFILES=""
+
 	IFS=$IFSNL
 
 	for RKHTMPVAR in ${STRINGSCAN}; do
 		FOUNDFILE=0
 		FOUNDSTRING=""
 
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-		FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
-		FILESTRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
-		STRING=`echo "${FILESTRING}" | sed -e 's/\./\\\./g'`
-		INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
+		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
+
+		FILE=`echo ${RKHTMPVAR} | cut -d: -f1`
+		FILESTRING=`echo ${RKHTMPVAR} | cut -d: -f2`
+		STRING=`echo ${FILESTRING} | sed -e 's/\./\\\./g'`
+		INFO=`echo ${RKHTMPVAR} | cut -d: -f3`
 
 		if [ "${FILE}" = "rcfile" ]; then
 			FOUNDFILE=1
@@ -7859,7 +8082,7 @@ malware_checks() {
 
 						if [ "${PROC}" = "${RKHTMPVAR2}" ]; then
 							if [ $PROCDELFILES_GIVEN -eq 1 ]; then
-								if [ -n "`echo \"${RKHTMPVAR}\" | egrep \":${FNAME}(:|$)\"`" ]; then
+								if [ -n "`echo \"${RKHTMPVAR}:\" | grep \":${FNAME}:\"`" ]; then
 									PROCWHITELISTED=1
 								fi
 							else
@@ -7874,10 +8097,10 @@ malware_checks() {
 
 					if [ $PROCWHITELISTED -eq 1 ]; then
 						if [ $PROCDELFILES_GIVEN -eq 1 ]; then
-							if [ -z "`echo \"${WHITEPROC}\" | egrep \"${PROC}:${FNAME}( |$)\"`" ]; then
+							if [ -z "`echo \"${WHITEPROC} \" | grep \"${PROC}:${FNAME} \"`" ]; then
 								WHITEPROC="${WHITEPROC} ${PROC}:${FNAME}"
 							fi
-						elif [ -z "`echo \"${WHITEPROC}\" | egrep \"${PROC}( |$)\"`" ]; then
+						elif [ -z "`echo \"${WHITEPROC} \" | grep \"${PROC} \"`" ]; then
 							WHITEPROC="${WHITEPROC} ${PROC}"
 						fi
 					else
@@ -7949,11 +8172,13 @@ ${PROC} ${PID} ${FNAME}"
 
 		if [ -n "${LSOF_CMD}" ]; then
 			SUSP_FILES=""
+
 			IFS=$IFSNL
 
 			for RKHTMPVAR in ${SUSP_FILES_INFO}; do
-				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-				FILENAME=`echo "${RKHTMPVAR}" | cut -d: -f1 | sed -e 's/\./\\\./g'`
+				RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
+
+				FILENAME=`echo ${RKHTMPVAR} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 				SUSP_FILES="${SUSP_FILES}|${FILENAME}"
 			done
 
@@ -8590,8 +8815,9 @@ freebsd_specific_checks() {
 		FOUNDKEYS=""
 
 		for RKHTMPVAR in ${KLDSTATKEYWORDS}; do
-			RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-			KLDKEYWD=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
+			RKHTMPVAR=`echo ${RKHTMPVAR}`
+
+			KLDKEYWD=`echo ${RKHTMPVAR} | sed -e 's/\./\\\./g'`
 
 			if [ -n "`${KLDSTAT_CMD} -v | grep \"${KLDKEYWD}\"`" ]; then
 				FOUND=1
@@ -8740,7 +8966,8 @@ linux_avail_modules() {
 	#
 
 	for RKHTMPVAR in ${LKM_BADNAMES}; do
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//; s/\./\\\./g'`
+		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/\./\\\./g'`
+
 		LKM_NAMES="${LKM_NAMES} ${RKHTMPVAR}"
 	done
 
@@ -9068,7 +9295,8 @@ do_network_port_checks() {
 						RKHTMPVAR2=1
 						FOUND="path_whitelisted"
 					elif [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
-						RKHTMPVAR=`basename ${FNAME}`
+						test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
+
 						RKHTMPVAR=`IFS=$RKHIFS find_cmd ${RKHTMPVAR}`
 
 						if [ "${RKHTMPVAR}" = "${FNAME}" ]; then
@@ -9250,7 +9478,7 @@ do_network_interface_checks() {
 		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](${INODE_LIST})[ 	]" | awk '{ print $2 }'`; do
 			NAME=""
 
-			if [ $HAVE_READLINK -eq 1 -a -h "/proc/$PID/exe" ]; then
+			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
 				NAME=`${READLINK_CMD} -f /proc/$PID/exe | cut -d' ' -f1`
 			elif [ -f "/proc/$PID/status" ]; then
 				NAME=`grep '^Name:.' /proc/$PID/status | sed -e 's/^Name:.//'`
@@ -9269,7 +9497,8 @@ do_network_interface_checks() {
 
 			if [ $AMATCH -eq 0 ]; then
 				FNAME=`echo "${NAME}" | sed -e 's/\./\\\./g'`
-				if [ -z "`echo ${WHITEPROC} | egrep \"${FNAME}( |$)\"`" ]; then
+
+				if [ -z "`echo \"${WHITEPROC} \" | grep \"${FNAME} \"`" ]; then
 					WHITEPROC="${WHITEPROC} ${NAME}"
 				fi
 			else
@@ -9422,16 +9651,17 @@ do_system_startup_file_checks() {
 	IFS=$IFSNL
 
 	for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
-		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
-		STR=`echo "${RKHTMPVAR}" | cut -d: -f1`
-		STRING=`echo "${STR}" | sed -e 's/\./\\\./g'`
+		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
+
+		STR=`echo ${RKHTMPVAR} | cut -d: -f1`
+		STRING=`echo ${STR} | sed -e 's/\./\\\./g'`
 		RCSTRINGS="${RCSTRINGS} ${STRING}"
-		INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
+		INFO=`echo ${RKHTMPVAR} | cut -d: -f2`
 	done
 
 	IFS=$RKHIFS
 
-	RCSTRINGS=`echo "${RCSTRINGS}" | sed -e 's/^ //'`
+	RCSTRINGS=`echo ${RCSTRINGS}`
 
 
 	for FNAME in ${RC_PATHS}; do
@@ -10182,7 +10412,9 @@ do_filesystem_check() {
 			fi
 		fi
 
-		for FNAME in `get_option 1 multi ALLOWDEVFILE`; do
+		RKHTMPVAR=`get_option 1 multi ALLOWDEVFILE` || exit 1
+
+		for FNAME in ${RKHTMPVAR}; do
 			ALLOWDEVFILES="${ALLOWDEVFILES} ${FNAME}"
 		done
 
@@ -10194,7 +10426,7 @@ do_filesystem_check() {
 				test -s "${RKHTMPVAR}" -a ! -d "${RKHTMPVAR}" -a ! -h "${RKHTMPVAR}" || continue
 
 				if [ $FDESCFS -eq 1 ]; then
-					test -n "`echo \"${RKHTMPVAR}\" | egrep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*(/|$)\"`" && continue
+					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
 				fi
 
 				do_dev_whitelist_check
@@ -10204,7 +10436,7 @@ do_filesystem_check() {
 				test -s "${RKHTMPVAR}" || continue
 
 				if [ $FDESCFS -eq 1 ]; then
-					test -n "`echo \"${RKHTMPVAR}\" | egrep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*(/|$)\"`" && continue
+					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
 				fi
 
 				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
@@ -10289,13 +10521,18 @@ do_filesystem_check() {
 	ALLOWHIDDENFILES=" "
 
 	if [ -n "${LOOKINDIRS}" ]; then
-		for DIR in `get_option 1 multi ALLOWHIDDENDIR`; do
+		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENDIR` || exit 1
+
+		for DIR in ${RKHTMPVAR}; do
 			ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
 		done
 
 		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
 
-		for FNAME in `get_option 1 multi ALLOWHIDDENFILE`; do
+
+		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENFILE` || exit 1
+
+		for FNAME in ${RKHTMPVAR}; do
 			ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
 		done
 
@@ -10314,7 +10551,7 @@ do_filesystem_check() {
 		fi
 
 		if [ $FDESCFS -eq 1 ]; then
-			test -n "`echo \"${FNAME}\" | egrep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*(/|$)\"`" && continue
+			test -n "`echo \"${FNAME}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
 		fi
 
 		FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
@@ -10495,10 +10732,10 @@ do_app_checks() {
 	IFS=$IFSNL
 
 	for APP in ${APP_NAMES}; do
-		APP=`echo "${APP}" | sed -e 's/^[ 	]*//'`
+		APP=`echo ${APP} | sed -e 's/^[ 	]*//'`
 
-		APPLICATION=`echo "${APP}" | cut -d: -f1`
-		APPLICATION_DESC=`echo "${APP}" | cut -d: -f2-`
+		APPLICATION=`echo ${APP} | cut -d: -f1`
+		APPLICATION_DESC=`echo ${APP} | cut -d: -f2-`
 
 		IFS=$RKHIFS
 		APP_CMD_FOUND=`find_cmd ${APPLICATION}`
@@ -11122,12 +11359,13 @@ set_file_prop_dirs_files() {
 
 	PROP_DIR_LIST=""
 
-	for DIR in ${BINPATHS}; do
+#jh
+	for DIR in ${BINPATHS} ${USER_DIR_LIST}; do
 		LINKDIR="${RKHROOTDIR}${DIR}"
 
 		test ! -d "${LINKDIR}" && continue
 
-		if [ $HAVE_READLINK -eq 1 -a -h "${LINKDIR}" ]; then
+		if [ -h "${LINKDIR}" -a $HAVE_READLINK -eq 1 ]; then
 			LINKDIR=`${READLINK_CMD} -f ${LINKDIR}`
 
 			#
@@ -11140,10 +11378,11 @@ set_file_prop_dirs_files() {
 			fi
 		fi
 
-		if [ -z "`echo \"${PROP_DIR_LIST}\" | egrep \"(^| )${LINKDIR}( |$)\"`" ]; then
+		if [ -z "`echo \" ${PROP_DIR_LIST} \" | grep \" ${LINKDIR} \"`" ]; then
 			PROP_DIR_LIST="${PROP_DIR_LIST} ${LINKDIR}"
 		fi
 	done
+
 
 	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
 	    chkconfig chmod chown chroot cp cron csh curl cut date depmod df
@@ -11159,7 +11398,6 @@ set_file_prop_dirs_files() {
 	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname unhide
 	    uniq useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"
-
 
 	#
 	# We add in some extra commands to check depending on the O/S.
@@ -11178,9 +11416,29 @@ set_file_prop_dirs_files() {
 
 
 	#
-	# Now loop through the file list and look for symbolic links.
-	# If a link is found, then add on the file and directory that
-	# the link points to.
+	# Next we quickly loop through the user supplied list of files,
+	# and ignore any that are already in the builtin list.
+	#
+
+	PROP_FILE_LIST=`echo ${PROP_FILE_LIST}`
+
+	if [ -n "${USER_SIMPLE_FILE_LIST}" ]; then
+		RKHTMPVAR=""
+
+		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
+			test -z "`echo \" ${PROP_FILE_LIST} \" | grep \" ${FNAME} \"`" && RKHTMPVAR="${RKHTMPVAR} ${FNAME}"
+		done
+
+		USER_SIMPLE_FILE_LIST=`echo ${RKHTMPVAR}`
+
+		PROP_FILE_LIST="${PROP_FILE_LIST} ${USER_SIMPLE_FILE_LIST}"
+	fi
+
+
+	#
+	# Now loop through the file list and look for any
+	# symbolic links. If a link is found, then add on
+	# the file and directory that the link points to.
 	#
 
 	if [ $HAVE_READLINK -eq 1 ]; then
@@ -11198,12 +11456,11 @@ set_file_prop_dirs_files() {
 					# Get the link target directory name.
 					#
 
-					LINKDIR=`echo "${RKHTMPVAR}" | sed -e 's:/[^/]*$::'`
+					test -n "${DIRNAME_CMD}" && LINKDIR=`${DIRNAME_CMD} ${RKHTMPVAR}` || LINKDIR=`echo "${RKHTMPVAR}" | sed -e 's:/[^/]*$::'`
 
 					#
-					# We need to see if the target directory
-					# starts with the RKHROOTDIR. If it
-					# does not, then we prepend it.
+					# We need to see if the target directory starts with
+					# the RKHROOTDIR. If it does not, then we prepend it.
 					#
 
 					if [ -z "`echo \"${LINKDIR}\" | grep \"^${RKHROOTDIR}/\"`" ]; then
@@ -11215,7 +11472,7 @@ set_file_prop_dirs_files() {
 					# If not, then we add it on.
 					#
 
-					if [ -z "`echo \"${PROP_DIR_LIST} ${EXTRA_DIRS}\" | egrep \"(^| )${LINKDIR}( |$)\"`" ]; then
+					if [ -z "`echo \" ${PROP_DIR_LIST} ${EXTRA_DIRS} \" | grep \" ${LINKDIR} \"`" ]; then
 						EXTRA_DIRS="${EXTRA_DIRS} ${LINKDIR}"
 					fi
 
@@ -11224,13 +11481,13 @@ set_file_prop_dirs_files() {
 					# Now get the link target file name.
 					#
 
-					LINKFNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/\([^/]*\)$:\1:'`
+					LINKFNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
 
 					#
 					# And finally check if we already have it listed.
 					#
 
-					if [ -z "`echo \"${PROP_FILE_LIST} ${EXTRA_FILES}\" | egrep \"(^| )${LINKFNAME}( |$)\"`" ]; then
+					if [ -z "`echo \" ${PROP_FILE_LIST} ${EXTRA_FILES} \" | grep \" ${LINKFNAME} \"`" ]; then
 						EXTRA_FILES="${EXTRA_FILES} ${LINKFNAME}"
 					fi
 				fi
@@ -11255,8 +11512,8 @@ check_test() {
 	# and 1 if it is not.
 	#
 
-	if [ "${ENABLE_TESTS}" = "all" -o -n "`echo \"${ENABLE_TESTS}\" | egrep \"(^| )${1}( |$)\"`" ]; then
-		if [ "${DISABLE_TESTS}" = "none" -o -z "`echo \"${DISABLE_TESTS}\" | egrep \"(^| )${1}( |$)\"`" ]; then
+	if [ "${ENABLE_TESTS}" = "all" -o -n "`echo \" ${ENABLE_TESTS} \" | grep \" $1 \"`" ]; then
+		if [ "${DISABLE_TESTS}" = "none" -o -z "`echo \" ${DISABLE_TESTS} \" | grep \" $1 \"`" ]; then
 			return 0
 		fi
 	fi
@@ -11274,23 +11531,23 @@ display_tests() {
 	# could be confusing if it was included.
 	#
 
-	KNOWN_TESTS="all none ${KNOWN_TESTS}"
+	RKHTMPVAR2="all none ${KNOWN_TESTS}"
 
 	if [ -n "${SORT_CMD}" ]; then
-		KNOWN_TESTS=`echo "${KNOWN_TESTS}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
+		RKHTMPVAR2=`echo "${RKHTMPVAR2}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
 		GROUPED_TESTS=`echo "${GROUPED_TESTS}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
 	fi
 
 
 	display --to SCREEN --type PLAIN --nl LIST_TESTS
 
-	while test -n "${KNOWN_TESTS}"; do
-		STR=`echo ${KNOWN_TESTS} | cut -d' ' -f1-6`
-		KNOWN_TESTS=`echo ${KNOWN_TESTS} | cut -d' ' -f7-`
+	while test -n "${RKHTMPVAR2}"; do
+		STR=`echo ${RKHTMPVAR2} | cut -d' ' -f1-6`
+		RKHTMPVAR2=`echo ${RKHTMPVAR2} | cut -d' ' -f7-`
 
 		echo "    ${STR}"
 
-		test "${STR}" = "${KNOWN_TESTS}" && KNOWN_TESTS=""
+		test "${STR}" = "${RKHTMPVAR2}" && RKHTMPVAR2=""
 	done
 
 
@@ -11312,6 +11569,8 @@ display_tests() {
 	#
 	# Now loop through the group names.
 	#
+
+	RKHTMPVAR2=" `echo ${GROUPED_TESTS}`"
 
 	for STR in ${GROUPED_TESTS}; do
 		TEST_NAMES=""
@@ -11335,7 +11594,7 @@ display_tests() {
 		#
 
 		for TEST in `echo "${STR}" | cut -d: -f2- | tr ':' ' '`; do
-			RKHTMPVAR=`echo "${GROUPED_TESTS}" | egrep "(^| )${TEST}:"`
+			RKHTMPVAR=`echo "${RKHTMPVAR2}" | grep " ${TEST}:"`
 
 			if [ -z "${RKHTMPVAR}" ]; then
 				TEST_NAMES="${TEST_NAMES}:${TEST}"
@@ -11400,17 +11659,17 @@ display_rootkits() {
 	# names which rkhunter will check for.
 	#
 
-	KNOWN_ROOTKITS=`echo ${KNOWN_ROOTKITS} | sed -e 's/^,*//; s/,$//'`
+	RKHTMPVAR2=`echo ${KNOWN_ROOTKITS} | sed -e 's/^,*//; s/,$//'`
 
 
 	display --to SCREEN --type PLAIN --nl LIST_RTKTS
 
-	while test -n "${KNOWN_ROOTKITS}"; do
-		STR=`echo ${KNOWN_ROOTKITS} | cut -d',' -f1-6`
-		KNOWN_ROOTKITS=`echo ${KNOWN_ROOTKITS} | cut -d',' -f7-`
+	while test -n "${RKHTMPVAR2}"; do
+		STR=`echo ${RKHTMPVAR2} | cut -d',' -f1-6`
+		RKHTMPVAR2=`echo ${RKHTMPVAR2} | cut -d',' -f7-`
 
-		if [ "${STR}" = "${KNOWN_ROOTKITS}" -o -z "${KNOWN_ROOTKITS}" ]; then
-			KNOWN_ROOTKITS=""
+		if [ "${STR}" = "${RKHTMPVAR2}" -o -z "${RKHTMPVAR2}" ]; then
+			RKHTMPVAR2=""
 		else
 			STR="${STR},"
 		fi
@@ -11431,7 +11690,7 @@ help() {
 	echo $ECHOOPT ""
 	echo $ECHOOPT "Usage: rkhunter {--check | --update | --versioncheck |"
 	echo $ECHOOPT "                 --propupd [{filename | directory | package name},...] |"
-	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits},...] |"
+	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits}] |"
 	echo $ECHOOPT "                 --version | --help} [options]"
 	echo $ECHOOPT ""
 
@@ -11704,7 +11963,7 @@ SPACEDPATH=`echo ${PATH} | tr ':' ' '`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="diff file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl ps pwd readlink sort stat strings uniq"
+CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl ps pwd readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr uname wc"
@@ -11854,6 +12113,9 @@ RTKT_FILE_WHITELIST=""
 
 # The full pathname of the 'rkhunter.dat' file.
 RKHDAT_FILE=""
+
+# The full pathname of the 'rkhunter_prop_list.dat' file.
+RKH_FILEPROP_LIST=""
 
 # This gets set if we have a working readlink command.
 HAVE_READLINK=0
@@ -12438,6 +12700,17 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 		fi
 	fi
 
+	if [ -e ${RKH_FILEPROP_LIST} ]; then
+		if [ -h ${RKH_FILEPROP_LIST} ]; then
+			echo "The rkhunter_prop_list.dat file is a symbolic link: ${RKH_FILEPROP_LIST}"
+			echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
+			exit 1
+		elif [ ! -f ${RKH_FILEPROP_LIST} ]; then
+			echo "The rkhunter_prop_list.dat file is not a file: ${RKH_FILEPROP_LIST}"
+			exit 1
+		fi
+	fi
+
 
 	#
 	# Check if the file properties option has been set. If so, then
@@ -12519,7 +12792,9 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 		fi
 	fi
 
-	set_file_prop_dirs_files
+	if `check_test properties` || test $PROP_UPDATE -eq 1; then
+		set_file_prop_dirs_files
+	fi
 
 
 	#
@@ -12962,6 +13237,12 @@ fi
 if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	display --to LOG --type INFO ENABLED_TESTS "${ENABLE_TESTS}"
 	display --to LOG --type INFO DISABLED_TESTS "${DISABLE_TESTS}"
+fi
+
+if `check_test properties` || test $PROP_UPDATE -eq 1; then
+	test -n "${USER_FILE_LIST}" && display --to LOG --type INFO USER_FILE_LIST "`echo ${USER_FILE_LIST}`"
+	test -n "${USER_SIMPLE_FILE_LIST}" && display --to LOG --type INFO USER_CMD_LIST "${USER_SIMPLE_FILE_LIST}"
+	test -n "${USER_DIR_LIST}" && display --to LOG --type INFO USER_DIR_LIST "${USER_DIR_LIST}"
 fi
 
 if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
