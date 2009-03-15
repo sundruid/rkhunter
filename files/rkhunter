@@ -2722,7 +2722,7 @@ get_os_version_option() {
 
 
 get_user_fileprop_list() {
-#jh
+
 	#
 	# This function gets any user supplied files and directories
 	# for the file properties check and the properties file update.
@@ -2730,18 +2730,48 @@ get_user_fileprop_list() {
 	# found in different variables. Only basic syntax checking is
 	# done here, further checking will be done later on.
 	#
+	# The configuration option can have three basic values:
+	#
+	#    1) A simple file (command) name - for example, 'top'
+	#    2) A directory - for example, '/usr/local/sbin'
+	#    3) A full file pathname - for example, '/usr/local/sbin/backup'
+	#
+	# The first two are simply added to the internal lists of files
+	# and directories. These are then used to build the file properties
+	# file list. The third type is added directly to the end of the file.
+	#
+	# The second and third types may be wildcarded. They may also be
+	# excluded from the checks by preceding them with a '!'. Only
+	# files and directories matching user added ones can be excluded.
+	# This prevents users from excluding anything in the internal list.
+	# For example: USER_FILEPROP_FILES_DIRS="/opt/b* !/opt/backup"
+	#
 
 	LEAVE=0
 
 	RKHTMPVAR=`get_option 2 multi USER_FILEPROP_FILES_DIRS` || exit 1
 
+	#
+	# We 'echo' the variable so that any wildcards get expanded.
+	#
+
+	RKHTMPVAR=`echo ${RKHTMPVAR}`
+
+
+	#
+	# Now we loop through the entries and check them again. They
+	# are then added to the relevant variable used to build the
+	# file properties file list.
+	#
+
 	for FNAME in ${RKHTMPVAR}; do
 		#
-		# First check for anything which contains just dots or
-		# forward-slashes. This means that '/' cannot be set.
+		# First check for anything which contains just dots,
+		# forward-slashes, asterisks etc. This means that
+		# '/' cannot be set.
 		#
 
-		if [ -n "`echo \"${FNAME}\" | grep '^[./]*$'`" ]; then
+		if [ -n "`echo \"${FNAME}\" | grep '^[./*?!]*$'`" ]; then
 			LEAVE=1
 			echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 			continue
@@ -2749,21 +2779,35 @@ get_user_fileprop_list() {
 
 
 		#
-		# Next check to see if it is a simple file name.
+		# Next we check for any files or directories to be excluded.
+		#
+
+		if [ -n "`echo \"${FNAME}\" | grep '^!'`" ]; then
+			RKHTMPVAR2=`echo ${FNAME} | cut -c2-`
+			RKHTMPVAR2=`echo ${RKHTMPVAR2}`
+
+			test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${RKHTMPVAR2}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP}
+${RKHTMPVAR2}"
+			continue
+		fi
+
+
+		#
+		# Now we check to see if it is a simple file name.
 		#
 
 		if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+			# Next check to see if it is a simple file name.
 			# Check that it is not a pathname like 'abc/def'.
-
-			if [ -z "`echo \"${FNAME}\" | grep '/'`" ]; then
+			if [ -n "`echo \"${FNAME}\" | grep '[;&!:/]'`" ]; then
+				LEAVE=1
+				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
+			else
 				# Check that it hasn't already been set.
 				# If it has, then we just ignore it.
 				if [ -z "`echo \" ${USER_SIMPLE_FILE_LIST} \" | grep \" ${FNAME} \"`" ]; then
 					test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST} ${FNAME}"
 				fi
-			else
-				LEAVE=1
-				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 			fi
 		else
 			# It's an absolute pathname. This could be a file or a directory.
@@ -2778,9 +2822,7 @@ get_user_fileprop_list() {
 				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
 					RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
 
-					if [ -z "${RKHTMPVAR2}" ]; then
-						:
-					elif [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR2}$\"`" ]; then
+					if [ -n "${RKHTMPVAR2}" -a -z "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR2}$\"`" ]; then
 						FNAME="${FNAME}
 ${RKHTMPVAR2}"
 					fi
@@ -2812,9 +2854,15 @@ ${FNAME}"
 					FNAME="${RKHTMPVAR2}"
 				fi
 
-				# Check that it hasn't already been set.
-				# If it has, then we just ignore it.
-				if [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${FNAME} \"`" ]; then
+				#
+				# Check that the directory name does not contain a colon. We then check
+				# that it hasn't already been set. If it has, then we just ignore it.
+				#
+
+				if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
+					LEAVE=1
+					echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
+				elif [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${FNAME} \"`" ]; then
 					test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST} ${FNAME}"
 				fi
 			elif [ -h "${FNAME}" ]; then
@@ -3510,7 +3558,6 @@ create_rkh_file_prop_list() {
 
 	rm -f ${RKH_FILEPROP_LIST} >/dev/null 2>&1
 
-#jh - got here
 	for DIR in ${PROP_DIR_LIST}; do
 		for FNAME in ${PROP_FILE_LIST}; do
 			echo "${DIR}/${FNAME}" >>${RKH_FILEPROP_LIST}
@@ -3527,6 +3574,12 @@ create_rkh_file_prop_list() {
 
 	if [ -n "${USER_FILE_LIST}" ]; then
 		for FNAME in ${USER_FILE_LIST}; do
+			#
+			# We must exclude any user requested files or directories.
+			#
+
+			test -n "${USER_EXCLUDE_PROP}" -a -n "`echo \"${FNAME}\" | grep \"^${USER_EXCLUDE_PROP}\"`" && continue
+
 			test -z "`grep \"^${FNAME}$\" ${RKH_FILEPROP_LIST} 2>/dev/null`" && echo "${FNAME}" >>${RKH_FILEPROP_LIST}
 		done
 	fi
@@ -5670,9 +5723,9 @@ file_properties_check() {
 
 
 	#
-	# Next we have to create the list of pathnames for the
-	# properties checks. We need to recreate it because the
-	# root PATH may have changed, and so there may be more
+	# Next we have to recreate the list of pathnames for the
+	# file properties checks. We need to recreate it because
+	# the root PATH may have changed, and so there may be more
 	# directories to be checked. However, if we have just run
 	# the '--propupd' option, then we can skip this.
 	#
@@ -5685,7 +5738,6 @@ file_properties_check() {
 	# perform the tests on each one.
 	#
 
-#jh - the file prop check
 	VERIFIED_PKG_LIST=""
 
 	for FNAME in `cat ${RKH_FILEPROP_LIST}`; do
@@ -11359,7 +11411,6 @@ set_file_prop_dirs_files() {
 
 	PROP_DIR_LIST=""
 
-#jh
 	for DIR in ${BINPATHS} ${USER_DIR_LIST}; do
 		LINKDIR="${RKHROOTDIR}${DIR}"
 
@@ -12122,6 +12173,12 @@ HAVE_READLINK=0
 
 # By default no commands are to be exempt from dependency errors.
 PRELINK_DEP_ERR_CMDS=""
+
+# User provided files/dirs for the file properties check.
+USER_FILE_LIST=""
+USER_SIMPLE_FILE_LIST=""
+USER_DIR_LIST=""
+USER_EXCLUDE_PROP=""
 
 
 ######################################################################
@@ -13243,6 +13300,7 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 	test -n "${USER_FILE_LIST}" && display --to LOG --type INFO USER_FILE_LIST "`echo ${USER_FILE_LIST}`"
 	test -n "${USER_SIMPLE_FILE_LIST}" && display --to LOG --type INFO USER_CMD_LIST "${USER_SIMPLE_FILE_LIST}"
 	test -n "${USER_DIR_LIST}" && display --to LOG --type INFO USER_DIR_LIST "${USER_DIR_LIST}"
+	test -n "${USER_EXCLUDE_PROP}" && display --to LOG --type INFO USER_EXCLUDE_PROP "`echo ${USER_EXCLUDE_PROP}`"
 fi
 
 if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
