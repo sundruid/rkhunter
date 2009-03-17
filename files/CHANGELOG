@@ -26,6 +26,10 @@
    option can be used when a persistent prelink dependency error occurs.
    Further details of its use are in the configuration file.
  - Added CX rootkit check.
+ - Added the USER_FILEPROP_FILES_DIRS configuration option. This allows
+   users to add further files and directories to the file properties
+   check. Details are in the configuration file. The installer program
+   will automatically add the configuration file pathname to this option.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently

@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.8"
+INSTALLER_VERSION="1.2.9"
 INSTALLER_COPYRIGHT="Copyright 2003-2009, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -492,6 +492,7 @@ if [ -e "${PREFIX}" ]; then
 				echo "DBDIR=$PREFIX" >> rkhunter.conf 
 				echo "SCRIPTDIR=$PREFIX" >> rkhunter.conf 
 				echo "INSTALLDIR=$PREFIX" >> rkhunter.conf
+				echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter.conf" >> rkhunter.conf
 				sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" rkhunter > rkhunter.
 				mv -f rkhunter. rkhunter
 				chmod "${RKHINST_MODE_EX}" rkhunter
@@ -620,6 +621,7 @@ for FILE in ${RKHINST_ETC_FILE}; do
 		echo "DBDIR=${RKHINST_DB_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 		echo "TMPDIR=${RKHINST_TMP_DIR}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
+		echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" >> "${RKHINST_ETC_DIR}/${NEWFILE}"
 
 		if [ "${RKHINST_LAYOUT}" != "RPM" -a "${RKHINST_LAYOUT}" != "DEB" -a "${RKHINST_LAYOUT}" != "TGZ" ]; then
 			echo " >>> "
@@ -638,17 +640,20 @@ for FILE in ${RKHINST_ETC_FILE}; do
 			echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" | sed "s|${RPM_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 		elif [ -n "${TGZ_BUILD_ROOT}" ]; then
 			echo "INSTALLDIR=${PREFIX}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" | sed "s|${TGZ_BUILD_ROOT}||g" >> "${RKHINST_ETC_DIR}/${FILE}"
 		# Done with a patch during the build process
 		elif [ -z "${DEB_BUILD_ROOT}" ]; then
 			echo "INSTALLDIR=${PREFIX}" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "DBDIR=${RKHINST_DB_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
 			echo "TMPDIR=${RKHINST_TMP_DIR}" >> "${RKHINST_ETC_DIR}/${FILE}"
+			echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" >> "${RKHINST_ETC_DIR}/${FILE}"
 		fi
 	fi
 done

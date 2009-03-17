@@ -2786,8 +2786,7 @@ get_user_fileprop_list() {
 			RKHTMPVAR2=`echo ${FNAME} | cut -c2-`
 			RKHTMPVAR2=`echo ${RKHTMPVAR2}`
 
-			test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${RKHTMPVAR2}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP}
-${RKHTMPVAR2}"
+			test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${RKHTMPVAR2}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP} ${RKHTMPVAR2}"
 			continue
 		fi
 
@@ -2805,7 +2804,10 @@ ${RKHTMPVAR2}"
 			else
 				# Check that it hasn't already been set.
 				# If it has, then we just ignore it.
-				if [ -z "`echo \" ${USER_SIMPLE_FILE_LIST} \" | grep \" ${FNAME} \"`" ]; then
+
+				RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+				if [ -z "`echo \" ${USER_SIMPLE_FILE_LIST} \" | grep \" ${RKHTMPVAR2} \"`" ]; then
 					test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST} ${FNAME}"
 				fi
 			fi
@@ -2817,14 +2819,21 @@ ${RKHTMPVAR2}"
 			if [ -f "${FNAME}" ]; then
 				# Check that it hasn't already been set.
 				# If it has, then we just ignore it.
-				test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAME}$\"`" && continue
+
+				RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+				test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR2}$\"`" && continue
 
 				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
 					RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
 
-					if [ -n "${RKHTMPVAR2}" -a -z "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR2}$\"`" ]; then
-						FNAME="${FNAME}
+					if [ -n "${RKHTMPVAR2}" ]; then
+						RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+						if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR3}$\"`" ]; then
+							FNAME="${FNAME}
 ${RKHTMPVAR2}"
+						fi
 					fi
 				fi
 
@@ -2862,8 +2871,12 @@ ${FNAME}"
 				if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
 					LEAVE=1
 					echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
-				elif [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${FNAME} \"`" ]; then
-					test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST} ${FNAME}"
+				else
+					RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+					if [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${RKHTMPVAR2} \"`" ]; then
+						test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST} ${FNAME}"
+					fi
 				fi
 			elif [ -h "${FNAME}" ]; then
 				LEAVE=1
@@ -3271,6 +3284,7 @@ rkh_dat_set_file_properties() {
 		FDATA=""
 		SYSHASH=""
 		PKGNAME=""
+		FNAMEGREP=""
 		RPM_QUERY_RESULT=""
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
@@ -3284,6 +3298,8 @@ rkh_dat_set_file_properties() {
 
 		if [ -z "${PROPUPD_OPT}" ]; then
 			FILENAME=`echo "${FNAME}" | sed -e "s:^${RDIR}::"`
+
+			FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 		else
 			#
 			# If we are looking for specific files, then just copy the
@@ -3292,16 +3308,18 @@ rkh_dat_set_file_properties() {
 			# through and process them as before.
 			#
 
-			FILENAME="${FNAME}"
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
-			if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FILENAME} \"`" ]; then
-				RKHTMPVAR=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
+			if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				RKHTMPVAR=`grep "^File:${FNAMEGREP}:" ${RKHDAT_FILE}`
 
 				if [ -n "${RKHTMPVAR}" ]; then
 					echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
 					continue
 				fi
 			fi
+
+			FILENAME="${FNAME}"
 
 			PROP_FILE_PROPOPT_COUNT=`expr ${PROP_FILE_PROPOPT_COUNT} + 1`
 		fi
@@ -3313,7 +3331,9 @@ rkh_dat_set_file_properties() {
 
 		test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FILENAME}` || DIR=`echo "${FILENAME}" | sed -e 's:/[^/]*$::'`
 
-		RKHTMPVAR=`echo "${DIR_FILE_COUNT}" | grep "^${DIR}:"`
+		RKHTMPVAR2=`echo "${DIR}" | sed -e 's/\./\\\./g'`
+
+		RKHTMPVAR=`echo "${DIR_FILE_COUNT}" | grep "^${RKHTMPVAR2}:"`
 
 		if [ -z "${RKHTMPVAR}" ]; then
 			DIR_FILE_COUNT="${DIR_FILE_COUNT}
@@ -3347,7 +3367,7 @@ ${DIR}:1"
 				FILE_IS_PKGD=1
 				PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
 
-				RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FILENAME}\$"`
+				RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FNAMEGREP}\$"`
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -3359,7 +3379,7 @@ ${DIR}:1"
 					# this is what RPM does).
 					#
 
-					RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep 'x86_64|ia64' | tail -1`
+					RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep ':(x86_64|ia64):' | tail -1`
 
 					test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail -1`
 
@@ -3394,7 +3414,7 @@ ${DIR}:1"
 
 
 		if [ -n "${HCMD}" ]; then
-			if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FILENAME} \"`" ]; then
+			if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				FILE_IS_PKGD=1
 				SYSHASH="ignore-prelink-dep-err"
 				display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FILENAME}"
@@ -3423,10 +3443,12 @@ ${DIR}:1"
 						# and then get the hash value.
 						#
 
-						if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-							FILNAM=`echo "${FILENAME}" | sed -e 's:^/::'`
-							SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
-							test -n "${SYSHASH}" && FILE_IS_PKGD=1
+						if [ -n "${PKGNAME}" ]; then
+							if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+								FILNAM=`echo "${FILENAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
+								SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
+								test -n "${SYSHASH}" && FILE_IS_PKGD=1
+							fi
 						fi
 					fi
 					;;
@@ -3450,7 +3472,7 @@ ${DIR}:1"
 						# and then get the hash value.
 						#
 
-						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
+						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::; s:\.:\\\.:g'`
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
@@ -3520,7 +3542,7 @@ ${DIR}:1"
 
 
 	#
-	# finally put the new file in place.
+	# Finally put the new file in place.
 	#
 
 	if [ -f ${RKHDAT_FILE} ]; then
@@ -3578,9 +3600,13 @@ create_rkh_file_prop_list() {
 			# We must exclude any user requested files or directories.
 			#
 
-			test -n "${USER_EXCLUDE_PROP}" -a -n "`echo \"${FNAME}\" | grep \"^${USER_EXCLUDE_PROP}\"`" && continue
+			RKHTMPVAR=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
-			test -z "`grep \"^${FNAME}$\" ${RKH_FILEPROP_LIST} 2>/dev/null`" && echo "${FNAME}" >>${RKH_FILEPROP_LIST}
+			if [ -n "${USER_EXCLUDE_PROP}" ]; then
+				test -n "`echo \" ${USER_EXCLUDE_PROP} \" | grep \" ${RKHTMPVAR} \"`" && continue
+			fi
+
+			test -z "`grep \"^${RKHTMPVAR}$\" ${RKH_FILEPROP_LIST} 2>/dev/null`" && echo "${FNAME}" >>${RKH_FILEPROP_LIST}
 		done
 	fi
 
@@ -4058,9 +4084,9 @@ do_i18n_update() {
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
 				PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail -1 | cut -d: -f2`
 
-				if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
-					PROG_VERS=`head -n 1 ${DB_PATH}/i18n/${LANGFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
-				fi
+#jh - redundant			if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
+#jh					PROG_VERS=`head -n 1 ${DB_PATH}/i18n/${LANGFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
+#jh				fi
 
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
@@ -4170,9 +4196,9 @@ do_update() {
 		if [ -s "${DB_PATH}/${UPDFILE}" ]; then
 			PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/${UPDFILE} | tail -1 | cut -d: -f2`
 
-			if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
-				PROG_VERS=`head -n 1 ${DB_PATH}/${UPDFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
-			fi
+#jh - redundant		if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
+#jh				PROG_VERS=`head -n 1 ${DB_PATH}/${UPDFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
+#jh			fi
 
 			if [ -z "${PROG_VERS}" ]; then
 				PROG_VERS=0
@@ -5741,6 +5767,7 @@ file_properties_check() {
 	VERIFIED_PKG_LIST=""
 
 	for FNAME in `cat ${RKH_FILEPROP_LIST}`; do
+		FNAMEGREP=""
 		TEST_RESULT=""
 		WHITELIST_RESULT=""
 
@@ -5773,7 +5800,9 @@ file_properties_check() {
 
 			FILENAME=`echo "${FNAME}" | sed -e "s:^${RDIR}::"`
 
-			RKHLINE=`grep "^File:${FILENAME}:" ${RKHDAT_FILE}`
+			FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+			RKHLINE=`grep "^File:${FNAMEGREP}:" ${RKHDAT_FILE}`
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
 				TEST_RESULT="${TEST_RESULT} norkhline"
@@ -5789,6 +5818,7 @@ file_properties_check() {
 			fi
 		elif [ $FILE_EXISTS -eq 1 ]; then
 			RKHLINE=""
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 		else
 			continue
 		fi
@@ -5831,11 +5861,13 @@ file_properties_check() {
 
 					FILE_IS_PKGD=1
 
-					PKGNAME=`echo "${PKGNAME_ARCH}" | egrep 'x86_64|ia64' | tail -1`
+					PKGNAME=`echo "${PKGNAME_ARCH}" | egrep '\.(x86_64|ia64)$' | tail -1`
 
 					test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail -1`
 
-					if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${PKGNAME} \"`" ]; then
+					RKHTMPVAR=`echo "${PKGNAME}" | sed -e 's/\./\\\./g'`
+
+					if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
 						#
 						# No, it isn't in the list. So we verify the package
 						# and either add it to the list if it verifies okay,
@@ -5851,7 +5883,7 @@ file_properties_check() {
 								DEPENDENCY_ERR=1
 							fi
 
-							PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FILENAME}\$" | cut -d' ' -f1`
+							PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FNAMEGREP}\$" | cut -d' ' -f1`
 						fi
 					fi
 
@@ -5862,7 +5894,7 @@ file_properties_check() {
 					# information about this file from the package manager database.
 					#
 
-					RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FILENAME}\$"`
+					RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FNAMEGREP}\$"`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
@@ -5897,11 +5929,11 @@ file_properties_check() {
 					# but only if prelinking is not being used.
 					#
 
-					RKHTMPVAR2=""
+					RKHTMPVAR=""
 
-					test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+					test $PRELINKED -eq 0 && RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
 
-					FDATA="${RKHTMPVAR2}:${FDATA}"
+					FDATA="${RKHTMPVAR}:${FDATA}"
 				fi
 			fi
 
@@ -5922,14 +5954,15 @@ file_properties_check() {
 					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-						FILENAME=`echo "${FILENAME}" | sed -e 's:^/::'`
-						SYSHASH=`egrep "( |\./)${FILENAME}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+						FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::'`
+
+						SYSHASH=`egrep "( |\./)${FNAMEGREP}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
-							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							RKHTMPVAR=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 								PKGMGR_VERIFY_RESULT="5"
 
 								if [ -n "`${PKGMGR_MD5_HASH} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
@@ -5952,14 +5985,15 @@ file_properties_check() {
 						# pathname, and then get the hash value.
 						#
 
-						FILENAME=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::'`
-						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FILENAME}\$" | tail -1 | cut -d: -f3`
+						FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's:^/usr/pkg/::'`
+
+						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FNAMEGREP}\$" | tail -1 | cut -d: -f3`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
-							RKHTMPVAR2=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							RKHTMPVAR=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
-							if [ "${RKHTMPVAR2}" != "${SYSHASH}" ]; then
+							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 								PKGMGR_VERIFY_RESULT="5"
 
 								if [ -n "`${PKGMGR_MD5_HASH} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
@@ -11477,7 +11511,9 @@ set_file_prop_dirs_files() {
 		RKHTMPVAR=""
 
 		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
-			test -z "`echo \" ${PROP_FILE_LIST} \" | grep \" ${FNAME} \"`" && RKHTMPVAR="${RKHTMPVAR} ${FNAME}"
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+			test -z "`echo \" ${PROP_FILE_LIST} \" | grep \" ${FNAMEGREP} \"`" && RKHTMPVAR="${RKHTMPVAR} ${FNAME}"
 		done
 
 		USER_SIMPLE_FILE_LIST=`echo ${RKHTMPVAR}`
@@ -11534,11 +11570,13 @@ set_file_prop_dirs_files() {
 
 					LINKFNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
 
+					FNAMEGREP=`echo "${LINKFNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
 					#
 					# And finally check if we already have it listed.
 					#
 
-					if [ -z "`echo \" ${PROP_FILE_LIST} ${EXTRA_FILES} \" | grep \" ${LINKFNAME} \"`" ]; then
+					if [ -z "`echo \" ${PROP_FILE_LIST} ${EXTRA_FILES} \" | grep \" ${FNAMEGREP} \"`" ]; then
 						EXTRA_FILES="${EXTRA_FILES} ${LINKFNAME}"
 					fi
 				fi
@@ -13300,7 +13338,7 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 	test -n "${USER_FILE_LIST}" && display --to LOG --type INFO USER_FILE_LIST "`echo ${USER_FILE_LIST}`"
 	test -n "${USER_SIMPLE_FILE_LIST}" && display --to LOG --type INFO USER_CMD_LIST "${USER_SIMPLE_FILE_LIST}"
 	test -n "${USER_DIR_LIST}" && display --to LOG --type INFO USER_DIR_LIST "${USER_DIR_LIST}"
-	test -n "${USER_EXCLUDE_PROP}" && display --to LOG --type INFO USER_EXCLUDE_PROP "`echo ${USER_EXCLUDE_PROP}`"
+	test -n "${USER_EXCLUDE_PROP}" && display --to LOG --type INFO USER_EXCLUDE_PROP "${USER_EXCLUDE_PROP}"
 fi
 
 if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
