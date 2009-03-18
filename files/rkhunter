@@ -12837,12 +12837,14 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				echo "Relative file or directory name specified: ${FNAME}"
 			elif [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
 				# Filename is absolute
-				RKHTMPVAR2=`grep "^File:${FNAME}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+				RKHTMPVAR2=`grep "^File:${FNAMEGREP}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 				if [ -z "${RKHTMPVAR2}" ]; then
 					if [ -d "${FNAME}" ]; then
 						# Filename is a directory
-						RKHTMPVAR2=`grep "^File:${FNAME}/[^:]*:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+						RKHTMPVAR2=`grep "^File:${FNAMEGREP}/[^:]*:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 						if [ -n "${RKHTMPVAR2}" ]; then
 							RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
@@ -12860,12 +12862,13 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 			else
 				# Filename could be a package name
 				# The package names are in field 10 in the rkhunter.dat file
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
-				RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAME}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+				RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 				if [ -z "${RKHTMPVAR2}" ]; then
 					# Filename is just a plain filename
-					RKHTMPVAR2=`grep "^File:[^:]*/${FNAME}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+					RKHTMPVAR2=`grep "^File:[^:]*/${FNAMEGREP}:" ${RKHDAT_FILE} 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
 					if [ -n "${RKHTMPVAR2}" ]; then
 						RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
