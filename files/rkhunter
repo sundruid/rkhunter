@@ -4084,10 +4084,6 @@ do_i18n_update() {
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
 				PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail -1 | cut -d: -f2`
 
-#jh - redundant			if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
-#jh					PROG_VERS=`head -n 1 ${DB_PATH}/i18n/${LANGFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
-#jh				fi
-
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
 					display --to LOG --type INFO UPDATE_FILE_NO_VERS "${DB_PATH}/i18n/${LANGFILE}"
@@ -4195,10 +4191,6 @@ do_update() {
 
 		if [ -s "${DB_PATH}/${UPDFILE}" ]; then
 			PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/${UPDFILE} | tail -1 | cut -d: -f2`
-
-#jh - redundant		if [ -n "${PROG_VERS}" -a -z "`echo \"${PROG_VERS}\" | grep '^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
-#jh				PROG_VERS=`head -n 1 ${DB_PATH}/${UPDFILE} | grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' | cut -d: -f2`
-#jh			fi
 
 			if [ -z "${PROG_VERS}" ]; then
 				PROG_VERS=0
