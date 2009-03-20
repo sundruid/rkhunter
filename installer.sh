@@ -53,13 +53,16 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 fi
 
 case "${OPERATING_SYSTEM}" in
-AIX|OpenBSD|SunOS|IRIX*)
+AIX|OpenBSD|Darwin|SunOS|IRIX*)
 	# What is the default shell?
 	if print >/dev/null 2>&1; then
 		alias echo='print'
 		ECHOOPT="--"
 	elif [ "${OPERATING_SYSTEM}" = "IRIX" -o "${OPERATING_SYSTEM}" = "IRIX64" ]; then
 		ECHOOPT=""
+	elif [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
+		ECHOOPT=""
+		MYSHELL=sh
 	else
 		ECHOOPT="-e"
 	fi
