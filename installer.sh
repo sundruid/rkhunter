@@ -62,7 +62,6 @@ AIX|OpenBSD|Darwin|SunOS|IRIX*)
 		ECHOOPT=""
 	elif [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
 		ECHOOPT=""
-		MYSHELL=sh
 	else
 		ECHOOPT="-e"
 	fi
