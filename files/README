@@ -65,6 +65,9 @@ as root, run the installation script:
     cd rkhunter-<version>
     ./installer.sh --layout default --install
 
+Note: If some form of file permission error is shown, then check that the
+      'installer.sh' script is executable.
+
 RKH installation supports custom layouts. To show some examples
 run:
 

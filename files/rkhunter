@@ -87,7 +87,7 @@ AIX|OpenBSD|Darwin|SunOS|IRIX*)
 		MYSHELL=sh
 	elif [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
 		ECHOOPT=""
-		MYSHELL=bash
+		MYSHELL=sh
 	else
 		ECHOOPT="-e"
 		MYSHELL=bash
@@ -3246,7 +3246,7 @@ rkh_dat_set_file_properties() {
 	display --to LOG --type PLAIN SET_FILE_PROP_START
 
 
-	if ! `check_test attributes`; then
+	if ! `check_test attributes` && test $ENDIS_OPT -eq 0; then
 		SCMD=""
 		INODECMD=""
 	elif [ -z "${STAT_CMD}" ]; then
@@ -3266,7 +3266,7 @@ rkh_dat_set_file_properties() {
 	fi
 
 
-	if ! `check_test hashes`; then
+	if ! `check_test hashes` && test $ENDIS_OPT -eq 0; then
 		HCMD=""
 	elif [ -z "${PKGMGR}" -a "${HASH_FUNC}" = "NONE" ]; then
 		HCMD=""
@@ -3678,7 +3678,14 @@ do_prop_update() {
 		echo "Prelinked:Yes" >>${RKHDAT_TMPFILE}
 	fi
 
-	if ! `check_test hashes`; then
+	#
+	# We do not want to bother storing the file hashes or other attibutes
+	# if the user has disabled these tests permanently. However, to do
+	# this we must check whether the relevant test is enabled or not, and
+	# that the --enable/--disable command-line options have not been used.
+	#
+
+	if ! `check_test hashes` && test $ENDIS_OPT -eq 0; then
 		echo "Hash:Disabled" >>${RKHDAT_TMPFILE}
 	elif [ -n "${PRELINK_HASH}" ]; then
 		echo "Hash:${PRELINK_HASH}" >>${RKHDAT_TMPFILE}
@@ -3688,7 +3695,7 @@ do_prop_update() {
 
 	echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_TMPFILE}
 
-	if ! `check_test attributes`; then
+	if ! `check_test attributes` && test $ENDIS_OPT -eq 0; then
 		echo "Attributes:Disabled" >>${RKHDAT_TMPFILE}
 	elif [ -z "${STAT_CMD}" ]; then
 		echo "Attributes:Nostatcmd" >>${RKHDAT_TMPFILE}
@@ -7926,6 +7933,7 @@ possible_rootkit_string_checks() {
 
 	for RKHTMPVAR in ${STRINGSCAN}; do
 		FOUNDFILE=0
+		STRINGFOUND=0
 		FOUNDSTRING=""
 
 		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
@@ -7942,8 +7950,15 @@ possible_rootkit_string_checks() {
 				FOUNDSTRING=`${STRINGS_CMD} ${FNAME} | grep "${STRING}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
-					FOUND=1
-					FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${FILESTRING}:${INFO}"
+					RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+
+					if [ -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+						FOUND=1
+						STRINGFOUND=1
+						FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${FILESTRING}:${INFO}"
+					else
+						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" possible_rkt_strings
+					fi
 				fi
 			done
 		else
@@ -7966,8 +7981,15 @@ possible_rootkit_string_checks() {
 					FOUNDSTRING=`${STRINGS_CMD} ${FILENAME} | grep "${STRING}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
-						FOUND=1
-						FOUNDSTRINGS="${FOUNDSTRINGS}%${FILENAME}:${FILESTRING}:${INFO}"
+						RKHTMPVAR2=`echo "${FILENAME}" | sed -e 's/\./\\\./g'`
+
+						if [ -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+							FOUND=1
+							STRINGFOUND=1
+							FOUNDSTRINGS="${FOUNDSTRINGS}%${FILENAME}:${FILESTRING}:${INFO}"
+						else
+							display --to LOG --type INFO FILE_PROP_WL "${FILENAME}" possible_rkt_strings
+						fi
 					fi
 
 					break
@@ -7979,7 +8001,7 @@ possible_rootkit_string_checks() {
 			ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				if [ -z "${FOUNDSTRING}" ]; then
+				if [ $STRINGFOUND -eq 0 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_STR "${FILESTRING}"
 				else
 					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_STR "${FILESTRING}"
@@ -9738,6 +9760,8 @@ do_system_startup_file_checks() {
 		STRING=`echo ${STR} | sed -e 's/\./\\\./g'`
 		RCSTRINGS="${RCSTRINGS} ${STRING}"
 		INFO=`echo ${RKHTMPVAR} | cut -d: -f2`
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 	done
 
 	IFS=$RKHIFS
@@ -9748,8 +9772,14 @@ do_system_startup_file_checks() {
 	for FNAME in ${RC_PATHS}; do
 		for STRING in ${RCSTRINGS}; do
 			if [ -n "`grep "${STRING}" ${FNAME} | egrep -v '^[ 	]*#'`" ]; then
-				FOUND=1
-				FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${STR}:${INFO}"
+				RKHTMPVAR=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+					display --to LOG --type INFO FILE_PROP_WL "${FNAME}" startup_malware
+				else
+					FOUND=1
+					FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${STR}:${INFO}"
+				fi
 			fi
 		done
 	done
@@ -9773,6 +9803,9 @@ do_system_startup_file_checks() {
 
 			FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
+
+			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
 			display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FNAME}" "${INFO}"
 		done
@@ -11034,7 +11067,7 @@ display_check_summary() {
 
 	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_RKT_SCAN
 
-	if `check_test rootkits`; then
+	if `check_test rootkits || check_test startup_malware`; then
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_COUNT $ROOTKIT_COUNT
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_FAILED $ROOTKIT_FAILED_COUNT
 
@@ -13235,7 +13268,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 	display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
 
 	if [ $PROP_UPDATE -eq 1 ]; then
-		if ! `check_test hashes`; then
+		if ! `check_test hashes` && test $ENDIS_OPT -eq 0; then
 			display --to LOG --type INFO HASHUPD_DISABLED
 		elif [ -z "${PKGMGR}" ]; then
 			if [ $PRELINKED -eq 1 ]; then
@@ -13318,7 +13351,7 @@ if [ $RKHTMPVAR -eq 1 ]; then
 fi
 
 if [ $PROP_UPDATE -eq 1 ]; then
-	if ! `check_test attributes`; then
+	if ! `check_test attributes` && test $ENDIS_OPT -eq 0; then
 		display --to LOG --type INFO ATTRUPD_DISABLED
 	elif [ -z "${STAT_CMD}" ]; then
 		display --to LOG --type INFO ATTRUPD_NOSTATCMD
@@ -13460,7 +13493,7 @@ test $VERSIONCHECK -eq 1 && do_versioncheck
 # The user wants to check the local system for anomalies.
 #
 
-test $CHECK -eq 1 && do_system_check
+test $CHECK -eq 1 -o $ENDIS_OPT -eq 1 && do_system_check
 
 display --to LOG --type INFO --nl RKH_ENDDATE "`date`"
 

@@ -37,6 +37,7 @@
  - Updated the ENYE LKM check.
  - The '--debug' option no longer needs to be the first option on the
    command line.
+ - Improved support for MAC's now using the bash shell by default.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious
@@ -48,6 +49,17 @@
    to be sorted.
  - If the '--list' option was used more than once with the same argument
    (e.g. '--list tests --list tests'), it displayed the wrong information.
+ - The rootkit strings check wasn't logging a warning for the particular
+   string found. It was, however, displaying an overall test failure
+   warning on the screen though.
+ - The rootkit file whitelisting wasn't applied to the startup script
+   malware check. Also the summary wasn't showing if any possible rootkits
+   had been found or not.
+ - If the '--propupd' option was used with either of the '--enable/--disable'
+   command-line options, then the file properties would not be stored.
+   However, if, for example, the 'hashes' test was enabled, then only these
+   would be stored. In all cases the relevant test was not run after the
+   file properties were obtained, unless the '--check' option was also used.
 
  -- 
 
