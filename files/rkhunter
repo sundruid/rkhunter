@@ -2160,6 +2160,80 @@ get_shadow_file_option() {
 }
 
 
+test_epoch_cmd() {
+
+	#
+	# This function simply checks if the supplied command
+	# can process epoch second times. We do this by using
+	# the '%s' formatting option, and the 'seconds ago'
+	# time format. If the command understands both of these
+	# then we can use it for the epoch date.
+	#
+
+	RKHTMPVAR=$1
+
+	if [ -n "`${RKHTMPVAR} --date '5 seconds ago' '+%s' 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
+		EPOCH_DATE_CMD=${RKHTMPVAR}
+	fi
+
+	return
+}
+
+
+get_epoch_date_cmd_option() {
+
+	#
+	# Get the option from the configuration file, or work out
+	# if the date command is suitable.
+	#
+
+	EPOCH_DATE_CMD=`get_option 1 single EPOCH_DATE_CMD` || exit 1
+
+	#
+	# Check the type of config file option we have. They user may have
+	# specified a command to use or 'NONE', in which case we return.
+	# If they specified 'PERL' then check we have a 'perl' command,
+	# and then return.
+	#
+
+	if [ -n "`echo \"${EPOCH_DATE_CMD}\" | grep -i '^perl$'`" ]; then
+		EPOCH_DATE_CMD=""
+		test -z "${PERL_CMD}" && EPOCH_DATE_CMD="NONE"
+		return
+	elif [ -n "`echo \"${EPOCH_DATE_CMD}\" | grep -i '^none$'`" ]; then
+		EPOCH_DATE_CMD="NONE"
+		return
+	elif [ -n "${EPOCH_DATE_CMD}" ]; then
+		test -x "${EPOCH_DATE_CMD}" || EPOCH_DATE_CMD="NONE"
+		return
+	fi
+
+
+	#
+	# Now we test if the 'date' command supports processing epoch seconds.
+	#
+
+	test_epoch_cmd "date"
+
+	test -n "${EPOCH_DATE_CMD}" && return
+
+
+	#
+	# For SunOS systems we need to check
+	# some other 'date' commands.
+	#
+
+	if [ $SUNOS -eq 1 ]; then
+		for RKHTMPVAR2 in `find_cmd gdate` /opt/sfw/bin/date; do
+			test_epoch_cmd "${RKHTMPVAR2}"
+			test -n "${EPOCH_DATE_CMD}" && break
+		done
+	fi
+
+	return
+}
+
+
 get_if_prelinked() {
 
 	#
@@ -2982,6 +3056,8 @@ get_configfile_options() {
 		check_test ports && get_ports_option
 
 		check_test group_accounts && get_shadow_file_option
+
+		get_epoch_date_cmd_option
 	fi
 
 
@@ -3027,6 +3103,33 @@ get_configfile_options() {
 
 	if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 		get_mirror_options
+	fi
+
+	return
+}
+
+
+get_readable_date() {
+
+	#
+	# This function returns a given epoch second time as a
+	# human-readable date and time. It sets the READABLE_DATE
+	# variable.
+	#
+
+	EPOCH_SECS=$1
+
+	READABLE_DATE=""
+
+	if [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
+		:
+	elif [ -n "${EPOCH_DATE_CMD}" ]; then
+		EPOCH_NOW=`${EPOCH_DATE_CMD} '+%s'`
+		EPOCH_SECS=`expr $EPOCH_NOW - $EPOCH_SECS`
+
+		READABLE_DATE=`${EPOCH_DATE_CMD} --date "$EPOCH_SECS seconds ago" '+%d-%b-%Y %H:%M:%S' 2>/dev/null`
+	elif [ -n "${PERL_CMD}" ]; then
+		READABLE_DATE=`${PERL_CMD} -e "@a=split(' ',scalar(localtime($EPOCH_SECS))); printf \"%d-%s-%d %s\",\\$a[2],\\$a[1],\\$a[4],\\$a[3];" 2>/dev/null`
 	fi
 
 	return
@@ -3184,6 +3287,10 @@ rkh_dat_get_os_info() {
 		OSNAME=`sw_vers 2>/dev/null | grep '^ProductName:' | sed -e 's/ProductName: *//'`
 		OSNAME="${OSNAME} `sw_vers 2>/dev/null | grep '^ProductVersion:' | sed -e 's/ProductVersion: *//'`"
 #		OSNAME="${OSNAME} `sysctl kern.version 2>/dev/null | sed -e 's/^kern.version = //' | cut -d: -f1`"
+
+		if [ -n "`sysctl -a 2>/dev/null | egrep '^(hw\.optional\.x86_64|hw\.optional\.64bitops|hw\.cpu64bit_capable).*1$'`" ]; then
+			OSNAME="${OSNAME} (64-bit)"
+		fi
 		;;
 	AIX)
 		ARCH=`uname -p 2>/dev/null`
@@ -6410,10 +6517,22 @@ file_properties_check() {
 						if [ -z "${SYSDTM}" ]; then
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM_UNAVAIL
 						else
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM "${SYSDTM}"
+							get_readable_date ${SYSDTM}
+
+							if [ -n "${READABLE_DATE}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM "${SYSDTM} (${READABLE_DATE})"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSDTM "${SYSDTM}"
+							fi
 						fi
 
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM}"
+						get_readable_date ${RKHDTM}
+
+						if [ -n "${READABLE_DATE}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM} (${READABLE_DATE})"
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM}"
+						fi
 						;;
 					esac
 					;;
@@ -13426,6 +13545,15 @@ if [ $CHECK -eq 1 ]; then
 				display --to LOG --type INFO SYSLOG_NO_LOGGER
 			fi
 		fi
+	fi
+
+
+	if [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
+		:
+	elif [ -n "${EPOCH_DATE_CMD}" ]; then
+		display --to LOG --type INFO FILE_PROP_EPOCH_DATE_CMD "${EPOCH_DATE_CMD}"
+	elif [ -n "${PERL_CMD}" ]; then
+		display --to LOG --type INFO FILE_PROP_EPOCH_DATE_CMD "${PERL_CMD}"
 	fi
 
 

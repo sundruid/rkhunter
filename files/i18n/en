@@ -1,4 +1,4 @@
-Version:2009031402
+Version:2009040201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -299,6 +299,8 @@ FILE_PROP_VRFY_UID:The file owner has changed
 FILE_PROP_VRFY_GID:The file group has changed
 FILE_PROP_VRFY_DTM:The file modification time has changed
 FILE_PROP_VRFY_SIZE:The file size has changed
+
+FILE_PROP_EPOCH_DATE_CMD:Using '$1' to process epoch second times.
 
 CHECK_ROOTKITS:Checking for rootkits...
 ROOTKIT_FILES_DIRS_START:Performing check of known rootkit files and directories

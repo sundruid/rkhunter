@@ -30,6 +30,11 @@
    users to add further files and directories to the file properties
    check. Details are in the configuration file. The installer program
    will automatically add the configuration file pathname to this option.
+ - Added the EPOCH_DATE_CMD configuration option. In the file properties
+   test any modification date/times will now be displayed in human-readable
+   format as well as the number of epoch seconds. This option can be used
+   to specify the command to use if 'date' or 'perl' cannot convert epoch
+   seconds.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -37,7 +42,8 @@
  - Updated the ENYE LKM check.
  - The '--debug' option no longer needs to be the first option on the
    command line.
- - Improved support for MAC's now using the bash shell by default.
+ - Improved support for MAC's now using the bash shell by default. Include
+   logging of whether 64-bit is available.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious
