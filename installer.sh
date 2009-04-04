@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.9"
+INSTALLER_VERSION="1.2.10"
 INSTALLER_COPYRIGHT="Copyright 2003-2009, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -121,21 +121,20 @@ showExamples() { # Show examples
 	echo $ECHOOPT ""
 	echo $ECHOOPT "Examples: "
 	echo $ECHOOPT "1. Show layout, files in /usr:"
-	echo $ECHOOPT "     installer.sh --layout /usr --show"
+	echo $ECHOOPT "        installer.sh --layout /usr --show"
 	echo $ECHOOPT ""
-	echo $ECHOOPT "2. Install, layout /usr/local:"
-	echo $ECHOOPT "     installer.sh --layout /usr/local --install"
+	echo $ECHOOPT "2. Install in /usr/local:"
+	echo $ECHOOPT "        installer.sh --layout /usr/local --install"
 	echo $ECHOOPT ""
 	echo $ECHOOPT "3. Install in temporary directory /tmp/rkhunter/usr/local,"
-	echo $ECHOOPT " with files in /usr/local (for package maintainers):"
-	echo $ECHOOPT "      mkdir -p /tmp/rkhunter/usr/local"
-	echo $ECHOOPT "     installer.sh --layout custom /tmp/rkhunter/usr/local \\"
-	echo $ECHOOPT "     --striproot /tmp/rkhunter --install"
+	echo $ECHOOPT "   with files in /usr/local (for package maintainers):"
+	echo $ECHOOPT "        mkdir -p /tmp/rkhunter/usr/local"
+	echo $ECHOOPT "        installer.sh --layout custom /tmp/rkhunter/usr/local \\"
+	echo $ECHOOPT "                     --striproot /tmp/rkhunter --install"
 	echo $ECHOOPT ""
 	echo $ECHOOPT "4. Remove files, layout /usr/local:"
-	echo $ECHOOPT "     installer.sh --layout /usr/local --remove"
+	echo $ECHOOPT "        installer.sh --layout /usr/local --remove"
 	echo $ECHOOPT ""
-	echo $ECHOOPT "Note: The installer will not remove files when a custom layout is chosen."
 
 	exit 1
 }
@@ -702,8 +701,7 @@ if [ -e "${PREFIX}" ]; then
 		echo "writable. OK"
 	fi
 else
-	echo "does NOT exist, exiting."
-	#exit 1
+	echo "does NOT exist."
 fi
 
 # Standalone removal involves just deleting the 'files' subdirectory.
@@ -751,11 +749,22 @@ echo "Removing installation directories:"
 
 for DIR in ${RKHINST_DIRS}; do
 	case "${DIR}" in 
-		*/${APPNAME}|*/${APPNAME}-${APPVERSION}) 
+		*/${APPNAME}) 
 			if [ -d "${DIR}" ]; then
 				echo $N " Removing ${DIR}: "
 				rm -rf "${DIR}"; retValChk
 			fi
+			;;
+		*/${APPNAME}-${APPVERSION}) 
+			# Anything involving a specific version number
+			# needs to remove all old versions as well.
+			DIR=`dirname "${DIR}"`
+			for RKHAPPDIR in ${DIR}/${APPNAME}-*; do
+				if [ -d "${RKHAPPDIR}" ]; then
+					echo $N " Removing ${RKHAPPDIR}: "
+					rm -rf "${RKHAPPDIR}"; retValChk
+				fi
+			done
 			;;
 		*/${APPNAME}/*)
 			DIR=`dirname "${DIR}"`
