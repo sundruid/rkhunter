@@ -73,18 +73,9 @@ run:
 
     ./installer.sh --examples
 
-As an another example, to install all files beneath /opt, run:
+The installer also has a help option:
 
-    ./installer.sh --layout custom /opt --install
-
-To show where files are installed using the 'oldschool' layout
-run:
-
-    ./installer.sh --layout oldschool --show
-
-The layout named 'RPM' may not be chosen since it is used solely
-for installing RKH using RPM.
-
+    ./installer.sh --help
 
 The default installation process will install a configuration file,
 called 'rkhunter.conf', into the '/etc' directory or where
@@ -276,8 +267,8 @@ the installer will remove the whole installation directory (the 'files'
 sub-directory).
 
 During uninstallation, the installer will remove the initial configuration
-file. However, if RKH was installed more than once, then any additional
-configuration files are not removed. These may be removed manually.
+file (usually '/etc/rkhunter.conf'). However, any other files beginning with
+'rkhunter.conf' are not removed. These may be removed manually.
 
 When installing RKH, some directories may have been created. However,
 RKH is unaware of this when being uninstalled. As such, and especially
