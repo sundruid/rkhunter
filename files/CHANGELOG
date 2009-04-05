@@ -35,6 +35,8 @@
    format as well as the number of epoch seconds. This option can be used
    to specify the command to use if 'date' or 'perl' cannot convert epoch
    seconds.
+ - Added the COPY_LOG_ON_ERROR configuration option. When set this will
+   take a copy of the log file if any errors or warnings have occurred.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -344,7 +346,7 @@
    values using the '--propupd' option.
  - The '--checkall' option has been changed to '--check'. The old option is
    still recognised, but will be deprecated at some time.
- - If a logfile is to be written, but not appended to, then the old log file
+ - If a log file is to be written, but not appended to, then the old log file
    is moved to '<logfile name>.old' now. The same happens to the rkhunter.dat
    file if the --propupd option is used.
  - The previous 'known good' hash check now also checks the files inode, uid,

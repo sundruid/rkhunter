@@ -1225,6 +1225,7 @@ get_logfile_option() {
 			exit 1
 		fi
 
+
 		#
 		# Now check whether we should append to the logfile
 		# or overwrite it. We check the configuration file
@@ -1236,11 +1237,29 @@ get_logfile_option() {
 
 			if [ -n "${APPEND_LOG}" ]; then
 				if [ "${APPEND_LOG}" != "0" -a "${APPEND_LOG}" != "1" ]; then
-					echo "Invalid APPEND_LOG configuration option: not a number: ${APPEND_LOG}"
+					echo "Invalid APPEND_LOG configuration option: not a valid number: ${APPEND_LOG}"
 					exit 1
 				fi
 			else
 				APPEND_LOG=0
+			fi
+		fi
+
+
+		#
+		# Finally, check if the logfile should be copied if
+		# there were any errors. Obviously this does not
+		# happen if no logfile is used.
+		#
+
+		RKHTMPVAR=`get_option 1 single COPY_LOG_ON_ERROR` || exit 1
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			if [ "${RKHTMPVAR}" = "0" -o "${RKHTMPVAR}" = "1" ]; then
+				COPY_LOG_ON_ERROR=$RKHTMPVAR
+			else
+				echo "Invalid COPY_LOG_ON_ERROR configuration option: not a valid number: ${RKHTMPVAR}"
+				exit 1
 			fi
 		fi
 	fi
@@ -1793,7 +1812,7 @@ get_syslog_config_options() {
 
 	if [ -n "${ALLOW_SYSLOG_REMOTE_LOGGING}" ]; then
 		if [ "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "0" -a "${ALLOW_SYSLOG_REMOTE_LOGGING}" != "1" ]; then
-			echo "Invalid ALLOW_SYSLOG_REMOTE_LOGGING configuration option: not a number: ${ALLOW_SYSLOG_REMOTE_LOGGING}"
+			echo "Invalid ALLOW_SYSLOG_REMOTE_LOGGING configuration option: not a valid number: ${ALLOW_SYSLOG_REMOTE_LOGGING}"
 			exit 1
 		fi
 	else
@@ -1827,7 +1846,7 @@ get_auto_x_option() {
 
 		if [ -n "${AUTO_X_DTCT}" ]; then
 			if [ "${AUTO_X_DTCT}" != "0" -a "${AUTO_X_DTCT}" != "1" ]; then
-				echo "Invalid AUTO_X_DETECT configuration option: not a number: ${AUTO_X_DTCT}"
+				echo "Invalid AUTO_X_DETECT configuration option: not a valid number: ${AUTO_X_DTCT}"
 				exit 1
 			fi
 		else
@@ -1846,7 +1865,7 @@ get_auto_x_option() {
 
 		if [ -n "${CLRSET2}" ]; then
 			if [ "${CLRSET2}" != "0" -a "${CLRSET2}" != "1" ]; then
-				echo "Invalid COLOR_SET2 configuration option: not a number: ${CLRSET2}"
+				echo "Invalid COLOR_SET2 configuration option: not a valid number: ${CLRSET2}"
 				exit 1
 			fi
 		else
@@ -2442,7 +2461,7 @@ get_hash_function() {
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		if [ -z "`echo \"${RKHTMPVAR}\" | grep '^[1-9][0-9]*$'`" ]; then
-			echo "Invalid HASH_FLD_IDX configuration option: not a number: ${RKHTMPVAR}"
+			echo "Invalid HASH_FLD_IDX configuration option: not a valid number: ${RKHTMPVAR}"
 			exit 1
 		else
 			HASH_FLD_IDX=${RKHTMPVAR}
@@ -2708,7 +2727,7 @@ get_mirror_options() {
 
 	if [ -n "${ROTATE_MIRRORS}" ]; then
 		if [ "${ROTATE_MIRRORS}" != "0" -a "${ROTATE_MIRRORS}" != "1" ]; then
-			echo "Invalid ROTATE_MIRRORS configuration option: not a number: ${ROTATE_MIRRORS}"
+			echo "Invalid ROTATE_MIRRORS configuration option: not a valid number: ${ROTATE_MIRRORS}"
 			exit 1
 		fi
 	else
@@ -2737,7 +2756,7 @@ get_mirror_options() {
 
 		if [ -n "${UPDATE_MIRRORS}" ]; then
 			if [ "${UPDATE_MIRRORS}" != "0" -a "${UPDATE_MIRRORS}" != "1" ]; then
-				echo "Invalid UPDATE_MIRRORS configuration option: not a number: ${UPDATE_MIRRORS}"
+				echo "Invalid UPDATE_MIRRORS configuration option: not a valid number: ${UPDATE_MIRRORS}"
 				exit 1
 			fi
 		else
@@ -2754,7 +2773,7 @@ get_mirror_options() {
 
 	if [ -n "${MIRRORS_MODE}" ]; then
 		if [ "${MIRRORS_MODE}" != "0" -a "${MIRRORS_MODE}" != "1" -a "${MIRRORS_MODE}" != "2" ]; then
-			echo "Invalid MIRRORS_MODE configuration option: not a number: ${MIRRORS_MODE}"
+			echo "Invalid MIRRORS_MODE configuration option: not a valid number: ${MIRRORS_MODE}"
 			exit 1
 		fi
 	else
@@ -12056,6 +12075,9 @@ DFLT_LOGFILE="/var/log/rkhunter.log"
 APPEND_LOG=0
 APPEND_OPT=0
 
+# Set to have the logfile copied if there was an error.
+COPY_LOG_ON_ERROR=0
+
 # Set to have rkhunter start/finish messages, and warnings,
 # logged to syslog. The priority/severity can be set on the
 # command-line or in the configuration file.
@@ -12885,6 +12907,7 @@ fi
 if [ "${RKHLOGFILE}" = "/dev/null" ]; then
 	NOLOG=1
 	VERBOSE_LOGGING=0
+	COPY_LOG_ON_ERROR=0
 
 	if [ $SHOWWARNINGSONLY -eq 1 ]; then
 		echo "The logfile has been disabled - unable to report warnings."
@@ -13623,7 +13646,20 @@ test $VERSIONCHECK -eq 1 && do_versioncheck
 
 test $CHECK -eq 1 -o $ENDIS_OPT -eq 1 && do_system_check
 
+
 display --to LOG --type INFO --nl RKH_ENDDATE "`date`"
+
+
+#
+# If there were errors, then copy the log file.
+#
+
+if [ $RET_CODE -gt 0 -o $WARNING_COUNT -gt 0 ]; then
+	if [ $COPY_LOG_ON_ERROR -eq 1 -a $NOLOG -eq 0 ]; then
+		RKHTMPVAR="${RKHLOGFILE}.`date +%Y-%m-%d_%H:%M:%S`"
+		cp -p ${RKHLOGFILE} ${RKHTMPVAR}
+	fi
+fi
 
 
 #
