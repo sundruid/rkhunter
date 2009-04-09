@@ -1,4 +1,4 @@
-Version:2009040201
+Version:2009040901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -247,9 +247,10 @@ FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe was found, which can cause errors. If possib
 FILE_PROP_SKIP_IMMUT:Unable to find 'lsattr' command - all file immutable-bit checks will be skipped.
 FILE_PROP_SKIP_SCRIPT:Unable to find 'file' command - all script replacement checks will be skipped.
 FILE_PROP_OS_CHANGED:The local host configuration or operating system has changed.
-FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not exist, and so must be created. To do this type in 'rkhunter --propupd'.
-FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, and so must be created. To do this type in 'rkhunter --propupd'.
+FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not exist, and should be created. To do this type in 'rkhunter --propupd'.
+FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, and should be created. To do this type in 'rkhunter --propupd'.
 FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
+FILE_PROP_DAT_MISSING_INFO:The file properties check will still run as there are checks that can be performed without the rkhunter.dat file.
 
 FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
 FILE_PROP_WL:Found file '$1': it is whitelisted for the '$2' check.

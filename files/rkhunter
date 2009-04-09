@@ -1248,8 +1248,8 @@ get_logfile_option() {
 
 		#
 		# Finally, check if the logfile should be copied if
-		# there were any errors. Obviously this does not
-		# happen if no logfile is used.
+		# there were any errors or warnings. Obviously no
+		# copy is done if no logfile is used.
 		#
 
 		RKHTMPVAR=`get_option 1 single COPY_LOG_ON_ERROR` || exit 1
@@ -5806,9 +5806,11 @@ file_properties_check() {
 				;;
 			missing)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_DAT_MISSING
+				display --to LOG --type INFO FILE_PROP_DAT_MISSING_INFO
 				;;
 			empty)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_DAT_EMPTY
+				display --to LOG --type INFO FILE_PROP_DAT_MISSING_INFO
 				;;
 			esac
 		done
@@ -13651,7 +13653,7 @@ display --to LOG --type INFO --nl RKH_ENDDATE "`date`"
 
 
 #
-# If there were errors, then copy the log file.
+# If there were errors or warnings, then copy the log file.
 #
 
 if [ $RET_CODE -gt 0 -o $WARNING_COUNT -gt 0 ]; then

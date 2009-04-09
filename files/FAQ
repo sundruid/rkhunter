@@ -50,7 +50,7 @@ The latest version of this FAQ can be found at the RKH web site.
 
    4.1) What does the following warning mean:
           The file of stored file properties (rkhunter.dat) is empty,
-          and so must be created. To do this type in
+          and should be created. To do this type in
           'rkhunter --propupd'.
    4.2) Rootkit Hunter skips some checks, and the logfile indicates
         that certain commands are missing. What can I do?
@@ -475,7 +475,7 @@ A.    The output from rkhunter probably shows something like this:
 4.1) What does the following warning mean:
 
        The file of stored file properties (rkhunter.dat) is empty,
-       and so must be created. To do this type in
+       and should be created. To do this type in
        'rkhunter --propupd'.
 
 A.   For rkhunter to perform file property checks, it must first
