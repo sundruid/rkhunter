@@ -1,4 +1,4 @@
-Version:2009040901
+Version:2009041001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -145,8 +145,9 @@ SUMMARY_APPS_COUNT:Applications checked: $1
 SUMMARY_APPS_FAILED:Suspect applications: $1
 SUMMARY_SCAN_TIME:The system checks took: $1
 SUMMARY_NO_SCAN_TIME:The system check took: Unable to determine clock time
-SUMMARY_LOGFILE:All results have been written to the logfile ($1)
+SUMMARY_LOGFILE:All results have been written to the log file ($1)
 SUMMARY_NO_LOGFILE:No log file created.
+SUMMARY_LOGFILE_COPIED:Log file copied to $1
 
 CREATED_TEMP_FILE:Created temporary file '$1'
 

@@ -13649,19 +13649,29 @@ test $VERSIONCHECK -eq 1 && do_versioncheck
 test $CHECK -eq 1 -o $ENDIS_OPT -eq 1 && do_system_check
 
 
+#
+# If there were errors or warnings, and the
+# log file is to be copied, then log it.
+#
+
+COPIEDLOG=""
+
+if [ $RET_CODE -gt 0 -o $WARNING_COUNT -gt 0 ]; then
+	if [ $COPY_LOG_ON_ERROR -eq 1 -a $NOLOG -eq 0 ]; then
+		COPIEDLOG="${RKHLOGFILE}.`date +%Y-%m-%d_%H:%M:%S`"
+
+		display --to LOG --type INFO --nl SUMMARY_LOGFILE_COPIED "${COPIEDLOG}"
+	fi
+fi
+
 display --to LOG --type INFO --nl RKH_ENDDATE "`date`"
 
 
 #
-# If there were errors or warnings, then copy the log file.
+# Now actually copy the log file.
 #
 
-if [ $RET_CODE -gt 0 -o $WARNING_COUNT -gt 0 ]; then
-	if [ $COPY_LOG_ON_ERROR -eq 1 -a $NOLOG -eq 0 ]; then
-		RKHTMPVAR="${RKHLOGFILE}.`date +%Y-%m-%d_%H:%M:%S`"
-		cp -p ${RKHLOGFILE} ${RKHTMPVAR}
-	fi
-fi
+test -n "${COPIEDLOG}" && cp -p ${RKHLOGFILE} ${COPIEDLOG}
 
 
 #
