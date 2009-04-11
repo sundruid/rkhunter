@@ -8,6 +8,7 @@
 #
 
 my $keyword = my $arg = my $found = '';
+my $search_string = my $ignore_case = '';
 
 my $dir = '/var/lib/rkhunter/db/i18n';
 my $rkh = '/usr/local/bin';
@@ -22,8 +23,18 @@ while (@ARGV) {
 	elsif ($arg =~ /^--?p$/io) {
 		$rkh = shift;
 	}
+	elsif ($arg =~ /^--?s$/io) {
+		$search_string = shift;
+
+		if (! defined($search_string) || ! $search_string) {
+			print "No search string given.\n";
+			exit 1;
+		}
+
+		$ignore_case = '-i' if ($arg =~ /s$/o);
+	}
 	elsif ($arg =~ /^--?h$/io) {
-		print "\nUsage: i18nchk [-d i18n_dir] [-p rkhunter_dir]\n\n";
+		print "\nUsage: i18nchk [-d i18n_dir] [-p rkhunter_dir] [-{sS} search_string]\n\n";
 		exit;
 	}
 	else {
@@ -40,6 +51,20 @@ if (! $dir || ! -d $dir) {
 elsif (! $rkh || ! -d $rkh) {
 	print "Unable to find the rkhunter program.\n";
 	exit 1;
+}
+
+
+if ($search_string) {
+	$found = `grep $ignore_case "$search_string" $dir/en`;
+
+	if ($found) {
+		print $found;
+	}
+	else {
+		print "Search string not found.\n";
+	}
+
+	exit;
 }
 
 

@@ -9234,7 +9234,7 @@ linux_avail_modules() {
 	else
 		for FNAME in `${FIND_CMD} ${LKM_PATH} -type f -name "*.o" 2>/dev/null`; do
 			for RKHTMPVAR in ${LKM_NAMES}; do
-				if [ -n "`echo ${FNAME} | grep \"/${RKHTMPVAR}\$\"`" ]; then
+				if [ -n "`echo ${FNAME} | grep \"/${RKHTMPVAR}$\"`" ]; then
 					FOUND=1
 					FOUNDFILES="${FOUNDFILES} ${RKHTMPVAR}"
 				fi
