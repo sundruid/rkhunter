@@ -9957,6 +9957,174 @@ do_system_startup_file_checks() {
 }
 
 
+pwdgrp_changes() {
+
+	#
+	# This function checks the changes made to the passwd and group files.
+	#
+
+	FNAME=$1
+	LINES=$2
+
+	SEEN_IDS=""
+
+	IFS=$IFSNL
+
+	for LINE in ${LINES}; do
+		#
+		# First we need to check if we have already dealt with
+		# this id. If we have, then just get the next line.
+		#
+
+		PWDGRPID=`echo "${LINE}" | cut -d: -f1 | cut -c3-`
+		IDGREP=`echo "${PWDGRPID}" | sed -e 's/\./\\\./g'`
+
+		RKHTMPVAR=`echo "${SEEN_IDS}" | grep " ${IDGREP} "`
+
+		test -n "${RKHTMPVAR}" && continue
+
+
+		#
+		# This id hasn't been seen before, so we record it.
+		#
+
+		SEEN_IDS="${SEEN_IDS} ${PWDGRPID} "
+
+		#
+		# Next we see if the id has just been added or removed.
+		# To do this we simply see if it appears more than once.
+		#
+
+		RKHTMPVAR=`echo "${LINES}" | grep "^> ${IDGREP}:"`
+		RKHTMPVAR2=`echo "${LINES}" | grep "^< ${IDGREP}:"`
+
+		if [ \( -n "${RKHTMPVAR}" -a -z "${RKHTMPVAR2}" \) -o \( -z "${RKHTMPVAR}" -a -n "${RKHTMPVAR2}" \) ]; then
+			if [ -n "${RKHTMPVAR}" ]; then
+				if [ "${FNAME}" = "passwd" ]; then
+					display --to LOG --type WARNING --log-indent 4 PWD_CHANGES_IDREM "${PWDGRPID}"
+				else
+					display --to LOG --type WARNING --log-indent 4 GROUP_CHANGES_IDREM "${PWDGRPID}"
+				fi
+			else
+				if [ "${FNAME}" = "passwd" ]; then
+					display --to LOG --type WARNING --log-indent 4 PWD_CHANGES_IDADD "${PWDGRPID}"
+				else
+					display --to LOG --type WARNING --log-indent 4 GROUP_CHANGES_IDADD "${PWDGRPID}"
+				fi
+			fi
+
+			continue
+		fi
+
+
+		#
+		# The id has changed in some way. We now need to
+		# go through the fields and see what has changed.
+		#
+
+		FIELD_IDX=1
+
+		OLD_LINE=`echo "${RKHTMPVAR}" | cut -d: -f2-`
+		NEW_LINE=`echo "${RKHTMPVAR2}" | cut -d: -f2-`
+
+		STR=${OLD_LINE}
+
+		if [ "${FNAME}" = "passwd" ]; then
+			display --to LOG --type WARNING PWD_CHANGES_FOUND "${PWDGRPID}"
+		else
+			display --to LOG --type WARNING GROUP_CHANGES_FOUND "${PWDGRPID}"
+		fi
+
+		while test -n "${STR}"; do
+			OLD_FIELD=`echo "${OLD_LINE}" | cut -d: -f$FIELD_IDX`
+			NEW_FIELD=`echo "${NEW_LINE}" | cut -d: -f$FIELD_IDX`
+
+			if [ "${OLD_FIELD}" != "${NEW_FIELD}" ]; then
+				if [ "${FNAME}" = "passwd" ]; then
+					case $FIELD_IDX in
+					1)
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_PWD "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					2)
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_UID "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					3)
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_GID "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					4)
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_COMM "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					5)
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_HOME "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					6)
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_SHL "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					*)
+						display --to LOG --type PLAIN --log-indent 9 PWDGRP_CHANGES_UNK "${FNAME}" "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					esac
+				else
+					case $FIELD_IDX in
+					1)
+						display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_PWD "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					2)
+						display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GID "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					3)
+						OLD_GRPUSRS=" `echo ${OLD_FIELD} | tr ',' ' '` "
+						NEW_GRPUSRS=" `echo ${NEW_FIELD} | tr ',' ' '` "
+
+						IFS=$RKHIFS
+
+						for GRPUSR in ${OLD_GRPUSRS} ${NEW_GRPUSRS}; do
+							RKHTMPVAR=`echo ${GRPUSR} | sed -e 's/\./\\\./g'`
+							RKHTMPVAR2=`echo "${OLD_GRPUSRS}" | grep " ${RKHTMPVAR} "`
+							RKHTMPVAR3=`echo "${NEW_GRPUSRS}" | grep " ${RKHTMPVAR} "`
+
+							if [ -n "${RKHTMPVAR2}" -a -z "${RKHTMPVAR3}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GRPREM "${GRPUSR}"
+							elif [ -z "${RKHTMPVAR2}" -a -n "${RKHTMPVAR3}" ]; then
+								display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GRPADD "${GRPUSR}"
+							fi
+						done
+
+						IFS=$IFSNL
+						;;
+					*)
+						display --to LOG --type PLAIN --log-indent 9 PWDGRP_CHANGES_UNK "${FNAME}" "${OLD_FIELD}" "${NEW_FIELD}"
+						;;
+					esac
+				fi
+			fi
+
+			FIELD_IDX=`expr $FIELD_IDX + 1`
+
+			RKHTMPVAR=`echo "${STR}" | cut -d: -f2-`
+
+			#
+			# For the group file the last field may be
+			# empty, so we need to cater for this.
+			#
+
+			if [ -z "${RKHTMPVAR}" ]; then
+				if [ \( "${FNAME}" = "passwd" -a $FIELD_IDX -eq 6 \) -o \( "${FNAME}" = "group" -a $FIELD_IDX -eq 3 \) ]; then
+						STR=""
+						RKHTMPVAR="x"
+				fi
+			fi
+
+			test "${RKHTMPVAR}" = "${STR}" && STR="" || STR=${RKHTMPVAR}
+		done
+	done
+
+	IFS=$RKHIFS
+
+	return
+}
+
+
 do_group_accounts_check() {
 
 	#
@@ -10171,36 +10339,9 @@ ${RKHTMPVAR}"
 		if [ -z "${DIFFS}" ]; then
 			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		else
-			DIFFS_ADDED=`echo "${DIFFS}" | grep '^< '`
-			DIFFS_REMOVED=`echo "${DIFFS}" | grep '^> '`
-
 			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 
-			if [ -n "${DIFFS_ADDED}" ]; then
-				display --to LOG --type WARNING PASSWD_CHANGES_ADDED
-
-				IFS=$IFSNL
-
-				for RKHTMPVAR in ${DIFFS_ADDED}; do
-					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^< //'`
-					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
-				done
-
-				IFS=$RKHIFS
-			fi
-
-			if [ -n "${DIFFS_REMOVED}" ]; then
-				display --to LOG --type WARNING PASSWD_CHANGES_REMOVED
-
-				IFS=$IFSNL
-
-				for RKHTMPVAR in ${DIFFS_REMOVED}; do
-					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^> //'`
-					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
-				done
-
-				IFS=$RKHIFS
-			fi
+			pwdgrp_changes "passwd" "${DIFFS}"
 
 			#
 			# Finally, move the current copy of the passwd file out
@@ -10249,36 +10390,9 @@ ${RKHTMPVAR}"
 		if [ -z "${DIFFS}" ]; then
 			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		else
-			DIFFS_ADDED=`echo "${DIFFS}" | grep '^< '`
-			DIFFS_REMOVED=`echo "${DIFFS}" | grep '^> '`
-
 			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 GROUP_CHANGES
 
-			if [ -n "${DIFFS_ADDED}" ]; then
-				display --to LOG --type WARNING GROUP_CHANGES_ADDED
-
-				IFS=$IFSNL
-
-				for RKHTMPVAR in ${DIFFS_ADDED}; do
-					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^< //'`
-					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
-				done
-
-				IFS=$RKHIFS
-			fi
-
-			if [ -n "${DIFFS_REMOVED}" ]; then
-				display --to LOG --type WARNING GROUP_CHANGES_REMOVED
-
-				IFS=$IFSNL
-
-				for RKHTMPVAR in ${DIFFS_REMOVED}; do
-					RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^> //'`
-					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
-				done
-
-				IFS=$RKHIFS
-			fi
+			pwdgrp_changes "group" "${DIFFS}"
 
 			#
 			# Finally, move the current copy of the group file out

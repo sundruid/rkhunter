@@ -1,4 +1,4 @@
-Version:2009041001
+Version:2009051601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -429,14 +429,28 @@ ACCOUNTS_NO_SHADOW_FILE:No shadow/password file found.
 
 PASSWD_CHANGES:Checking for passwd file changes
 PASSWD_CHANGES_NO_TMP:Unable to check for passwd file differences: no copy of the passwd file exists.
-PASSWD_CHANGES_ADDED:Users have been added to the passwd file:
-PASSWD_CHANGES_REMOVED:Users have been removed from the passwd file:
+
+PWD_CHANGES_IDADD:User '$1' has been added to the passwd file.
+PWD_CHANGES_IDREM:User '$1' has been removed from the passwd file.
+PWD_CHANGES_FOUND:Changes found in the passwd file for user '$1':
+PWDGRP_CHANGES_UNK:Unknown field found in the $1 file: Old field: '$2' New field: '$3'
+PWD_CHANGES_PWD:The passwd has changed from '$1' to '$2'
+PWD_CHANGES_UID:The UID has changed from '$1' to '$2'
+PWD_CHANGES_GID:The GID has changed from '$1' to '$2'
+PWD_CHANGES_COMM:The account comment has changed from '$1' to '$2'
+PWD_CHANGES_HOME:The home directory has changed from '$1' to '$2'
+PWD_CHANGES_SHL:The login shell has changed from '$1' to '$2'
 
 GROUP_CHANGES:Checking for group file changes
 GROUP_CHANGES_NO_FILE:Group file $1 does not exist.
 GROUP_CHANGES_NO_TMP:Unable to check for group file differences: no copy of the group file exists.
-GROUP_CHANGES_ADDED:Groups have been added to the group file:
-GROUP_CHANGES_REMOVED:Groups have been removed from the group file:
+GROUP_CHANGES_FOUND:Changes found in the group file for group '$1':
+GROUP_CHANGES_IDADD:Group '$1' has been added to the group file.
+GROUP_CHANGES_IDREM:Group '$1' has been removed from the group file.
+GROUP_CHANGES_PWD:The group passwd has changed from '$1' to '$2'
+GROUP_CHANGES_GID:The group number has changed from '$1' to '$2'
+GROUP_CHANGES_GRPREM:User '$1' has been removed from the group
+GROUP_CHANGES_GRPADD:User '$1' has been added to the group
 
 HISTORY_CHECK:Checking root account shell history files
 HISTORY_CHECK_FOUND:Root account $1 shell history file is a symbolic link: $2
