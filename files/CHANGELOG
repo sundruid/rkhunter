@@ -72,6 +72,8 @@
    However, if, for example, the 'hashes' test was enabled, then only these
    would be stored. In all cases the relevant test was not run after the
    file properties were obtained, unless the '--check' option was also used.
+ - The installer now uses a basic 'echo' command. Hopefully it should work
+   on all UNIX/Linux systems, and avoid any further -e's being displayed.
 
  -- 
 
