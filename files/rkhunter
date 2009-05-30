@@ -30,10 +30,14 @@ OPERATING_SYSTEM=`uname 2>/dev/null`
 
 if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	if [ -z "$RANDOM" ]; then
-		if [ -n "`which bash 2>/dev/null | grep '^/'`" ]; then
+		# If the 'which' output contains a space, then it is probably an error.
+		if [ -n "`which bash 2>/dev/null | grep -v ' '`" ]; then
 			exec bash $0 $*
-		else
+		elif [ -n "`which ksh 2>/dev/null | grep -v ' '`" ]; then
 			exec ksh $0 $*
+		else
+			echo "Unable to find the bash or ksh shell to run rkhunter."
+			exit 1
 		fi
 
 		exit 0
@@ -47,7 +51,7 @@ if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 	# Ensure we create a random file name.
 	#
 
-	if [ -n "`which mktemp 2>/dev/null | grep '^/'`" ]; then
+	if [ -n "`which mktemp 2>/dev/null | grep -v ' '`" ]; then
 		RKHDEBUGFILE=`mktemp ${RKHDEBUGBASE}.XXXXXXXXXX`
 	elif [ -n "$RANDOM" ]; then
 		RKHDEBUGFILE="${RKHDEBUGBASE}.$RANDOM"
@@ -3286,7 +3290,7 @@ rkh_dat_get_os_info() {
 		if [ -d "${RKHROOTDIR}/var/smoothwall" ]; then
 			OSNAME="Smoothwall Linux"
 			RELEASE="${RKHROOTDIR}/var/smoothwall"
-		elif `which sorcery gaze >/dev/null 2>&1`; then
+		elif [ -n "`which gaze 2>/dev/null | grep -v ' '`" ]; then
 			OSNAME="Source Mage Linux"
 		fi
 	fi
