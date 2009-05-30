@@ -38,10 +38,12 @@ STRIPROOT=""
 
 umask 027
 
-OPERATING_SYSTEM=`uname 2>/dev/null`
+OPERATING_SYSTEM=`uname`
+UNAMEM=`uname -m`
 
 if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	if [ -z "$RANDOM" ]; then
+		# If the 'which' output contains a space, then it is probably an error.
 		if [ -n "`which bash 2>/dev/null | grep -v ' '`" ]; then
 			exec bash $0 $*
 		elif [ -n "`which ksh 2>/dev/null | grep -v ' '`" ]; then
@@ -209,39 +211,43 @@ selectTemplate() { # Take input from the "--installdir parameter"
 
 		case "$1" in
 		custom_*)
-			if [ "`uname -m`" = "x86_64" ]; then
+			if [ "${UNAMEM}" = "x86_64" ]; then
 				LIBDIR="${PREFIX}/lib64"
 			else
 				LIBDIR="${PREFIX}/lib"
 			fi
 
+			BINDIR="${PREFIX}/bin"
 			VARDIR="${PREFIX}/var"
-			SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+			SHAREDIR="${PREFIX}/share"
 			;;
 		RPM)
-			if [ "`uname -m`" = "x86_64" ]; then
+			if [ "${UNAMEM}" = "x86_64" ]; then
 				LIBDIR="${PREFIX}/lib64"
 			else
 				LIBDIR="${PREFIX}/lib"
 			fi
 
+			BINDIR="${PREFIX}/bin"
 			VARDIR="${RPM_BUILD_ROOT}/var"
-			SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+			SHAREDIR="${PREFIX}/share"
 			;;
 		DEB)
+			BINDIR="${PREFIX}/bin"
 			LIBDIR="${PREFIX}/lib"
 			VARDIR="${DEB_BUILD_ROOT}/var"
-			SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+			SHAREDIR="${PREFIX}/share"
 			;;
 		TGZ)
-			if [ "`uname -m`" = "x86_64" ]; then
+			if [ "${UNAMEM}" = "x86_64" ]; then
 				LIBDIR="${PREFIX}/lib64"
 			else
 				LIBDIR="${PREFIX}/lib"
 			fi
 
+			BINDIR="${PREFIX}/bin"
 			VARDIR="${TGZ_BUILD_ROOT}/var"
-			SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+			SHAREDIR="${PREFIX}/share"
 			;;
 		*)
 			if [ -d "${PREFIX}/lib64" ]; then
@@ -250,14 +256,19 @@ selectTemplate() { # Take input from the "--installdir parameter"
 				LIBDIR="${PREFIX}/lib"
 			fi
 
+			BINDIR="${PREFIX}/bin"
 			VARDIR="/var"
-			SHAREDIR="${PREFIX}/share"; BINDIR="${PREFIX}/bin"
+			SHAREDIR="${PREFIX}/share"
 			;;
 		esac
 		;;
 	oldschool) # The rigid way, like RKH used to be set up.
-		PREFIX="/usr/local"; SYSCONFIGDIR="${PREFIX}/etc"; LIBDIR="${PREFIX}/${APPNAME}/lib"
-		VARDIR="${LIBDIR}"; SHAREDIR="${LIBDIR}"; RKHINST_DOC_DIR="${PREFIX}/${APPNAME}/lib/docs"
+		PREFIX="/usr/local"
+		SYSCONFIGDIR="${PREFIX}/etc"
+		LIBDIR="${PREFIX}/${APPNAME}/lib"
+		VARDIR="${LIBDIR}"
+		SHAREDIR="${LIBDIR}"
+		RKHINST_DOC_DIR="${PREFIX}/${APPNAME}/lib/docs"
 		BINDIR="${PREFIX}/bin"
 		;;
 	*)	# None chosen.
@@ -355,21 +366,21 @@ useCVS() {
 			echo "Succeeded in getting Rootkit Hunter source from CVS."
 
 			if [ -d "./files" ]; then
-				rm -rf "./files" >/dev/null 2>&1
+				rm -rf "./files"
 			fi
 
 			mv -f rkhunter/files .
 
 			if [ -d "./files/CVS" ]; then
-				rm -rf "./files/CVS" >/dev/null 2>&1
+				rm -rf "./files/CVS"
 			fi
 
 			case "${RKHINST_LAYOUT}" in
 			RPM|DEB|TGZ) 
 				;;
 			*)
-				find ./files | while read ITEM; do
-					chown "${RKHINST_OWNER}" "${ITEM}" 2>/dev/null
+				for ITEM in `find ./files`; do
+					chown "${RKHINST_OWNER}" "${ITEM}"
 				done
 				;;
 			esac
@@ -404,8 +415,8 @@ doInstall()  {
 		RPM|DEB|TGZ) 
 			;;
 		*)
-			find ./files | while read ITEM; do
-				chown "${RKHINST_OWNER}" "${ITEM}" 2>/dev/null
+			for ITEM in `find ./files`; do
+				chown "${RKHINST_OWNER}" "${ITEM}"
 			done
 			;;
 		esac
@@ -416,28 +427,27 @@ doInstall()  {
 	fi
 
 
-	echo " Available file retrieval tools:"
+	# We only look for one download command.
+	echo " Looking for a web file download command:"
 
 	for RKHWEBCMD in wget links elinks lynx curl GET bget; do
 		SEARCH=`which ${RKHWEBCMD} 2>/dev/null | grep -v ' '`
 
-		if [ -z "${SEARCH}" ]; then
-			echo "    ${RKHWEBCMD}: not found"
-		else
-			break
-		fi
+		test -n "${SEARCH}" && break
 	done
 
 	if [ -n "${SEARCH}" ]; then
-		echo "    ${RKHWEBCMD}: found"
+		echo "    ${RKHWEBCMD} found"
 	else
+		echo "    None found"
 		echo ""
-		echo " Please install one of wget, links, elinks, lynx, curl, GET or"
-		echo ' bget (from www.cpan.org/authors/id/E/EL/ELIJAH/bget)'
+		echo "    Please install one of wget, links, elinks, lynx, curl, GET or"
+		echo '    bget (from www.cpan.org/authors/id/E/EL/ELIJAH/bget)'
+		echo ""
 	fi
 
 
-	# Perl will be found in Rkhunter itself.
+	# Perl will be found in rkhunter itself.
 
 	RKHINST_DIRS="$RKHINST_DOC_DIR $RKHINST_MAN_DIR $RKHINST_ETC_DIR $RKHINST_BIN_DIR"
 	RKHINST_DIRS_EXCEP="$RKHINST_SCRIPT_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
@@ -458,20 +468,20 @@ doInstall()  {
 				if [ "${PREFIX}" = "." ]; then
 					chown -R ${RKHINST_OWNER} ./files 
 
-					find ./files -type d -name CVS | while read DIR; do
+					for DIR in `find ./files -type d -name CVS`; do
 						rm -rf "${DIR}"
 					done
 
-					find ./files -type f -name Entries -o -name Repository -o -name Root | while read FILE; do
+					for FILE in `find ./files -type f -name Entries -o -name Repository -o -name Root`; do
 						rm -rf "${FILE}"
 					done
 
-					find ./files -type f | while read ITEM; do
+					for ITEM in `find ./files -type f`; do
 						case "${ITEM}" in
-						*.sh|*.pl|rkhunter)
+						*.sh|*.pl|*/rkhunter)
 							chmod "${RKHINST_MODE_EX}" "${ITEM}"
 							;;
-						rkhunter.conf|*)
+						*)
 							chmod "${RKHINST_MODE_RW}" "${ITEM}"
 							;;
 						esac
@@ -630,7 +640,9 @@ doInstall()  {
 
 
 	# Language support files
-	find ./files/i18n -type f | while read FILE; do
+	ERRCODE=0
+
+	for FILE in `find ./files/i18n -type f`; do
 		cp "${FILE}" "${RKHINST_LANG_DIR}"
 		ERRCODE=$?
 
@@ -761,8 +773,8 @@ doInstall()  {
 
 	# Strip root from fake root install.
 	if [ -n "${STRIPROOT}" ]; then
-		find "${PREFIX}" -type f | while read FILE; do 
-			STR=`grep "${PREFIX}" "${FILE}" 2>/dev/null`
+		for FILE in `find "${PREFIX}" -type f`; do 
+			STR=`grep "${PREFIX}" "${FILE}"`
 
 			if [ -n "${STR}" ]; then
 				sed -i "s|${STRIPROOT}||g" "${FILE}"
@@ -823,8 +835,15 @@ doRemove()  {
 
 	# Standalone removal involves just deleting the 'files' subdirectory.
 	if [ "$PREFIX" = "." ]; then
-		rm -rf ./files 2>/dev/null
-		echo "Uninstallation complete."
+		rm -rf ./files
+		ERRCODE=$?
+
+		if [ $ERRCODE -eq 0 ]; then
+			echo "Uninstallation complete."
+		else
+			echo "Uninstallation FAILED: Code $ERRCODE"
+		fi
+
 		return
 	fi
 
@@ -951,7 +970,7 @@ doRemove()  {
 	rm -f /var/log/rkhunter.log /var/log/rkhunter.log.old >/dev/null 2>&1
 
 	echo ""
-	echo "Done removing files. Please double-check."
+	echo "Finished removing files. Please double-check."
 
 	return
 } # end doRemove
