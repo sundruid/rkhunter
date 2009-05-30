@@ -57,32 +57,34 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 	fi
 
 	# We need /usr/xpg4/bin before other directories on Solaris.
-	PATH="/usr/xpg4/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin" 
+	PATH="/usr/xpg4/bin:${PATH}" 
 fi
 
 
 showHelp() { # Show help / version
 	echo "${INSTALLER_NAME} ${INSTALLER_VERSION}"
+	echo ""
 	echo "Usage: $0 <parameters>"
 	echo ""
 	echo "Ordered valid parameters:"
-	echo '--help (-h)      : Show this help.'
-	echo "--examples       : Show layout examples."
-	echo '--layout <value> : Choose installation template (mandatory switch).'
-	echo "                   The templates are:"
-        echo '                    - default: (FHS compliant),'
-        echo "                    - /usr,"
-        echo "                    - /usr/local,"
-	echo "                    - oldschool: previous version file locations,"
-	echo "                    - custom: supply your own prefix,"
-	echo "                    - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
-	echo "                    - DEB: for building DEB's. Requires \$DEB_BUILD_ROOT."
-	echo "                    - TGZ: for building Slackware TGZ's. Requires \$TGZ_BUILD_ROOT."
-	echo '--striproot      : Strip path from custom layout (for package maintainers).'
-	echo "--install        : Install according to chosen layout."
-	echo "--show           : Show chosen layout."
-	echo "--remove         : Uninstall according to chosen layout."
-	echo "--version        : Show the installer version."
+	echo '  --help (-h)      : Show this help.'
+	echo "  --examples       : Show layout examples."
+	echo '  --layout <value> : Choose installation template (mandatory switch).'
+	echo "                     The templates are:"
+        echo '                      - default: (FHS compliant)'
+        echo "                      - /usr"
+        echo "                      - /usr/local"
+	echo "                      - oldschool: old version file locations"
+	echo "                      - custom: supply your own installation directory"
+	echo "                      - RPM: for building RPM's. Requires \$RPM_BUILD_ROOT."
+	echo "                      - DEB: for building DEB's. Requires \$DEB_BUILD_ROOT."
+	echo "                      - TGZ: for building Slackware TGZ's. Requires \$TGZ_BUILD_ROOT."
+	echo '  --striproot      : Strip path from custom layout (for package maintainers).'
+	echo "  --install        : Install according to chosen layout."
+	echo "  --show           : Show chosen layout."
+	echo "  --remove         : Uninstall according to chosen layout."
+	echo "  --version        : Show the installer version."
+	echo ""
 
 	return
 }
@@ -132,7 +134,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 				fi
 				;;
 			.*|/.*)
-				echo "Bad prefix chosen, exiting."
+				echo "Bad installation directory chosen. Exiting."
 				exit 1
 				;;
 			*)
@@ -152,7 +154,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			if [ -n "${RPM_BUILD_ROOT}" ]; then
 				PREFIX="${RPM_BUILD_ROOT}/usr/local"
 			else
-				echo "RPM prefix chosen but \$RPM_BUILD_ROOT variable not found, exiting."
+				echo "RPM installation chosen but \$RPM_BUILD_ROOT variable not found: exiting."
 				exit 1
 			fi
 			;;
@@ -160,7 +162,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			if [ -n "${DEB_BUILD_ROOT}" ]; then
 				PREFIX="${DEB_BUILD_ROOT}/usr"
 			else
-				echo "DEB prefix chosen but \$DEB_BUILD_ROOT variable not found, exiting."
+				echo "DEB installation chosen but \$DEB_BUILD_ROOT variable not found: exiting."
 				exit 1
 			fi
 			;;
@@ -168,7 +170,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			if [ -n "${TGZ_BUILD_ROOT}" ]; then
 				PREFIX="${TGZ_BUILD_ROOT}/usr"
 			else
-				echo "TGZ prefix chosen but \$TGZ_BUILD_ROOT variable not found, exiting."
+				echo "TGZ installation chosen but \$TGZ_BUILD_ROOT variable not found: exiting."
 				exit 1
 			fi
 			;;
@@ -183,7 +185,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 		*)
 			if [ "${RKHINST_ACTION}" = "install" ]; then
 				if [ ! -d "${PREFIX}" ]; then
-					echo "Bad prefix chosen: non-existent directory. Exiting."
+					echo "Bad installation directory chosen: non-existent directory. Exiting."
 					echo "Perhaps run \"mkdir -p ${PREFIX}\" first?"
 					exit 1
 				fi
@@ -332,7 +334,7 @@ showTemplate() { # Take input from the "--installdir parameter"
 	*)
 		selectTemplate "$1"
 
-		echo "PREFIX:             ${PREFIX}"
+		echo "Install into:       ${PREFIX}"
 		echo "Application:        ${RKHINST_BIN_DIR}"
 		echo "Configuration file: ${RKHINST_ETC_DIR}"
 		echo "Documents:          ${RKHINST_DOC_DIR}"
@@ -402,8 +404,10 @@ useCVS() {
 
 doInstall()  {
 	# Preflight checks
+	echo "Checking system for:"
+
 	if [ -f "./files/${APPNAME}" ]; then
-		echo "Checking system for: ${INSTALLER_NAME} files: found"
+		echo " ${INSTALLER_NAME} files: found"
 
 		if [ $USE_CVS -eq 1 ]; then
 			# You want it, and you got it!
@@ -422,24 +426,24 @@ doInstall()  {
 		esac
 	else
 		echo "Checking system for: ${INSTALLER_NAME} files: FAILED"
-		echo "Installer files not in \"${PWD}/files\". Exiting."
+		echo "Installation files not in \"${PWD}/files\". Exiting."
 		exit 1
 	fi
 
 
 	# We only look for one download command.
-	echo " Looking for a web file download command:"
 
 	for RKHWEBCMD in wget links elinks lynx curl GET bget; do
 		SEARCH=`which ${RKHWEBCMD} 2>/dev/null | grep -v ' '`
 
-		test -n "${SEARCH}" && break
+		if [ -n "${SEARCH}" ]; then
+			echo " A web file download command: ${RKHWEBCMD} found"
+			break
+		fi
 	done
 
-	if [ -n "${SEARCH}" ]; then
-		echo "    ${RKHWEBCMD} found"
-	else
-		echo "    None found"
+	if [ -z "${SEARCH}" ]; then
+		echo " A web file download command: None found"
 		echo ""
 		echo "    Please install one of wget, links, elinks, lynx, curl, GET or"
 		echo '    bget (from www.cpan.org/authors/id/E/EL/ELIJAH/bget)'
@@ -452,8 +456,11 @@ doInstall()  {
 	RKHINST_DIRS="$RKHINST_DOC_DIR $RKHINST_MAN_DIR $RKHINST_ETC_DIR $RKHINST_BIN_DIR"
 	RKHINST_DIRS_EXCEP="$RKHINST_SCRIPT_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
 
-	echo "Starting installation/update"
-	echo ""
+	if [ -f "${RKHINST_ETC_DIR}/rkhunter.conf" ]; then
+		echo "Starting update:"
+	else
+		echo "Starting installation:"
+	fi
 
 	case "${RKHINST_LAYOUT}" in
 	RPM|DEB|TGZ)
@@ -462,7 +469,7 @@ doInstall()  {
 		# Check PREFIX
 		if [ -d "${PREFIX}" ]; then
 			if [ -w "${PREFIX}" ]; then
-				echo " Checking PREFIX $PREFIX: it exists and is writable."
+				echo " Checking installation directory \"$PREFIX\": it exists and is writable."
 
 				# That's enough for a standalone installation.
 				if [ "${PREFIX}" = "." ]; then
@@ -503,19 +510,19 @@ doInstall()  {
 
 					chmod "${RKHINST_MODE_EX}" rkhunter
 
-					echo "Finished install in \"${PREFIX}\"."
+					echo "Installation complete"
 
 					exit 0
 				fi
 			else
-				echo " Checking PREFIX $PREFIX: it exists, but it is NOT writable. Exiting."
+				echo " Checking installation directory \"$PREFIX\": it exists, but it is not writable. Exiting."
 				exit 1
 			fi
 		elif [ -e "${PREFIX}" ]; then
-			echo " Checking PREFIX $PREFIX: it is NOT a directory. Exiting."
+			echo " Checking installation directory \"$PREFIX\": it is not a directory. Exiting."
 			exit 1
 		else
-			echo " Checking PREFIX $PREFIX: it does NOT exist. Exiting."
+			echo " Checking installation directory \"$PREFIX\": it does not exist. Exiting."
 			exit 1
 		fi
 		;;
@@ -536,7 +543,7 @@ doInstall()  {
 			if [ -w "${PREFIX}" ]; then
 				echo "  Directory ${DIR}: exists and is writable."
 			else
-				echo "  Directory ${DIR}: exists, but it is NOT writable. Exiting."
+				echo "  Directory ${DIR}: exists, but it is not writable. Exiting."
 				exit 1
 			fi
 		else
@@ -558,7 +565,7 @@ doInstall()  {
 			if [ -w "${PREFIX}" ]; then
 				echo "  Directory ${DIR}: exists and is writable."
 			else
-				echo "  Directory ${DIR}: exists, but it is NOT writable. Exiting."
+				echo "  Directory ${DIR}: exists, but it is not writable. Exiting."
 				exit 1
 			fi
 		else
@@ -690,19 +697,20 @@ doInstall()  {
 
 	# Configuration file
 	for FILE in ${RKHINST_ETC_FILE}; do
-		# We need people to make local changes themselves, so
-		# give opportunity and alert. Don't use Perl to get value.
-		if [ -n "$RANDOM" ]; then
-			RANDVAL=$RANDOM
-		else
-			RANDVAL=`date +%Y%m%d%H%M%S 2>/dev/null`
-
-			if [ -z "${RANDVAL}" ]; then
-				RANDVAL=$$
-			fi
-		fi
-
 		if [ -f "${RKHINST_ETC_DIR}/${FILE}" ]; then
+			# We need people to make local changes themselves, so
+			# give opportunity and alert. Don't use Perl to get value.
+
+			if [ -n "$RANDOM" ]; then
+				RANDVAL=$RANDOM
+			else
+				RANDVAL=`date +%Y%m%d%H%M%S 2>/dev/null`
+
+				if [ -z "${RANDVAL}" ]; then
+					RANDVAL=$$
+				fi
+			fi
+
 			NEWFILE="${FILE}.${RANDVAL}"
 
 			cp -f "./files/${FILE}" "${RKHINST_ETC_DIR}/${NEWFILE}"
@@ -803,7 +811,7 @@ doInstall()  {
 		;;
 	esac
 
-	echo "Installation finished."
+	echo "Installation complete"
 
 	return
 } # End doInstall
@@ -819,16 +827,16 @@ doRemove()  {
 	# Check the PREFIX
 	if [ -d "${PREFIX}" ]; then
 		if [ -w "${PREFIX}" ]; then
-			echo "Checking PREFIX $PREFIX: it exists and is writable."
+			echo "Checking installation directory \"$PREFIX\": it exists and is writable."
 		else
-			echo "Checking PREFIX $PREFIX: it exists, but is NOT writable. Exiting."
+			echo "Checking installation directory \"$PREFIX\": it exists, but it is not writable. Exiting."
 			exit 1
 		fi
 	elif [ -e "${PREFIX}" ]; then
-		echo "Checking PREFIX $PREFIX: it exists but it is not a directory. Exiting."
+		echo "Checking installation directory \"$PREFIX\": it exists but it is not a directory. Exiting."
 		exit 1
 	else
-		echo "Checking PREFIX $PREFIX: it does NOT exist. Exiting."
+		echo "Checking installation directory \"$PREFIX\": it does not exist. Exiting."
 		exit 1
 	fi
 
@@ -839,7 +847,7 @@ doRemove()  {
 		ERRCODE=$?
 
 		if [ $ERRCODE -eq 0 ]; then
-			echo "Uninstallation complete."
+			echo "Uninstallation complete"
 		else
 			echo "Uninstallation FAILED: Code $ERRCODE"
 		fi
