@@ -503,6 +503,7 @@ doInstall()  {
 					echo "DBDIR=$PREFIX" >>rkhunter.conf 
 					echo "SCRIPTDIR=$PREFIX" >>rkhunter.conf 
 					echo "INSTALLDIR=$PREFIX" >>rkhunter.conf
+					echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter" >>rkhunter.conf
 					echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter.conf" >>rkhunter.conf
 
 					sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" rkhunter >rkhunter.
@@ -767,7 +768,7 @@ doInstall()  {
 				echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
-			# Done with a patch during the build process
+			# Debian builds are handled with a patch during the build process.
 			elif [ -z "${DEB_BUILD_ROOT}" ]; then
 				echo "INSTALLDIR=${PREFIX}" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "DBDIR=${RKHINST_DB_DIR}" >>"${RKHINST_ETC_DIR}/${FILE}"
