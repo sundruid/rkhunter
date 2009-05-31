@@ -50,6 +50,7 @@
    (usually /usr/local/share/doc/rkhunter-*) will now be removed.
  - The warnings from the passwd and group file changes tests are now
    more specific about what has changed.
+ - Small change to the detection of Source Mage Linux - hopefully nothing broke!
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious
@@ -73,7 +74,11 @@
    would be stored. In all cases the relevant test was not run after the
    file properties were obtained, unless the '--check' option was also used.
  - The installer now uses a basic 'echo' command. Hopefully it should work
-   on all UNIX/Linux systems, and avoid any further -e's being displayed.
+   on all UNIX/Linux systems, and avoid any further "-e"'s being displayed.
+ - Changed how rkhunter detects the Korn shell, and added a test to see if
+   the 'echo -e' command works or not. As with the installer, this should
+   allow rkhunter to work on all UNIX/Linux systems, and avoid any further
+   "-e"'s being displayed.
 
  -- 
 

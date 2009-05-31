@@ -22,13 +22,18 @@
 
 
 #
-# Unfortunately we must do some O/S checks at the very beginning.
-# Otherwise SunOS will complain about some of the ksh/bash syntax.
+# Unfortunately we must do some O/S checks at the very beginning,
+# otherwise SunOS will complain about some of the ksh/bash syntax.
+# By default the SunOS root account uses a simple Bourne shell,
+# which does not work with RKH. So we exec to use the Bash shell
+# if it is present, or the Korn shell which is usually installed
+# by default on Solaris systems.
 #
 
 OPERATING_SYSTEM=`uname 2>/dev/null`
 
 if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	# Simple SunOS test of RANDOM to see if we are now running bash or ksh.
 	if [ -z "$RANDOM" ]; then
 		# If the 'which' output contains a space, then it is probably an error.
 		if [ -n "`which bash 2>/dev/null | grep -v ' '`" ]; then
@@ -43,6 +48,12 @@ if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
 		exit 0
 	fi
 fi
+
+
+#
+# Check to see if we are using the '--debug' option. If so, then
+# we exec to log everything to the debug file.
+#
 
 if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 	RKHDEBUGBASE="/tmp/rkhunter-debug"
@@ -79,28 +90,23 @@ else
 	DEBUG_OPT=0
 fi
 
-case "${OPERATING_SYSTEM}" in
-AIX|OpenBSD|Darwin|SunOS|IRIX*)
-	# What is the default shell?
-	if print >/dev/null 2>&1; then
-		alias echo='print'
-		ECHOOPT="--"
-		MYSHELL=ksh
-	elif [ "${OPERATING_SYSTEM}" = "IRIX" -o "${OPERATING_SYSTEM}" = "IRIX64" ]; then
-		ECHOOPT=""
-		MYSHELL=sh
-	elif [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
-		ECHOOPT=""
-		MYSHELL=sh
-	else
-		ECHOOPT="-e"
-		MYSHELL=bash
-	fi
-	;;
-*)
+
+#
+# Now we must determine if we are using the Korn shell or not. If so,
+# then we alias the 'echo' command and set ECHOOPT. For other shells,
+# we try and determine the real shell being used, and test to see if
+# the 'echo -e' command is valid or not. We set ECHOOPT accordingly.
+#
+
+if [ "`print "rkh-ksh-string-test" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
+	alias echo='print'
+	ECHOOPT="--"
+	MYSHELL=ksh
+elif [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+	# For Solaris, if we are not running ksh, then it must be bash.
+	MYSHELL=bash
 	ECHOOPT="-e"
-
-
+else
 	#
 	# We want to get the actual shell used by this program, and
 	# so we need to test /bin/sh.
@@ -110,13 +116,19 @@ AIX|OpenBSD|Darwin|SunOS|IRIX*)
 	test -h ${MYSHELL} && MYSHELL=`readlink ${MYSHELL} 2>/dev/null`
 	MYSHELL=`basename ${MYSHELL} 2>/dev/null`
 
-	if [ -z "${MYSHELL}" ]; then
-		MYSHELL=bash
-	elif [ "${MYSHELL}" = "dash" -o "${MYSHELL}" = "ash" ]; then
+	# Assume 'bash' if we have problems finding the real shell.
+	test -z "${MYSHELL}" && MYSHELL=bash
+
+	#
+	# Now test the 'echo -e' command.
+	#
+
+	if [ "`echo -e \"rkh-ksh-string-test\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
+		ECHOOPT="-e"
+	else
 		ECHOOPT=""
 	fi
-	;;
-esac
+fi
 
 
 ######################################################################
