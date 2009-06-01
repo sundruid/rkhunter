@@ -1001,7 +1001,7 @@ check_commands() {
 	#
 
 	for CMD in ${CMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
 		RKHTMPVAR="${RKHTMPVAR}_CMD"
 
 
@@ -1084,7 +1084,7 @@ check_commands() {
 	#
 
 	for CMD in ${CMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
 		RKHTMPVAR="${RKHTMPVAR}_CMD"
 		RKHTMPVAR2=`eval echo "\\$${RKHTMPVAR}"`
 
@@ -1699,7 +1699,7 @@ get_syslog_option() {
 	#
 
 	if [ -n "${USE_SYSLOG}" ]; then
-		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr '[A-Z]' '[a-z]'`
+		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr '[:upper:]' '[:lower:]'`
 
 		if [ "${USE_SYSLOG}" = "none" ]; then
 			# The value of 'none' will be processed later on.
@@ -1763,7 +1763,7 @@ get_ssh_options() {
 	ALLOW_SSH_ROOT_USER=`get_option 1 single ALLOW_SSH_ROOT_USER` || exit 1
 
 	if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
-		ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[A-Z]' '[a-z]'`
+		ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[:upper:]' '[:lower:]'`
 	else
 		#
 		# By default SSH tends to allow root access. However, we
@@ -1911,7 +1911,7 @@ get_enable_option() {
 				echo "Invalid --enable option - no test names given."
 				exit 1
 			else
-				ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[A-Z]' '[a-z]'`
+				ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 			fi
 
 
@@ -1930,7 +1930,7 @@ get_enable_option() {
 		fi
 	else
 		ENABLE_TESTS=`get_option 2 single ENABLE_TESTS` || exit 1
-		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[A-Z]' '[a-z]'`
+		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 	fi
 
 	test -z "${ENABLE_TESTS}" && ENABLE_TESTS="all"
@@ -2024,7 +2024,7 @@ get_disable_option() {
 	if [ -z "${DISABLE_TESTS}" ]; then
 		DISABLE_TESTS="none"
 	else
-		DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr '[A-Z]' '[a-z]'`
+		DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 	fi
 
 
@@ -2146,7 +2146,7 @@ get_ports_option() {
 
 		test $FOUND -eq 1 && exit 1
 
-		PORT_WHITELIST=`echo " ${PORT_WHITELIST} " | tr '[a-z]' '[A-Z]'`
+		PORT_WHITELIST=`echo " ${PORT_WHITELIST} " | tr '[:lower:]' '[:upper:]'`
 		PORT_WHITELIST_PATH=" ${PORT_WHITELIST_PATH} "
 	fi
 
@@ -2381,7 +2381,7 @@ get_hash_function() {
 			echo "Invalid --hash option: no hash function given."
 			exit 1
 		elif [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|NONE)$'`" ]; then
-			HASH_FUNC=`echo "${HASH_FUNC}" | tr '[a-z]' '[A-Z]'`
+			HASH_FUNC=`echo "${HASH_FUNC}" | tr '[:lower:]' '[:upper:]'`
 		fi
 	else
 		HASH_FUNC=`get_option 2 single HASH_FUNC` || exit 1
@@ -2503,7 +2503,7 @@ get_hash_function() {
 		PKGMGR=`get_option 1 single PKGMGR` || exit 1
 	fi
 
-	PKGMGR=`echo "${PKGMGR}" | tr '[a-z]' '[A-Z]'`
+	PKGMGR=`echo "${PKGMGR}" | tr '[:lower:]' '[:upper:]'`
 
 	test "${PKGMGR}" = "NONE" && PKGMGR=""
 
@@ -2595,7 +2595,7 @@ get_scan_mode_dev_option() {
 	SCAN_MODE_DEV=`get_option 1 single SCAN_MODE_DEV` || exit 1
 
 	if [ -n "${SCAN_MODE_DEV}" ]; then
-		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | tr '[a-z]' '[A-Z]'`
+		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | tr '[:lower:]' '[:upper:]'`
 
 		case "${SCAN_MODE_DEV}" in
 		THOROUGH|LAZY)
@@ -9450,7 +9450,7 @@ do_network_port_checks() {
 
 		PORT=`echo "${LINE}" | cut -d: -f1`
 		DESCRIPTION=`echo "${LINE}" | cut -d: -f2`
-		PROTO=`echo "${LINE}" | cut -d: -f3 | tr '[a-z]' '[A-Z]'`
+		PROTO=`echo "${LINE}" | cut -d: -f3 | tr '[:lower:]' '[:upper:]'`
 
 		if [ -z "`echo \"${PORT}\" | grep '^[1-9][0-9]*$'`" ]; then
 			echo "Error: Invalid port in backdoorports.dat file: $LINE"
@@ -10544,7 +10544,7 @@ do_system_config_files_check() {
 			# Get the value that has been set.
 			#
 
-			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[A-Z]' '[a-z]'`
+			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[:upper:]' '[:lower:]'`
 
 			if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
 				test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
@@ -11110,7 +11110,7 @@ do_app_checks() {
 
 	RKHTMVAR=`get_option 2 single APP_WHITELIST` || exit 1
 
-	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[A-Z]' '[a-z]'`
+	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[:upper:]' '[:lower:]'`
 
 
 	IFS=$IFSNL
@@ -13260,7 +13260,7 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 		fi
 
 
-		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
 
 		eval ${RKHTMPVAR}_CMD=`find_cmd ${CMD}`
 
@@ -13442,7 +13442,7 @@ if [ $NOLOG -eq 0 ]; then
 	test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
 
 	for CMD in ${CMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
 		RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
 
 		if [ -n "${RKHTMPVAR}" ]; then
@@ -13453,7 +13453,7 @@ if [ $NOLOG -eq 0 ]; then
 	done
 
 	for CMD in ${WEBCMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr '[a-z]' '[A-Z]'`
+		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
 		RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
 
 		if [ -n "${RKHTMPVAR}" ]; then

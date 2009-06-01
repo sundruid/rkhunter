@@ -79,6 +79,9 @@
    the 'echo -e' command works or not. As with the installer, this should
    allow rkhunter to work on all UNIX/Linux systems, and avoid any further
    "-e"'s being displayed.
+ - When converting the case of characters, unpredictable results could
+   occur when other languages were specified (via LANG). We now use character
+   classes rather than the 'a-z' and 'A-Z' ranges. 
 
  -- 
 
