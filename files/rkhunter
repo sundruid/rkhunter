@@ -3302,7 +3302,7 @@ rkh_dat_get_os_info() {
 		if [ -d "${RKHROOTDIR}/var/smoothwall" ]; then
 			OSNAME="Smoothwall Linux"
 			RELEASE="${RKHROOTDIR}/var/smoothwall"
-		elif [ -n "`which gaze 2>/dev/null | grep -v ' '`" ]; then
+		elif [ -n "`which sorcery 2>/dev/null | grep -v ' '`" -a -n "`which gaze 2>/dev/null | grep -v ' '`" ]; then
 			OSNAME="Source Mage Linux"
 		fi
 	fi
