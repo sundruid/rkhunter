@@ -9295,13 +9295,6 @@ os_specific_checks() {
 	# This function performs any O/S specific tests.
 	#
 
-	#
-	# There are no specific tests for OpenBSD at present, so we just
-	# return. We do not want to log or display anything.
-	#
-
-	test "${OPERATING_SYSTEM}" = "OpenBSD" && return
-
 	if ! `check_test os_specific`; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST os_specific
 		return
@@ -9313,6 +9306,14 @@ os_specific_checks() {
 	#
 
 	case "${OPERATING_SYSTEM}" in
+	OpenBSD)
+		#
+		# There are no specific tests for OpenBSD at present, so we just
+		# return. We do not want to log or display anything.
+		#
+
+		return
+		;;
 	*BSD)
 		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 		display --to LOG --type INFO STARTING_TEST os_specific
@@ -12921,7 +12922,9 @@ if [ $SUNOS -eq 1 ]; then
 	test -x "/usr/xpg4/bin/id" && ID_CMD="/usr/xpg4/bin/id"
 fi
 
-if [ "`${ID_CMD} -u 2>/dev/null`" != "0" ]; then
+RKHTMPVAR=`${ID_CMD} -u 2>/dev/null`
+
+if [ "${RKHTMPVAR}" != "0" -a "${RKHTMPVAR}" != "root" ]; then
 	echo "You must be the root user to run this program."
 	exit 1
 fi
