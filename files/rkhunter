@@ -8256,7 +8256,7 @@ malware_checks() {
 			FOUND=0
 			WHITEPROC=""; BLACKPROC=""
 
-			DELE_FILES=`${LSOF_CMD} -wnl ${SOLARISX} | grep '(dele' | head -n 1`
+			DELE_FILES=`${LSOF_CMD} -wnlP ${SOLARISX} | grep '(dele' | head -n 1`
 
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
@@ -8265,7 +8265,7 @@ malware_checks() {
 
 				IFS=$IFSNL
 
-				for LINE in `${LSOF_CMD} -wnl ${SOLARISX} | grep '(dele'`; do
+				for LINE in `${LSOF_CMD} -wnlP ${SOLARISX} | grep '(dele'`; do
 					PROC=""
 
 					PID=`echo "${LINE}" | awk '{ print $2 }'`
@@ -8296,9 +8296,9 @@ malware_checks() {
 
 					if [ -z "${PROC}" ]; then
 						if [ $SUNOS -eq 1 ]; then
-							PROC=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
 						else
-							PROC=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 						fi
 
 						test -z "${PROC}" && PROC=`echo "${LINE}" | awk '{ print $1 }'`
@@ -8452,9 +8452,9 @@ ${PROC} ${PID} ${FNAME}"
 			#
 
 			if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | ${SORT_CMD} | ${UNIQ_CMD} | egrep "/(${SUSP_FILES})\$"`
+				FILENAME=`${LSOF_CMD} -wnlP -F n | grep '^n/' | sed -e 's/^n//' | ${SORT_CMD} | ${UNIQ_CMD} | egrep "/(${SUSP_FILES})\$"`
 			else
-				FILENAME=`${LSOF_CMD} -F n -w -n | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})\$"`
+				FILENAME=`${LSOF_CMD} -wnlP -F n | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})\$"`
 			fi
 
 			if [ -z "${FILENAME}" ]; then
@@ -9465,9 +9465,26 @@ do_network_port_checks() {
 		if [ -n "${LSOF_CMD}" ]; then
 			FNAME=""
 			PID_SEEN=0
-			IFS=$RKHIFS
 
-			for PID in `${LSOF_CMD} -wnl -i ${PROTO}:${PORT} | grep -v '^COMMAND' | awk '{ print $2 }'`; do
+			for LSOFLINE in `${LSOF_CMD} -wnlP -i ${PROTO}:${PORT}`; do
+				#
+				# We must only look at connections using the port on the local host.
+				#
+
+				if [ -n "`echo \"${LSOFLINE}\" | grep \" ${PROTO} \*:${PORT} \"`" ]; then
+					# Process listening for connections from anywhere.
+					PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+				elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:${PORT}[ -]\"`" ]; then
+					# Established or listening process using IPv4 address.
+					PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+				elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} \[[:0-9a-fA-F]+\]:${PORT}[ -]\"`" ]; then
+					# Established or listening process using IPv6 address.
+					PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+				else
+					# Ignore anything else.
+					continue
+				fi
+
 				FNAME=""
 				PID_SEEN=1
 
@@ -9489,9 +9506,9 @@ do_network_port_checks() {
 
 				if [ -z "${FNAME}" ]; then
 					if [ $SUNOS -eq 1 ]; then
-						FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+						FNAME=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
 					else
-						FNAME=`${LSOF_CMD} -wnl -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+						FNAME=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 					fi
 				fi
 
@@ -9505,8 +9522,6 @@ do_network_port_checks() {
 				FNAME=""
 				FOUND="${PROTO}:${PORT}"
 			fi
-
-			IFS=$IFSNL
 		else
 			case "${OPERATING_SYSTEM}" in
 			Linux)

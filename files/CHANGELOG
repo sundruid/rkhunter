@@ -81,7 +81,8 @@
    "-e"'s being displayed.
  - When converting the case of characters, unpredictable results could
    occur when other languages were specified (via LANG). We now use character
-   classes rather than the 'a-z' and 'A-Z' ranges. 
+   classes rather than the 'a-z' and 'A-Z' ranges.
+ - For the 'ports' test ensure that only local ports are checked.
 
  -- 
 
