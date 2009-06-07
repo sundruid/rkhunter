@@ -50,8 +50,8 @@ For other operating systems, we have to use other commands. For example,
 'sysctl' on FreeBSD and OSX, 'uname -p' on SunOS and AIX.
 
 
-4) Does 'ls -ld /etc/*release*' show some sort of 'release' file being
-present?
+4) Does 'ls -ld /etc/*release* /etc/*version*' show some sort of 'release' or
+version file being present?
 
 In order to find out some information about the O/S, such as its version
 number, RKH will look in '/etc' for any one of various files. Typically this
