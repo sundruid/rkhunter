@@ -35,7 +35,9 @@ Please note RKH has some requirements:
    system does not allow the possibility to install one of these 
    applications, but does run perl, you can use 'bget' available from 
    http://www.cpan.org/authors/id/E/EL/ELIJAH/. If you use another 
-   generic method of updating RKH then please let us know.
+   generic method of updating RKH then please let us know. Additionally,
+   a non-standard command to be used for file downloads can be
+   configured in the RKH configuration file.
 
 4) Some tests require single-purpose tools. RKH does not depend on
    these, but it will use them if it finds them - they can enhance

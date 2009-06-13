@@ -1674,6 +1674,45 @@ get_mailonwarn_option() {
 }
 
 
+get_webcmd_option() {
+
+	#
+	# Get the option from the configuration file. If it is set,
+	# then we set the RKHWEBCMD_OPTS option as well if necessary.
+	#
+
+	RKHWEBCMD=`get_option 2 single WEBCMD` || exit 1
+
+	if [ -n "${RKHWEBCMD}" ]; then
+		#
+		# Check that the command is executable.
+		#
+
+		WCMD=`echo "${RKHWEBCMD}" | cut -d' ' -f1`
+		WC=`find_cmd ${WCMD}`
+
+		if [ -n "${WC}" ]; then
+			#
+			# We find if there any command options, and set
+			# the command to use the full pathname.
+			#
+
+			RKHWEBCMD_OPTS=`echo "${RKHWEBCMD}" | cut -d' ' -f2-`
+
+			test "${RKHWEBCMD_OPTS}" = "${RKHWEBCMD}" && RKHWEBCMD_OPTS=""
+
+			RKHWEBCMD="${WC}"
+			test -n "${BASENAME_CMD}" && RKHWEBCMD_BASE=`${BASENAME_CMD} ${WC}` || RKHWEBCMD_BASE=`echo "${WC}" | sed -e 's:^.*/::'`
+		else
+			echo "Invalid WEBCMD configuration option - command '${WCMD}' is non-existent or not executable."
+			exit 1
+		fi
+	fi
+
+	return
+}
+
+
 get_syslog_option() {
 
 	#
@@ -3133,11 +3172,13 @@ get_configfile_options() {
 
 
 	#
-	# Get the mirror file options if necessary.
+	# Get any set options when doing an update or version check.
 	#
 
 	if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 		get_mirror_options
+
+		get_webcmd_option
 	fi
 
 	return
@@ -4113,21 +4154,29 @@ download_file() {
 
 		rm -f ${OUTPUT_FILE} >/dev/null 2>&1
 
-		if [ -n "${WGET_CMD}" ]; then
-			CMD="${WGET_CMD} -q -O ${OUTPUT_FILE} ${MIRROR}${URL}"
-		elif [ -n "${CURL_CMD}" ]; then
-			CMD="${CURL_CMD} --fail --output ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
-		elif [ -n "${BGET_CMD}" ]; then
-			CMD="${BGET_CMD} --out ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
-		elif [ -n "${ELINKS_CMD}" ]; then
-			CMD="${ELINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${OUTPUT_FILE}"
-		elif [ -n "${LINKS_CMD}" ]; then
-			CMD="${LINKS_CMD} -no-home 1 -source ${MIRROR}${URL} >${OUTPUT_FILE}"
-		elif [ -n "${LYNX_CMD}" ]; then
-			CMD="${LYNX_CMD} -source ${MIRROR}${URL} >${OUTPUT_FILE}"
-		elif [ -n "${GET_CMD}" ]; then
-			CMD="${GET_CMD} ${MIRROR}${URL} >${OUTPUT_FILE}"
-		fi
+		case "${RKHWEBCMD_BASE}" in
+		wget)
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -q -O ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+			;;
+		curl)
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} --fail --output ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+			;;
+		bget)
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} --out ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+			;;
+		links|elinks)
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -no-home 1 -source ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			;;
+		lynx)
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -source ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			;;
+		GET)
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			;;
+		*)
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			;;
+		esac
 
 		display --to LOG --type INFO DOWNLOAD_CMD "${CMD}"
 
@@ -12269,8 +12318,6 @@ CLRSET2=0
 AUTO_X_DTCT=0
 AUTO_X_OPT=0
 
-PREVIOUSTEXT=""
-
 # Set to be quiet. No output, but the return code will be set.
 QUIET=0
 
@@ -12376,8 +12423,12 @@ REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr
 
 # List of commands used to download files from the web. This list is 
 # used by the '--update' and '--versioncheck' options. Preferred commands
-# are listed first.
+# are listed first. This can be overridden by the config file.
 WEBCMDLIST="wget curl elinks links lynx bget GET"
+
+RKHWEBCMD=""
+RKHWEBCMD_OPTS=""
+RKHWEBCMD_BASE=""
 
 HOST_NAME=""
 
@@ -13251,48 +13302,51 @@ fi
 #
 # For the update and versioncheck options, we need to make sure
 # we have a command capable of downloading files from the web.
-# The first command found is used.
+# The first command found is used, unless it has been set in
+# the configuration file.
 #
 
 if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
-	FOUND=0
+	if [ -z "${RKHWEBCMD}" ]; then
+		FOUND=0
 
-	for CMD in ${WEBCMDLIST}; do
-		#
-		# Ignore perl commands if perl is not present, or if
-		# certain modules are not present.
-		#
+		for CMD in ${WEBCMDLIST}; do
+			#
+			# Ignore perl commands if perl is not present, or if
+			# certain modules are not present.
+			#
 
-		if [ "${CMD}" = "GET" ]; then
-			test -z "${PERL_CMD}" && continue
+			if [ "${CMD}" = "GET" ]; then
+				test -z "${PERL_CMD}" && continue
 
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl LWP URI HTTP::Status HTTP::Date Getopt::Long 2>&1 | grep 'NOT'`
+				RKHTMPVAR=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl LWP URI HTTP::Status HTTP::Date Getopt::Long 2>&1 | grep 'NOT'`
 
-			test -n "${MOD_INSTALLED}" && continue
-		elif [ "${CMD}" = "bget" ]; then
-			test -z "${PERL_CMD}" && continue
+				test -n "${RKHTMPVAR}" && continue
+			elif [ "${CMD}" = "bget" ]; then
+				test -z "${PERL_CMD}" && continue
 
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Socket Carp 2>&1 | grep 'NOT'`
+				RKHTMPVAR=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Socket Carp 2>&1 | grep 'NOT'`
 
-			test -n "${MOD_INSTALLED}" && continue
+				test -n "${RKHTMPVAR}" && continue
+			fi
+
+
+			RKHTMPVAR=`find_cmd ${CMD}`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				FOUND=1
+				RKHWEBCMD="${RKHTMPVAR}"
+				RKHWEBCMD_BASE="${CMD}"
+				break
+			fi
+		done
+
+		if [ $FOUND -eq 0 ]; then
+			echo "The '--update' and '--versioncheck' options require a command able to"
+			echo "download files from the web. No such command can be found on the system."
+			echo "Examples of commands that could be used are: ${WEBCMDLIST}"
+			exit 1
 		fi
-
-
-		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
-
-		eval ${RKHTMPVAR}_CMD=`find_cmd ${CMD}`
-
-		if [ -n "`eval echo \"\\$${RKHTMPVAR}_CMD\"`" ]; then
-			FOUND=1
-			break
-		fi
-	done
-
-	if [ $FOUND -eq 0 ]; then
-		echo "The '--update' and '--versioncheck' options require a command able to"
-		echo "download files from the web. No such command can be found on the system."
-		echo "Examples of commands that could be used are: ${WEBCMDLIST}"
-		exit 1
 	fi
 fi
 
@@ -13470,14 +13524,7 @@ if [ $NOLOG -eq 0 ]; then
 		fi
 	done
 
-	for CMD in ${WEBCMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
-		RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
-
-		if [ -n "${RKHTMPVAR}" ]; then
-			display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
-		fi
-	done
+	test -n "${RKHWEBCMD}" && display --to LOG --type INFO FOUND_CMD "${RKHWEBCMD_BASE}" "${RKHWEBCMD}"
 
 	test $GRSECINSTALLED -eq 1 && display --to LOG --type INFO GRSECINSTALLED
 fi

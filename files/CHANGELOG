@@ -37,6 +37,8 @@
    seconds.
  - Added the COPY_LOG_ON_ERROR configuration option. When set this will
    take a copy of the log file if any errors or warnings have occurred.
+ - Added the WEBCMD configuration option. This allows users to specify
+   the command used to download data file updates from the Internet.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
