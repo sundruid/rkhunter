@@ -539,21 +539,22 @@ get_option() {
 	# it is then process it according to the multi-line argument.
 	#
 
-	if [ -z "`grep \"^${OPTV}=\" ${CONFIGFILE}`" ]; then
+	if [ -z "`grep -h \"^${OPTV}=\" ${CONFIGFILE} ${LOCALCONFIGFILE}`" ]; then
 		echo ""
 		return 0
 	else
 		case "${OPTMULTI}" in
 		single)
-			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
 			;;
 		multi)
-			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | sed -e "s/${OPTV}=//"`
 			;;
 		*)
 			echo "Error: Invalid multi-line argument in get_option function: $*" >&2
+
 			# Treat this as a single-line option.
-			OPTVAR=`grep "^${OPTV}=" ${CONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
 			;;
 		esac
 	fi
@@ -1665,7 +1666,7 @@ get_mailonwarn_option() {
 			echo "Invalid MAIL_CMD configuration option - command '${MCMD}' is non-existent or not executable."
 			exit 1
 		fi
-	elif [ -z "`grep \"^MAIL-ON-WARNING=\" ${CONFIGFILE}`" ]; then
+	elif [ -z "`grep -h \"^MAIL-ON-WARNING=\" ${CONFIGFILE} ${LOCALCONFIGFILE}`" ]; then
 		RET_CODE=1
 		echo "No MAIL-ON-WARNING option has been configured."
 	fi
@@ -12341,6 +12342,10 @@ DB_PATH=""
 # Users can reset this to a new configuration file.
 CONFIGFILE=""
 
+# Users cannnot reset this. The local config file must
+# be in the same directory as the main config file.
+LOCALCONFIGFILE=""
+
 # Users can reset this to new command directories.
 BINPATHS=""
 
@@ -13020,8 +13025,9 @@ check_required_commands "${SPACEDPATH} ${DFLT_BINPATHS}"
 
 
 #
-# Now we check for the configuration file, and then check the various
-# options within it.
+# Now we check for the configuration file. We then see if there is a
+# local configuration file present in the same directory, and finally
+# check the various options within them.
 #
 # NOTE: Do not change the format of the following 'if' statement.
 # The installer script will modify it directly during installation.
@@ -13046,6 +13052,9 @@ elif [ ! -s "${CONFIGFILE}" ]; then
 	exit 1
 fi
 
+RKHTMPVAR=`echo "${CONFIGFILE}" | sed -e 's:/[^/]*$::'`
+
+test -f "${RKHTMPVAR}/rkhunter.conf.local" && LOCALCONFIGFILE="${RKHTMPVAR}/rkhunter.conf.local"
 
 get_configfile_options
 
@@ -13481,6 +13490,8 @@ if [ $NOLOG -eq 0 ]; then
 	display --to LOG --type INFO CONFIG_ENVSHELL ${SHELL} ${MYSHELL}
 
 	display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
+
+	test -n "${LOCALCONFIGFILE}" && display --to LOG --type INFO CONFIG_LOCALCONFIGFILE "${LOCALCONFIGFILE}"
 
 	display --to LOG --type INFO CONFIG_INSTALLDIR "${RKHINSTALLDIR}"
 

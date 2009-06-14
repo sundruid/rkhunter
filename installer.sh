@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.11"
+INSTALLER_VERSION="1.2.12"
 INSTALLER_COPYRIGHT="Copyright 2003-2009, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -505,6 +505,7 @@ doInstall()  {
 					echo "INSTALLDIR=$PREFIX" >>rkhunter.conf
 					echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter" >>rkhunter.conf
 					echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter.conf" >>rkhunter.conf
+					test -f "$PREFIX/rkhunter.conf.local" && echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter.conf.local" >>rkhunter.conf
 
 					sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" rkhunter >rkhunter.
 					mv -f rkhunter. rkhunter
@@ -730,15 +731,20 @@ doInstall()  {
 			echo "DBDIR=${RKHINST_DB_DIR}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
 			echo "TMPDIR=${RKHINST_TMP_DIR}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
-			echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
+
+			if [ "$FILE" = "rkhunter.conf" ]; then
+				echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
+				test -f "${RKHINST_ETC_DIR}/${FILE}.local" && echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}.local" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
+			fi
 
 			case "${RKHINST_LAYOUT}" in
 			RPM|DEB|TGZ)
 				;;
 			*)
 				echo " >>>"
-				echo " >>> PLEASE NOTE: inspect for update changes in \"${RKHINST_ETC_DIR}/${NEWFILE}\""
-				echo " >>> and apply to \"${RKHINST_ETC_DIR}/${FILE}\" before running Rootkit Hunter."
+				echo " >>> PLEASE NOTE: inspect for update changes in \"${RKHINST_ETC_DIR}/${NEWFILE}\","
+				echo " >>> and apply to either \"${RKHINST_ETC_DIR}/${FILE}\" or your local configuration"
+				echo " >>> file before running Rootkit Hunter."
 				echo " >>>"
 				;;
 			esac

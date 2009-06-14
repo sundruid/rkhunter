@@ -81,12 +81,17 @@ The installer also has a help option:
 
 The default installation process will install a configuration file,
 called 'rkhunter.conf', into the '/etc' directory or where
-you chose using the --layout switch. Please edit the configuration 
-file according to your own system requirements. If the installer 
-encounters an existing rkhunter.conf, it will not be overwritten.
-Instead the installer creates a new configuration file, but with
-a unique number as its suffix. Please inspect the new configuration
-file and copy over any changes to the existing configuration file.
+you chose using the --layout switch. You can either edit the main
+configuration file itself, or create a 'local' configuration file
+for your own settings. This file, which must be called
+'rkhunter.conf.local', must reside in the same directory as the main
+configuration file. You should edit either, or both, of these files
+according to your own system requirements. If the installer 
+encounters an existing 'rkhunter.conf' file, it will not be overwritten.
+Instead the installer creates a new configuration file, but with a
+unique number as its suffix. Please inspect the new configuration file
+and copy over any changes to the existing main configuration file, or
+to your local configuration file.
 
 The main RKH script will be installed into the '/usr/local/bin'
 directory or where you chose using the --layout switch. Man pages will 

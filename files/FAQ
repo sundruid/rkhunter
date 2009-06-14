@@ -169,7 +169,7 @@ A.   Prior to any incident it is recommended that you have read
      binaries. If so, then please check further:
 
        1. If you run a file integrity checker, for example Aide,
-          Samhain, or tripwire, consult the results from running those
+          Samhain, or Tripwire, consult the results from running those
           tools. Note they must be installed directly after the O/S
           installation in order to be useful, and you must keep a copy
           of the binary, configuration files and databases off-site.
@@ -265,7 +265,7 @@ A.   Some distributions, for example Red Hat and OpenBSD, do patch
 
      If you wish you can skip the application version check completely
      by adding the 'apps' test name to the DISABLE_TESTS option in your
-     rkhunter.conf configuration file.
+     rkhunter configuration file.
 
 
 3.3) How can I automatically run Rootkit Hunter every day?

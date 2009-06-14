@@ -39,6 +39,13 @@
    take a copy of the log file if any errors or warnings have occurred.
  - Added the WEBCMD configuration option. This allows users to specify
    the command used to download data file updates from the Internet.
+ - It is now possible to put configuration changes into a local config
+   file. This file, called 'rkhunter.conf.local', must be in the same
+   directory as the main configuration file. Rkhunter will look for
+   configuration options in the main config file, and then in the local
+   config file if it exists. As before, for options allowed only once,
+   the last one seen is used. For options allowed more than once, all
+   options from both files will be used.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
