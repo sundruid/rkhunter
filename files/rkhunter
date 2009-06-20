@@ -2380,8 +2380,6 @@ get_md5_hash_function() {
 	#
 
 	if [ $PRELINKED -eq 1 ]; then
-		test $1 -eq 1 && PRELINK_HASH="MD5"
-
 		if [ $USE_RUNCON -eq 1 ]; then
 			echo "${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify --md5"
 		else
@@ -2470,6 +2468,12 @@ get_hash_function() {
 
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "MD5" ]; then
 		HASH_FUNC=`get_md5_hash_function 1`
+
+		if [ $PRELINKED -eq 1 ]; then
+			PRELINK_HASH="MD5"
+		elif [ -z "`echo \"${HASH_FUNC}\" | grep '/filehashmd5\.pl$'`" ]; then
+			MD5_CMD="${HASH_FUNC}"
+		fi
 	fi
 
 

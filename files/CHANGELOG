@@ -92,6 +92,7 @@
    occur when other languages were specified (via LANG). We now use character
    classes rather than the 'a-z' and 'A-Z' ranges.
  - For the 'ports' test ensure that only local ports are checked.
+ - Using '--hash MD5 --propupd' on a prelinked system caused an error.
 
  -- 
 
