@@ -2373,11 +2373,6 @@ get_md5_hash_function() {
 	# This is a short function to try and locate
 	# an MD5 hash function command.
 	#
-	# The first parameter simply indicates if we are
-	# setting the hash function (parameter is 1) or
-	# just looking for an MD5 command to support a
-	# package manager (parameter is 0).
-	#
 
 	if [ $PRELINKED -eq 1 ]; then
 		if [ $USE_RUNCON -eq 1 ]; then
@@ -2396,7 +2391,6 @@ get_md5_hash_function() {
 			test -n "${MOD_INSTALLED}" && echo "${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
 		else
 			echo "${HFUNC}"
-			MD5_CMD="${HFUNC}"
 		fi
 	fi
 
@@ -2467,7 +2461,7 @@ get_hash_function() {
 	#
 
 	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "MD5" ]; then
-		HASH_FUNC=`get_md5_hash_function 1`
+		HASH_FUNC=`get_md5_hash_function`
 
 		if [ $PRELINKED -eq 1 ]; then
 			PRELINK_HASH="MD5"
@@ -2583,7 +2577,7 @@ get_hash_function() {
 		fi
 
 		if [ $CHECK -eq 1 ]; then
-			PKGMGR_MD5_HASH=`get_md5_hash_function 0`
+			PKGMGR_MD5_HASH=`get_md5_hash_function`
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
 				echo "Unable to find an MD5 hash function command to assist package manager 'DPKG'."
@@ -2605,7 +2599,7 @@ get_hash_function() {
 		fi
 
 		if [ $CHECK -eq 1 ]; then
-			PKGMGR_MD5_HASH=`get_md5_hash_function 0`
+			PKGMGR_MD5_HASH=`get_md5_hash_function`
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
 				echo "Unable to find an MD5 hash function command to assist package manager 'BSD'."
