@@ -2766,6 +2766,23 @@ get_rtkt_whitelist_options() {
 }
 
 
+get_shared_lib_whitelist_option() {
+
+	#
+	# This function gets any whitelisted shared library files
+	# from the configuration file. There are no defaults.
+	#
+
+	SHARED_LIB_WHITELIST=`get_option 2 single SHARED_LIB_WHITELIST` || exit 1
+
+	if [ -n "${SHARED_LIB_WHITELIST}" ]; then
+		SHARED_LIB_WHITELIST=" ${SHARED_LIB_WHITELIST} "
+	fi
+
+	return
+}
+
+
 get_mirror_options() {
 
 	#
@@ -3129,6 +3146,8 @@ get_configfile_options() {
 		check_test ports && get_ports_option
 
 		check_test group_accounts && get_shadow_file_option
+
+		check_test shared_libs && get_shared_lib_whitelist_option
 
 		get_epoch_date_cmd_option
 	fi
@@ -5515,11 +5534,32 @@ shared_libs_check() {
 
 	RKHTMPVAR=${RKHROOTDIR}/etc/ld.so.preload
 
-	if [ -f ${RKHTMPVAR} ]; then
-		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
-		display --to LOG --type WARNING SHARED_LIBS_PRELOAD_FILE_FOUND "${RKHTMPVAR}"
+	if [ -s ${RKHTMPVAR} ]; then
+		RKHLIBLIST=""
+
+		display --to LOG --type INFO SHARED_LIBS_PRELOAD_FILE_FOUND "${RKHTMPVAR}"
+
+		for FNAME in `cat ${RKHTMPVAR}`; do
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+
+			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				RKHLIBLIST="${RKHLIBLIST} ${FNAME}"
+			else
+				display --to LOG --type INFO SHARED_LIBS_PRELOAD_LIB_WLIST "${FNAME}"
+			fi
+		done
+
+		if [ -n "${RKHLIBLIST}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+
+			for FNAME in ${RKHLIBLIST}; do
+				display --to LOG --type WARNING SHARED_LIBS_PRELOAD_LIB_FOUND "${FNAME}"
+			done
+		else
+			display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+		fi
 	else
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
 	fi
 
 

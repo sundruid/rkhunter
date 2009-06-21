@@ -1,4 +1,4 @@
-Version:2009061401
+Version:2009062101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -26,6 +26,7 @@ MSG_RESULT_NONE_FOUND:None found
 MSG_RESULT_ALLOWED:Allowed
 MSG_RESULT_NOT_ALLOWED:Not allowed
 MSG_RESULT_UNSET:Not set
+MSG_RESULT_WHITELISTED:Whitelisted
 
 MSG_RESULT_UPD:Updated
 MSG_RESULT_NO_UPD:No update
@@ -534,8 +535,10 @@ NETWORK_PACKET_CAP_WL:Found process '$1': it is whitelisted.
 SHARED_LIBS_START:Performing 'shared libraries' checks
 SHARED_LIBS_PRELOAD_VAR:Checking for preloading variables
 SHARED_LIBS_PRELOAD_VAR_FOUND:Found library preload variable(s): $1
-SHARED_LIBS_PRELOAD_FILE:Checking for preload file
+SHARED_LIBS_PRELOAD_FILE:Checking for preloaded libraries
+SHARED_LIBS_PRELOAD_LIB_FOUND:Found preloaded shared library: $1
 SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1
+SHARED_LIBS_PRELOAD_LIB_WLIST:Found preloaded shared library '$1': it is whitelisted.
 SHARED_LIBS_PATH:Checking LD_LIBRARY_PATH variable
 SHARED_LIBS_PATH_BAD:The LD_LIBRARY_PATH environment variable is set and can influence binaries: set to: $1
 

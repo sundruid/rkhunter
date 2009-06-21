@@ -46,6 +46,8 @@
    config file if it exists. As before, for options allowed only once,
    the last one seen is used. For options allowed more than once, all
    options from both files will be used.
+ - Added the SHARED_LIB_WHITELIST configuration option to allow the
+   whitelisting of preloaded shared libraries.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -60,6 +62,11 @@
  - The warnings from the passwd and group file changes tests are now
    more specific about what has changed.
  - Small change to the detection of Source Mage Linux.
+ - Renamed part of the 'shared_libs' test to display that it is checking
+   for preloaded libraries, rather than just the preload file. If all the
+   libraries are whitelisted, then the overall result is shown as
+   'whitelisted'. The pathname of the preload file is now logged, and any
+   found shared library files are now logged as a warning.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious
