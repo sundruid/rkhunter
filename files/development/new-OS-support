@@ -50,7 +50,7 @@ For other operating systems, we have to use other commands. For example,
 'sysctl' on FreeBSD and OSX, 'uname -p' on SunOS and AIX.
 
 
-4) Does 'ls -ld /etc/*release* /etc/*version*' show some sort of 'release' or
+4) Does 'ls -ld /etc/*release* /etc/*version* /etc/issue' show some sort of 'release' or
 version file being present?
 
 In order to find out some information about the O/S, such as its version
@@ -94,7 +94,7 @@ As above, this is a second check for promiscuous interfaces.
 exist, then is the 'lsof' command present on the system as well?
 
 This is used by RKH to see if there are any applications watching the network
-interfaces. The 'lsof' command i used by several tests in RKH.
+interfaces. The 'lsof' command is used by several tests in RKH.
 
 
 10) Does the 'ps ax' command display the processes running on the system? If
@@ -113,7 +113,7 @@ This is used by RKH in order to add to filenames to make them random.
 
 
 12) Is the 'stat' command present on the system, and if so, does the
-'stat --format='%i 0%a %u %g %s %Y:' /etc/motd' command work?
+'stat -c '%i 0%a %u %g %s %Y:' /etc/motd' command work?
 
 This should display some numbers relating to the ('/etc/motd') file attributes.
 If it doesn't work, then we may need to see the man page for the 'stat'

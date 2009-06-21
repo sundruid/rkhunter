@@ -33,8 +33,8 @@
  - Added the EPOCH_DATE_CMD configuration option. In the file properties
    test any modification date/times will now be displayed in human-readable
    format as well as the number of epoch seconds. This option can be used
-   to specify the command to use if 'date' or 'perl' cannot convert epoch
-   seconds.
+   to specify the command to use if the 'date' or 'perl' commands cannot
+   convert epoch seconds.
  - Added the COPY_LOG_ON_ERROR configuration option. When set this will
    take a copy of the log file if any errors or warnings have occurred.
  - Added the WEBCMD configuration option. This allows users to specify
@@ -48,6 +48,7 @@
    options from both files will be used.
  - Added the SHARED_LIB_WHITELIST configuration option to allow the
    whitelisting of preloaded shared libraries.
+ - Made some minor changes to enable support for SliTaz Linux.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -63,10 +64,28 @@
    more specific about what has changed.
  - Small change to the detection of Source Mage Linux.
  - Renamed part of the 'shared_libs' test to display that it is checking
-   for preloaded libraries, rather than just the preload file. If all the
-   libraries are whitelisted, then the overall result is shown as
-   'whitelisted'. The pathname of the preload file is now logged, and any
-   found shared library files are now logged as a warning.
+   for preloaded libraries, rather than just the preload file. The pathname
+   of the preload file is now logged, and any found shared library files are
+   now logged as a warning.
+ - The SYSLOG_CONFIG_FILE configuration option can now take the value of
+   'NONE' to indicate that there is no syslog configuration file, despite
+   the fact that syslogd may be running.
+ - Some tests will now show their result as 'Whitelisted'. If a test uses a
+   configuration option, and this has been set, and the test passes - giving
+   a green result - then it will now be shown as 'Whitelisted'. The user can
+   now see that a test has either passed correctly - an 'OK' or 'Not found'
+   type result - or has passed because the test requirements have been
+   whitelisted. It is for the user to investigate if this is correct or not.
+   (This change does not currently apply to all relevant tests.)
+   Additionally, the configuration option WHITELISTED_IS_WHITE can be set
+   if the 'Whitelisted' result is to be shown in white rather than green.
+   For color set two users this will be shown in black.
+ - Improved the O/S name detection slightly for those systems which only
+   provide a version number.
+ - Rkhunter now ensures that the output from the 'lsattr' command, or
+   'ls -lno' on *BSD systems, and the 'file' command is valid. That is, it
+   produces something on stdout. If it doesn't, then the 'immutable' and/or
+   'scripts' test is skipped.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious
@@ -98,8 +117,11 @@
  - When converting the case of characters, unpredictable results could
    occur when other languages were specified (via LANG). We now use character
    classes rather than the 'a-z' and 'A-Z' ranges.
- - For the 'ports' test ensure that only local ports are checked.
+ - For the 'ports' test ensure that only local ports are checked. Also if a
+   port is whitelisted, the result will say so.
  - Using '--hash MD5 --propupd' on a prelinked system caused an error.
+ - If a non-existent syslog config file was put into the RKH configuration
+   file, then rkhunter incorrectly said that it was found.
 
  -- 
 

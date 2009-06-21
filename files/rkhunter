@@ -343,6 +343,16 @@ display() {
 
 
 	#
+	# If we want whitelisted results to be shown as white, or
+	# black for colour set two users, then change the colour now.
+	#
+
+	if [ $WLIST_IS_WHITE -eq 1 -a $WRITETOTTY -eq 1 -a $COLORS -eq 1 -a "${RESULT}" = "${MSG_RESULT_WHITELISTED}" ]; then
+		COLOR=$WHITE
+	fi
+
+
+	#
 	# We set the variable LINE1 to contain the first line of the message.
 	# For the log file we use the variable LOGLINE1. We also set
 	# where the language file is located. If a message cannot be found
@@ -1882,6 +1892,10 @@ get_syslog_config_options() {
 
 	SYSLOG_CONFIG_FILE=`get_option 1 single SYSLOG_CONFIG_FILE` || exit 1
 
+	if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep -i '^none$'`" ]; then
+		SYSLOG_CONFIG_FILE="NONE"
+	fi
+
 
 	return
 }
@@ -1927,6 +1941,23 @@ get_auto_x_option() {
 		else
 			CLRSET2=0
 		fi
+	fi
+
+
+	#
+	# Finally, we get the option to see if whitelisted
+	# results are to be shown as white rather than green.
+	#
+
+	WLIST_IS_WHITE=`get_option 1 single WHITELISTED_IS_WHITE` || exit 1
+
+	if [ -n "${WLIST_IS_WHITE}" ]; then
+		if [ "${WLIST_IS_WHITE}" != "0" -a "${WLIST_IS_WHITE}" != "1" ]; then
+			echo "Invalid WHITELISTED_IS_WHITE configuration option: not a valid number: ${WLIST_IS_WHITE}"
+			exit 1
+		fi
+	else
+		WLIST_IS_WHITE=0
 	fi
 
 	return
@@ -2259,7 +2290,7 @@ get_epoch_date_cmd_option() {
 
 	#
 	# Get the option from the configuration file, or work out
-	# if the date command is suitable.
+	# if the 'date' command is suitable.
 	#
 
 	EPOCH_DATE_CMD=`get_option 1 single EPOCH_DATE_CMD` || exit 1
@@ -2279,7 +2310,8 @@ get_epoch_date_cmd_option() {
 		EPOCH_DATE_CMD="NONE"
 		return
 	elif [ -n "${EPOCH_DATE_CMD}" ]; then
-		test -x "${EPOCH_DATE_CMD}" || EPOCH_DATE_CMD="NONE"
+		RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
+		test -x "${RKHTMPVAR}" || EPOCH_DATE_CMD="NONE"
 		return
 	fi
 
@@ -3402,6 +3434,10 @@ rkh_dat_get_os_info() {
 	# whatever is in the LSB release file. We test these last because
 	# they are not necessarily reliable in providing the O/S version.
 	#
+	# However, if an O/S has been found, but it seems to be just a
+	# version number, then we look for the first word in the 'issue'
+	# file and prepend that. Hopefully, it will make sense!
+	#
 
 	if [ -z "${OSNAME}" ]; then
 		if [ -f "${RKHROOTDIR}/etc/issue" ]; then
@@ -3414,6 +3450,12 @@ rkh_dat_get_os_info() {
 			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/lsb-release | head -n 1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/lsb-release"
+		fi
+	elif [ -n "`echo \"${OSNAME}\" | grep '^[0-9.][0-9.]*$'`" ]; then
+		if [ -f "${RKHROOTDIR}/etc/issue" ]; then
+			RKHTMPVAR=`awk '/^[ 	]*[^ 	]/ { print $1 }' ${RKHROOTDIR}/etc/issue | head -n 1`
+
+			test -n "${RKHTMPVAR}" && OSNAME="${RKHTMPVAR} ${OSNAME}"
 		fi
 	fi
 
@@ -3461,8 +3503,8 @@ rkh_dat_set_file_properties() {
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
 			INODECMD="${STAT_CMD} -f '%i'"
 		else
-			SCMD="${STAT_CMD} --format='%i 0%a %u %g %s %Y:'"
-			INODECMD="${STAT_CMD} --format='%i'"
+			SCMD="${STAT_CMD} -c '%i 0%a %u %g %s %Y:'"
+			INODECMD="${STAT_CMD} -c '%i'"
 		fi
 	fi
 
@@ -5811,14 +5853,31 @@ file_properties_check() {
 		fi
 	fi
 
-	if [ $SKIP_IMMUT -eq 0 -a $BSDOS -eq 0 -a -z "${LSATTR_CMD}" ]; then
-		SKIP_IMMUT=1
-		RKHTMPVAR="${RKHTMPVAR} immutable"
+	if [ $SKIP_IMMUT -eq 0 ]; then
+		if [ $BSDOS -eq 1 ]; then
+			if [ -z "`ls -lno ${CONFIGFILE} 2>/dev/null`" ]; then
+				SKIP_IMMUT=1
+				RKHTMPVAR="${RKHTMPVAR} immutable-bsd"
+			fi
+		else
+			if [ -z "${LSATTR_CMD}" ]; then
+				SKIP_IMMUT=1
+				RKHTMPVAR="${RKHTMPVAR} immutable"
+			elif [ -z "`${LSATTR_CMD} ${CONFIGFILE} 2>/dev/null`" ]; then
+				SKIP_IMMUT=1
+				RKHTMPVAR="${RKHTMPVAR} immutable-cmd"
+			fi
+		fi
 	fi
 
-	if [ $SKIP_SCRIPT -eq 0 -a -z "${FILE_CMD}" ]; then
-		SKIP_SCRIPT=1
-		RKHTMPVAR="${RKHTMPVAR} script"
+	if [ $SKIP_SCRIPT -eq 0 ]; then
+		if [ -z "${FILE_CMD}" ]; then
+			SKIP_SCRIPT=1
+			RKHTMPVAR="${RKHTMPVAR} script"
+		elif [ -z "`${FILE_CMD} ${CONFIGFILE} 2>/dev/null`" ]; then
+			SKIP_SCRIPT=1
+			RKHTMPVAR="${RKHTMPVAR} script-cmd"
+		fi
 	fi
 
 	if [ $SKIP_ATTR -eq 0 -o $SKIP_HASH -eq 0 ]; then
@@ -5902,8 +5961,17 @@ file_properties_check() {
 			immutable)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT
 				;;
+			immutable-bsd)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD "ls -lno"
+				;;
+			immutable-cmd)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD "lsattr"
+				;;
 			script)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_SCRIPT
+				;;
+			script-cmd)
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_FILE_CMD
 				;;
 			os_changed)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_OS_CHANGED
@@ -5947,8 +6015,8 @@ file_properties_check() {
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
 			INODECMD="${STAT_CMD} -f '%i'"
 		else
-			SCMD="${STAT_CMD} --format='%i 0%a %u %g %s %Y:'"
-			INODECMD="${STAT_CMD} --format='%i'"
+			SCMD="${STAT_CMD} -c '%i 0%a %u %g %s %Y:'"
+			INODECMD="${STAT_CMD} -c '%i'"
 		fi
 	fi
 
@@ -6513,9 +6581,9 @@ file_properties_check() {
 
 			if [ -z "${WL_FILE}" ]; then
 				if [ $BSDOS -eq 0 ]; then
-					RKHTMPVAR=`${LSATTR_CMD} ${FNAME} 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+					RKHTMPVAR=`${LSATTR_CMD} ${FNAME} 2>&1 | cut -d' ' -f1 | grep 'i'`
 				else
-					RKHTMPVAR=`ls -lno ${FNAME} 2>/dev/null | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+					RKHTMPVAR=`ls -lno ${FNAME} 2>&1 | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 				fi
 
 				test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} immutable"
@@ -9683,15 +9751,15 @@ do_network_port_checks() {
 		case "${FOUND}" in
 		path_whitelisted)
 			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WHITELISTED --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
 			;;
 		trusted_whitelisted)
 			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WHITELISTED --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
 			;;
 		port_whitelisted)
 			display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WHITELISTED --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
 			;;
 		"")
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
@@ -10755,20 +10823,28 @@ do_system_config_files_check() {
 	# Now find out where the syslog configuration file is located.
 	#
 
-	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
-		RKHTMPVAR="${SYSLOG_CONFIG_FILE}"
+	if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
+		RKHTMPVAR=""
 	else
-		RKHTMPVAR="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf"
+		if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+			RKHTMPVAR="${SYSLOG_CONFIG_FILE}"
+			SYSLOG_CONFIG_FILE=""
+		else
+			RKHTMPVAR="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf"
+		fi
+
+		for FILE in ${RKHTMPVAR}; do
+			if [ -f "${RKHROOTDIR}${FILE}" ]; then
+				SYSLOG_CONFIG_FILE="${RKHROOTDIR}${FILE}"
+				break
+			fi
+		done
 	fi
 
-	for FILE in ${RKHTMPVAR}; do
-		if [ -f "${RKHROOTDIR}${FILE}" ]; then
-			SYSLOG_CONFIG_FILE="${RKHROOTDIR}${FILE}"
-			break
-		fi
-	done
-
-	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+	if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
+		SYSLOG_CONFIG_FILE=""
+		display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+	elif [ -n "${SYSLOG_CONFIG_FILE}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
 		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "syslog" "${SYSLOG_CONFIG_FILE}"
 	elif [ $METALOG_SEEN -eq 1 -o $SOCKLOG_SEEN -eq 1 ]; then
@@ -12342,6 +12418,7 @@ PRELINK_CMD=""
 PRELINK_HASH=""
 PKGMGR_MD5_HASH=""
 MD5_CMD=""
+EPOCH_DATE_CMD=""
 
 UPDATE=0
 PROP_UPDATE=0
@@ -12351,6 +12428,9 @@ VERSIONCHECK=0
 # By default use coloured output.
 COLORS=1
 CLRSET2=0
+
+# Are whitelisted results to be shown as white?
+WLIST_IS_WHITE=0
 
 # Set to automatically detect if X is in use, and
 # hence use the second colour set.
@@ -12628,6 +12708,9 @@ USER_FILE_LIST=""
 USER_SIMPLE_FILE_LIST=""
 USER_DIR_LIST=""
 USER_EXCLUDE_PROP=""
+
+# This gets set if any shared libraries are to be whitelisted.
+SHARED_LIB_WHITELIST=""
 
 
 ######################################################################
@@ -13754,10 +13837,37 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 fi
 
 if `check_test properties` || test $PROP_UPDATE -eq 1; then
-	test -n "${USER_FILE_LIST}" && display --to LOG --type INFO USER_FILE_LIST "`echo ${USER_FILE_LIST}`"
-	test -n "${USER_SIMPLE_FILE_LIST}" && display --to LOG --type INFO USER_CMD_LIST "${USER_SIMPLE_FILE_LIST}"
-	test -n "${USER_DIR_LIST}" && display --to LOG --type INFO USER_DIR_LIST "${USER_DIR_LIST}"
-	test -n "${USER_EXCLUDE_PROP}" && display --to LOG --type INFO USER_EXCLUDE_PROP "${USER_EXCLUDE_PROP}"
+	if [ -n "${USER_FILE_LIST}" ]; then
+		display --to LOG --type INFO USER_FILE_LIST
+
+		for FNAME in ${USER_FILE_LIST}; do
+			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+		done
+	fi
+
+	if [ -n "${USER_SIMPLE_FILE_LIST}" ]; then
+		display --to LOG --type INFO USER_CMD_LIST
+
+		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
+			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+		done
+	fi
+
+	if [ -n "${USER_DIR_LIST}" ]; then
+		display --to LOG --type INFO USER_DIR_LIST
+
+		for FNAME in ${USER_DIR_LIST}; do
+			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+		done
+	fi
+
+	if [ -n "${USER_EXCLUDE_PROP}" ]; then
+		display --to LOG --type INFO USER_EXCLUDE_PROP
+
+		for FNAME in ${USER_EXCLUDE_PROP}; do
+			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+		done
+	fi
 fi
 
 if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then

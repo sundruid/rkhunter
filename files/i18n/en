@@ -1,4 +1,4 @@
-Version:2009062101
+Version:2009062102
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -213,10 +213,10 @@ PROPUPD_WARN:cannot determine what has caused the change, that is for the user t
 ENABLED_TESTS:Enabled tests are: $1
 DISABLED_TESTS:Disabled tests are: $1
 
-USER_FILE_LIST:Including user files for file properties check: $1
-USER_CMD_LIST:Including user commands for file properties check: $1
-USER_DIR_LIST:Including user directories for file properties check: $1
-USER_EXCLUDE_PROP:Excluding from file properties check: $1
+USER_FILE_LIST:Including user files for file properties check:
+USER_CMD_LIST:Including user commands for file properties check:
+USER_DIR_LIST:Including user directories for file properties check:
+USER_EXCLUDE_PROP:Excluding from file properties check:
 
 KSYMS_FOUND:Found ksym file '$1'
 KSYMS_MISSING:All ksyms and kallsyms checks will be skipped - neither file is present on the system.
@@ -248,7 +248,9 @@ FILE_PROP_SKIP_HASH_PRELINK:Unable to find 'prelink' command.
 FILE_PROP_SKIP_HASH_SHA1:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
 FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe was found, which can cause errors. If possible, disable libsafe and then run the prelink command. Finally, recreate the hash values using 'rkhunter --propupd'.
 FILE_PROP_SKIP_IMMUT:Unable to find 'lsattr' command - all file immutable-bit checks will be skipped.
+FILE_PROP_SKIP_IMMUT_CMD:No output from the '$1' command - all file immutable-bit checks will be skipped.
 FILE_PROP_SKIP_SCRIPT:Unable to find 'file' command - all script replacement checks will be skipped.
+FILE_PROP_SKIP_FILE_CMD:No output from the 'file' command - all script replacement checks will be skipped.
 FILE_PROP_OS_CHANGED:The local host configuration or operating system has changed.
 FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not exist, and should be created. To do this type in 'rkhunter --propupd'.
 FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, and should be created. To do this type in 'rkhunter --propupd'.
