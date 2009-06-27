@@ -6581,7 +6581,9 @@ file_properties_check() {
 
 			if [ -z "${WL_FILE}" ]; then
 				if [ $BSDOS -eq 0 ]; then
-					RKHTMPVAR=`${LSATTR_CMD} ${FNAME} 2>&1 | cut -d' ' -f1 | grep 'i'`
+					if [ ! -h "${FNAME}" ]; then
+						RKHTMPVAR=`${LSATTR_CMD} ${FNAME} 2>&1 | cut -d' ' -f1 | grep 'i'`
+					fi
 				else
 					RKHTMPVAR=`ls -lno ${FNAME} 2>&1 | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 				fi
