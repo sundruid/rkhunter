@@ -1,4 +1,4 @@
-Version:2009062102
+Version:2009062701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -251,6 +251,7 @@ FILE_PROP_SKIP_IMMUT:Unable to find 'lsattr' command - all file immutable-bit ch
 FILE_PROP_SKIP_IMMUT_CMD:No output from the '$1' command - all file immutable-bit checks will be skipped.
 FILE_PROP_SKIP_SCRIPT:Unable to find 'file' command - all script replacement checks will be skipped.
 FILE_PROP_SKIP_FILE_CMD:No output from the 'file' command - all script replacement checks will be skipped.
+FILE_PROP_NO_OS_WARNING:Warnings of any O/S change have been disabled at the users request.
 FILE_PROP_OS_CHANGED:The local host configuration or operating system has changed.
 FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not exist, and should be created. To do this type in 'rkhunter --propupd'.
 FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, and should be created. To do this type in 'rkhunter --propupd'.

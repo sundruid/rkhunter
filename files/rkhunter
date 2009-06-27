@@ -2887,10 +2887,13 @@ get_mirror_options() {
 }
 
 
-get_os_version_option() {
+get_os_info_options() {
 
 	#
-	# This function gets the O/S 'release' file pathname
+	# This function gets configuration options relating
+	# to obtaining information about the O/S.
+	#
+	# The first part gets the 'release' file pathname
 	# from the configuration file. There is no default.
 	#
 
@@ -2914,6 +2917,23 @@ get_os_version_option() {
 			echo "O/S release file is empty: ${RKHROOTDIR}${OS_VERSION_FILE}"
 			exit 1
 		fi
+	fi
+
+
+	#
+	# Next we get the option as to whether we should
+	# issue a warning when the O/S info changes or not.
+	#
+
+	WARN_ON_OS_CHANGE=`get_option 1 single WARN_ON_OS_CHANGE` || exit 1
+
+	if [ -n "${WARN_ON_OS_CHANGE}" ]; then
+		if [ "${WARN_ON_OS_CHANGE}" != "0" -a "${WARN_ON_OS_CHANGE}" != "1" ]; then
+			echo "Invalid WARN_ON_OS_CHANGE configuration option: not a valid number: ${WARN_ON_OS_CHANGE}"
+			exit 1
+		fi
+	else
+		WARN_ON_OS_CHANGE=1
 	fi
 
 	return
@@ -3205,7 +3225,7 @@ get_configfile_options() {
 
 		test $SKIP_HASH_MSG -eq 0 && get_hash_function
 
-		get_os_version_option
+		get_os_info_options
 
 		get_user_fileprop_list
 	fi
@@ -5847,10 +5867,6 @@ file_properties_check() {
 				;;
 			esac
 		fi
-
-		if [ $OS_CHANGED -eq 1 -a $SHOWWARNINGSONLY -eq 0 ]; then
-			RKHTMPVAR="${RKHTMPVAR} os_changed"
-		fi
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
@@ -5903,6 +5919,15 @@ file_properties_check() {
 		#
 
 		USE_DAT_FILE=0
+	fi
+
+	#
+	# If the O/S has changed in some way, and we are not just reporting warnings,
+	# and O/S warnings are enabled, then show a warning in the prerequisites test.
+	#
+
+	if [ $OS_CHANGED -eq 1 -a $SHOWWARNINGSONLY -eq 0 -a $WARN_ON_OS_CHANGE -eq 1 ]; then
+		RKHTMPVAR="${RKHTMPVAR} os_changed"
 	fi
 
 	#
@@ -11822,12 +11847,22 @@ check_os_info() {
 	display --to LOG --type PLAIN --nl OSINFO_START
 
 
+	if [ $WARN_ON_OS_CHANGE -eq 1 ]; then
+		IND_COUNT=9
+		OSINFO_WARNING="WARNING"
+	else
+		IND_COUNT=6
+		OSINFO_WARNING="INFO"
+		display --to LOG --type INFO FILE_PROP_NO_OS_WARNING
+	fi
+
+
 	OLD_HOST=`grep '^Host:' ${RKHDAT_FILE} | cut -d: -f2-`
 
 	if [ "${HOST_NAME}" != "${OLD_HOST}" ]; then
 		OS_CHANGED=1
-		display --to LOG --type WARNING OSINFO_HOST_CHANGE1
-		display --to LOG --type PLAIN --log-indent 9 OSINFO_HOST_CHANGE2 "${OLD_HOST}" "${HOST_NAME}"
+		display --to LOG --type "${OSINFO_WARNING}" OSINFO_HOST_CHANGE1
+		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_HOST_CHANGE2 "${OLD_HOST}" "${HOST_NAME}"
 	fi
 
 
@@ -11839,8 +11874,8 @@ check_os_info() {
 
 	if [ "${OSNAME}" != "${OLD_OSNAME}" ]; then
 		OS_CHANGED=1
-		display --to LOG --type WARNING OSINFO_OSVER_CHANGE1
-		display --to LOG --type PLAIN --log-indent 9 OSINFO_OSVER_CHANGE2 "${OLD_OSNAME}" "${OSNAME}"
+		display --to LOG --type "${OSINFO_WARNING}" OSINFO_OSVER_CHANGE1
+		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_OSVER_CHANGE2 "${OLD_OSNAME}" "${OSNAME}"
 	fi
 
 
@@ -11857,9 +11892,9 @@ check_os_info() {
 	if [ $PRELINKED -ne $OLD_PRELINK ]; then
 		OS_CHANGED=1
 		if [ $PRELINKED -eq 1 ]; then
-			display --to LOG --type WARNING OSINFO_PRELINK_CHANGE ''
+			display --to LOG --type "${OSINFO_WARNING}" OSINFO_PRELINK_CHANGE ''
 		else
-			display --to LOG --type WARNING OSINFO_PRELINK_CHANGE 'not '
+			display --to LOG --type "${OSINFO_WARNING}" OSINFO_PRELINK_CHANGE 'not '
 		fi
 	fi
 
@@ -11890,14 +11925,15 @@ check_os_info() {
 
 	if [ "${OLD_ARCH_TYPE}" != "${ARCH_TYPE}" ]; then
 		OS_CHANGED=1
-		display --to LOG --type WARNING OSINFO_ARCH_CHANGE1
-		display --to LOG --type PLAIN --log-indent 9 OSINFO_ARCH_CHANGE2 "${OLD_ARCH}" "${ARCH}"
+		display --to LOG --type "${OSINFO_WARNING}" OSINFO_ARCH_CHANGE1
+		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_ARCH_CHANGE2 "${OLD_ARCH}" "${ARCH}"
 	fi
 
 	if [ $OS_CHANGED -eq 1 ]; then
-		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG1
-		display --to LOG --type PLAIN --log-indent 9 OSINFO_MSG2
-		display --to LOG --type WARNING --nl PROPUPD_WARN
+		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_MSG1
+		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_MSG2
+
+		test $WARN_ON_OS_CHANGE -eq 1 && display --to LOG --type WARNING --nl PROPUPD_WARN
 	else
 		display --to LOG --type INFO OSINFO_END
 	fi
@@ -12498,6 +12534,9 @@ esac
 
 # This will be set if the local host or O/S has changed in some way.
 OS_CHANGED=0
+
+# By default we want a warning if the O/S has changed.
+WARN_ON_OS_CHANGE=1
 
 # These SSH options can only be set in the configuration file.
 ALLOW_SSH_PROT_V1=0

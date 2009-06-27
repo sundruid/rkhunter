@@ -49,6 +49,11 @@
  - Added the SHARED_LIB_WHITELIST configuration option to allow the
    whitelisting of preloaded shared libraries.
  - Made some minor changes to enable support for SliTaz Linux.
+ - Added the WARN_ON_OS_CHANGE configuration option. By default this option
+   is set. During the file properties check there are some O/S tests
+   performed to see if the O/S has changed since the last run of
+   'rkhunter --propupd'. If something has changed, then a warning is shown.
+   If this option is unset, then no warnings will be shown.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
