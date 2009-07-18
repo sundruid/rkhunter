@@ -49,11 +49,14 @@
  - Added the SHARED_LIB_WHITELIST configuration option to allow the
    whitelisting of preloaded shared libraries.
  - Made some minor changes to enable support for SliTaz Linux.
- - Added the WARN_ON_OS_CHANGE configuration option. By default this option
-   is set. During the file properties check there are some O/S tests
+ - Added the WARN_ON_OS_CHANGE and UPDT_ON_OS_CHANGE configuration
+   options. During the file properties check there are some O/S tests
    performed to see if the O/S has changed since the last run of
-   'rkhunter --propupd'. If something has changed, then a warning is shown.
-   If this option is unset, then no warnings will be shown.
+   'rkhunter --propupd'. By default if something has changed, then a
+   warning is shown. If the WARN_ON_OS_CHANGE option is unset, then no
+   warnings will be shown. If the UPDT_ON_OS_CHANGE option is set, and
+   the O/S has changed, then rkhunter will automatically update the file
+   properties file (in effect, it will run 'rkhunter --propupd').
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -127,6 +130,10 @@
  - Using '--hash MD5 --propupd' on a prelinked system caused an error.
  - If a non-existent syslog config file was put into the RKH configuration
    file, then rkhunter incorrectly said that it was found.
+ - If the use of prelinking changed, and the 'hashes' test was disabled, then
+   rkhunter correctly logged a warning (of an O/S change) but did not display
+   it unless the '--rwo' option was used. It now displays the warning whether
+   '--rwo' is used or not.
 
  -- 
 

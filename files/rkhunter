@@ -2936,6 +2936,23 @@ get_os_info_options() {
 		WARN_ON_OS_CHANGE=1
 	fi
 
+
+	#
+	# Now get the option as to whether we should automatically run
+	# a properties update ('--propupd') if the O/S has changed.
+	#
+
+	UPDT_ON_OS_CHANGE=`get_option 1 single UPDT_ON_OS_CHANGE` || exit 1
+
+	if [ -n "${UPDT_ON_OS_CHANGE}" ]; then
+		if [ "${UPDT_ON_OS_CHANGE}" != "0" -a "${UPDT_ON_OS_CHANGE}" != "1" ]; then
+			echo "Invalid UPDT_ON_OS_CHANGE configuration option: not a valid number: ${UPDT_ON_OS_CHANGE}"
+			exit 1
+		fi
+	else
+		UPDT_ON_OS_CHANGE=1
+	fi
+
 	return
 }
 
@@ -6487,8 +6504,6 @@ file_properties_check() {
 					# Check the file inode number.
 					#
 
-#jh - this check should be 'if not prelinking or file is a script'. Change script stuff and store if file is script in rkhunter.dat.
-#jh - we can then simply check to see if a file has changed to/from being a script. It should avoid users having to whitelist script files. Also store soft links?
 					if [ $PRELINKED -eq 0 ]; then
 						RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
 						SYSINODE=`echo ${FDATA} | cut -d: -f1`
@@ -11933,7 +11948,11 @@ check_os_info() {
 		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_MSG1
 		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_MSG2
 
-		test $WARN_ON_OS_CHANGE -eq 1 && display --to LOG --type WARNING --nl PROPUPD_WARN
+		if [ $WARN_ON_OS_CHANGE -eq 1 -a $UPDT_ON_OS_CHANGE -eq 0 ]; then
+			display --to LOG --type WARNING --nl PROPUPD_WARN
+		fi
+
+		test $UPDT_ON_OS_CHANGE -eq 1 && PROP_UPDATE=1
 	else
 		display --to LOG --type INFO OSINFO_END
 	fi
@@ -12537,6 +12556,9 @@ OS_CHANGED=0
 
 # By default we want a warning if the O/S has changed.
 WARN_ON_OS_CHANGE=1
+
+# If set, then automatically perform a properties update if the O/S changes.
+UPDT_ON_OS_CHANGE=0
 
 # These SSH options can only be set in the configuration file.
 ALLOW_SSH_PROT_V1=0
