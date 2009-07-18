@@ -59,10 +59,11 @@
    the O/S has changed, then rkhunter will automatically update the file
    properties file (in effect, it will run 'rkhunter --propupd').
  - The installer now has a '--overwrite/-o' option. When used this will
-   overwrite any existing configuration file. This allows large sites to
-   install their own 'rkhunter.conf.local' file, and then have the installer
-   overwrite the default config file. It saves having to move the new
-   config file into place on each computer.
+   overwrite the existing configuration file. This allows a site to check
+   the new config file (at least once) for changes, and then modify their
+   own 'rkhunter.conf.local' file as required. This option can then be
+   used to have the installer overwrite the default config file. It saves
+   having to move the new default config file into place on each computer.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
