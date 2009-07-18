@@ -94,6 +94,9 @@
    'ls -lno' on *BSD systems, and the 'file' command is valid. That is, it
    produces something on stdout. If it doesn't, then the 'immutable' and/or
    'scripts' test is skipped.
+ - Changed the RPM spec file so as not to verify the checksum, size and mtime
+   of the database files and the i18n files. These files may be changed by
+   rkhunter itself.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious

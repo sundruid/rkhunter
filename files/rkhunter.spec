@@ -15,9 +15,9 @@
 # 2. rewrite the files section below.
 %define _prefix /usr/local
 
-# We can't let RPM do the dependencies automatic because it'll then pick up
-# a correct but undesirable perl dependency, which rkhunter does not require
-# in order to function properly.
+# We can't let RPM do the dependencies automatically because it will then pick up
+# a correct, but undesirable, perl dependency, which rkhunter does not require in
+# order to function properly.
 AutoReqProv: no
 
 Name: %{name}
@@ -111,14 +111,18 @@ fi
 %attr(644,root,root) %doc %{docdir}/*
 %attr(750,root,root) %dir %{_var}/lib/%{name}
 %attr(750,root,root) %dir %{_var}/lib/%{name}/db
-%attr(640,root,root) %{_var}/lib/%{name}/db/*.dat
+%attr(640,root,root) %verify(not md5 size mtime) %{_var}/lib/%{name}/db/*.dat
 %attr(750,root,root) %dir %{_var}/lib/%{name}/db/i18n
-%attr(640,root,root) %{_var}/lib/%{name}/db/i18n/*
+%attr(640,root,root) %verify(not md5 size mtime) %{_var}/lib/%{name}/db/i18n/*
 %attr(750,root,root) %dir %{_var}/lib/%{name}/tmp
 %{_sysconfdir}/cron.daily/rkhunter
 
 
 %changelog
+* Sat Jul 18 2009 jhorne - 1.3.5
+- Do not verify the checksum, size or mtime of the database
+  files or the i18n files.
+
 * Wed Dec 10 2008 unSpawn - 1.3.4
 - Spec sync.
 
