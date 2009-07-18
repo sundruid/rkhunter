@@ -9,7 +9,8 @@
 
  - Dates in this file are formatted as DD/MM/YYYY (European format)
  - The rkhunter configuration file (default /etc/rkhunter.conf) will
-   not be overwritten when using the rkhunter installer.
+   not be overwritten when using the rkhunter installer, unless
+   specifically requested to do so (using the '--overwrite' option).
    Be sure you compare your existing configuration file against the
    one delivered in this package, in order to optimize the file for
    your machine.
@@ -57,6 +58,11 @@
    warnings will be shown. If the UPDT_ON_OS_CHANGE option is set, and
    the O/S has changed, then rkhunter will automatically update the file
    properties file (in effect, it will run 'rkhunter --propupd').
+ - The installer now has a '--overwrite/-o' option. When used this will
+   overwrite any existing configuration file. This allows large sites to
+   install their own 'rkhunter.conf.local' file, and then have the installer
+   overwrite the default config file. It saves having to move the new
+   config file into place on each computer.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently

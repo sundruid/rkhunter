@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.12"
+INSTALLER_VERSION="1.2.13"
 INSTALLER_COPYRIGHT="Copyright 2003-2009, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -34,6 +34,7 @@ RKHINST_ACTION=""
 RKHINST_ACTION_SEEN=0
 USE_CVS=0
 ERRCODE=0
+OVERWRITE=0
 STRIPROOT=""
 
 umask 027
@@ -81,6 +82,8 @@ showHelp() { # Show help / version
 	echo "                      - TGZ: for building Slackware TGZ's. Requires \$TGZ_BUILD_ROOT."
 	echo '  --striproot      : Strip path from custom layout (for package maintainers).'
 	echo "  --install        : Install according to chosen layout."
+	echo "  --overwrite      : Overwrite the existing configuration file."
+	echo "                     (Default is to create a separate configuration file.)"
 	echo "  --show           : Show chosen layout."
 	echo "  --remove         : Uninstall according to chosen layout."
 	echo "  --version        : Show the installer version."
@@ -336,7 +339,13 @@ showTemplate() { # Take input from the "--installdir parameter"
 
 		echo "Install into:       ${PREFIX}"
 		echo "Application:        ${RKHINST_BIN_DIR}"
-		echo "Configuration file: ${RKHINST_ETC_DIR}"
+
+		if [ $OVERWRITE -eq 0 -o ! -f "${RKHINST_ETC_DIR}/${RKHINST_ETC_FILE}" ]; then
+			echo "Configuration file: ${RKHINST_ETC_DIR}"
+		else
+			echo "Configuration file: ${RKHINST_ETC_DIR}   (File will be overwritten)"
+		fi
+
 		echo "Documents:          ${RKHINST_DOC_DIR}"
 		echo "Man page:           ${RKHINST_MAN_DIR}"
 		echo "Scripts:            ${RKHINST_SCRIPT_DIR}"
@@ -590,6 +599,10 @@ doInstall()  {
 	done
 
 
+	#
+	# Now do the actual installation.
+	#
+
 	# Helper scripts, database and man page
 	for FILE in ${RKHINST_SCRIPT_FILES} ${RKHINST_DB_FILES} ${RKHINST_MAN_FILES}; do
 		case "${FILE}" in
@@ -699,6 +712,8 @@ doInstall()  {
 
 	# Configuration file
 	for FILE in ${RKHINST_ETC_FILE}; do
+		test $OVERWRITE -eq 1 && rm -f "${RKHINST_ETC_DIR}/${FILE}"
+
 		if [ -f "${RKHINST_ETC_DIR}/${FILE}" ]; then
 			# We need people to make local changes themselves, so
 			# give opportunity and alert. Don't use Perl to get value.
@@ -1080,6 +1095,9 @@ while [ $# -ge 1 ]; do
 		esac
 
 		exit 0
+		;;
+	-o | --overwrite)
+		OVERWRITE=1
 		;;
 	*)
 		echo "Unknown option given: $1"
