@@ -65,7 +65,7 @@ as root, run the installation script:
 
     tar zxf rkhunter-<version>.tar.gz
     cd rkhunter-<version>
-    ./installer.sh --layout default --install
+    ./installer.sh --install
 
 Note: If some form of file permission error is shown, then check that the
       'installer.sh' script is executable.
@@ -81,7 +81,7 @@ The installer also has a help option:
 
 The default installation process will install a configuration file,
 called 'rkhunter.conf', into the '/etc' directory or where
-you chose using the --layout switch. You can either edit the main
+you chose using the '--layout' switch. You can either edit the main
 configuration file itself, or create a 'local' configuration file
 for your own settings. This file, which must be called
 'rkhunter.conf.local', must reside in the same directory as the main
@@ -94,7 +94,7 @@ and copy over any changes to the existing main configuration file, or
 to your local configuration file.
 
 The main RKH script will be installed into the '/usr/local/bin'
-directory or where you chose using the --layout switch. Man pages will 
+directory or where you chose using the '--layout' switch. Man pages will 
 be installed into '/usr/local/share/man', and other documentation will 
 be installed into the '/usr/local/share/doc' directory. RKH data files,
 language support, and a directory for temporary files will be
@@ -241,10 +241,10 @@ INSTALLATION INFORMATION FOR x86_64 SYSTEMS
 
 The installation of RKH is largely independent of the system architecture.
 However, RKH does have some support scripts and these need to be installed
-into the appropriate library directory. When using the 'default' layout
-option, or one of the known layout options (for example, '/usr' or
-'/usr/local'), then the relevant 'lib64' directory will be used only if it
-already exists. For a 'custom' layout, the 'lib64' directory will be used
+into the appropriate library directory. When performing a default
+installation, or using one of the known layout options (for example, '/usr'
+or '/usr/local'), then the relevant 'lib64' directory will be used only if
+it already exists. For a 'custom' layout, the 'lib64' directory will be used
 and created if necessary. Standalone installations do not use any special
 library directory at all. RPM installations will use the relevant 'lib64'
 directory only if the system architecture is detected as being 'x86_64'.
@@ -259,7 +259,7 @@ was installed using a default installation, then run:
 
     tar zxf rkhunter-<version>.tar.gz
     cd rkhunter-<version>
-    ./installer.sh --layout default --remove
+    ./installer.sh --remove
 
 If you chose a different layout, for example '/usr', then run the
 installer using:

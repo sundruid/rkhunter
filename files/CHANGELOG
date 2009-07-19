@@ -104,6 +104,10 @@
  - Changed the RPM spec file so as not to verify the checksum, size and mtime
    of the database files and the i18n files. These files may be changed by
    rkhunter itself.
+ - The installer now uses the 'default' layout by default. It is no longer
+   necessary to specify the layout at all if the default is to be used.
+   The '--layout' option no longer needs to be the first option specified
+   if it is used.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious

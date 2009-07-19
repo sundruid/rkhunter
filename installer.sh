@@ -29,7 +29,7 @@ RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
 RKHINST_MODE_RWR="0644"
-RKHINST_LAYOUT=""
+RKHINST_LAYOUT="default"
 RKHINST_ACTION=""
 RKHINST_ACTION_SEEN=0
 USE_CVS=0
@@ -70,9 +70,9 @@ showHelp() { # Show help / version
 	echo "Ordered valid parameters:"
 	echo '  --help (-h)      : Show this help.'
 	echo "  --examples       : Show layout examples."
-	echo '  --layout <value> : Choose installation template (mandatory switch).'
+	echo '  --layout <value> : Choose installation template.'
 	echo "                     The templates are:"
-        echo '                      - default: (FHS compliant)'
+        echo '                      - default: (FHS compliant; the default)'
         echo "                      - /usr"
         echo "                      - /usr/local"
 	echo "                      - oldschool: old version file locations"
@@ -340,10 +340,10 @@ showTemplate() { # Take input from the "--installdir parameter"
 		echo "Install into:       ${PREFIX}"
 		echo "Application:        ${RKHINST_BIN_DIR}"
 
-		if [ $OVERWRITE -eq 0 -o ! -f "${RKHINST_ETC_DIR}/${RKHINST_ETC_FILE}" ]; then
+		if [ $OVERWRITE -eq 0 ]; then
 			echo "Configuration file: ${RKHINST_ETC_DIR}"
 		else
-			echo "Configuration file: ${RKHINST_ETC_DIR}   (File will be overwritten)"
+			echo "Configuration file: ${RKHINST_ETC_DIR}   (Configuration file will be overwritten)"
 		fi
 
 		echo "Documents:          ${RKHINST_DOC_DIR}"
@@ -1061,40 +1061,9 @@ while [ $# -ge 1 ]; do
 			exit 1
 		fi
 		;;
-	--show|--remove|--install)
-		if [ -z "${RKHINST_LAYOUT}" ]; then
-			echo "No layout given. The '--layout' option must be specified first."
-			exit 1
-		fi
-
+	--show | --remove | --install)
 		RKHINST_ACTION_SEEN=1
 		RKHINST_ACTION=`echo "$1" | sed 's/-//g'`
-
-		case "${RKHINST_ACTION}" in
-		show)
-			showTemplate $RKHINST_LAYOUT
-			;;
-		remove)	# Clean active window
-			clear
-			selectTemplate $RKHINST_LAYOUT
-			doRemove
-			;;
-		install) # Clean active window
-			 clear
-			 selectTemplate $RKHINST_LAYOUT
-			 doInstall
-			 ;;
-		"")
-			echo "No action given, exiting."
-			exit 1
-			;;
-		*)
-			echo "Unknown action given, exiting: ${RKHINST_ACTION}"
-			exit 1
-			;;
-		esac
-
-		exit 0
 		;;
 	-o | --overwrite)
 		OVERWRITE=1
@@ -1114,6 +1083,22 @@ done
 # We only get here when some installation action was to be taken.
 if [ $RKHINST_ACTION_SEEN -eq 0 ]; then
 	echo "No action given, exiting."
+else
+	case "${RKHINST_ACTION}" in
+	show)
+		showTemplate $RKHINST_LAYOUT
+		;;
+	remove)	# Clean active window
+		clear
+		selectTemplate $RKHINST_LAYOUT
+		doRemove
+		;;
+	install) # Clean active window
+		clear
+		selectTemplate $RKHINST_LAYOUT
+		doInstall
+		;;
+	esac
 fi
 
 exit 0
