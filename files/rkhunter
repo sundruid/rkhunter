@@ -10695,6 +10695,56 @@ ${RKHTMPVAR}"
 		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
 	fi
 
+	#
+	# Check for passwordless accounts in /etc/passwd.
+	#
+
+	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+		#
+		# Respect whitelisting of the shadow check below.
+		#
+
+		PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
+		PWD_WHITELIST=" ${PWD_WHITELIST} "
+
+		PWDLESS_LIST=""
+
+		IFS=$IFSNL
+
+		for RKHTMPVAR in `grep '^[^:]*::' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`; do
+			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
+
+			if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
+				PDWLESS_LIST="${PWDLESS_LIST}
+${RKHTMPVAR}"
+			else
+				display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+			fi
+		done
+
+		IFS=$RKHIFS
+
+		#
+		# Now display the results.
+		#
+
+		if [ -z "${PWDLESS_LIST}" ]; then
+			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
+		else
+			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
+
+			IFS=$IFSNL
+
+			for RKHTMPVAR in "$PWDLESS_LIST"; do
+				test -z "${RKHTMPVAR}" && continue
+				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "${RKHTMPVAR}"
+			done
+
+			IFS=$RKHIFS
+		fi
+	else
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
+	fi
 
 	#
 	# Now check for any passwordless accounts. For TCB shadow
