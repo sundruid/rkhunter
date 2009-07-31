@@ -4825,6 +4825,7 @@ do_system_check_initialisation() {
 
 	# Flea Linux Rootkit
 	FLEA_FILES="${RKHROOTDIR}/etc/ld.so.hash
+		    ${RKHROOTDIR}/lib/security/.config/ssh/sshd_config
 		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key
 		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key.pub
 		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_random_seed
@@ -7442,6 +7443,263 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${FLEA_DIRS}
 	SCAN_KSYMS=${FLEA_KSYMS}
 	scanrootkit
+
+	# Flea Linux Rootkit (strings) # /usr/sbin/login in /bin/login
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (login)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/bin/login" ]; then
+			if `grep -q '/usr/sbin/login' ${RKHROOTDIR}/bin/login >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/sbin/login"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/bin/login"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/sbin/login"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		# DONTWARN
+		fi
+	fi
+
+	# Flea Linux Rootkit (strings) # /usr/bin/ssh2d in /etc/rc.d/rc.sysinit
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (rc.sysinit)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/etc/rc.d/rc.sysinit" ]; then
+			if `grep -q '/usr/bin/ssh2d' ${RKHROOTDIR}/etc/rc.d/rc.sysinit >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/bin/ssh2d"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/etc/rc.d/rc.sysinit"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/bin/ssh2d"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		fi
+	fi
+
+	# Flea Linux Rootkit (strings) # /usr/lib/ldlibns.so in /bin/netstat
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (netstat)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/bin/netstat" ]; then
+			if `grep -q '/usr/lib/ldlibns.so' ${RKHROOTDIR}/bin/netstat >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibns.so"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/bin/netstat"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibns.so"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		fi
+	fi
+
+	# Flea Linux Rootkit (strings) # /usr/lib/ldlibpst.so in /usr/bin/pstree
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (pstree)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/usr/bin/pstree" ]; then
+			if `grep -q '/usr/lib/ldlibpst.so' ${RKHROOTDIR}/usr/bin/pstree >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibpst.so"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/usr/bin/pstree"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibpst.so"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		fi
+	fi
+
+	# Flea Linux Rootkit (strings) # /usr/lib/ldlibps.so in /bin/ps
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (ps)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/bin/ps" ]; then
+			if `grep -q '/usr/lib/ldlibps.so' ${RKHROOTDIR}/bin/ps >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibps.so"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/bin/ps"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibps.so"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		fi
+	fi
+
+	# Flea Linux Rootkit (strings) # /usr/lib/ldlibct.so in /usr/bin/slocate
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (slocate)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/usr/bin/slocate" ]; then
+			if `grep -q '/usr/lib/ldlibct.so' ${RKHROOTDIR}/usr/bin/slocate >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibct.so"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/usr/bin/slocate"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibct.so"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		fi
+	fi
+
+	# Flea Linux Rootkit (strings) # /usr/lib/ldlibct.so in /usr/bin/locate
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (locate)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/usr/bin/locate" ]; then
+			if `grep -q '/usr/lib/ldlibct.so' ${RKHROOTDIR}/usr/bin/locate >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibct.so"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/usr/bin/locate"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibct.so"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		fi
+	fi
+
+	# Flea Linux Rootkit (strings) # /usr/lib/ldlibdu.so in /usr/bin/du
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		SCAN_ROOTKIT="Flea Linux Rootkit (du)"
+
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
+		fi
+
+		if [ -f "${RKHROOTDIR}/usr/bin/du" ]; then
+			if `grep -q '/usr/lib/ldlibdu.so' ${RKHROOTDIR}/usr/bin/du >/dev/null 2>&1`; then
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibdu.so"
+				fi
+
+				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "Flea Linux Rootkit" "${RKHROOTDIR}/usr/bin/du"
+			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "/usr/lib/ldlibdu.so"
+				fi
+
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+			fi
+		fi
+	fi
 
 	# FreeBSD Rootkit
 
