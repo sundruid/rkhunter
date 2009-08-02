@@ -109,6 +109,7 @@
    The '--layout' option no longer needs to be the first option specified
    if it is used.
  - Improved Fleakit Linux Rootkit checks.
+ - Improved SHV4 Rootkit checks.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious
