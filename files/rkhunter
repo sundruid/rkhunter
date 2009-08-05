@@ -4729,6 +4729,8 @@ do_system_check_initialisation() {
 
 
 	# beX2 Rootkit
+	BEX_FILES="${RKHROOTDIR}/usr/info/termcap.info-5.gz
+		   ${RKHROOTDIR}/usr/bin/sshd2"
 	BEX_DIRS="${RKHROOTDIR}/usr/include/bex"
 
 
@@ -5153,8 +5155,28 @@ do_system_check_initialisation() {
 
 	# SHV5 Rootkit
 	SHV5_FILES="${RKHROOTDIR}/etc/sh.conf
+		    ${RKHROOTDIR}/lib/libproc.a
+		    ${RKHROOTDIR}/lib/libproc.so.2.0.6
+		    ${RKHROOTDIR}/lib/lidps1.so
+		    ${RKHROOTDIR}/lib/libsh.so/bash
+		    ${RKHROOTDIR}/usr/include/file.h
+		    ${RKHROOTDIR}/usr/include/hosts.h
+		    ${RKHROOTDIR}/usr/include/log.h
+		    ${RKHROOTDIR}/usr/include/proc.h
+		    ${RKHROOTDIR}/lib/libsh.so/shdcf2
+		    ${RKHROOTDIR}/lib/libsh.so/shhk
+		    ${RKHROOTDIR}/lib/libsh.so/shhk.pub
+		    ${RKHROOTDIR}/lib/libsh.so/shrs
+		    ${RKHROOTDIR}/usr/lib/libsh/.bashrc
+		    ${RKHROOTDIR}/usr/lib/libsh/shsb
+		    ${RKHROOTDIR}/usr/lib/libsh/hide
+		    ${RKHROOTDIR}/usr/lib/libsh/.sniff/shsniff
+		    ${RKHROOTDIR}/usr/lib/libsh/.sniff/shp
 		    ${RKHROOTDIR}/dev/srd0"
-	SHV5_DIRS="${RKHROOTDIR}/usr/lib/libsh"
+	SHV5_DIRS="${RKHROOTDIR}/lib/libsh.so
+		   ${RKHROOTDIR}/usr/lib/libsh
+		   ${RKHROOTDIR}/usr/lib/libsh/utilz
+		   ${RKHROOTDIR}/usr/lib/libsh/.backup"
 
 
 	# Sin Rootkit
@@ -5445,12 +5467,19 @@ do_system_check_initialisation() {
 		    tcpd:/dev/xdta:Dica-Kit Rootkit
 		    top:/usr/lib/.tbd:TBD Rootkit
 		    xtty:/bin/sh:Possible backdoor shell installed
+		    ttymon:fucknut:SHV5 Rootkit
+		    ttymon:lamersucks:SHV5 Rootkit
+		    ttymon:skillz:SHV5 Rootkit
+		    ttyload:/sbin/ttyload -q >/dev/null:SHV5 Rootkit
+		    ttyload:/sbin/ttymon >/dev/null:SHV5 Rootkit
+		    ttyload:propert of SH:SHV5 Rootkit
 		    rcfile:in.inetd:SHV4 Rootkit
 		    rcfile:#<HIDE_.*>:Enye LKM
 		    rcfile:bin/xchk:Optic Kit (Tux) Worm
 		    rcfile:bin/xsf:Optic Kit (Tux) Worm
 		    rcfile:/usr/bin/ssh2d:Flea Linux Rootkit
 		    rcfile:/usr/sbin/xntps:SHV4 Rootkit
+		    rcfile:ttyload:Possible SHV5 Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -5469,6 +5498,8 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/usr/bin/take/pid:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/sbin/create:MzOzD Local backdoor
 		  file:${RKHROOTDIR}/dev/ttypz:spwn login backdoor
+		  file:${RKHROOTDIR}/var/log/tcp.log:Possible beX2 Rootkit component
+		  file:${RKHROOTDIR}/usr/include/audit.h:Possible beX2 Rootkit component
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Unusual directory
 		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
