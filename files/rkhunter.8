@@ -4,7 +4,7 @@
 .SH NAME
 rkhunter \- RootKit Hunter
 .SH SYNOPSIS
-\fBrkhunter\fP {--check | --update | --versioncheck |
+\fBrkhunter\fP {--check | --unlock | --update | --versioncheck |
           --propupd [{filename | directory | package name},...] |
           --list [tests | {lang | languages} | rootkits] |
           --version | --help} [options]
@@ -39,6 +39,12 @@ and the results will be automatically produced.
 
 It is suggested that this command option is run regularly in order to ensure
 that the system has not been compromised.
+
+.IP
+
+.IP "\fB\-\-unlock\fP"
+This command option simply unlocks (removes) the lock file. If this option is
+used on its own, then no log file is created.
 
 .IP
 

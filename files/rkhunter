@@ -1964,6 +1964,73 @@ get_auto_x_option() {
 }
 
 
+get_locking_options() {
+
+	#
+	# This function gets the configuration options to see if locking
+	# should be used when RKH is run. The mechanism for locking uses
+	# a simple timer, and will display some basic messages while RKH
+	# is trying to get the lock.
+	#
+	# All of these options can only be set in the configuration file.
+	#
+
+	RKHTMPVAR=`get_option 1 single USE_LOCKING` || exit 1
+
+	if [ -n "${RKHTMPVAR}" ]; then
+		if [ "${RKHTMPVAR}" = "0" -o "${RKHTMPVAR}" = "1" ]; then
+			USE_LOCKING=$RKHTMPVAR
+		else
+			echo "Invalid USE_LOCKING configuration option: not a valid number: ${RKHTMPVAR}"
+			exit 1
+		fi
+	else
+		USE_LOCKING=0
+	fi
+
+	test $USE_LOCKING -eq 0 && return
+
+
+	#
+	# Now get the lock timeout value. This must be a positive integer.
+	# The default value is 300 seconds (5 minutes).
+	#
+
+	RKHTMPVAR=`get_option 1 single LOCK_TIMEOUT` || exit 1
+
+	if [ -n "`echo \"${RKHTMPVAR}\" | grep '^[0-9][0-9]*$'`" ]; then
+		LOCK_TIMEOUT=$RKHTMPVAR
+	elif [ -n "${RKHTMPVAR}" ]; then
+		echo "Invalid LOCK_TIMEOUT configuration option: not a valid number: ${RKHTMPVAR}"
+		exit 1
+	else
+		LOCK_TIMEOUT=300
+	fi
+
+
+	#
+	# Finally, we get the option to see if any lock messages should
+	# be shown or not. These are only shown on the screen, and not
+	# logged anywhere. The default is to show the messages.
+	#
+
+	RKHTMPVAR=`get_option 1 single SHOW_LOCK_MSGS` || exit 1
+
+	if [ -n "${RKHTMPVAR}" ]; then
+		if [ "${RKHTMPVAR}" = "0" -o "${RKHTMPVAR}" = "1" ]; then
+			SHOW_LOCK_MSGS=$RKHTMPVAR
+		else
+			echo "Invalid SHOW_LOCK_MSGS configuration option: not a valid number: ${RKHTMPVAR}"
+			exit 1
+		fi
+	else
+		SHOW_LOCK_MSGS=1
+	fi
+
+	return
+}
+
+
 get_enable_option() {
 
 	#
@@ -3162,6 +3229,8 @@ get_configfile_options() {
 	get_scriptdir_option
 
 	get_auto_x_option
+
+	get_locking_options
 
 
 	#
@@ -10421,7 +10490,7 @@ do_group_accounts_check() {
 
 	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
 		#
-		# We need to remove any whitelisted UID 0 accounts.
+		# We need to ignore any whitelisted UID 0 accounts.
 		#
 
 		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || exit 1
@@ -10465,64 +10534,33 @@ ${RKHTMPVAR}"
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
-		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
 	fi
 
-	#
-	# Check for passwordless accounts in /etc/passwd.
-	#
-
-	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
-		#
-		# Respect whitelisting of the shadow check below.
-		#
-
-		PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
-		PWD_WHITELIST=" ${PWD_WHITELIST} "
-
-		PWDLESS_LIST=""
-
-		IFS=$IFSNL
-
-		for RKHTMPVAR in `grep '^[^:]*::' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`; do
-			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
-
-			if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
-				PDWLESS_LIST="${PWDLESS_LIST}
-${RKHTMPVAR}"
-			else
-				display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
-			fi
-		done
-
-		IFS=$RKHIFS
-
-		#
-		# Now display the results.
-		#
-
-		if [ -z "${PWDLESS_LIST}" ]; then
-			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
-		else
-			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
-
-			IFS=$IFSNL
-
-			for RKHTMPVAR in "$PWDLESS_LIST"; do
-				test -z "${RKHTMPVAR}" && continue
-				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "${RKHTMPVAR}"
-			done
-
-			IFS=$RKHIFS
-		fi
-	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
-	fi
 
 	#
-	# Now check for any passwordless accounts. For TCB shadow
-	# files we have to do a little more work, and loop through
-	# all the shadow files in the /etc/tcb directory.
+	# Now check for any passwordless accounts. We do this in two steps.
+	# The first is to check the shadow file, and for TCB shadow files we
+	# have to loop through all the shadow files in the /etc/tcb directory.
+	# Then we check the /etc/passwd file for any passwordless accounts.
+	# Finally we display the overall result.
+	#
+
+	#
+	# We need to ignore any whitelisted passwordless accounts.
+	#
+
+	WL_SEEN=""
+
+	PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
+	PWD_WHITELIST=" ${PWD_WHITELIST} "
+
+	PWD_PWDLESS_LIST=""
+	SHAD_PWDLESS_LIST=""
+
+
+	#
+	# Check for passwordless accounts in the shadow file(s).
 	#
 
 	if [ -n "${SHADOW_FILE}" -o $HAVE_TCB_SHADOW -eq 1 ]; then
@@ -10531,15 +10569,6 @@ ${RKHTMPVAR}"
 		else
 			display --to LOG --type INFO ACCOUNTS_SHADOW_TCB "${RKHROOTDIR}/etc/tcb"
 		fi
-
-		#
-		# We need to remove any whitelisted passwordless accounts.
-		#
-
-		PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
-		PWD_WHITELIST=" ${PWD_WHITELIST} "
-
-		UID_LIST=""
 
 		#
 		# We have do a bit of a kludge here. We need a loop in order to
@@ -10576,10 +10605,12 @@ ${RKHTMPVAR}"
 				RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
 
 				if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
-					UID_LIST="${UID_LIST}
+					SHAD_PWDLESS_LIST="${SHAD_PWDLESS_LIST}
 ${RKHTMPVAR}"
-					test $HAVE_TCB_SHADOW -eq 1 && UID_LIST="${UID_LIST} (${SHADOW_FILE})"
+					test $HAVE_TCB_SHADOW -eq 1 && SHAD_PWDLESS_LIST="${SHAD_PWDLESS_LIST} (${SHADOW_FILE})"
 				else
+					WL_SEEN="${WL_SEEN} ${RKHTMPVAR} "
+
 					display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
 				fi
 			done
@@ -10588,29 +10619,73 @@ ${RKHTMPVAR}"
 		done
 
 		IFS=$RKHIFS
-
-
+	else
 		#
-		# Now display the results.
+		# No shadow file found.
 		#
 
-		if [ -z "${UID_LIST}" ]; then
-			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
-		else
-			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
+		SHAD_PWDLESS_LIST="RKH:No shadow file"
+	fi
 
-			IFS=$IFSNL
 
-			for RKHTMPVAR in ${UID_LIST}; do
-				test -z "${RKHTMPVAR}" && continue
-				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "${RKHTMPVAR}"
-			done
+	#
+	# Check for passwordless accounts in /etc/passwd.
+	#
 
-			IFS=$RKHIFS
-		fi
+	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+		IFS=$IFSNL
+
+		for RKHTMPVAR in `grep '^[^:]*::' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`; do
+			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
+
+			if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
+				PWD_PWDLESS_LIST="${PWD_PWDLESS_LIST}
+${RKHTMPVAR}"
+			elif [ -z "`echo \"${WL_SEEN}\" | grep \" ${RKHUSERID} \"`" ]; then
+				display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+			fi
+		done
+
+		IFS=$RKHIFS
+	fi
+
+
+	#
+	# Now display the results.
+	#
+
+	if [ -z "${SHAD_PWDLESS_LIST}" -a -z "${PWD_PWDLESS_LIST}" ]; then
+		display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWDLESS
-		display --to LOG --type WARNING ACCOUNTS_NO_SHADOW_FILE
+
+		#
+		# Log the shadow file results.
+		#
+
+		if [ "${SHAD_PWDLESS_LIST}" = "RKH:No shadow file" ]; then
+			display --to LOG --type WARNING ACCOUNTS_NO_SHADOW_FILE
+		else
+			IFS=$IFSNL
+
+			for RKHTMPVAR in ${SHAD_PWDLESS_LIST}; do
+				test -z "${RKHTMPVAR}" && continue
+				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "shadow" "${RKHTMPVAR}"
+			done
+		fi
+
+		#
+		# Log the passwd file results.
+		#
+
+		IFS=$IFSNL
+
+		for RKHTMPVAR in ${PWD_PWDLESS_LIST}; do
+			test -z "${RKHTMPVAR}" && continue
+			display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "passwd" "${RKHTMPVAR}"
+		done
+
+		IFS=$RKHIFS
 	fi
 
 
@@ -10633,7 +10708,7 @@ ${RKHTMPVAR}"
 		:
 	elif [ ! -f "${RKHROOTDIR}/etc/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
-		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD "diff"
@@ -12393,7 +12468,7 @@ help() {
 	#
 
 	echo $ECHOOPT ""
-	echo $ECHOOPT "Usage: rkhunter {--check | --update | --versioncheck |"
+	echo $ECHOOPT "Usage: rkhunter {--check | --unlock | --update | --versioncheck |"
 	echo $ECHOOPT "                 --propupd [{filename | directory | package name},...] |"
 	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits}] |"
 	echo $ECHOOPT "                 --version | --help} [options]"
@@ -12443,6 +12518,7 @@ help() {
 	echo $ECHOOPT "         --syslog [facility.priority]  Log the check start and finish times to syslog"
 	echo $ECHOOPT "                                       (Default level is $SYSLOG_DFLT_PRIO)"
 	echo $ECHOOPT "         --tmpdir <directory>          Use the specified temporary directory"
+	echo $ECHOOPT "         --unlock                      Unlock (remove) the lock file"
 	echo $ECHOOPT "         --update                      Check for updates to database files"
 	echo $ECHOOPT "   --vl, --verbose-logging             Use verbose logging (on by default)"
 	echo $ECHOOPT "     -V, --version                     Display the version number, then exit"
@@ -12856,6 +12932,14 @@ USER_EXCLUDE_PROP=""
 # This gets set if any shared libraries are to be whitelisted.
 SHARED_LIB_WHITELIST=""
 
+# If used, these lock values must be set in the config file.
+USE_LOCKING=0
+LOCK_TIMEOUT=0
+SHOW_LOCK_MSGS=1
+
+# This gets set if the unlock command-line option is used.
+UNLOCK=0
+
 
 ######################################################################
 #
@@ -13201,6 +13285,9 @@ while [ $# -ge 1 ]; do
 			echo "No temporary directory specified."
 			exit 1
 		fi
+		;;
+	--unlock)
+		UNLOCK=1
 		;;
 	--update)
 		UPDATE=1
@@ -13629,11 +13716,23 @@ fi
 # If no option is given for the program to action, then say so and exit.
 #
 
-if [ $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 -a $PROP_UPDATE -eq 0 ]; then
+if [ $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 -a $PROP_UPDATE -eq 0 -a $UNLOCK -eq 0 ]; then
 	echo "You must enter an option for the program to perform."
 	echo "Type in 'rkhunter --help' to see the available options,"
 	echo "or read the rkhunter man page."
 	exit 1
+fi
+
+
+#
+# Handle any locking straight away.
+#
+
+if [ $UNLOCK -eq 1 ]; then
+	rm -f ${RKHTMPDIR}/rkhunter.LCK >/dev/null 2>&1
+
+	# If we are just unlocking the lock file, then exit.
+	test $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 -a $PROP_UPDATE -eq 0 && exit 0
 fi
 
 
@@ -13679,6 +13778,15 @@ done
 
 IFS=$RKHIFS
 
+
+#
+# Before we touch the log file we must see if locking is being used.
+#
+
+if [ $USE_LOCKING -eq 1 ]; then
+#jh - get_lock()
+	:
+fi
 
 #
 # Sort out the logfile before we write to it.
@@ -14102,6 +14210,12 @@ if [ $CHECK -eq 1 ]; then
 			check_os_info
 		fi
 	fi
+fi
+
+if [ $USE_LOCKING -eq 1 ]; then
+	display --to LOG --type INFO LOCK_USED "$LOCK_TIMEOUT"
+else
+	display --to LOG --type INFO LOCK_UNUSED
 fi
 
 

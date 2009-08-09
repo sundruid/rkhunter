@@ -151,8 +151,12 @@
    rkhunter correctly logged a warning (of an O/S change) but did not display
    it unless the '--rwo' option was used. It now displays the warning whether
    '--rwo' is used or not.
- - The 'group_accounts' test checks /etc/passwd for passwordless accounts.
- 
+ - The 'group_accounts' test now checks /etc/passwd, as well as the shadow
+   file, for passwordless accounts.
+ - If the passwd file did not exist, then a warning of this was logged three
+   times. It is now logged once as a warning, and as an info message for the
+   others.
+
 -- 
 
  * 1.3.4 (31/12/2008)

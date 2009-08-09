@@ -1,4 +1,4 @@
-Version:2009062701
+Version:2009080901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -429,7 +429,7 @@ ACCOUNTS_SHADOW_FILE:Found shadow file: $1
 ACCOUNTS_SHADOW_TCB:Found TCB shadow file directory: $1
 ACCOUNTS_PWDLESS:Checking for passwordless accounts
 ACCOUNTS_PWDLESS_WL:Found passwordless account '$1': it is whitelisted.
-ACCOUNTS_PWDLESS_FOUND:Found passwordless account: $1
+ACCOUNTS_PWDLESS_FOUND:Found passwordless account in $1 file: $2
 ACCOUNTS_NO_SHADOW_FILE:No shadow/password file found.
 
 PASSWD_CHANGES:Checking for passwd file changes
@@ -575,3 +575,6 @@ LIST_TESTS:Current test names:
 LIST_GROUPED_TESTS:Grouped test names:
 LIST_LANGS:Current languages:
 LIST_RTKTS:Rootkits checked for:
+
+LOCK_USED:Locking is being used: timeout is $1 seconds
+LOCK_UNUSED:Locking is not being used
