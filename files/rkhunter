@@ -4923,14 +4923,23 @@ do_system_check_initialisation() {
 
 
 	# Fuckit Rootkit
-	FUCKIT_FILES="${RKHROOTDIR}/dev/proc/fuckit/hax0r
+	FUCKIT_FILES="${RKHROOTDIR}/lib/libproc.so.2.0.7
+		      ${RKHROOTDIR}/dev/proc/.bash_profile
+		      ${RKHROOTDIR}/dev/proc/.bashrc
+		      ${RKHROOTDIR}/dev/proc/.cshrc
+		      ${RKHROOTDIR}/dev/proc/fuckit/hax0r
 		      ${RKHROOTDIR}/dev/proc/fuckit/hax0rshell
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/lports
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/rports
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/rkconf
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/password
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/progs
-		      ${RKHROOTDIR}/dev/proc/system-bins/init"
+		      ${RKHROOTDIR}/dev/proc/system-bins/init
+		      ${RKHROOTDIR}/usr/lib/libcps.a
+		      ${RKHROOTDIR}/usr/lib/libtty.a"
+	FUCKIT_DIRS="${RKHROOTDIR}/dev/proc
+		     ${RKHROOTDIR}/dev/proc/fuckit
+		     ${RKHROOTDIR}/dev/proc/toolz"
 
 
 	# GasKit Rootkit
@@ -5519,12 +5528,16 @@ do_system_check_initialisation() {
 		    netstat:/usr/lib/ldlibns.so:Flea Linux Rootkit
 		    netstat:syg:Possible trojaned netstat
 		    nscd:sshd_config:Possible backdoor shell installed (SSH)
+                    ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
 		    ps:/dev/pts/01:SunOS Rootkit
 		    ps:tw33dl3:SunOS Rootkit
 		    ps:psniff:SunOS Rootkit
 		    ps:/usr/lib/ldlibps.so:Flea Linux Rootkit
 		    pstree:/usr/lib/ldlibpst.so:Flea Linux Rootkit
 		    ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
+		    ps:libproc.so.2.0.7:Fuckit Rootkit
+		    pgrep:libproc.so.2.0.7:Fuckit Rootkit
+		    pkill:libproc.so.2.0.7:Fuckit Rootkit
 		    rpc.nfsd:cant open log:Possible sniffer installed
 		    rpc.nfsd:sniff.pid:Possible sniffer installed
 		    rpc.nfsd:tcp.log:Possible sniffer installed
@@ -5552,9 +5565,14 @@ do_system_check_initialisation() {
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
+		    ssh:/dev/proc/fuckit:Fuckit Rootkit
+		    skill:libproc.so.2.0.7:Fuckit Rootkit
+		    snice:libproc.so.2.0.7:Fuckit Rootkit
+		    top:libproc.so.2.0.7:Fuckit Rootkit
 		    slocate:/usr/lib/ldlibct.so:Flea Linux Rootkit
 		    locate:/usr/lib/ldlibct.so:Flea Linux Rootkit
 		    du:/usr/lib/ldlibdu.so:Flea Linux Rootkit
+		    w:libproc.so.2.0.7:Fuckit Rootkit
 		    xlogin:/lib/libext:SHV4 Rootkit"
 
 
