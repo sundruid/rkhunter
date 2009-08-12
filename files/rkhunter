@@ -9840,6 +9840,7 @@ do_network_port_checks() {
 				FOUND="${PROTO}:${PORT}"
 			fi
 		else
+			FNAME=""
 			case "${OPERATING_SYSTEM}" in
 			Linux)
 				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
