@@ -3372,20 +3372,6 @@ get_configfile_options() {
 }
 
 
-rkh_exit() {
-
-	#
-	# This function is called when rkhunter needs to exit after
-	# the lock has been set. If an exit is required before locking
-	# has occurred, then it is safe to just call 'exit'.
-	#
-
-	rm -f ${RKHTMPDIR}/rkhunter.LCK >/dev/null 2>&1
-
-	exit $1
-}
-
-
 get_readable_date() {
 
 	#
@@ -6277,16 +6263,16 @@ file_properties_check() {
 	#
 
 	if [ $SKIP_ATTR -eq 0 ]; then
-		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || rkh_exit 1
-		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || rkh_exit 1
+		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || exit 1
+		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || exit 1
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
-		IMMUTWHITELIST=`get_option 1 multi IMMUTWHITELIST` || rkh_exit 1
+		IMMUTWHITELIST=`get_option 1 multi IMMUTWHITELIST` || exit 1
 	fi
 
 	if [ $SKIP_SCRIPT -eq 0 ]; then
-		SCRIPTWHITELIST=`get_option 1 multi SCRIPTWHITELIST` || rkh_exit 1
+		SCRIPTWHITELIST=`get_option 1 multi SCRIPTWHITELIST` || exit 1
 	fi
 
 
@@ -7132,7 +7118,7 @@ suspscan() {
 	# Get the directories to scan.
 	#
 
-	SUSPSCAN_DIRS=`get_option 2 single SUSPSCAN_DIRS` || rkh_exit 1
+	SUSPSCAN_DIRS=`get_option 2 single SUSPSCAN_DIRS` || exit 1
 
 	if [ -z "${SUSPSCAN_DIRS}" ]; then
 		SUSPSCAN_DIRS="/tmp /var/tmp"
@@ -7145,7 +7131,7 @@ suspscan() {
 	# Get the tempdir. Should be a /dev/shm type.
 	#
 
-	SUSPSCAN_TEMP=`get_option 1 single SUSPSCAN_TEMP` || rkh_exit 1
+	SUSPSCAN_TEMP=`get_option 1 single SUSPSCAN_TEMP` || exit 1
 
 	if [ -z "${SUSPSCAN_TEMP}" ]; then
 		SUSPSCAN_TEMP="/dev/shm"
@@ -7168,7 +7154,7 @@ suspscan() {
 	# Get the max filesize to handle, say 1024000.
 	#
 
-	SUSPSCAN_MAXSIZE=`get_option 1 single SUSPSCAN_MAXSIZE` || rkh_exit 1
+	SUSPSCAN_MAXSIZE=`get_option 1 single SUSPSCAN_MAXSIZE` || exit 1
 
 	if [ -z "${SUSPSCAN_MAXSIZE}" ]; then
 		SUSPSCAN_MAXSIZE=1024000
@@ -7185,7 +7171,7 @@ suspscan() {
 	# Get the score threshold, 600 seems sensible.
 	#
 
-	SUSPSCAN_THRESH=`get_option 1 single SUSPSCAN_THRESH` || rkh_exit 1
+	SUSPSCAN_THRESH=`get_option 1 single SUSPSCAN_THRESH` || exit 1
 
 	if [ -z "${SUSPSCAN_THRESH}" ]; then
 		SUSPSCAN_THRESH=600
@@ -8622,7 +8608,7 @@ malware_checks() {
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
 
-				ALLOWPROCDELFILES=`get_option 1 multi ALLOWPROCDELFILE` || rkh_exit 1
+				ALLOWPROCDELFILES=`get_option 1 multi ALLOWPROCDELFILE` || exit 1
 
 				IFS=$IFSNL
 
@@ -9566,7 +9552,7 @@ linux_avail_modules() {
 	LKM_PATH=""
 	LKM_NAMES=""
 
-	RKHTMPVAR=`get_option 1 single MODULES_DIR` || rkh_exit 1
+	RKHTMPVAR=`get_option 1 single MODULES_DIR` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		LKM_PATH="${RKHTMPVAR}"
@@ -10098,7 +10084,7 @@ do_network_interface_checks() {
 		# We only need to get the whitelisted processes once.
 		#
 
-		ALLOWPROCLISTENERS=`get_option 1 multi ALLOWPROCLISTEN` || rkh_exit 1
+		ALLOWPROCLISTENERS=`get_option 1 multi ALLOWPROCLISTEN` || exit 1
 
 
 		INODE_LIST=""
@@ -10556,7 +10542,7 @@ do_group_accounts_check() {
 		# We need to ignore any whitelisted UID 0 accounts.
 		#
 
-		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || rkh_exit 1
+		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || exit 1
 		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
 		UID_LIST=""
@@ -10615,7 +10601,7 @@ ${RKHTMPVAR}"
 
 	WL_SEEN=""
 
-	PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || rkh_exit 1
+	PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
 	PWD_WHITELIST=" ${PWD_WHITELIST} "
 
 	PWD_PWDLESS_LIST=""
@@ -11237,7 +11223,7 @@ do_filesystem_check() {
 			fi
 		fi
 
-		RKHTMPVAR=`get_option 1 multi ALLOWDEVFILE` || rkh_exit 1
+		RKHTMPVAR=`get_option 1 multi ALLOWDEVFILE` || exit 1
 
 		for FNAME in ${RKHTMPVAR}; do
 			ALLOWDEVFILES="${ALLOWDEVFILES} ${FNAME}"
@@ -11346,7 +11332,7 @@ do_filesystem_check() {
 	ALLOWHIDDENFILES=" "
 
 	if [ -n "${LOOKINDIRS}" ]; then
-		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENDIR` || rkh_exit 1
+		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENDIR` || exit 1
 
 		for DIR in ${RKHTMPVAR}; do
 			ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
@@ -11355,7 +11341,7 @@ do_filesystem_check() {
 		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
 
 
-		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENFILE` || rkh_exit 1
+		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENFILE` || exit 1
 
 		for FNAME in ${RKHTMPVAR}; do
 			ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
@@ -11549,7 +11535,7 @@ do_app_checks() {
 
 	APP_WHITELIST=""
 
-	RKHTMVAR=`get_option 2 single APP_WHITELIST` || rkh_exit 1
+	RKHTMVAR=`get_option 2 single APP_WHITELIST` || exit 1
 
 	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[:upper:]' '[:lower:]'`
 
@@ -12554,6 +12540,12 @@ get_lock() {
 		touch ${RKHTMPDIR}/rkhunter.LCK
 
 		test $SHOW_LOCK_MSGS -eq 1 -a $RKHTMPVAR -gt 0 -a $NOTTY -eq 0 && echo ""
+
+		#
+		# We handle any subsequent exit conditions by setting a trap.
+		#
+
+		trap "rm -f ${RKHTMPDIR}/rkhunter.LCK >/dev/null 2>&1" 0 >/dev/null 2>&1
 	else
 		#
 		# We need to be careful here. We do not want to display the message if the user
@@ -14414,4 +14406,4 @@ test $CATLOGFILE -eq 1 && cat ${RKHLOGFILE}
 
 IFS=$ORIGIFS
 
-rkh_exit $RET_CODE
+exit $RET_CODE
