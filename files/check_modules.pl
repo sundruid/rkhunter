@@ -21,7 +21,9 @@
 #
 # Digest modules:
 # > install Digest::MD5
+# > install Digest::SHA
 # > install Digest::SHA1
+# > install Digest::SHA256
 #
 
 #################################################################################
@@ -33,7 +35,9 @@ my $check = "0";
 # Modules to check
 my @modCheck = qw(
 Digest::MD5
+Digest::SHA
 Digest::SHA1
+Digest::SHA256
 );
 
 # Use command-line module names if present.
