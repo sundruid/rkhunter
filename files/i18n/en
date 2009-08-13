@@ -1,4 +1,4 @@
-Version:2009080901
+Version:2009081201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -578,3 +578,5 @@ LIST_RTKTS:Rootkits checked for:
 
 LOCK_USED:Locking is being used: timeout is $1 seconds
 LOCK_UNUSED:Locking is not being used
+LOCK_WAIT:Waiting for lock file
+LOCK_FAIL:Unable to get the lock file.

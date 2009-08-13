@@ -131,6 +131,18 @@ else
 fi
 
 
+#
+# We now perform a similar test to see if 'echo -n' is valid
+# or not. We set ECHON accordingly.
+#
+
+if [ "`echo -n \"rkh-ksh-string-test\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
+	ECHON="-n"
+else
+	ECHON=""
+fi
+
+
 ######################################################################
 #
 # Global function definitions
@@ -151,7 +163,7 @@ display() {
 	#
 	# Syntax: display --to <destination> --type <type>
 	#		  [--screen-indent <n>] [--log-indent <n>]
-	#		  [--nl [<n>]] [--nl-after] [--log-nl]
+	#		  [--nl [<n>]] [--nl-after] [--log-nl] [--nonl]
 	#		  [--result <result> --color <colour>]
 	#		  <message index> [optional message arguments]
 	#
@@ -168,6 +180,12 @@ display() {
 	# The --log-nl option outputs a blank line only in the log file.
 	# The --nl-after option outputs a blank line on the screen after
 	# the message.
+	# The --nonl option is only to be used in special cases where we
+	# want the output of more than one message to appear on the same
+	# line. This is currently only used when trying to obtain the
+	# lock file. It only applies to PLAIN messages, and may not be
+	# supported on all systems (depending on whether 'echo -n' works
+	# or not).
 	#
 
 
@@ -179,7 +197,7 @@ display() {
 	WARN_MSG=0; NL=0; NLAFTER=0; LOGINDENT=0; SCREENINDENT=0
 	LOGNL=0
 	WRITETO=''; TYPE=''; RESULT=''; COLOR=''; MSG=''
-	LINE1=''; LOGLINE1=''; SPACES=''
+	LINE1=''; LOGLINE1=''; SPACES=''; NONL=''
 
 	DISPLAY_LINE="display $*"
 
@@ -283,6 +301,9 @@ display() {
 		--nl-after)
 			NLAFTER=1
 			;;
+		--nonl)
+			NONL=$ECHON
+			;;
 		-*)
 			echo "Error: Invalid display option given: $1   Display line: ${DISPLAY_LINE}"
 			return
@@ -340,6 +361,12 @@ display() {
 		echo "Error: Invalid display - no color given: Display line: ${DISPLAY_LINE}"
 		return
 	fi
+
+	#
+	# We only allow no newline for PLAIN messages.
+	#
+
+	test -n "${TYPE}" && NONL=""
 
 
 	#
@@ -452,7 +479,7 @@ display() {
 			NLLOOP=`expr ${NLLOOP} - 1`
 		done
 
-		echo $ECHOOPT "${LINE1}"
+		echo $NONL $ECHOOPT "${LINE1}"
 	fi
 
 	if [ $WRITETOLOG -eq 1 ]; then
@@ -2010,8 +2037,10 @@ get_locking_options() {
 
 	#
 	# Finally, we get the option to see if any lock messages should
-	# be shown or not. These are only shown on the screen, and not
-	# logged anywhere. The default is to show the messages.
+	# be shown or not. If the user has used the '--quiet' option,
+	# then we cannot display the lock messages. Otherwise, these are
+	# only shown on the screen, and not logged anywhere. The default
+	# is to show the messages.
 	#
 
 	RKHTMPVAR=`get_option 1 single SHOW_LOCK_MSGS` || exit 1
@@ -2026,6 +2055,8 @@ get_locking_options() {
 	else
 		SHOW_LOCK_MSGS=1
 	fi
+
+	test $QUIET -eq 1 && SHOW_LOCK_MSGS=0
 
 	return
 }
@@ -3338,6 +3369,20 @@ get_configfile_options() {
 	fi
 
 	return
+}
+
+
+rkh_exit() {
+
+	#
+	# This function is called when rkhunter needs to exit after
+	# the lock has been set. If an exit is required before locking
+	# has occurred, then it is safe to just call 'exit'.
+	#
+
+	rm -f ${RKHTMPDIR}/rkhunter.LCK >/dev/null 2>&1
+
+	exit $1
 }
 
 
@@ -6232,16 +6277,16 @@ file_properties_check() {
 	#
 
 	if [ $SKIP_ATTR -eq 0 ]; then
-		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || exit 1
-		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || exit 1
+		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || rkh_exit 1
+		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || rkh_exit 1
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
-		IMMUTWHITELIST=`get_option 1 multi IMMUTWHITELIST` || exit 1
+		IMMUTWHITELIST=`get_option 1 multi IMMUTWHITELIST` || rkh_exit 1
 	fi
 
 	if [ $SKIP_SCRIPT -eq 0 ]; then
-		SCRIPTWHITELIST=`get_option 1 multi SCRIPTWHITELIST` || exit 1
+		SCRIPTWHITELIST=`get_option 1 multi SCRIPTWHITELIST` || rkh_exit 1
 	fi
 
 
@@ -7087,7 +7132,7 @@ suspscan() {
 	# Get the directories to scan.
 	#
 
-	SUSPSCAN_DIRS=`get_option 2 single SUSPSCAN_DIRS` || exit 1
+	SUSPSCAN_DIRS=`get_option 2 single SUSPSCAN_DIRS` || rkh_exit 1
 
 	if [ -z "${SUSPSCAN_DIRS}" ]; then
 		SUSPSCAN_DIRS="/tmp /var/tmp"
@@ -7100,7 +7145,7 @@ suspscan() {
 	# Get the tempdir. Should be a /dev/shm type.
 	#
 
-	SUSPSCAN_TEMP=`get_option 1 single SUSPSCAN_TEMP` || exit 1
+	SUSPSCAN_TEMP=`get_option 1 single SUSPSCAN_TEMP` || rkh_exit 1
 
 	if [ -z "${SUSPSCAN_TEMP}" ]; then
 		SUSPSCAN_TEMP="/dev/shm"
@@ -7123,7 +7168,7 @@ suspscan() {
 	# Get the max filesize to handle, say 1024000.
 	#
 
-	SUSPSCAN_MAXSIZE=`get_option 1 single SUSPSCAN_MAXSIZE` || exit 1
+	SUSPSCAN_MAXSIZE=`get_option 1 single SUSPSCAN_MAXSIZE` || rkh_exit 1
 
 	if [ -z "${SUSPSCAN_MAXSIZE}" ]; then
 		SUSPSCAN_MAXSIZE=1024000
@@ -7140,7 +7185,7 @@ suspscan() {
 	# Get the score threshold, 600 seems sensible.
 	#
 
-	SUSPSCAN_THRESH=`get_option 1 single SUSPSCAN_THRESH` || exit 1
+	SUSPSCAN_THRESH=`get_option 1 single SUSPSCAN_THRESH` || rkh_exit 1
 
 	if [ -z "${SUSPSCAN_THRESH}" ]; then
 		SUSPSCAN_THRESH=600
@@ -8577,7 +8622,7 @@ malware_checks() {
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
 
-				ALLOWPROCDELFILES=`get_option 1 multi ALLOWPROCDELFILE` || exit 1
+				ALLOWPROCDELFILES=`get_option 1 multi ALLOWPROCDELFILE` || rkh_exit 1
 
 				IFS=$IFSNL
 
@@ -9521,7 +9566,7 @@ linux_avail_modules() {
 	LKM_PATH=""
 	LKM_NAMES=""
 
-	RKHTMPVAR=`get_option 1 single MODULES_DIR` || exit 1
+	RKHTMPVAR=`get_option 1 single MODULES_DIR` || rkh_exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		LKM_PATH="${RKHTMPVAR}"
@@ -9777,10 +9822,10 @@ do_network_port_checks() {
 			continue
 		fi
 
+		FNAME=""
 		FOUND=""
 
 		if [ -n "${LSOF_CMD}" ]; then
-			FNAME=""
 			PID_SEEN=0
 
 			for LSOFLINE in `${LSOF_CMD} -wnlP -i ${PROTO}:${PORT}`; do
@@ -9840,7 +9885,6 @@ do_network_port_checks() {
 				FOUND="${PROTO}:${PORT}"
 			fi
 		else
-			FNAME=""
 			case "${OPERATING_SYSTEM}" in
 			Linux)
 				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
@@ -10054,7 +10098,7 @@ do_network_interface_checks() {
 		# We only need to get the whitelisted processes once.
 		#
 
-		ALLOWPROCLISTENERS=`get_option 1 multi ALLOWPROCLISTEN` || exit 1
+		ALLOWPROCLISTENERS=`get_option 1 multi ALLOWPROCLISTEN` || rkh_exit 1
 
 
 		INODE_LIST=""
@@ -10512,7 +10556,7 @@ do_group_accounts_check() {
 		# We need to ignore any whitelisted UID 0 accounts.
 		#
 
-		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || exit 1
+		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || rkh_exit 1
 		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
 		UID_LIST=""
@@ -10571,7 +10615,7 @@ ${RKHTMPVAR}"
 
 	WL_SEEN=""
 
-	PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
+	PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || rkh_exit 1
 	PWD_WHITELIST=" ${PWD_WHITELIST} "
 
 	PWD_PWDLESS_LIST=""
@@ -11193,7 +11237,7 @@ do_filesystem_check() {
 			fi
 		fi
 
-		RKHTMPVAR=`get_option 1 multi ALLOWDEVFILE` || exit 1
+		RKHTMPVAR=`get_option 1 multi ALLOWDEVFILE` || rkh_exit 1
 
 		for FNAME in ${RKHTMPVAR}; do
 			ALLOWDEVFILES="${ALLOWDEVFILES} ${FNAME}"
@@ -11302,7 +11346,7 @@ do_filesystem_check() {
 	ALLOWHIDDENFILES=" "
 
 	if [ -n "${LOOKINDIRS}" ]; then
-		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENDIR` || exit 1
+		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENDIR` || rkh_exit 1
 
 		for DIR in ${RKHTMPVAR}; do
 			ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
@@ -11311,7 +11355,7 @@ do_filesystem_check() {
 		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
 
 
-		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENFILE` || exit 1
+		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENFILE` || rkh_exit 1
 
 		for FNAME in ${RKHTMPVAR}; do
 			ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
@@ -11505,7 +11549,7 @@ do_app_checks() {
 
 	APP_WHITELIST=""
 
-	RKHTMVAR=`get_option 2 single APP_WHITELIST` || exit 1
+	RKHTMVAR=`get_option 2 single APP_WHITELIST` || rkh_exit 1
 
 	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[:upper:]' '[:lower:]'`
 
@@ -12475,6 +12519,63 @@ display_rootkits() {
 
 		echo "    ${STR}"
 	done
+
+	return
+}
+
+get_lock() {
+
+	#
+	# This function attempts to get the lock file. If it cannot
+	# get the lock then it waits for 10 seconds, and then tries
+	# again. It repeats this until the timeout has passed.
+	#
+	# We cannot log anything at this time, but we can use
+	# 'display' to display messages on the users screen.
+	#
+
+	RKHTMPVAR=0
+
+	while test $RKHTMPVAR -lt $LOCK_TIMEOUT; do
+		if [ -f "${RKHTMPDIR}/rkhunter.LCK" ]; then
+			test $SHOW_LOCK_MSGS -eq 1 -a $RKHTMPVAR -eq 0 && display --to SCREEN --type PLAIN --nonl LOCK_WAIT
+
+			sleep 10;
+
+			RKHTMPVAR=`expr ${RKHTMPVAR} + 10`
+
+			test $SHOW_LOCK_MSGS -eq 1 && display --to SCREEN --type PLAIN --nonl NAME "..${RKHTMPVAR}"
+		else
+			break
+		fi
+	done
+
+	if [ $RKHTMPVAR -lt $LOCK_TIMEOUT -o ! -f "${RKHTMPDIR}/rkhunter.LCK" ]; then
+		touch ${RKHTMPDIR}/rkhunter.LCK
+
+		test $SHOW_LOCK_MSGS -eq 1 -a $RKHTMPVAR -gt 0 -a $NOTTY -eq 0 && echo ""
+	else
+		#
+		# We need to be careful here. We do not want to display the message if the user
+		# has explicitly requested not to, but we must display it if the user has set
+		# the '--report-warnings-only' option (we treat it as a warning), or the
+		# '--cronjob' option. If we did not, then the user may think that rkhunter has
+		# run and that there were no warnings. If the user used the '--quiet' option,
+		# then this message won't be displayed. However, that is okay because they
+		# should be checking the return-code.
+		#
+
+		if [ $SHOWWARNINGSONLY -eq 1 -o $CRONJOB -eq 1 ]; then
+			NOTTY=0
+			RKHTMPVAR=""
+		else
+			RKHTMPVAR="--nl"
+		fi
+
+		test $SHOW_LOCK_MSGS -eq 1 -o $NOTTY -eq 0 && display --to SCREEN --type PLAIN ${RKHTMPVAR} LOCK_FAIL
+
+		exit 1
+	fi
 
 	return
 }
@@ -13803,8 +13904,7 @@ IFS=$RKHIFS
 #
 
 if [ $USE_LOCKING -eq 1 ]; then
-#jh - get_lock()
-	:
+	get_lock
 fi
 
 #
@@ -14314,4 +14414,4 @@ test $CATLOGFILE -eq 1 && cat ${RKHLOGFILE}
 
 IFS=$ORIGIFS
 
-exit $RET_CODE
+rkh_exit $RET_CODE

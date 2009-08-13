@@ -64,6 +64,11 @@
    own 'rkhunter.conf.local' file as required. This option can then be
    used to have the installer overwrite the default config file. It saves
    having to move the new default config file into place on each computer.
+ - Locking is now possible when rkhunter runs. This prevents RKH running
+   more than once and corrupting any modified files such as the log file,
+   or the file properties file. New configuration options have been added
+   to handle the locking, and the configuration file contains details of
+   how the locking works. The default is not to use locking.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -155,7 +160,9 @@
    file, for passwordless accounts.
  - If the passwd file did not exist, then a warning of this was logged three
    times. It is now logged once as a warning, and as an info message for the
-   others.
+   other times.
+ - It was possible for the network ports test to incorrectly display a warning
+   due to an uninitialised variable.
 
 -- 
 
