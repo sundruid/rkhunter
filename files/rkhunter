@@ -12226,7 +12226,7 @@ set_file_prop_dirs_files() {
 	    newsyslog nologin passwd perl pkgdb pkg_info prelink ps pstree pwck
 	    pwd readlink rkhunter rmmod rpm rsyslogd runcon runlevel sed sestatus sh
 	    sha1 sha1sum size skdet slocate sockstat sort stat strace strings su sudo
-	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname unhide
+	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname
 	    uniq useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"
 
@@ -12244,6 +12244,16 @@ set_file_prop_dirs_files() {
 	elif [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
 		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload"
 	fi
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		if [ `uname -r|grep ^2.6` ]; then
+			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
+		else
+			PROP_FILE_LIST="${PROP_FILE_LIST} unhide"
+		fi
+        elif [ $SUNOS -eq 1 -o $BSDOS -eq 1 ]; then
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide"
+        fi
 
 
 	#
