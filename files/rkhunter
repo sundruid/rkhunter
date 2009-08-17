@@ -8829,7 +8829,13 @@ ${PROC} ${PID} ${FNAME}"
 	if `check_test hidden_procs`; then
 		display --to LOG --type INFO STARTING_TEST hidden_procs
 
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		if [ `uname -r|grep ^2.6` ]; then
+			UNHIDE_CMD=`find_cmd unhide-linux26`
+		fi
+	else
 		UNHIDE_CMD=`find_cmd unhide`
+	fi
 
 		if [ -n "${UNHIDE_CMD}" ]; then
 			HIDDEN_PROCS=`${UNHIDE_CMD} sys | grep '^F' | awk -F':' '{ print $2 }'`
