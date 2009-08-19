@@ -13691,6 +13691,15 @@ if [ $CHECK -eq 1 ]; then
 	elif [ -f "${RKHROOTDIR}/proc/kallsyms" ]; then
 		KSYMS_FILE="${RKHROOTDIR}/proc/kallsyms"
 	fi
+
+	#
+	# Check to make sure that the symbols are readable
+	# as certain security frameworks hide this.
+	#
+
+	if [ -z "`head -1 /proc/kallsyms 2>/dev/null`" ]; then
+		KSYMS_FILE=""
+	fi
 fi
 
 
@@ -14334,6 +14343,12 @@ if [ $CHECK -eq 1 ]; then
 
 	if [ -n "${KSYMS_FILE}" ]; then
 		display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"
+	elif [ -f "${RKHROOTDIR}/proc/ksyms" ]; then
+		display --to LOG --type INFO KSYMS_FOUND "${RKHROOTDIR}/proc/ksyms"
+		display --to LOG --type INFO KSYMS_UNAVAIL
+	elif [ -f "${RKHROOTDIR}/proc/kallsyms" ]; then
+		display --to LOG --type INFO KSYMS_FOUND "${RKHROOTDIR}/proc/kallsyms"
+		display --to LOG --type INFO KSYMS_UNAVAIL
 	else
 		display --to LOG --type INFO KSYMS_MISSING
 	fi
