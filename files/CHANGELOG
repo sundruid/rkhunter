@@ -168,6 +168,7 @@
  - The SSH configuration file tests now allow for leading spaces/tabs.
  - When using the '--debug' option, and running the 'suspscan' test, the debug
    file itself could be logged as suspicious. It is now skipped from the test.
+ - Ensure the /proc/ksyms or /proc/kallsyms file is readable before using it.
 
 -- 
 
