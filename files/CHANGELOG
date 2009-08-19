@@ -71,6 +71,11 @@
    how the locking works. The default is not to use locking.
  - Added support for hash functions SHA224, SHA256, SHA384 and SHA512 using
    perl modules Digest-SHA-PurePerl or SHA256, both available at CPAN.
+ - Added the UPDATE_LANG configuration option. This can be set to those
+   language files the user wants to be updated when the '--update' option is
+   used. Since most sites may only use one language, this can reduce the
+   network bandwidth used. The default is to update all the languages. The
+   configured default language, and English (en), are always updated.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently

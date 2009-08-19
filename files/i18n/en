@@ -1,4 +1,4 @@
-Version:2009081901
+Version:2009081902
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -176,6 +176,7 @@ UPDATE_FILE_NO_VERS:File '$1' has no valid version number. Downloading a new cop
 UPDATE_FILE_MISSING:File '$1' is missing or empty. Downloading a new copy.
 UPDATE_DOWNLOAD_FAIL:Download of '$1' failed: Unable to determine the latest version number.
 UPDATE_I18N_NO_VERS:No i18n language file version numbers can be found.
+UPDATE_SKIPPED:Language file update skipped at users request.
 
 OSINFO_START:Checking if the O/S has changed since last time...
 OSINFO_END:Nothing seems to have changed

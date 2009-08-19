@@ -266,7 +266,7 @@ display() {
 				echo "Error: No --log-indent value given.   Display line: ${DISPLAY_LINE}"
 				return
 			elif [ -z "`echo ${LOGINDENT} | grep '^[0-9]*$'`" ]; then
-				echo "Error: Invalid --log-indent value given: $2   Display line: ${DISPLAY_LINE}"
+				echo "Error: Invalid '--log-indent' value given: $2   Display line: ${DISPLAY_LINE}"
 				return
 			fi
 
@@ -279,7 +279,7 @@ display() {
 				echo "Error: No --screen-indent value given.   Display line: ${DISPLAY_LINE}"
 				return
 			elif [ -z "`echo ${SCREENINDENT} | grep '^[0-9]*$'`" ]; then
-				echo "Error: Invalid --screen-indent value given: $2   Display line: ${DISPLAY_LINE}"
+				echo "Error: Invalid '--screen-indent' value given: $2   Display line: ${DISPLAY_LINE}"
 				return
 			fi
 
@@ -1169,7 +1169,7 @@ get_language_option() {
 		LANGUAGE=`echo "${LANGUAGE}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${LANGUAGE}" ]; then
-			echo "Invalid --language option - no language given."
+			echo "Invalid '--language' option - no language given."
 			exit 1
 		fi
 	else
@@ -1216,6 +1216,26 @@ get_language_option() {
 		fi
 	fi
 
+	#
+	# Finally, find out what languages the user wants to be updated.
+	# We add in the default language, and 'en', if they have not
+	# been specified.
+	#
+
+	if [ $UPDATE -eq 1 ]; then
+		UPDATE_LANG=`get_option 2 single UPDATE_LANG` || exit 1
+
+		if [ -n "${UPDATE_LANG}" ]; then
+			if [ -z "`echo \" ${UPDATE_LANG} \" | grep \" ${LANGUAGE} \"`" ]; then
+				UPDATE_LANG="${UPDATE_LANG} ${LANGUAGE}"
+			fi
+
+			if [ -z "`echo \" ${UPDATE_LANG} \" | grep ' en '`" ]; then
+				UPDATE_LANG="${UPDATE_LANG} en"
+			fi
+		fi
+	fi
+
 	return
 }
 
@@ -1232,7 +1252,7 @@ get_logfile_option() {
 		RKHLOGFILE=`echo "${RKHLOGFILE}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${RKHLOGFILE}" ]; then
-			echo "Invalid --logfile option - no logfile name given."
+			echo "Invalid '--logfile' option - no logfile name given."
 			exit 1
 		fi
 	else
@@ -1334,7 +1354,7 @@ get_tmpdir_option() {
 		RKHTMPDIR=`echo "${RKHTMPDIR}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${RKHTMPDIR}" ]; then
-			echo "Invalid --tmpdir option - no directory name given."
+			echo "Invalid '--tmpdir' option - no directory name given."
 			exit 1
 		fi
 	else
@@ -1386,7 +1406,7 @@ get_dbdir_option() {
 		DB_PATH=`echo "${DB_PATH}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${DB_PATH}" ]; then
-			echo "Invalid --dbdir option - no directory name given."
+			echo "Invalid '--dbdir' option - no directory name given."
 			exit 1
 		fi
 	else
@@ -1510,7 +1530,7 @@ get_bindir_option() {
 		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
 
 		if [ "${BINPATHS}" = " " ]; then
-			echo "Invalid --bindir option - no directory names given."
+			echo "Invalid '--bindir option' - no directory names given."
 			exit 1
 		fi
 	else
@@ -1640,7 +1660,7 @@ get_rootdir_option() {
 		RKHROOTDIR=`echo "${RKHROOTDIR}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${RKHROOTDIR}" ]; then
-			echo "Invalid --rootdir option - no directory name given."
+			echo "Invalid '--rootdir' option - no directory name given."
 			exit 1
 		fi
 	else
@@ -1762,7 +1782,7 @@ get_syslog_option() {
 		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${USE_SYSLOG}" ]; then
-			echo "Invalid --syslog option - no facility/priority names given."
+			echo "Invalid '--syslog' option - no facility/priority names given."
 			exit 1
 		fi
 	else
@@ -2077,7 +2097,7 @@ get_enable_option() {
 			ENABLE_TESTS=`echo ${ENABLE_TESTS}`
 
 			if [ -z "${ENABLE_TESTS}" ]; then
-				echo "Invalid --enable option - no test names given."
+				echo "Invalid '--enable' option - no test names given."
 				exit 1
 			else
 				ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
@@ -2182,7 +2202,7 @@ get_disable_option() {
 			DISABLE_TESTS=`echo ${DISABLE_TESTS}`
 
 			if [ -z "${DISABLE_TESTS}" ]; then
-				echo "Invalid --disable option - no test names given."
+				echo "Invalid '--disable' option - no test names given."
 				exit 1
 			fi
 		fi
@@ -2702,7 +2722,7 @@ get_hash_function() {
 		PKGMGR=`echo "${PKGMGR}" | tr -d '" 	' | tr -d "'"`
 
 		if [ -z "${PKGMGR}" ]; then
-			echo "Invalid --pkgmgr option: no package manager given."
+			echo "Invalid '--pkgmgr' option: no package manager given."
 			exit 1
 		fi
 	else
@@ -4516,6 +4536,19 @@ do_i18n_update() {
 		for FNAME in ${FOUNDFILES}; do
 			LANGFILE=`echo "${FNAME}" | cut -d: -f1`
 			LATEST_VERS=`echo "${FNAME}" | cut -d: -f2`
+
+			#
+			# Only update the language files the user has asked for.
+			#
+
+			if [ -n "${UPDATE_LANG}" ]; then
+				if [ -z "`echo \" ${UPDATE_LANG} \" | grep \" ${LANGFILE} \"`" ]; then
+					display --to LOG --type INFO UPDATE_SKIPPED
+					display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED UPDATE_CHECKING_FILE "i18n/${LANGFILE}"
+
+					continue
+				fi
+			fi
 
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
 				PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail -1 | cut -d: -f2`
@@ -12963,6 +12996,7 @@ RET_CODE=0
 
 # Initially there is no language, this will be set later.
 LANGUAGE=""
+UPDATE_LANG=""
 
 # A space-separated list of test names we recognise.
 KNOWN_TESTS="strings properties hashes scripts immutable attributes
@@ -13340,7 +13374,7 @@ while [ $# -ge 1 ]; do
 			LIST_OPT="${LIST_OPT} tests languages rootkits "
 			;;
 		*)
-			echo "Invalid --list option specified: $2"
+			echo "Invalid '--list' option specified: $2"
 			exit 1
 			;;
 		esac
