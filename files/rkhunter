@@ -2535,53 +2535,82 @@ get_hash_function() {
 	# check on whether it is empty or a space.
 	#
 
-	if [ -n "${HASH_FUNC}" ]; then
+	if [ $HASH_OPT -eq 1 ]; then
 		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
 		HASH_FUNC=`echo ${HASH_FUNC}`
 
 		if [ -z "${HASH_FUNC}" ]; then
-			echo "Invalid --hash option: no hash function given."
+			echo "Invalid '--hash' option: no hash function given."
 			exit 1
-		elif [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|NONE)$'`" ]; then
-			HASH_FUNC=`echo "${HASH_FUNC}" | tr '[:lower:]' '[:upper:]'`
 		fi
 	else
 		HASH_FUNC=`get_option 2 single HASH_FUNC` || exit 1
 	fi
 
+	if [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|SHA224|SHA256|SHA384|SHA512|NONE)$'`" ]; then
+		HASH_FUNC=`echo "${HASH_FUNC}" | tr '[:lower:]' '[:upper:]'`
+	fi
+
 
 	#
-	# At this point we have either been given a hash function
-	# command, one of the reserved words 'SHA1', 'MD5' or 'NONE',
-	# or nothing. For the SHA1 and MD5 reserved words we must
-	# find the SHA1 or MD5 command or use the supplied perl scripts.
+	# At this point we have either been given a hash function command,
+	# one of the reserved words 'MD5', 'NONE', or one of the SHA functions,
+	# or nothing. For the SHA and MD5 reserved words we must find the
+	# SHA or MD5 command or use the supplied perl scripts.
 	#
 
-	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "SHA1" ]; then
-		if [ $PRELINKED -eq 1 ]; then
-			PRELINK_HASH="SHA1"
+	SHA_SIZE=0
 
-			if [ $USE_RUNCON -eq 1 ]; then
-				HASH_FUNC="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify --sha"
-			else
-				HASH_FUNC="${PRELINK_CMD} --verify --sha"
-			fi
+	test -z "${HASH_FUNC}" && HASH_FUNC="SHA1"
+
+	case "${HASH_FUNC}" in
+	SHA1)	SHA_SIZE=1
+		;;
+	SHA224)	SHA_SIZE=224
+		;;
+	SHA256)	SHA_SIZE=256
+		;;
+	SHA384)	SHA_SIZE=384
+		;;
+	SHA512)	SHA_SIZE=512
+		;;
+	esac
+
+	if [ "${HASH_FUNC}" = "SHA1" -a  $PRELINKED -eq 1 ]; then
+		PRELINK_HASH="SHA1"
+
+		if [ $USE_RUNCON -eq 1 ]; then
+			HASH_FUNC="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify --sha"
 		else
-			HF=`find_cmd sha1sum`
+			HASH_FUNC="${PRELINK_CMD} --verify --sha"
+		fi
+	elif [ $SHA_SIZE -gt 0 ]; then
+		HF=`find_cmd sha${SHA_SIZE}sum`
 
-			test -z "${HF}" && HF=`find_cmd sha1`
+		test -z "${HF}" && HF=`find_cmd sha${SHA_SIZE}`
 
-			if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA1 2>&1 | grep 'Digest::SHA1 installed'`
+		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA1 Digest::SHA256 2>&1`
 
-				if [ -n "${MOD_INSTALLED}" ]; then
-					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha1.pl"
+			if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::SHA installed'`" ]; then
+				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA512 $SHA_SIZE"
+			elif [ $SHA_SIZE -eq 256 -o $SHA_SIZE -eq 384 -o $SHA_SIZE -eq 512 ]; then
+				if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::SHA256 installed'`" ]; then
+					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA256 $SHA_SIZE"
+				else
+					HASH_FUNC=""
+				fi
+			elif [ $SHA_SIZE -eq 1 ]; then
+				if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::SHA1 installed'`" ]; then
+					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA1 $SHA_SIZE"
 				else
 					HASH_FUNC=""
 				fi
 			else
-				HASH_FUNC=$HF
+				HASH_FUNC=""
 			fi
+		else
+			HASH_FUNC=$HF
 		fi
 	fi
 
@@ -2590,7 +2619,7 @@ get_hash_function() {
 	# If we still have no hash function, then look for an MD5 command.
 	#
 
-	if [ -z "${HASH_FUNC}" -o "${HASH_FUNC}" = "MD5" ]; then
+	if [ \( -z "${HASH_FUNC}" -a $SHA_SIZE -eq 1 \) -o "${HASH_FUNC}" = "MD5" ]; then
 		HASH_FUNC=`get_md5_hash_function`
 
 		if [ $PRELINKED -eq 1 ]; then
@@ -2603,7 +2632,7 @@ get_hash_function() {
 
 	#
 	# A final check that the command is actually executable.
-	# This will ensure that the sha1/md5 perl scripts have been
+	# This will ensure that the SHA/MD5 perl scripts have been
 	# installed correctly, should they be needed.
 	#
 
@@ -2625,12 +2654,21 @@ get_hash_function() {
 			else
 				HASH_FUNC="${HF} ${HCMD}"
 			fi
+		elif [ $HASH_OPT -eq 1 ]; then
+			echo "Invalid '--hash' option: command '${HCMD}' is non-existent or not executable."
+			exit 1
 		else
 			echo "Invalid HASH_FUNC configuration option: command '${HCMD}' is non-existent or not executable."
 			exit 1
 		fi
+	elif [ $HASH_OPT -eq 1 ]; then
+		echo "Invalid '--hash' option: no usable hash command or perl modules could be found."
+		exit 1
+	elif [ $SHA_SIZE -gt 1 ]; then
+		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl modules for SHA${SHA_SIZE} could be found."
+		exit 1
 	else
-		echo "Invalid HASH_FUNC configuration option: option not specified and no hash command or perl modules could be found."
+		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl modules for SHA1 or MD5 could be found."
 		exit 1
 	fi
 
@@ -7207,8 +7245,13 @@ suspscan() {
 
 			$FIND_CMD "${SUSPSCAN_DIR}" -type f -o -type l 2>/dev/null | while read SUSPSCAN_ITEM; do
 				#
-				# If the file is a link, then find
-				# what it points to.
+				# Skip the debug file which may well be in one of the default suspscan directories.
+				#
+
+				test $DEBUG_OPT -eq 1 -a "${SUSPSCAN_ITEM}" = "${RKHDEBUGFILE}" && continue
+
+				#
+				# If the file is a link, then find what it points to.
 				#
 
 				if [ -h "${SUSPSCAN_ITEM}" ]; then
@@ -7389,6 +7432,7 @@ suspscan() {
 
 	# Cruel hack due to looping
 
+#jh - fix this. If append_log is set then old etries could be found. Use a temp file?
 	FOUNDDIRS=`grep '.score:.*contains' "${RKHLOGFILE}" | head -n 1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
@@ -8829,13 +8873,15 @@ ${PROC} ${PID} ${FNAME}"
 	if `check_test hidden_procs`; then
 		display --to LOG --type INFO STARTING_TEST hidden_procs
 
-	UNHIDE_CMD=`find_cmd unhide`
+		RKHTMPVAR="unhide"
+		UNHIDE_CMD=`find_cmd unhide`
 
-	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-		if [ `uname -r|grep ^2.6` ]; then
-			UNHIDE_CMD=`find_cmd unhide-linux26`
+		if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+			if [ -n "`uname -r | grep '^2\.6'`" ]; then
+				RKHTMPVAR="unhide-linux26"
+				UNHIDE_CMD=`find_cmd unhide-linux26`
+			fi
 		fi
-	fi
 
 		if [ -n "${UNHIDE_CMD}" ]; then
 			HIDDEN_PROCS=`${UNHIDE_CMD} sys | grep '^F' | awk -F':' '{ print $2 }'`
@@ -8848,7 +8894,7 @@ ${PROC} ${PID} ${FNAME}"
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
-			display --to LOG --type INFO NOT_FOUND_CMD "unhide"
+			display --to LOG --type INFO NOT_FOUND_CMD "${RKHTMPVAR}"
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_procs
@@ -10962,14 +11008,14 @@ do_system_config_files_check() {
 		# First we check for allowed root access.
 		#
 
-		RKHTMPVAR=`grep -i '^PermitRootLogin[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
+		RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			#
 			# Get the value that has been set.
 			#
 
-			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[:upper:]' '[:lower:]'`
+			RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[:upper:]' '[:lower:]'`
 
 			if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
 				test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
@@ -10995,14 +11041,14 @@ do_system_config_files_check() {
 		# Next we check to see if protocol version 1 is allowed.
 		#
 
-		RKHTMPVAR=`grep -i '^Protocol[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
+		RKHTMPVAR=`grep -i '^[ 	]*Protocol[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			#
 			# Get the value that has been set.
 			#
 
-			RKHTMPVAR2=`echo "${RKHTMPVAR}" | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | grep '1'`
+			RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | grep '1'`
 
 			if [ -z "${RKHTMPVAR2}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
@@ -12225,7 +12271,8 @@ set_file_prop_dirs_files() {
 	    modload modprobe modstat modunload more mount mv netstat newgrp
 	    newsyslog nologin passwd perl pkgdb pkg_info prelink ps pstree pwck
 	    pwd readlink rkhunter rmmod rpm rsyslogd runcon runlevel sed sestatus sh
-	    sha1 sha1sum size skdet slocate sockstat sort stat strace strings su sudo
+	    sha1 sha1sum sha224 sha224sum sha256 sha256sum sha384 sha384sum sha512
+	    sha512sum size skdet slocate sockstat sort stat strace strings su sudo
 	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname
 	    uniq useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"
@@ -12246,7 +12293,7 @@ set_file_prop_dirs_files() {
 	fi
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-		if [ `uname -r|grep ^2.6` ]; then
+		if [ -n "`uname -r | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
 		else
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide"
@@ -12618,8 +12665,9 @@ help() {
 	echo $ECHOOPT "         --display-logfile             Display the logfile at the end"
 	echo $ECHOOPT "         --enable  <test>[,<test>...]  Enable specific tests"
 	echo $ECHOOPT "                                       (Default is to enable all tests)"
-	echo $ECHOOPT "         --hash {MD5 | SHA1 | NONE |   Use the specified file hash function"
-	echo $ECHOOPT "                 <command>}            (Default is SHA1)"
+	echo $ECHOOPT "         --hash {MD5 | SHA1 | SHA224 | SHA256 | SHA384 | SHA512 |"
+	echo $ECHOOPT "                 NONE | <command>}     Use the specified file hash function"
+	echo $ECHOOPT "                                       (Default is SHA1, then MD5)"
 	echo $ECHOOPT "     -h, --help                        Display this help menu, then exit"
 	echo $ECHOOPT " --lang, --language <language>         Specify the language to use"
 	echo $ECHOOPT "                                       (Default is English)"
@@ -12749,6 +12797,8 @@ OLD_HASH_FUNC=""
 PKGMGR=""
 OLD_PKGMGR=""
 OLD_ATTRUPD=""
+HASH_OPT=0
+SHA_SIZE=0
 HASH_FLD_IDX=1
 PROP_DIR_LIST=""
 PROP_FILE_LIST=""
@@ -13223,6 +13273,7 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			HASH_FUNC="$1"
+			HASH_OPT=1
 			;;
 		esac
 
@@ -13781,7 +13832,12 @@ if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a -z "${PKGMGR}" -a "${HASH_FUNC}" 
 		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 
 		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
-			echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+			if [ $HASH_OPT -eq 1 ]; then
+				echo "This system uses prelinking, but the '--hash' option (${HASH_FUNC}) does not look like SHA1 or MD5."
+			else
+				echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+			fi
+
 			exit 1
 		fi
 	fi
@@ -14092,8 +14148,8 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			else
 				display --to LOG --type INFO HASH_FUNC_NONE
 			fi
-		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashsha1\.pl$'`" ]; then
-			display --to LOG --type INFO HASH_FUNC_PERL 'SHA1'
+		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashsha\.pl$'`" ]; then
+			display --to LOG --type INFO HASH_FUNC_PERL "SHA${SHA_SIZE}"
 		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashmd5\.pl$'`" ]; then
 			display --to LOG --type INFO HASH_FUNC_PERL 'MD5'
 		else

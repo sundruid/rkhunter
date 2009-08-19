@@ -211,18 +211,20 @@ option is used, and \fB\-\-propupd\fP is not specified, then the
 Read the README file for more information about test names. By default all
 tests are enabled. All tests will be listed below under TESTS.
 
-.IP "\fB\-\-hash {MD5 | SHA1 | NONE | <command>}\fP"
+.IP "\fB\-\-hash {MD5 | SHA1 | SHA224 | SHA256 | SHA384 | SHA512 |\fP"
+\fB NONE | <command>}\fP
+.br
 Both the file properties check and the \fB\-\-propupd\fP command option will
 use a hash function to determine a files current hash value. This option tells
-\fBrkhunter\fP which hash function to use. The \fIMD5\fP and \fISHA1\fP
-options, in uppercase, will look for the relevant command, and if not found
-a perl support script will be used to provide the function. Alternatively, a
-specific \fIcommand\fP may be specified. A value of \fINONE\fP can be used
-to indicate that the hash values should not be obtained or used as part of the
-file properties check. The default is \fISHA1\fP, or \fIMD5\fP if no SHA1
-command can be found.
+\fBrkhunter\fP which hash function to use. The \fIMD5\fP and \fISHA\fP
+options will look for the relevant command, and, if not found, a perl support
+script will then be used to see if a perl module supporting the function has been
+installed. Alternatively, a specific \fIcommand\fP may be specified. A value of
+\fINONE\fP can be used to indicate that the hash values should not be obtained
+or used as part of the file properties check. The default is \fISHA1\fP, or
+\fIMD5\fP if no SHA1 command can be found.
 
-Systems using prelinking must use MD5, SHA1 or NONE.
+Systems using prelinking must use either MD5, SHA1 or NONE.
 
 .IP "\fB\-\-lang, \-\-language <language>\fP"
 This option specifies which language to use for the displayed tests and results.

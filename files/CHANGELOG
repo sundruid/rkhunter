@@ -69,6 +69,8 @@
    or the file properties file. New configuration options have been added
    to handle the locking, and the configuration file contains details of
    how the locking works. The default is not to use locking.
+ - Added support for hash functions SHA224, SHA256, SHA384 and SHA512 using
+   perl modules Digest-SHA-PurePerl or SHA256, both available at CPAN.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -163,6 +165,9 @@
    other times.
  - It was possible for the network ports test to incorrectly display a warning
    due to an uninitialised variable.
+ - The SSH configuration file tests now allow for leading spaces/tabs.
+ - When using the '--debug' option, and running the 'suspscan' test, the debug
+   file itself could be logged as suspicious. It is now skipped from the test.
 
 -- 
 

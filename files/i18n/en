@@ -1,4 +1,4 @@
-Version:2009081201
+Version:2009081701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -555,7 +555,7 @@ SUSPSCAN_TEMP:Temporary directory to use: $1
 SUSPSCAN_NO_TEMP:No temporary directory specified: using default ($1)
 SUSPSCAN_TEMP_NOT_EXIST:The suspscan temporary directory does not exist: $1
 SUSPSCAN_TEMP_NO_WRITE:The suspscan temporary directory is not writable: $1
-SUSPSCAN_SIZE:Maximum file size to check (in bytes): '$1'
+SUSPSCAN_SIZE:Maximum file size to check (in bytes): $1
 SUSPSCAN_NO_SIZE:No maximum file size specified: using default ($1)
 SUSPSCAN_SIZE_INVALID:The suspscan maximum file size is invalid: $1
 SUSPSCAN_THRESH:Score threshold is set to: $1
@@ -579,4 +579,4 @@ LIST_RTKTS:Rootkits checked for:
 LOCK_USED:Locking is being used: timeout is $1 seconds
 LOCK_UNUSED:Locking is not being used
 LOCK_WAIT:Waiting for lock file
-LOCK_FAIL:Unable to get the lock file.
+LOCK_FAIL:Unable to get the lock file: rkhunter has not run!

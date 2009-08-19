@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-die "Usage: $0 <module number> <SHA size> <filename>" if ($#ARGV != 2);
+die "Usage: $0 <module name> <SHA size> <filename>" if ($#ARGV != 2);
 
 my $sha = '';
 
@@ -12,11 +12,11 @@ my $file = $ARGV[2];
 open(FILE, $file) or die "Can't open file '$file'";
 binmode(FILE);
 
-if ($mod eq '1') {
+if ($mod eq 'SHA1') {
 	use Digest::SHA1;
 	$sha = Digest::SHA1 -> new;
 }
-elsif ($mod eq '256') {
+elsif ($mod eq 'SHA256') {
 	use Digest::SHA256;
 	$sha = Digest::SHA256::new($size);
 }
