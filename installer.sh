@@ -412,6 +412,8 @@ useCVS() {
 #################################################################################
 
 doInstall()  {
+	DOING_UPDT=0
+
 	# Preflight checks
 	echo "Checking system for:"
 
@@ -467,6 +469,7 @@ doInstall()  {
 
 	if [ -f "${RKHINST_ETC_DIR}/rkhunter.conf" ]; then
 		echo "Starting update:"
+		DOING_UPDT=1
 	else
 		echo "Starting installation:"
 	fi
@@ -833,7 +836,11 @@ doInstall()  {
 		;;
 	esac
 
-	echo "Installation complete"
+	if [ $DOING_UPDT -eq 1 ]; then
+		echo "Update complete"
+	else
+		echo "Installation complete"
+	fi
 
 	return
 } # End doInstall
