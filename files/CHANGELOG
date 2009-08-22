@@ -123,6 +123,12 @@
  - Improved Fleakit Linux Rootkit checks.
  - Improved SHV4 Rootkit checks.
  - Improved beX2 Rootkit check.
+ - Improved Phalanx2 Rootkit check to include Phalanx version 2.3d as reported
+   in ticket 2839813, including a PHALANX2_DIRTEST configuration option which 
+   enables scanning for directory names and accepts the value '0' for default 
+   directory names to search for and '1' for scanning the /etc and /usr 
+   directories for directory names ending in '.p2' at the expense of a slightly
+   longer running time. Absence of the configuration option selects value '0'.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious

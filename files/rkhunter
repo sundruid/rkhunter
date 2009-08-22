@@ -5234,10 +5234,13 @@ do_system_check_initialisation() {
 		        ${RKHROOTDIR}/etc/lolzz.p2/.p2rc
 		        ${RKHROOTDIR}/etc/lolzz.p2/.phalanx2
 		        ${RKHROOTDIR}/etc/lolzz.p2/.sniff
-		        ${RKHROOTDIR}/etc/lolzz.p2/sshgrab.py"
+		        ${RKHROOTDIR}/etc/lolzz.p2/sshgrab.py
+			${RKHROOTDIR}/etc/cron.d/zupzzplaceholder
+			${RKHROOTDIR}/usr/lib/zupzz.p2/.p-2.3d
+			${RKHROOTDIR}/usr/lib/zupzz.p2/.p2rc"
 	PHALANX2_DIRS="${RKHROOTDIR}/etc/khubd.p2
-		       ${RKHROOTDIR}/etc/lolzz.p2"
-
+		       ${RKHROOTDIR}/etc/lolzz.p2
+		       ${RKHROOTDIR}/usr/lib/zupzz.p2"
 
 	# Portacelo Rootkit
 	PORTACELO_FILES="${RKHROOTDIR}/var/lib/.../.ak
@@ -5744,7 +5747,8 @@ do_system_check_initialisation() {
 		      cleaner.o
 		      flkm.o
 		      phide_mod.o
-		      vlogger.o"
+		      vlogger.o
+		      p2.ko"
 
 	return
 }
@@ -7885,32 +7889,35 @@ rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 		fi
 
-		if `cd ${RKHROOTDIR}/etc/khubd.p2 >/dev/null 2>&1`; then
-			ROOTKIT_PHALANX2_TEST=1
+                ROOTKIT_PHALANX2_DIRTESTVAL=`get_option 1 single PHALANX2_DIRTEST`
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/khubd.p2"
-			fi
+		case "${ROOTKIT_PHALANX2_DIRTESTVAL}" in
+			1)   ROOTKIT_PHALANX2_DIRNAMES=`find /etc /usr -type d -iname "*.p2"`
+			;;
+			0|*) ROOTKIT_PHALANX2_DIRNAMES="${RKHROOTDIR}/etc/khubd.p2 ${RKHROOTDIR}/etc/lolzz.p2 ${RKHROOTDIR}/usr/lib/zupzz.p2"
+			;;
+		esac
 
-			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${RKHROOTDIR}/etc/khubd.p2"
-		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/khubd.p2"
-		fi
+		if [ -n "${ROOTKIT_PHALANX2_DIRNAMES}" ]; then
 
-		if `cd ${RKHROOTDIR}/etc/lolzz.p2 >/dev/null 2>&1`; then
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/lolzz.p2"
-			fi
+			for ROOTKIT_PHALANX2_DIRNAME in "${ROOTKIT_PHALANX2_DIRNAMES}"; do
 
-			if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
-				ROOTKIT_PHALANX2_TEST=1
-				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-			fi
+				if `cd ${ROOTKIT_PHALANX2_DIRNAME} >/dev/null 2>&1`; then
+					ROOTKIT_PHALANX2_TEST=1
 
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${RKHROOTDIR}/etc/lolzz.p2"
-		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHROOTDIR}/etc/lolzz.p2"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${ROOTKIT_PHALANX2_DIRNAME}"
+					fi
+
+					display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${ROOTKIT_PHALANX2_DIRNAME}"
+				elif [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${ROOTKIT_PHALANX2_DIRNAME}"
+				fi
+			done
+
+		elif [ $VERBOSE_LOGGING -eq 1 -a $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "*.p2"
 		fi
 
 		if `grep -q '^/dev/root .* ext[23] ' /proc/mounts 2>/dev/null`; then 
