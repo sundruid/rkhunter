@@ -331,6 +331,10 @@ ROOTKIT_LINK_COUNT_FAIL:Hard link count from '$1' command: $2
 ROOTKIT_LINK_COUNT_CMDERR:Error from '$1' command when checking '$2'
 
 ROOTKIT_PHALANX2_LINK_COUNT_FAIL:Hard link check on '$1' failed
+ROOTKIT_PHALANX2_PROC:Checking process list for process 'ata/0'
+ROOTKIT_PHALANX2_PROC_FOUND:Found running process 'ata/0'
+ROOTKIT_PHALANX2_PROC_PPID:Expected 'kthread' parent PID '$1' found parent PID '$2'
+ROOTKIT_PHALANX2_PROC_PS_ERR:Running 'ps' returned unexpected results: possibly unsupported cmdline arguments.
 
 ROOTKIT_ADD_START:Performing additional rootkit checks
 ROOTKIT_ADD_SUCKIT:Suckit Rookit additional checks

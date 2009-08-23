@@ -7900,7 +7900,7 @@ rootkit_file_dir_checks() {
 
 		if [ -n "${ROOTKIT_PHALANX2_DIRNAMES}" ]; then
 
-			for ROOTKIT_PHALANX2_DIRNAME in "${ROOTKIT_PHALANX2_DIRNAMES}"; do
+			for ROOTKIT_PHALANX2_DIRNAME in ${ROOTKIT_PHALANX2_DIRNAMES}; do
 
 				if `cd ${ROOTKIT_PHALANX2_DIRNAME} >/dev/null 2>&1`; then
 					ROOTKIT_PHALANX2_TEST=1
@@ -7964,12 +7964,58 @@ rootkit_file_dir_checks() {
 			fi
 		fi
 
+		# On Linux 2.6 kernels certain processes are children of the kthread process which itself is a child of init.
+		# argv[0] hiding in plain sight works OK (who expects '^ata/0$' processes to be illegal?) but if the parent process Id is not kthread's
+		# then suspicion is justified. Like other process listing relying on 'ps' the usual process hiding caveat remains.
+
+		if [ -n "${PGREP_CMD}" ]; then
+			if [ -n `pgrep 'ata/0'` ]; then
+				ROOTKIT_PHALANX2_PROC_KTHREAD_PPID=`pgrep -f '^kthread$'`
+				ROOTKIT_PHALANX2_PROC_ATA_PPID=`ps --no-headers -C 'ata/0' -oppid 2> /dev/null`
+
+				if [ -n "${ROOTKIT_PHALANX2_PROC_ATA_PPID}" ]; then
+					if [ ${ROOTKIT_PHALANX2_PROC_ATA_PPID} -ne ${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID} ]; then
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_PHALANX2_PROC_FOUND
+							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_PHALANX2_PROC_PPID "${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID}" "${ROOTKIT_PHALANX2_PROC_ATA_PPID}"
+						fi
+
+						if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
+							ROOTKIT_PHALANX2_TEST=1
+							display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+						fi
+
+						display --to LOG --type PLAIN --log-indent 9 ROOTKIT_PHALANX2_PROC_FOUND
+					else
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_PHALANX2_PROC
+						fi
+					fi
+
+				else # ROOTKIT_PHALANX2_PROC_ATA_PPID ps might not support some cmdline args
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
+						display --to LOG --type INFO ROOTKIT_PHALANX2_PROC_PS_ERR
+					fi
+				fi
+
+			#else # This kernel does not run any 'ata/0' kthread child processes, no warning necessary.
+			fi
+
+		else # PGREP_CMD
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
+				display --to LOG --type INFO NOT_FOUND_CMD "pgrep"
+			fi
+		fi
+
 		if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		else
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 		fi
+
 	fi
 
 	# Portacelo Rootkit
@@ -12978,6 +13024,12 @@ SPACEDPATH=`echo ${PATH} | tr ':' ' '`
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
 CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl ps pwd readlink sort stat strings uniq"
+
+case "${OPERATING_SYSTEM}" in
+	Linux)  # We require 'pgrep' for Phalanx2 extended test.
+		CMDLIST="$CMDLIST pgrep"
+	;;
+esac
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr uname wc"
