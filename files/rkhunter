@@ -7469,7 +7469,6 @@ suspscan() {
 
 	# Cruel hack due to looping
 
-#jh - fix this. If append_log is set then old etries could be found. Use a temp file?
 	FOUNDDIRS=`grep '.score:.*contains' "${RKHLOGFILE}" | head -n 1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
@@ -7889,14 +7888,13 @@ rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 		fi
 
-                ROOTKIT_PHALANX2_DIRTESTVAL=`get_option 1 single PHALANX2_DIRTEST`
+		ROOTKIT_PHALANX2_DIRTESTVAL=`get_option 1 single PHALANX2_DIRTEST` || exit 1
 
-		case "${ROOTKIT_PHALANX2_DIRTESTVAL}" in
-			1)   ROOTKIT_PHALANX2_DIRNAMES=`find /etc /usr -type d -iname "*.p2"`
-			;;
-			0|*) ROOTKIT_PHALANX2_DIRNAMES="${RKHROOTDIR}/etc/khubd.p2 ${RKHROOTDIR}/etc/lolzz.p2 ${RKHROOTDIR}/usr/lib/zupzz.p2"
-			;;
-		esac
+		if [ "${ROOTKIT_PHALANX2_DIRTESTVAL}" = "1" ]; then
+			ROOTKIT_PHALANX2_DIRNAMES=`find ${RKHROOTDIR}/etc ${RKHROOTDIR}/usr -type d -iname "*.p2"`
+		else
+			ROOTKIT_PHALANX2_DIRNAMES="${RKHROOTDIR}/etc/khubd.p2 ${RKHROOTDIR}/etc/lolzz.p2 ${RKHROOTDIR}/usr/lib/zupzz.p2"
+		fi
 
 		if [ -n "${ROOTKIT_PHALANX2_DIRNAMES}" ]; then
 
@@ -7916,7 +7914,7 @@ rootkit_file_dir_checks() {
 				fi
 			done
 
-		elif [ $VERBOSE_LOGGING -eq 1 -a $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
+		elif [ $VERBOSE_LOGGING -eq 1 -a "${ROOTKIT_PHALANX2_DIRTESTVAL}" = "1" ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "*.p2"
 		fi
 
@@ -7969,11 +7967,11 @@ rootkit_file_dir_checks() {
 		# then suspicion is justified. Like other process listing relying on 'ps' the usual process hiding caveat remains.
 
 		if [ -n "${PGREP_CMD}" ]; then
-			if [ -n `pgrep 'ata/0'` ]; then
-				ROOTKIT_PHALANX2_PROC_KTHREAD_PPID=`pgrep -f '^kthread$'`
-				ROOTKIT_PHALANX2_PROC_ATA_PPID=`ps --no-headers -C 'ata/0' -oppid 2> /dev/null`
+			if [ -n "`${PGREP_CMD} 'ata/0'`" ]; then
+				ROOTKIT_PHALANX2_PROC_KTHREAD_PPID=`${PGREP_CMD} -f '^kthread.?$'`
+				ROOTKIT_PHALANX2_PROC_ATA_PPID=`${PS_CMD} --no-headers -C 'ata/0' -oppid 2>/dev/null`
 
-				if [ -n "${ROOTKIT_PHALANX2_PROC_ATA_PPID}" ]; then
+				if [ -n "${ROOTKIT_PHALANX2_PROC_ATA_PPID}" -a -n "${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID}" ]; then
 					if [ ${ROOTKIT_PHALANX2_PROC_ATA_PPID} -ne ${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID} ]; then
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
 							display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_PHALANX2_PROC_FOUND
@@ -10128,15 +10126,28 @@ do_network_interface_checks() {
 		if [ -n "${IFCONFIG_CMD}" ]; then
 			PROMISCSCAN1=""; PROMISCSCAN2=""
 
+			IFWLIST=`get_option 2 single ALLOWPROMISCIF` || exit 1
+
+			if [ -n "${IFWLIST}" ]; then
+				display --to LOG --type INFO NETWORK_PROMISC_WLIST "${IFWLIST}"
+
+				IFWLIST=`echo "${IFWLIST}" | tr ' ' '|'`
+			else
+				IFWLIST=" "
+			fi
+
 			case "${OPERATING_SYSTEM}" in
 			*BSD|AIX)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep -v 'pflog' | grep 'PROMISC'`
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /pflog/ && $1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
 				;;
-			SunOS|IRIX*)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | grep 'PROMISC'`
+			SunOS)
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
+				;;
+			IRIX*)
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
 				;;
 			*)
-				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | grep 'PROMISC'`
+				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
 				;;
 			esac
 
@@ -12355,7 +12366,7 @@ set_file_prop_dirs_files() {
 	    killall ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
-	    newsyslog nologin passwd perl pkgdb pkg_info prelink ps pstree pwck
+	    newsyslog nologin passwd perl pgrep pkgdb pkg_info prelink ps pstree pwck
 	    pwd readlink rkhunter rmmod rpm rsyslogd runcon runlevel sed sestatus sh
 	    sha1 sha1sum sha224 sha224sum sha256 sha256sum sha384 sha384sum sha512
 	    sha512sum size skdet slocate sockstat sort stat strace strings su sudo
@@ -13023,13 +13034,7 @@ SPACEDPATH=`echo ${PATH} | tr ':' ' '`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl ps pwd readlink sort stat strings uniq"
-
-case "${OPERATING_SYSTEM}" in
-	Linux)  # We require 'pgrep' for Phalanx2 extended test.
-		CMDLIST="$CMDLIST pgrep"
-	;;
-esac
+CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl pgrep ps pwd readlink sort stat strings uniq"
 
 # Commands that are required to exist for RKH to run.
 REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr uname wc"

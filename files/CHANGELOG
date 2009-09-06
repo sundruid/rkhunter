@@ -76,6 +76,8 @@
    used. Since most sites may only use one language, this can reduce the
    network bandwidth used. The default is to update all the languages. The
    configured default language, and English (en), are always updated.
+ - Added the ALLOWPROMISCIF configuration option. This can be used to
+   specify network interfaces which are allowed to be in promiscuous mode.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
