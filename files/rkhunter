@@ -5648,6 +5648,7 @@ do_system_check_initialisation() {
 		    rpc.nfsd:tcp.log:Possible sniffer installed
 		    sshd:/dev/ptyxx:OpenBSD Rootkit
 		    sshd:/.config:SHV4 Rootkit
+		    sshd:\\$.*\\$\!.*\!\!\\$:Possible backdoored ssh daemon installed
 		    xntps:/.config:SHV4 Rootkit
 		    syslogd:promiscuous:Possible sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
@@ -8571,7 +8572,7 @@ possible_rootkit_string_checks() {
 			FOUNDFILE=1
 
 			for FNAME in ${RC_PATHS}; do
-				FOUNDSTRING=`${STRINGS_CMD} ${FNAME} | grep "${STRING}"`
+				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep "${STRING}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
 					RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
@@ -8602,7 +8603,7 @@ possible_rootkit_string_checks() {
 
 				if [ -f "${FILENAME}" ]; then
 					FOUNDFILE=1
-					FOUNDSTRING=`${STRINGS_CMD} ${FILENAME} | grep "${STRING}"`
+					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FILENAME} | grep "${STRING}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
 						RKHTMPVAR2=`echo "${FILENAME}" | sed -e 's/\./\\\./g'`
