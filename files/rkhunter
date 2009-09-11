@@ -5213,6 +5213,16 @@ do_system_check_initialisation() {
 		       ${RKHROOTDIR}/usr/bin/ssh2d"
 
 
+	# OSX Rootkit 0.2.1
+	OSXRK_FILES="${RKHROOTDIR}/dev/.rk/nc
+		     ${RKHROOTDIR}/dev/.rk/diepu
+		     ${RKHROOTDIR}/dev/.rk/backd"
+	OSXRK_DIRS="${RKHROOTDIR}/dev/.rk
+		    ${RKHROOTDIR}/users/LDAP-daemon
+		    ${RKHROOTDIR}/tmp/.work
+		    ${RKHROOTDIR}/Library/StartupItems/opener"
+
+
 	# Oz Rootkit
 	OZ_FILES="${RKHROOTDIR}/dev/.oz/.nap/rkit/terror"
 	OZ_DIRS="${RKHROOTDIR}/dev/.oz"
@@ -5566,6 +5576,9 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/usr/lib/volc
 		   ${RKHROOTDIR}/usr/lib/volc/backup"
 
+	# weaponX 0.1
+	WEAPONX_FILES="${RKHROOTDIR}/System/Library/Extensions/WeaponX.kext"
+	WEAPONX_DIRS="${RKHROOTDIR}/tmp/..."
 
 	# X-Org SunOS Rootkit
 	XORGSUNOS_FILES="${RKHROOTDIR}/usr/lib/libX.a/bin/tmpfl
@@ -5648,7 +5661,7 @@ do_system_check_initialisation() {
 		    rpc.nfsd:tcp.log:Possible sniffer installed
 		    sshd:/dev/ptyxx:OpenBSD Rootkit
 		    sshd:/.config:SHV4 Rootkit
-		    sshd:\\$.*\\$\!.*\!\!\\$:Possible backdoored ssh daemon installed
+		    sshd:+\\$.*\\$\!.*\!\!\\$:Possible backdoored ssh daemon installed
 		    xntps:/.config:SHV4 Rootkit
 		    syslogd:promiscuous:Possible sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
@@ -5658,11 +5671,11 @@ do_system_check_initialisation() {
 		    ttymon:fucknut:SHV5 Rootkit
 		    ttymon:lamersucks:SHV5 Rootkit
 		    ttymon:skillz:SHV5 Rootkit
-		    ttyload:/sbin/ttyload -q >/dev/null:SHV5 Rootkit
-		    ttyload:/sbin/ttymon >/dev/null:SHV5 Rootkit
+		    ttyload:/sbin/ttyload:SHV5 Rootkit
+		    ttyload:/sbin/ttymon:SHV5 Rootkit
 		    ttyload:propert of SH:SHV5 Rootkit
 		    rcfile:in.inetd:SHV4 Rootkit
-		    rcfile:#<HIDE_.*>:Enye LKM
+		    rcfile:+#<HIDE_.*>:Enye LKM
 		    rcfile:bin/xchk:Optic Kit (Tux) Worm
 		    rcfile:bin/xsf:Optic Kit (Tux) Worm
 		    rcfile:/usr/bin/ssh2d:Flea Linux Rootkit
@@ -7427,16 +7440,16 @@ suspscan() {
 				#
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'corrupted section header size'`" ]; then
-					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "Possible UPX-compressed or Dexter01s obfuscated binary" "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
+					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible UPX-compressed or Dexter01s obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
 
 				#
 				# ELF ultimate compression kit (ELFuck)
 				#
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'invalid class invalid byte order'`" ]; then
-					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "Possible ELFuck obfuscated binary" "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
+					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible ELFuck obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
-					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${FTYPE}" "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
+					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "${FTYPE}"" >> "${SUSPSCAN_TMPFILE}"
 				fi
 			done
 
@@ -7455,15 +7468,27 @@ suspscan() {
 	cat "${SUSPSCAN_TMPFILE}" | while read LINE; do
 		LOGCHAR=`echo "$LINE" | cut -c 1`
 		case "$LOGCHAR" in
-			4|6)	display --to LOG --type PLAIN --log-indent $LINE;;
-			S)	display --to LOG --type WARNING $LINE;;
+			4|6)	LOGTYPE=`echo "$LINE" | cut -d ' ' -f 2`
+				case "$LOGTYPE" in
+					SUSPSCAN_FILE_SKIPPED_TYPE)
+						SUSP_SKIP_ITEM=`echo "$LINE" | cut -d ' ' -f 3`
+						SUSP_SKIP_MSG=`echo "$LINE" | cut -d ' ' -f 4-`
+						display --to LOG --type PLAIN --log-indent $LOGCHAR $LOGTYPE
+					;;
+					*)
+						display --to LOG --type PLAIN --log-indent $LINE
+					;;
+				esac
+			;;
+			S)	
+				display --to LOG --type WARNING $LINE
+			;;
 		esac
 	done
 
 	FOUNDDIRS=`grep "SUSPSCAN_FILE_CHECK" "${SUSPSCAN_TMPFILE}" | head -n 1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
-		echo "FOUNDDIRS "${FOUNDDIRS}""
 	else
 		# The 'type' here should be PLAIN, but the loop prevents RKH from seeing that a warning has occurred.
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
@@ -7844,6 +7869,14 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${OPTICKIT_DIRS}
 	SCAN_KSYMS=${OPTICKIT_KSYMS}
 	scanrootkit
+
+	if [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
+		# OSX Rootkit 0.2.1
+		SCAN_ROOTKIT="OSX Rootkit"
+		SCAN_FILES="${OSXRK_FILES}"
+		SCAN_DIRS="${OSXRK_DIRS}"
+		scanrootkit
+	fi
 
 	# Oz Rootkit
 
@@ -8296,6 +8329,15 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${VOLC_KSYMS}
 	scanrootkit
 
+	# weaponX Rootkit
+
+	if [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
+		SCAN_ROOTKIT="weaponX Rootkit"
+		SCAN_FILES=${WEAPONX_FILES}
+		SCAN_DIRS=${WEAPONX_DIRS}
+		scanrootkit
+	fi
+
 	# X-Org SunOS Rootkit
 
 	SCAN_ROOTKIT="X-Org SunOS Rootkit"
@@ -8565,7 +8607,12 @@ possible_rootkit_string_checks() {
 
 		FILE=`echo ${RKHTMPVAR} | cut -d: -f1`
 		FILESTRING=`echo ${RKHTMPVAR} | cut -d: -f2`
-		STRING=`echo ${FILESTRING} | sed -e 's/\./\\\./g'`
+		if [ `echo ${FILESTRING} | cut -c 1` = "+" ]; then
+			STRING=`echo ${FILESTRING} | cut -c 2-`
+			FILESTRING="${STRING}"
+		else
+			STRING=`echo ${FILESTRING} | sed -e 's/\./\\\./g'`
+		fi
 		INFO=`echo ${RKHTMPVAR} | cut -d: -f3`
 
 		if [ "${FILE}" = "rcfile" ]; then
@@ -8657,6 +8704,11 @@ possible_rootkit_string_checks() {
 			test -z "${FILE}" && continue
 
 			FILESTRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
+
+			if [ `echo ${FILESTRING} | cut -c 1` = "+" ]; then
+				FILESTRING=`echo ${FILESTRING} | cut -c 2-`
+			fi
+
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
 
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
@@ -13094,10 +13146,10 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient 
   Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
   Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
-  Optic Kit (Tux), Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
+  Optic Kit (Tux), Oz, OSX, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
   RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin,
   Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
-  TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, X-Org SunOS,
+  TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, weaponX, X-Org SunOS,
   zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.

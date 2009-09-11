@@ -78,6 +78,8 @@
    configured default language, and English (en), are always updated.
  - Added the ALLOWPROMISCIF configuration option. This can be used to
    specify network interfaces which are allowed to be in promiscuous mode.
+ - Added OSX Rootkit check.
+ - Added weaponX Rootkit check.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently

@@ -520,7 +520,7 @@ SUSPSCAN_FILE_CHECK:檔案檢查: Name: '$1' Score: $2
 SUSPSCAN_FILE_CHECK_DEBUG:檔案檢查: Name: '$1' Score: $2 Hitcount: $3 Hits: ($4)
 SUSPSCAN_FILE_SKIPPED_EMPTY:忽略檔案: 空白: '$1'
 SUSPSCAN_FILE_SKIPPED_LINK:忽略檔案: 符號連接檔: '$1'
-SUSPSCAN_FILE_SKIPPED_TYPE:忽略檔案: 錯誤類型: '$1': '$2'
+SUSPSCAN_FILE_SKIPPED_TYPE:忽略檔案: 錯誤類型: '$SUSP_SKIP_ITEM': '$SUSP_SKIP_MSG'
 SUSPSCAN_FILE_SKIPPED_SIZE:忽略檔案: 太大: '$1'
 SUSPSCAN_FILE_LINK_CHANGE:發現符號連接檔: '$1' -> '$2'
 

@@ -536,7 +536,7 @@ SUSPSCAN_FILE_CHECK:Datei überprüft: Name: '$1' Bewertung: $2
 SUSPSCAN_FILE_CHECK_DEBUG:Datei überprüft: Name: '$1' Bewertung: $2 Treffersumme: $3 Treffer: ($4)
 SUSPSCAN_FILE_SKIPPED_EMPTY:Datei ignoriert: leer: '$1'
 SUSPSCAN_FILE_SKIPPED_LINK:Datei ignoriert: symbolischer Link: '$1'
-SUSPSCAN_FILE_SKIPPED_TYPE:Datei ignoriert: falscher Typ: '$1': '$2'
+SUSPSCAN_FILE_SKIPPED_TYPE:Datei ignoriert: falscher Typ: '$SUSP_SKIP_ITEM': '$SUSP_SKIP_MSG'
 SUSPSCAN_FILE_SKIPPED_SIZE:Datei ignoriert: zu groß: '$1'
 SUSPSCAN_FILE_LINK_CHANGE:Symbolischer Link wurde nicht gefunden: '$1' -> '$2'
 
