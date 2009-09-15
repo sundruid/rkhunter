@@ -7269,7 +7269,7 @@ suspscan() {
 	rm -f "${SUSPSCAN_TEMP}/suspscan.*.strings" >/dev/null 2>&1
 
 	#
-	# Set a temporary file ot log scan results to.
+	# Set a temporary file to log scan results to.
 	#
 
         get_temp_file "${RKHTMPDIR}/suspscan.tmp"
