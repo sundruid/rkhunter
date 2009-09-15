@@ -1,4 +1,4 @@
-Version:2009091401
+Version:2009091601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -574,7 +574,7 @@ SUSPSCAN_FILE_CHECK:File checked: Name: '$1' Score: $2
 SUSPSCAN_FILE_CHECK_DEBUG:File checked: Name: '$1' Score: $2 Hitcount: $3 Hits: ($4)
 SUSPSCAN_FILE_SKIPPED_EMPTY:File ignored: empty: '$1'
 SUSPSCAN_FILE_SKIPPED_LINK:File ignored: symbolic link: '$1'
-SUSPSCAN_FILE_SKIPPED_TYPE:File ignored: wrong type: '$SUSP_SKIP_ITEM': '$SUSP_SKIP_MSG'
+SUSPSCAN_FILE_SKIPPED_TYPE:File ignored: wrong type: '$1': '$2'
 SUSPSCAN_FILE_SKIPPED_SIZE:File ignored: too big: '$1'
 SUSPSCAN_FILE_LINK_CHANGE:Symbolic link found: '$1' -> '$2'
 

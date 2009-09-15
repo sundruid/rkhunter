@@ -7473,7 +7473,7 @@ suspscan() {
 					SUSPSCAN_FILE_SKIPPED_TYPE)
 						SUSP_SKIP_ITEM=`echo "$LINE" | cut -d ' ' -f 3`
 						SUSP_SKIP_MSG=`echo "$LINE" | cut -d ' ' -f 4-`
-						display --to LOG --type PLAIN --log-indent $LOGCHAR $LOGTYPE
+						display --to LOG --type PLAIN --log-indent $LOGCHAR $LOGTYPE "${SUSP_SKIP_ITEM}" "${SUSP_SKIP_MSG}"
 					;;
 					*)
 						display --to LOG --type PLAIN --log-indent $LINE
