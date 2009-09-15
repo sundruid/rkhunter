@@ -1,4 +1,4 @@
-Version:2007103001
+Version:2009091601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -530,7 +530,7 @@ SUSPSCAN_FILE_CHECK:文件检测: Name: '$1' Score: $2
 SUSPSCAN_FILE_CHECK_DEBUG:文件检测: Name: '$1' Score: $2 Hitcount: $3 Hits: ($4)
 SUSPSCAN_FILE_SKIPPED_EMPTY:忽略文件: 空白: '$1'
 SUSPSCAN_FILE_SKIPPED_LINK:忽略文件: 符号连接: '$1'
-SUSPSCAN_FILE_SKIPPED_TYPE:忽略文件: 错误类型: '$@'
+SUSPSCAN_FILE_SKIPPED_TYPE:忽略文件: 错误类型: '$1': '$2'
 SUSPSCAN_FILE_SKIPPED_SIZE:忽略文件: 太大: '$1'
 SUSPSCAN_FILE_LINK_CHANGE:发现符号连接: '$1' -> '$2'
 
