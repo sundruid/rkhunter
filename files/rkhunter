@@ -2260,7 +2260,7 @@ get_xinetd_option() {
 		INETD_CONF_PATH="${FNAME}"
 
 		if [ ! -f "${INETD_CONF_PATH}" ]; then
-			echo "Invalid INETD_CONF_PATH configuration option - non-existent pathname specified."
+			echo "Invalid INETD_CONF_PATH configuration option - non-existent pathname specified: ${INETD_CONF_PATH}"
 			exit 1
 		fi
 	fi
@@ -2278,7 +2278,7 @@ get_xinetd_option() {
 		XINETD_CONF_PATH="${FNAME}"
 
 		if [ ! -f "${XINETD_CONF_PATH}" ]; then
-			echo "Invalid XINETD_CONF_PATH configuration option - non-existent pathname specified."
+			echo "Invalid XINETD_CONF_PATH configuration option - non-existent pathname specified: ${XINETD_CONF_PATH}"
 			exit 1
 		fi
 	fi
@@ -2526,7 +2526,7 @@ get_md5_hash_function() {
 
 	if [ $PRELINKED -eq 1 ]; then
 		if [ $USE_RUNCON -eq 1 ]; then
-			echo "${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify --md5"
+			echo "${RUNCON_CMD} -u root ${PRELINK_CMD} --verify --md5"
 		else
 			echo "${PRELINK_CMD} --verify --md5"
 		fi
@@ -2600,7 +2600,7 @@ get_hash_function() {
 		PRELINK_HASH="SHA1"
 
 		if [ $USE_RUNCON -eq 1 ]; then
-			HASH_FUNC="${RUNCON_CMD} -t unconfined_t -- ${PRELINK_CMD} --verify --sha"
+			HASH_FUNC="${RUNCON_CMD} -u root ${PRELINK_CMD} --verify --sha"
 		else
 			HASH_FUNC="${PRELINK_CMD} --verify --sha"
 		fi
@@ -2800,6 +2800,31 @@ get_hash_function() {
 		exit 1
 		;;
 	esac
+
+
+	#
+	# Finally we see if any files are to be exempt from the
+	# package manager verification. These will go through the
+	# usual commands to get the file info, so they will still
+	# be tested.
+	#
+
+	ERRCODE=0
+
+	PKGMGRNOVRFY=`get_option 2 multi PKGMGR_NO_VRFY` || exit 1
+
+	for RKHTMPVAR in ${PKGMGRNOVRFY}; do
+		if [ ! -f "${RKHTMPVAR}" ]; then
+			echo "Invalid PKGMGR_NO_VRFY configuration option: file does not exist: ${RKHTMPVAR}"
+			ERRCODE=1
+		fi
+	done
+
+	if [ $ERRCODE -eq 0 ]; then
+		test -n "${PKGMGRNOVRFY}" && PKGMGRNOVRFY=" ${PKGMGRNOVRFY} "
+	else
+		exit $ERRCODE
+	fi
 
 	return
 }
@@ -3727,6 +3752,7 @@ rkh_dat_set_file_properties() {
 		PKGNAME=""
 		FNAMEGREP=""
 		RPM_QUERY_RESULT=""
+		NOVRFYFILE=0
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
 
@@ -3788,17 +3814,30 @@ ${DIR}:1"
 
 
 		#
+		# See if the file is to be exempt from any package manager verification.
+		#
+
+		if [ -n "`echo \"${PKGMGRNOVRFY}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			NOVRFYFILE=1
+		fi
+
+
+		#
 		# Now start to get the file info by seeing if we
 		# are using a package manager.
 		#
 
 		if [ "${PKGMGR}" = "RPM" ]; then
 			#
-			# First see if the file belongs to a package.
+			# First see if the file is exempt or belongs to a package.
 			#
 
-			RKHTMPVAR=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
-			ERRCODE=$?
+			if [ $NOVRFYFILE -eq 1 ]; then
+				ERRCODE=1
+			else
+				RKHTMPVAR=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
+				ERRCODE=$?
+			fi
 
 			if [ $ERRCODE -eq 0 ]; then
 				#
@@ -3866,11 +3905,15 @@ ${DIR}:1"
 					;;
 				DPKG)
 					#
-					# First see if the file is part of a known package.
+					# First see if the file is exempt or part of a known package.
 					#
 
-					RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
-					ERRCODE=$?
+					if [ $NOVRFYFILE -eq 1 ]; then
+						ERRCODE=1
+					else
+						RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
+						ERRCODE=$?
+					fi
 
 					if [ $ERRCODE -eq 0 ]; then
 						#
@@ -3895,11 +3938,15 @@ ${DIR}:1"
 					;;
 				BSD)
 					#
-					# First see if the file is part of a known package.
+					# First see if the file is exempt or part of a known package.
 					#
 
-					RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
-					ERRCODE=$?
+					if [ $NOVRFYFILE -eq 1 ]; then
+						ERRCODE=1
+					else
+						RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+						ERRCODE=$?
+					fi
 
 					if [ $ERRCODE -eq 0 ]; then
 						#
@@ -6388,6 +6435,7 @@ file_properties_check() {
 		TEST_RESULT=""
 		WHITELIST_RESULT=""
 
+		NOVRFYFILE=0
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
 		HASH_TEST_PASSED=0
@@ -6450,6 +6498,14 @@ file_properties_check() {
 			RPM_QUERY_RESULT=""
 			PKGMGR_VERIFY_RESULT=""
 
+			#
+			# See if the file is to be exempt from any package manager verification.
+			#
+
+			if [ -n "`echo \"${PKGMGRNOVRFY}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				NOVRFYFILE=1
+			fi
+
 
 			#
 			# Because the RPM package manager can verify most
@@ -6461,11 +6517,15 @@ file_properties_check() {
 
 			if [ "${PKGMGR}" = "RPM" ]; then
 				#
-				# First we see if the file is part of a package.
+				# First we see if the file is exempt or part of a package.
 				#
 
-				PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
-				ERRCODE=$?
+				if [ $NOVRFYFILE -eq 1 ]; then
+					ERRCODE=1
+				else
+					PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
+					ERRCODE=$?
+				fi
 
 				if [ $ERRCODE -eq 0 ]; then
 					#
@@ -6568,7 +6628,15 @@ file_properties_check() {
 				RPM)
 					;;
 				DPKG)
-					PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+					#
+					# First see if the file is exempt or part of a known package.
+					#
+
+					if [ $NOVRFYFILE -eq 1 ]; then
+						PKGNAME=""
+					else
+						PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+					fi
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
 						FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::'`
@@ -6591,10 +6659,14 @@ file_properties_check() {
 					;;
 				BSD)
 					#
-					# First see if the file is part of a known package.
+					# First see if the file is exempt or part of a known package.
 					#
 
-					PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+					if [ $NOVRFYFILE -eq 1 ]; then
+						PKGNAME=""
+					else
+						PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+					fi
 
 					if [ -n "${PKGNAME}" ]; then
 						#
@@ -12954,6 +13026,7 @@ PRELINK_HASH=""
 PKGMGR_MD5_HASH=""
 MD5_CMD=""
 EPOCH_DATE_CMD=""
+PKGMGRNOVRFY=""
 
 UPDATE=0
 PROP_UPDATE=0

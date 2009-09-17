@@ -80,6 +80,12 @@
    specify network interfaces which are allowed to be in promiscuous mode.
  - Added OSX Rootkit check.
  - Added weaponX Rootkit check.
+ - Added the PKGMGR_NO_VRFY configuration option. This allows specified
+   files to be exempt from the package manager verification process. Now
+   that users can include their own files into the file properties check,
+   it is possible that changed packaged files will cause a warning to be
+   issued. This option allows those files to skip the package manager
+   verification, and be treated as non-packaged files.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
