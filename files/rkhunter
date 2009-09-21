@@ -2526,7 +2526,7 @@ get_md5_hash_function() {
 
 	if [ $PRELINKED -eq 1 ]; then
 		if [ $USE_RUNCON -eq 1 ]; then
-			echo "${RUNCON_CMD} -u root ${PRELINK_CMD} --verify --md5"
+			echo "${RUNCON_CMD} -u root -- ${PRELINK_CMD} --verify --md5"
 		else
 			echo "${PRELINK_CMD} --verify --md5"
 		fi
@@ -2600,7 +2600,7 @@ get_hash_function() {
 		PRELINK_HASH="SHA1"
 
 		if [ $USE_RUNCON -eq 1 ]; then
-			HASH_FUNC="${RUNCON_CMD} -u root ${PRELINK_CMD} --verify --sha"
+			HASH_FUNC="${RUNCON_CMD} -u root -- ${PRELINK_CMD} --verify --sha"
 		else
 			HASH_FUNC="${PRELINK_CMD} --verify --sha"
 		fi
