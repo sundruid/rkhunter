@@ -4956,6 +4956,17 @@ do_system_check_initialisation() {
 
 	# BOBkit Rootkit
 	BOBKIT_FILES="${RKHROOTDIR}/usr/sbin/ntpsx
+		      ${RKHROOTDIR}/usr/sbin/.../bkit-ava
+		      ${RKHROOTDIR}/usr/sbin/.../bkit-d
+		      ${RKHROOTDIR}/usr/sbin/.../bkit-shd
+		      ${RKHROOTDIR}/usr/sbin/.../bkit-f
+		      ${RKHROOTDIR}/usr/include/.../proc.h
+		      ${RKHROOTDIR}/usr/include/.../.bash_history
+		      ${RKHROOTDIR}/usr/include/.../bkit-get
+		      ${RKHROOTDIR}/usr/include/.../bkit-dl
+		      ${RKHROOTDIR}/usr/include/.../bkit-screen
+		      ${RKHROOTDIR}/usr/include/.../bkit-sleep
+		      ${RKHROOTDIR}/usr/lib/.../bkit-adore.o
 		      ${RKHROOTDIR}/usr/lib/.../ls
 		      ${RKHROOTDIR}/usr/lib/.../netstat
 		      ${RKHROOTDIR}/usr/lib/.../lsof
@@ -4963,6 +4974,7 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shhk
 		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-pw
 		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shrs
+		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-mots
 		      ${RKHROOTDIR}/usr/lib/.../uconf.inv
 		      ${RKHROOTDIR}/usr/lib/.../psr
 		      ${RKHROOTDIR}/usr/lib/.../find
@@ -4970,7 +4982,11 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/usr/lib/.../slocate
 		      ${RKHROOTDIR}/usr/lib/.../du
 		      ${RKHROOTDIR}/usr/lib/.../top"
-	BOBKIT_DIRS="${RKHROOTDIR}/usr/lib/...
+	BOBKIT_DIRS="${RKHROOTDIR}/usr/sbin/...
+		     ${RKHROOTDIR}/usr/include/...
+		     ${RKHROOTDIR}/usr/include/.../.tmp
+		     ${RKHROOTDIR}/usr/lib/...
+		     ${RKHROOTDIR}/usr/lib/.../.ssh
 		     ${RKHROOTDIR}/usr/lib/.../bkit-ssh
 		     ${RKHROOTDIR}/usr/lib/.bkit-
 		     ${RKHROOTDIR}/tmp/.bkp"
