@@ -4992,6 +4992,41 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/tmp/.bkp"
 
 
+	# cb Rootkit 
+	CB_FILES="${RKHROOTDIR}/dev/srd0
+		  ${RKHROOTDIR}/lib/libproc.so.2.0.6
+		  ${RKHROOTDIR}/dev/mounnt
+		  ${RKHROOTDIR}/etc/rc.d/init.d/init
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /cl
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /.x.tgz
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /statdx
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wted
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /write
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /scan
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /sc
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /sl2
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wroot
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wscan
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wu
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /v
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /read
+		  ${RKHROOTDIR}/usr/lib/ssh_host_key
+		  ${RKHROOTDIR}/usr/lib/ssh_host_key.pub
+		  ${RKHROOTDIR}/usr/lib/ssh_random_seed
+		  ${RKHROOTDIR}/usr/lib/sshd_config
+		  ${RKHROOTDIR}/usr/bin/.system/.. /tcp.log
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/attrib
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/chattr
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/ps
+		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/pstree
+		  ${RKHROOTDIR}/usr/bin/.system/.. /.x/xC.o"
+	CB_DIRS="${RKHROOTDIR}/etc/rc.d/init.d
+		 ${RKHROOTDIR}/usr/bin/.zeen
+		 ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare
+		 ${RKHROOTDIR}/usr/bin/.zeen/.. /scan
+		 ${RKHROOTDIR}/usr/bin/.system/.. "
+
+
 	# CiNIK Worm (Slapper.B variant)
 	CINIK_FILES="${RKHROOTDIR}/tmp/.cinik"
 	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
@@ -5024,6 +5059,10 @@ do_system_check_initialisation() {
 	DICA_FILES="${RKHROOTDIR}/lib/.sso
 		    ${RKHROOTDIR}/lib/.so
 		    ${RKHROOTDIR}/var/run/...dica/clean
+		    ${RKHROOTDIR}/var/run/...dica/dxr
+		    ${RKHROOTDIR}/var/run/...dica/read
+		    ${RKHROOTDIR}/var/run/...dica/write
+		    ${RKHROOTDIR}/var/run/...dica/lf
 		    ${RKHROOTDIR}/var/run/...dica/xl
 		    ${RKHROOTDIR}/var/run/...dica/xdr
 		    ${RKHROOTDIR}/var/run/...dica/psg
@@ -5031,7 +5070,11 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/var/run/...dica/rdx
 		    ${RKHROOTDIR}/var/run/...dica/va
 		    ${RKHROOTDIR}/var/run/...dica/cl.sh
-		    ${RKHROOTDIR}/usr/bin/.etc"
+		    ${RKHROOTDIR}/var/run/...dica/last.log
+		    ${RKHROOTDIR}/usr/bin/.etc
+		    ${RKHROOTDIR}/etc/sshd_config
+		    ${RKHROOTDIR}/etc/ssh_host_key
+		    ${RKHROOTDIR}/etc/ssh_random_seed"
 	DICA_DIRS="${RKHROOTDIR}/var/run/...dica
 		   ${RKHROOTDIR}/var/run/...dica/mh
 		   ${RKHROOTDIR}/var/run/...dica/scan"
@@ -5707,6 +5750,7 @@ do_system_check_initialisation() {
 		    login:/usr/sbin/login:Flea Linux Rootkit
 		    login:/usr/lib/.tbd:TBD Rootkit
 		    login:sendmail:Ambient (ark) Rootkit
+		    login:cocacola:cb Rootkit
 		    ls:/dev/ptyxx/.file:Dica-Kit Rootkit
 		    ls:/dev/ptyxx/.file:Ambient (ark) Rootkit
 		    ls:/dev/sgk:Possible Linux Rootkit (LRK4)
@@ -5760,6 +5804,7 @@ do_system_check_initialisation() {
 		    rcfile:/usr/bin/ssh2d:Flea Linux Rootkit
 		    rcfile:/usr/sbin/xntps:SHV4 Rootkit
 		    rcfile:ttyload:Possible SHV5 Rootkit
+		    rcfile:/etc/rc.d/init.d/init:cb Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -5777,6 +5822,9 @@ do_system_check_initialisation() {
 
 	# Possible rootkit files and directories
 	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:Possible T0rn Rootkit MD5 hash database
+		  file:${RKHROOTDIR}/dev/pisu:Unknown rootkit
+		  file:${RKHROOTDIR}/dev/dsx:Unknown rootkit
+		  file:${RKHROOTDIR}/dev/xdta:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
 		  file:${RKHROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
 		  file:${RKHROOTDIR}/usr/info/.clib:Possible backdoor
@@ -5786,12 +5834,40 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/dev/ttypz:spwn login backdoor
 		  file:${RKHROOTDIR}/var/log/tcp.log:Possible beX2 Rootkit component
 		  file:${RKHROOTDIR}/usr/include/audit.h:Possible beX2 Rootkit component
+		  file:${RKHROOTDIR}/usr/bin/sourcemask:Unknown rootkit
+		  file:${RKHROOTDIR}/usr/bin/ras2xm:Unknown rootkit
+		  file:${RKHROOTDIR}/dev/xmx:Dica-Kit Rootkit
+		  file:${RKHROOTDIR}/usr/sbin/gpm.root:Unknown rootkit
+		  file:${RKHROOTDIR}/bin/vobiscum:Unknown rootkit
+		  file:${RKHROOTDIR}/bin/psr:Unknown rootkit
+		  file:${RKHROOTDIR}/dev/kdx:Unknown rootkit
+		  file:${RKHROOTDIR}/dev/dkx:Unknown rootkit
+		  file:${RKHROOTDIR}/usr/sbin/sshd3:Unknown rootkit
+		  file:${RKHROOTDIR}/usr/sbin/jcd:Unknown rootkit
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Unknown rootkit
+		  file:${RKHROOTDIR}/usr/sbin/atd2:Unknown rootkit
+		  file:${RKHROOTDIR}/home/httpd/cgi-bin/linux.cgi:Dica-Kit Rootkit
+		  file:${RKHROOTDIR}/home/httpd/cgi-bin/psid:Dica-Kit Rootkit
+		  file:${RKHROOTDIR}/home/httpd/cgi-bin/void.cgi:Dica-Kit Rootkit
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/system:Unknown rootkit
+		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Unknown rootkit
+		  file:${RKHROOTDIR}/tmp/.ush:Dica-Kit Rootkit
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
-		  dir:${RKHROOTDIR}/usr/src/.lib:Unusual directory
+		  dir:${RKHROOTDIR}/usr/src/.lib:Suspicious directory name
 		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
 		  dir:${RKHROOTDIR}/lib/lblip.tk:Possible T0rn Rootkit directory with backdoored SSH-configuration
-		  dir:${RKHROOTDIR}/usr/sbin/...:Unusual directory
-		  dir:${RKHROOTDIR}/usr/share/.gun:Unusual directory"
+		  dir:${RKHROOTDIR}/usr/sbin/...:Suspicious directory name
+		  dir:${RKHROOTDIR}/usr/share/.gun:Suspicious directory name
+		  dir:${RKHROOTDIR}/unde/vrei/tu/sa/te/ascunzi/in/server:Unknown rootkit
+		  dir:${RKHROOTDIR}/usr/man/man1/..  /.dir:Unknown rootkit
+		  dir:${RKHROOTDIR}/usr/X11R6/include/X11/...:Unknown rootkit
+		  dir:${RKHROOTDIR}/tmp/.sys:Suspicious directory name
+		  dir:${RKHROOTDIR}/tmp/':Suspicious directory name
+		  dir:${RKHROOTDIR}/tmp/.,:Suspicious directory name
+		  dir:${RKHROOTDIR}/tmp/,.,:Suspicious directory name
+		  dir:${RKHROOTDIR}/dev/shm/emilien:Suspicious directory name
+		  dir:${RKHROOTDIR}/var/tmp/.log:Suspicious directory name
+		  dir:${RKHROOTDIR}/tmp/zmeu/... :Suspicious directory name"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -5801,7 +5877,8 @@ do_system_check_initialisation() {
 	# Suspicious startup file strings
 	RCLOCAL_STRINGS="/usr/bin/rpc.wall:Possible Linux Rootkit (LRK4)
 			 sshdd:Possible GasKit rootkit
-			 hidef:Possible part of Knark rootkit"
+			 hidef:Possible part of Knark rootkit
+			 /usr/bin/.etc:Dica-Kit Rootkit"
 
 
 	# Suspicious open files
@@ -5814,7 +5891,26 @@ do_system_check_initialisation() {
 			 cleaner.o:Cleaner kernel module
 			 mod_klgr.o:klgr, keyboard logger (kernel module)
 			 hydra:THC-Hydra (password capture)
-			 hydra.restore:THC-Hydra (password capture)"
+			 hydra.restore:THC-Hydra (password capture)
+			 ras2xm:Unknown rootkit
+			 vobiscum:Unknown rootkit
+			 sshd3:Unknown rootkit
+			 secure:Dica-Kit Rootkit
+			 system:Unknown rootkit
+			 t0rnsb:T0rn
+			 t0rns:T0rn
+			 t0rnp:T0rn
+			 rx4u:Unknown rootkit
+			 rx2me:Unknown rootkit
+			 xhide:XHide process name faker
+			 xh:possible XHide alternative name
+			 x:possible XHide alternative name
+			 h:possible XHide alternative name
+			 mech:IRC bot software
+			 httpd.bin:possible IRC bot software alternative name
+			 mh:Dica-Kit Rootkit IRC bot software
+			 xl:Dica-Kit Rootkit
+			 write:Dica-Kit Rootkit"
 
 
 	# System startup file pathnames
@@ -5838,11 +5934,13 @@ do_system_check_initialisation() {
 
 	# Known bad Linux kernel modules
 	LKM_BADNAMES="adore.o
+		      bkit-adore.o
 		      cleaner.o
 		      flkm.o
 		      phide_mod.o
 		      vlogger.o
-		      p2.ko"
+		      p2.ko
+		      xC.o"
 
 	return
 }
@@ -7755,6 +7853,11 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${BOBKIT_FILES}
 	SCAN_DIRS=${BOBKIT_DIRS}
 	SCAN_KSYMS=${BOBKIT_KSYMS}
+	scanrootkit
+
+	# cb Rootkit
+	SCAN_ROOTKIT="cb Rootkit"
+	SCAN_FILES=${CB_FILES}
 	scanrootkit
 
 	# CiNIK Worm (Slapper.B variant)
