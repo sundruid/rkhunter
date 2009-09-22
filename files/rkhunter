@@ -5073,6 +5073,12 @@ do_system_check_initialisation() {
 			 ${RKHROOTDIR}/usr/lib/.fx/adore"
 
 
+	# Fu Rootkit
+	FU_FILES="${RKHROOTDIR}/sbin/xc
+		  ${RKHROOTDIR}/usr/include/ivtype.h
+		  ${RKHROOTDIR}/bin/.lib"
+
+
 	# Fuckit Rootkit
 	FUCKIT_FILES="${RKHROOTDIR}/lib/libproc.so.2.0.7
 		      ${RKHROOTDIR}/dev/proc/.bash_profile
@@ -7815,6 +7821,12 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${FREEBSD_RK_FILES}
 	SCAN_DIRS=${FREEBSD_RK_DIRS}
 	SCAN_KSYMS=${FREEBSD_RK_KSYMS}
+	scanrootkit
+
+	# Fu Rootkit
+
+	SCAN_ROOTKIT="Fu Rootkit"
+	SCAN_FILES=${FU_FILES}
 	scanrootkit
 
 	# Fuck`it Rootkit
@@ -13227,7 +13239,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient (ark),
   Balaur, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), CX, Danny-Boy'"'"'s Abuse Kit,
-  Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD,
+  Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
   Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
   Optic Kit (Tux), Oz, OSX, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
