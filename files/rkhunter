@@ -4922,7 +4922,9 @@ do_system_check_initialisation() {
 	# Ambient (ark) Rootkit
 	ARK_FILES="${RKHROOTDIR}/usr/lib/.ark?
 		   ${RKHROOTDIR}/dev/ptyxx/.log
-		   ${RKHROOTDIR}/dev/ptyxx/.file"
+		   ${RKHROOTDIR}/dev/ptyxx/.file
+		   ${RKHROOTDIR}/dev/ptyxx/.proc
+		   ${RKHROOTDIR}/dev/ptyxx/.addr"
 	ARK_DIRS="${RKHROOTDIR}/dev/ptyxx"
 
 
@@ -5674,6 +5676,7 @@ do_system_check_initialisation() {
 		    init:/dev/proc/fuckit:Fuckit Rootkit
 		    init:FUCK:Possible Suckit Rootkit found
 		    init:backdoor:Possible backdoored init file (Suckit)
+		    killall:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    login:vt200:Possible Linux Rootkit (LRK4)
 		    login:/usr/bin/xstat:Possible Linux Rootkit (LRK4)
 		    login:/bin/envpc:Possible Linux Rootkit (LRK4)
@@ -5681,7 +5684,9 @@ do_system_check_initialisation() {
 		    login:/lib/libext:SHV4 Rootkit
 		    login:/usr/sbin/login:Flea Linux Rootkit
 		    login:/usr/lib/.tbd:TBD Rootkit
+		    login:sendmail:Ambient (ark) Rootkit
 		    ls:/dev/ptyxx/.file:Dica-Kit Rootkit
+		    ls:/dev/ptyxx/.file:Ambient (ark) Rootkit
 		    ls:/dev/sgk:Possible Linux Rootkit (LRK4)
 		    ls:/var/lock/subsys/...datafile...:Ohhara Rootkit
 		    ls:/usr/lib/.tbd:TBD Rootkit
@@ -5691,6 +5696,7 @@ do_system_check_initialisation() {
 		    netstat:/dev/caca:MRK Rootkit
 		    netstat:/dev/ttyoa:Sin Rootkit
 		    netstat:/usr/lib/ldlibns.so:Flea Linux Rootkit
+		    netstat:/dev/ptyxx/.addr:Ambient (ark) Rootkit
 		    netstat:syg:Possible trojaned netstat
 		    nscd:sshd_config:Possible backdoor shell installed (SSH)
                     ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
@@ -5701,6 +5707,8 @@ do_system_check_initialisation() {
 		    pstree:/usr/lib/ldlibpst.so:Flea Linux Rootkit
 		    ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
 		    ps:libproc.so.2.0.7:Fuckit Rootkit
+		    ps:/dev/ptyxx/.proc:Ambient (ark) Rootkit
+		    pstree:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    pgrep:libproc.so.2.0.7:Fuckit Rootkit
 		    pkill:libproc.so.2.0.7:Fuckit Rootkit
 		    rpc.nfsd:cant open log:Possible sniffer installed
@@ -5712,8 +5720,10 @@ do_system_check_initialisation() {
 		    xntps:/.config:SHV4 Rootkit
 		    syslogd:promiscuous:Possible sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
+		    syslogd:/dev/ptyxx/.log:Ambient (ark) Rootkit
 		    tcpd:/dev/xdta:Dica-Kit Rootkit
 		    top:/usr/lib/.tbd:TBD Rootkit
+		    top:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    xtty:/bin/sh:Possible backdoor shell installed
 		    ttymon:fucknut:SHV5 Rootkit
 		    ttymon:lamersucks:SHV5 Rootkit
@@ -5738,6 +5748,7 @@ do_system_check_initialisation() {
 		    slocate:/usr/lib/ldlibct.so:Flea Linux Rootkit
 		    locate:/usr/lib/ldlibct.so:Flea Linux Rootkit
 		    du:/usr/lib/ldlibdu.so:Flea Linux Rootkit
+		    du:/dev/ptyxx/.file:Ambient (ark) Rootkit
 		    w:libproc.so.2.0.7:Fuckit Rootkit
 		    xlogin:/lib/libext:SHV4 Rootkit"
 
