@@ -86,6 +86,8 @@
    it is possible that changed packaged files will cause a warning to be
    issued. This option allows those files to skip the package manager
    verification, and be treated as non-packaged files.
+ - Added cb Rootkit.
+ - Added Fu Rootkit.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -139,6 +141,14 @@
    directory names to search for and '1' for scanning the /etc and /usr 
    directories for directory names ending in '.p2' at the expense of a slightly
    longer running time. Absence of the configuration option selects value '0'.
+ - Improved Ambient (ark) Rootkit.
+ - Improved BOBkit Rootkit.
+ - Improved Dica-Kit Rootkit.
+ - Improved Evil strings test.
+ - Improved Possible rootkit files and directories test.
+ - Improved Suspicious startup file strings test.
+ - Improved Suspicious open files test.
+ - Improved Known bad Linux kernel modules test.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious

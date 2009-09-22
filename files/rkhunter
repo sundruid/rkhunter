@@ -13357,8 +13357,8 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), CX, Danny-Boy'"'"'s Abuse Kit,
-  Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
+  Balaur, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), cb, CX, 
+  Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
   Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
   Optic Kit (Tux), Oz, OSX, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
