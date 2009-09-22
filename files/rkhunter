@@ -4997,34 +4997,34 @@ do_system_check_initialisation() {
 		  ${RKHROOTDIR}/lib/libproc.so.2.0.6
 		  ${RKHROOTDIR}/dev/mounnt
 		  ${RKHROOTDIR}/etc/rc.d/init.d/init
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /cl
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /.x.tgz
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /statdx
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wted
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /write
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /scan
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /sc
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /sl2
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wroot
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wscan
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /wu
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /v
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /read
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/cl
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/.x.tgz
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/statdx
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wted
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/write
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/scan
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/sc
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/sl2
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wroot
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wscan
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wu
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/v
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/read
 		  ${RKHROOTDIR}/usr/lib/ssh_host_key
 		  ${RKHROOTDIR}/usr/lib/ssh_host_key.pub
 		  ${RKHROOTDIR}/usr/lib/ssh_random_seed
 		  ${RKHROOTDIR}/usr/lib/sshd_config
-		  ${RKHROOTDIR}/usr/bin/.system/.. /tcp.log
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/attrib
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/chattr
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/ps
-		  ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare/pstree
-		  ${RKHROOTDIR}/usr/bin/.system/.. /.x/xC.o"
+		  ${RKHROOTDIR}/usr/bin/.system/..%/tcp.log
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/attrib
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/chattr
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/ps
+		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/pstree
+		  ${RKHROOTDIR}/usr/bin/.system/..%/.x/xC.o"
 	CB_DIRS="${RKHROOTDIR}/etc/rc.d/init.d
 		 ${RKHROOTDIR}/usr/bin/.zeen
-		 ${RKHROOTDIR}/usr/bin/.zeen/.. /curatare
-		 ${RKHROOTDIR}/usr/bin/.zeen/.. /scan
-		 ${RKHROOTDIR}/usr/bin/.system/.. "
+		 ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare
+		 ${RKHROOTDIR}/usr/bin/.zeen/..%/scan
+		 ${RKHROOTDIR}/usr/bin/.system/..%"
 
 
 	# CiNIK Worm (Slapper.B variant)
