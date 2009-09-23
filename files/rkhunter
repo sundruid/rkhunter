@@ -4898,6 +4898,8 @@ do_system_check_initialisation() {
 	# 55808 Variant A
 	W55808A_FILES="${RKHROOTDIR}/tmp/.../r
 		       ${RKHROOTDIR}/tmp/.../a"
+	W55808A_DIRS=
+	W55808A_KSYMS=
 
 
 	# AjaKit Rootkit
@@ -4909,14 +4911,19 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/lib/.libgh-gh/sb0k"
 	AJAKIT_DIRS="${RKHROOTDIR}/dev/tux
 		     ${RKHROOTDIR}/lib/.libgh-gh"
+	AJAKIT_KSYMS=
 
 
 	# aPa Kit Rootkit
 	APAKIT_FILES="${RKHROOTDIR}/usr/share/.aPa"
+	APAKIT_DIRS=
+	APAKIT_KSYMS=
 
 
 	# Apache Worm
 	APACHEWORM_FILES="${RKHROOTDIR}/bin/.log"
+	APACHEWORM_DIRS=
+	APACHEWORM_KSYMS=
 
 
 	# Ambient (ark) Rootkit
@@ -4926,6 +4933,7 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/dev/ptyxx/.proc
 		   ${RKHROOTDIR}/dev/ptyxx/.addr"
 	ARK_DIRS="${RKHROOTDIR}/dev/ptyxx"
+	ARK_KSYMS=
 
 
 	# Balaur Rootkit 2.0 (LRK5 based)
@@ -4933,6 +4941,7 @@ do_system_check_initialisation() {
 	BALAUR_DIRS="${RKHROOTDIR}/usr/lib/.kinetic
 		     ${RKHROOTDIR}/usr/lib/.egcs
 		     ${RKHROOTDIR}/usr/lib/.wormie"
+	BALAUR_KSYMS=
 
 
 	# Beastkit Rootkit
@@ -4946,12 +4955,14 @@ do_system_check_initialisation() {
 			${RKHROOTDIR}/usr/lib/elm/arobia/elm/sdco
 			${RKHROOTDIR}/usr/lib/elm/arobia/elm/srsd"
 	BEASTKIT_DIRS="${RKHROOTDIR}/lib/ldd.so/bktools"
+	BEASTKIT_KSYMS=
 
 
 	# beX2 Rootkit
 	BEX_FILES="${RKHROOTDIR}/usr/info/termcap.info-5.gz
 		   ${RKHROOTDIR}/usr/bin/sshd2"
 	BEX_DIRS="${RKHROOTDIR}/usr/include/bex"
+	BEX_KSYMS=
 
 
 	# BOBkit Rootkit
@@ -4990,6 +5001,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/usr/lib/.../bkit-ssh
 		     ${RKHROOTDIR}/usr/lib/.bkit-
 		     ${RKHROOTDIR}/tmp/.bkp"
+	BOBKIT_KSYMS=
 
 
 	# cb Rootkit 
@@ -5026,11 +5038,13 @@ do_system_check_initialisation() {
 		 ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare
 		 ${RKHROOTDIR}/usr/bin/.zeen/..%/scan
 		 ${RKHROOTDIR}/usr/bin/.system/..%"
+	CB_KSYMS=
 
 
 	# CiNIK Worm (Slapper.B variant)
 	CINIK_FILES="${RKHROOTDIR}/tmp/.cinik"
 	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
+	CINIK_KSYMS=
 
 
 	# CX Rootkit
@@ -5043,11 +5057,14 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/usr/lib/ldlibns.so
 		     ${RKHROOTDIR}/usr/include/db"
 	CXKIT_DIRS="${RKHROOTDIR}/usr/include/cxk"
+	CXKIT_KSYMS=
 
 
 	# Danny-Boy's Abuse Kit
 	DANNYBOYS_FILES="${RKHROOTDIR}/dev/mdev
 			 ${RKHROOTDIR}/usr/lib/libX.a"
+	DANNYBOYS_DIRS=
+	DANNYBOYS_KSYMS=
 
 
 	# Devil Rootkit
@@ -5078,6 +5095,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/localroot.sh
 		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/old/sense"
 	DEVIL_DIRS="${RKHROOTDIR}/usr/doc/tar/.../.dracusor"
+	DEVIL_KSYMS=
 
 
 	# Dica-Kit (T0rn variant) Rootkit
@@ -5103,6 +5121,7 @@ do_system_check_initialisation() {
 	DICA_DIRS="${RKHROOTDIR}/var/run/...dica
 		   ${RKHROOTDIR}/var/run/...dica/mh
 		   ${RKHROOTDIR}/var/run/...dica/scan"
+	DICA_KSYMS=
 
 
 	# Dreams Rootkit
@@ -5116,17 +5135,21 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/usr/bin/snfs
 		      ${RKHROOTDIR}/usr/lib/libsss"
 	DREAMS_DIRS="${RKHROOTDIR}/dev/ida/.hpd"
+	DREAMS_KSYMS=
 
 
 	# Duarawkz Rootkit
 	DUARAWKZ_FILES="${RKHROOTDIR}/usr/bin/duarawkz/loginpass"
 	DUARAWKZ_DIRS="${RKHROOTDIR}/usr/bin/duarawkz"
+	DUARAWKZ_KSYMS=
 
 
 	# ENYE LKM v1.1, v1.2
 	# Installer default.
 	ENYELKM_FILES="${RKHROOTDIR}/etc/.enyelkmHIDE^IT.ko
 		       ${RKHROOTDIR}/etc/.enyelkmOCULTAR.ko"
+	ENYELKM_DIRS=
+	ENYELKM_KSYMS=
 
 
 	# Flea Linux Rootkit
@@ -5143,6 +5166,7 @@ do_system_check_initialisation() {
 	FLEA_DIRS="${RKHROOTDIR}/lib/security/.config/ssh
 		   ${RKHROOTDIR}/dev/..0
 		   ${RKHROOTDIR}/dev/..0/backup"
+	FLEA_KSYMS=
 
 
 	# FreeBSD Rootkit
@@ -5155,12 +5179,15 @@ do_system_check_initialisation() {
 			  ${RKHROOTDIR}/usr/local/bin/sysback"
 	FREEBSD_RK_DIRS="${RKHROOTDIR}/usr/lib/.fx
 			 ${RKHROOTDIR}/usr/lib/.fx/adore"
+	FREEBSD_RK_KSYMS=
 
 
 	# Fu Rootkit
 	FU_FILES="${RKHROOTDIR}/sbin/xc
 		  ${RKHROOTDIR}/usr/include/ivtype.h
 		  ${RKHROOTDIR}/bin/.lib"
+	FU_DIRS=
+	FU_KSYMS=
 
 
 	# Fuckit Rootkit
@@ -5181,6 +5208,7 @@ do_system_check_initialisation() {
 	FUCKIT_DIRS="${RKHROOTDIR}/dev/proc
 		     ${RKHROOTDIR}/dev/proc/fuckit
 		     ${RKHROOTDIR}/dev/proc/toolz"
+	FUCKIT_KSYMS=
 
 
 	# GasKit Rootkit
@@ -5188,14 +5216,19 @@ do_system_check_initialisation() {
 	GASKIT_DIRS="${RKHROOTDIR}/dev/dev
 		     ${RKHROOTDIR}/dev/dev/gaskit
 		     ${RKHROOTDIR}/dev/dev/gaskit/sshd"
+	GASKIT_KSYMS=
 
 
 	# Heroin LKM
+	HEROIN_FILES=
+	HEROIN_DIRS=
 	HEROIN_KSYMS="heroin"
 
 
 	# HjC Kit Rootkit
+	HJCKIT_FILES=
 	HJCKIT_DIRS="${RKHROOTDIR}/dev/.hijackerz"
+	HJCKIT_KSYMS=
 
 
 	# ignoKit Rootkit
@@ -5213,14 +5246,19 @@ do_system_check_initialisation() {
 		       ${RKHROOTDIR}/usr/lib/.libigno/.igno/psybnc/psybnc"
 	IGNOKIT_DIRS="${RKHROOTDIR}/usr/lib/.libigno
 		      ${RKHROOTDIR}/usr/lib/.libigno/.igno"
+	IGNOKIT_KSYMS=
 
 
 	# ImperalsS-FBRK (FreeBSD Rootkit)
+	IMPFRB_FILES=
 	IMPFRB_DIRS="${RKHROOTDIR}/dev/fd/.88
 		     ${RKHROOTDIR}/dev/fd/.99"
+	IMPFRB_KSYMS=
 
 
 	# IntoXonia-NG Rootkit
+	INTOXONIA_FILES=
+	INTOXONIA_DIRS=
 	INTOXONIA_KSYMS="funces
 			ixinit
 			tricks
@@ -5231,19 +5269,24 @@ do_system_check_initialisation() {
 
 
 	# Irix Rootkit (for Irix 6.x)
+	IRIXRK_FILES=
 	IRIXRK_DIRS="${RKHROOTDIR}/dev/pts/01
 		     ${RKHROOTDIR}/dev/pts/01/backup
 		     ${RKHROOTDIR}/dev/pts/01/etc
 		     ${RKHROOTDIR}/dev/pts/01/tmp"
+	IRIXRK_KSYMS=
 
 
 	# Kitko Rootkit
+	KITKO_FILES=
 	KITKO_DIRS="${RKHROOTDIR}/usr/src/redhat/SRPMS/..."
+	KITKO_KSYMS=
 
 
 	# Knark Rootkit
 	KNARK_FILES="${RKHROOTDIR}/proc/knark/pids"
 	KNARK_DIRS="${RKHROOTDIR}/proc/knark"
+	KNARK_KSYMS=
 
 
 	# Lion Worm
@@ -5267,6 +5310,8 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1logz
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1proc
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1file"
+	LION_DIRS=
+	LION_KSYMS=
 
 
 	# Lockit (a.k.a. LJK2) Rootkit
@@ -5303,6 +5348,7 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/RK1phide
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh"
 	LOCKIT_DIRS="${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2"
+	LOCKIT_KSYMS=
 
 
 	# MRK (MiCrobul?) RootKit (based on Devil RootKit)
@@ -5312,6 +5358,7 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/dev/ida/.inet/tcp.log"
 	MRK_DIRS="${RKHROOTDIR}/dev/ida/.inet
 		  ${RKHROOTDIR}/var/spool/cron/.sh"
+	MRK_KSYMS=
 
 
 	# Mood-NT Rootkit
@@ -5323,6 +5370,7 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/_cthulhu/mood-nt.conf
 		      ${RKHROOTDIR}/_cthulhu/mood-nt.sniff"
 	MOODNT_DIRS="${RKHROOTDIR}/_cthulhu"
+	MOODNT_KSYMS=
 
 
 	# Ni0 Rootkit
@@ -5333,6 +5381,7 @@ do_system_check_initialisation() {
 	NIO_DIRS="${RKHROOTDIR}/tmp/waza
 		  ${RKHROOTDIR}/var/lock/subsys/...datafile...
 		  ${RKHROOTDIR}/usr/sbin/es"
+	NIO_KSYMS=
 
 
 	# Ohhara Rootkit
@@ -5343,13 +5392,16 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/bin
 		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/sbin
 		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../lib/security"
+	OHHARA_KSYMS=
 
 
 	# Optic Kit (Tux variant) Rootkit
+	OPTICKIT_FILES=
 	OPTICKIT_DIRS="${RKHROOTDIR}/dev/tux
 		       ${RKHROOTDIR}/usr/bin/xchk
 		       ${RKHROOTDIR}/usr/bin/xsf
 		       ${RKHROOTDIR}/usr/bin/ssh2d"
+	OPTICKIT_KSYMS=
 
 
 	# OSX Rootkit 0.2.1
@@ -5360,11 +5412,13 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/users/LDAP-daemon
 		    ${RKHROOTDIR}/tmp/.work
 		    ${RKHROOTDIR}/Library/StartupItems/opener"
+	OSXRK_KSYMS=
 
 
 	# Oz Rootkit
 	OZ_FILES="${RKHROOTDIR}/dev/.oz/.nap/rkit/terror"
 	OZ_DIRS="${RKHROOTDIR}/dev/.oz"
+	OZ_KSYMS=
 
 
 	# Phalanx Rootkit
@@ -5373,6 +5427,7 @@ do_system_check_initialisation() {
 		       ${RKHROOTDIR}/bin/host.ph1
 		       ${RKHROOTDIR}/usr/share/.home.ph1/phalanx"
 	PHALANX_DIRS="${RKHROOTDIR}/usr/share/.home.ph1"
+	PHALANX_KSYMS=
 
 
 	# Phalanx2 Rootkit
@@ -5390,6 +5445,7 @@ do_system_check_initialisation() {
 	PHALANX2_DIRS="${RKHROOTDIR}/etc/khubd.p2
 		       ${RKHROOTDIR}/etc/lolzz.p2
 		       ${RKHROOTDIR}/usr/lib/zupzz.p2"
+	PHALANX2_KSYMS=
 
 	# Portacelo Rootkit
 	PORTACELO_FILES="${RKHROOTDIR}/var/lib/.../.ak
@@ -5404,6 +5460,8 @@ do_system_check_initialisation() {
 			 ${RKHROOTDIR}/var/lib/.../sssh_equiv
 			 ${RKHROOTDIR}/var/lib/.../sssh_known_hosts
 			 ${RKHROOTDIR}/var/lib/.../sssh_pid ~/.sssh/known_hosts"
+	PORTACELO_DIRS=
+	PORTACELO_KSYMS=
 
 
 	# R3dstorm Toolkit
@@ -5414,6 +5472,7 @@ do_system_check_initialisation() {
 	REDSTORM_DIRS="${RKHROOTDIR}/var/log/tk02
 		       ${RKHROOTDIR}/var/log/tk02/old
 		       ${RKHROOTDIR}/bin/..."
+	REDSTORM_KSYMS=
 
 
 	# RH-Sharpe's Rootkit
@@ -5429,6 +5488,8 @@ do_system_check_initialisation() {
 			 ${RKHROOTDIR}/usr/bin/slice
 			 ${RKHROOTDIR}/usr/bin/cleaner
 			 ${RKHROOTDIR}/usr/include/rpcsvc/du"
+	RHSHARPES_DIRS=
+	RHSHARPES_KSYMS=
 
 
 	# RSHA's Rootkit
@@ -5440,6 +5501,7 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/etc/rc.d/arch/alpha/lib/.lib/.1addr"
 	RSHA_DIRS="${RKHROOTDIR}/etc/rc.d/rsha
 		   ${RKHROOTDIR}/etc/rc.d/arch/alpha/lib/.lib"
+	RSHA_KSYMS=
 
 
 	# Shutdown Rootkit
@@ -5452,11 +5514,14 @@ do_system_check_initialisation() {
 	SHUTDOWN_DIRS="${RKHROOTDIR}/usr/man/man5/..%/.dir
 		       ${RKHROOTDIR}/usr/man/man5/..%/.dir/scannah
 		       ${RKHROOTDIR}/etc/rc.d/rc0.d/..%/.dir"
+	SHUTDOWN_KSYMS=
 
 
 	# Scalper (FreeBSD.Scalper.Worm) Worm
 	SCALPER_FILES="${RKHROOTDIR}/tmp/.a
 		       ${RKHROOTDIR}/tmp/.uua"
+	SCALPER_DIRS=
+	SCALPER_KSYMS=
 
 
 	# SHV4 Rootkit
@@ -5483,6 +5548,7 @@ do_system_check_initialisation() {
 	SHV4_DIRS="${RKHROOTDIR}/lib/ldd.so
 		   ${RKHROOTDIR}/lib/security/.config
 		   ${RKHROOTDIR}/lib/security/.config/ssh"
+	SHV4_KSYMS=
 
 
 	# SHV5 Rootkit
@@ -5509,6 +5575,7 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/usr/lib/libsh
 		   ${RKHROOTDIR}/usr/lib/libsh/utilz
 		   ${RKHROOTDIR}/usr/lib/libsh/.backup"
+	SHV5_KSYMS=
 
 
 	# Sin Rootkit
@@ -5527,6 +5594,7 @@ do_system_check_initialisation() {
 	SINROOTKIT_DIRS="${RKHROOTDIR}/usr/lib/sn
 			 ${RKHROOTDIR}/usr/lib/man1/...
 			 ${RKHROOTDIR}/dev/.haos"
+	SINROOTKIT_KSYMS=
 
 
 	# Slapper Worm
@@ -5538,10 +5606,14 @@ do_system_check_initialisation() {
 		       ${RKHROOTDIR}/tmp/update
 		       ${RKHROOTDIR}/tmp/.cinik
 		       ${RKHROOTDIR}/tmp/.b"
+	SLAPPER_DIRS=
+	SLAPPER_KSYMS=
 
 
 	# Sneakin Rootkit
+	SNEAKIN_FILES=
 	SNEAKIN_DIRS="${RKHROOTDIR}/tmp/.X11-unix/.../rk"
+	SNEAKIN_KSYMS=
 
 
 	# Suckit Rootkit
@@ -5560,6 +5632,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/etc/.MG
 		     ${RKHROOTDIR}/usr/share/locale/sk/.sk12
 		     ${RKHROOTDIR}/usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist"
+	SUCKIT_KSYMS=
 
 
 	# SunOS / NSDAP Rootkit
@@ -5576,6 +5649,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/usr/lib/vold/nsdap/runsniff
 		     ${RKHROOTDIR}/usr/lib/lpset"
 	NSDAP_DIRS="${RKHROOTDIR}/usr/lib/vold/nsdap"
+	NSDAP_KSYMS=
 
 
 	# SunOS Rootkit
@@ -5590,14 +5664,20 @@ do_system_check_initialisation() {
 			    ${RKHROOTDIR}/lib/security/.config/lpsched
 			    ${RKHROOTDIR}/dev/kmod
 			    ${RKHROOTDIR}/dev/dos"
+	SUNOSROOTKIT_DIRS=
+	SUNOSROOTKIT_KSYMS=
 
 
 	# Superkit Rootkit
 	SUPERKIT_FILES="${RKHROOTDIR}/usr/man/.sman/sk"
+	SUPERKIT_DIRS=
+	SUPERKIT_KSYMS=
 
 
 	# Telnet Backdoor
 	TBD_FILES="${RKHROOTDIR}/usr/lib/.tbd"
+	TBD_DIRS=
+	TBD_KSYMS=
 
 
 	# TeLeKiT Rootkit
@@ -5613,6 +5693,7 @@ do_system_check_initialisation() {
 	TELEKIT_DIRS="${RKHROOTDIR}/usr/man/man3/...
 		      ${RKHROOTDIR}/usr/man/man3/.../lsniff
 		      ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT"
+	TELEKIT_KSYMS=
 
 
 	# T0rn (and misc) Rootkit
@@ -5654,6 +5735,7 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/usr/man/man1/man1/lib
 		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib
 		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.backup"
+	TORN_KSYMS=
 
 
 	# Trojanit Kit Rootkit
@@ -5662,6 +5744,8 @@ do_system_check_initialisation() {
 			${RKHROOTDIR}/bin/.netstat
 			${RKHROOTDIR}/usr/bin/.nop
 			${RKHROOTDIR}/usr/bin/.who"
+	TROJANIT_DIRS=
+	TROJANIT_KSYMS=
 
 
 	# Tuxtendo (Tuxkit) Rootkit
@@ -5687,6 +5771,7 @@ do_system_check_initialisation() {
 	TUXTENDO_DIRS="${RKHROOTDIR}/dev/tux
 		       ${RKHROOTDIR}/dev/tux/ssh2
 		       ${RKHROOTDIR}/dev/tux/backup"
+	TUXTENDO_KSYMS=
 
 
 	# URK - Universal Rootkit
@@ -5695,14 +5780,19 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ps
 		   ${RKHROOTDIR}/tmp/conf.inf"
 	URK_DIRS="${RKHROOTDIR}/usr/man/man1/xxxxxxbin"
+	URK_KSYMS=
 
 
 	# VcKit Rootkit
+	VCKIT_FILES=
 	VCKIT_DIRS="${RKHROOTDIR}/usr/include/linux/modules/lib.so
 		    ${RKHROOTDIR}/usr/include/linux/modules/lib.so/bin"
+	VCKIT_KSYMS=
 
 
 	# Vampire Rootkit
+	VAMPIRE_FILES=
+	VAMPIRE_DIRS=
 	VAMPIRE_KSYMS="new_getdents
 			old_getdents
 			should_hide_file_name
@@ -5710,14 +5800,17 @@ do_system_check_initialisation() {
 
 
 	# Volc Rootkit
+	VOLC_FILES=
 	VOLC_DIRS="${RKHROOTDIR}/var/spool/.recent
 		   ${RKHROOTDIR}/var/spool/.recent/.files
 		   ${RKHROOTDIR}/usr/lib/volc
 		   ${RKHROOTDIR}/usr/lib/volc/backup"
+	VOLC_KSYMS=
 
 	# weaponX 0.1
 	WEAPONX_FILES="${RKHROOTDIR}/System/Library/Extensions/WeaponX.kext"
 	WEAPONX_DIRS="${RKHROOTDIR}/tmp/..."
+	WEAPONX_KSYMS=
 
 	# X-Org SunOS Rootkit
 	XORGSUNOS_FILES="${RKHROOTDIR}/usr/lib/libX.a/bin/tmpfl
@@ -5729,6 +5822,7 @@ do_system_check_initialisation() {
 			${RKHROOTDIR}/usr/lib/libX.a/bin
 			${RKHROOTDIR}/usr/lib/libX.a/bin/sparcv7
 			${RKHROOTDIR}/usr/share/man..."
+	XORGSUNOS_KSYMS=
 
 
 	# zaRwT.KiT Rootkit
@@ -5739,6 +5833,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/rk/tulz"
 	ZARWT_DIRS="${RKHROOTDIR}/rk
 		    ${RKHROOTDIR}/dev/rd/s"
+	ZARWT_KSYMS=
 
 
 	# ZK Rootkit
@@ -5749,6 +5844,7 @@ do_system_check_initialisation() {
 		  ${RKHROOTDIR}/etc/sysconfig/console/load.zk"
 	ZK_DIRS="${RKHROOTDIR}/usr/share/.zk
 		 ${RKHROOTDIR}/usr/X11R6/.zk"
+	ZK_KSYMS=
 
 
 	# Miscellaneous login backdoors
