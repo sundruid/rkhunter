@@ -4993,6 +4993,7 @@ do_system_check_initialisation() {
 
 
 	# cb Rootkit 
+	# The '%' character represents a space.
 	CB_FILES="${RKHROOTDIR}/dev/srd0
 		  ${RKHROOTDIR}/lib/libproc.so.2.0.6
 		  ${RKHROOTDIR}/dev/mounnt
@@ -7894,6 +7895,8 @@ rootkit_file_dir_checks() {
 	# cb Rootkit
 	SCAN_ROOTKIT="cb Rootkit"
 	SCAN_FILES=${CB_FILES}
+	SCAN_DIRS=${CB_DIRS}
+	SCAN_KSYMS=${CB_KSYMS}
 	scanrootkit
 
 	# CiNIK Worm (Slapper.B variant)
@@ -7982,6 +7985,8 @@ rootkit_file_dir_checks() {
 
 	SCAN_ROOTKIT="Fu Rootkit"
 	SCAN_FILES=${FU_FILES}
+	SCAN_DIRS=${FU_DIRS}
+	SCAN_KSYMS=${FU_KSYMS}
 	scanrootkit
 
 	# Fuck`it Rootkit
@@ -13393,7 +13398,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, CiNIK Worm (Slapper.B variant), cb, CX, 
+  Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX, 
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
   Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
