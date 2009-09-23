@@ -5052,7 +5052,31 @@ do_system_check_initialisation() {
 	# Devil Rootkit
 	DEVIL_FILES="${RKHROOTDIR}/var/lib/games/.src
 		     ${RKHROOTDIR}/dev/dsx
-		     ${RKHROOTDIR}/dev/caca"
+		     ${RKHROOTDIR}/dev/caca
+		     ${RKHROOTDIR}/dev/pro
+		     ${RKHROOTDIR}/bin/bye
+		     ${RKHROOTDIR}/bin/homedir
+		     ${RKHROOTDIR}/usr/bin/xfss
+		     ${RKHROOTDIR}/usr/sbin/tzava
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/holber
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/sense
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/clear
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/tzava
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/citeste
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/killrk
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/searchlog
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/gaoaza
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/cleaner
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/shk
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/srs
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/utile.tgz
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/webpage
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/getpsy
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/getbnc
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/getemech
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/localroot.sh
+		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/old/sense"
+	DEVIL_DIRS="${RKHROOTDIR}/usr/doc/tar/.../.dracusor"
 
 
 	# Dica-Kit (T0rn variant) Rootkit
@@ -5805,6 +5829,7 @@ do_system_check_initialisation() {
 		    rcfile:/usr/sbin/xntps:SHV4 Rootkit
 		    rcfile:ttyload:Possible SHV5 Rootkit
 		    rcfile:/etc/rc.d/init.d/init:cb Rootkit
+		    rcfile:usr/bin/xfss:Devil Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -5823,7 +5848,6 @@ do_system_check_initialisation() {
 	# Possible rootkit files and directories
 	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:Possible T0rn Rootkit MD5 hash database
 		  file:${RKHROOTDIR}/dev/pisu:Unknown rootkit
-		  file:${RKHROOTDIR}/dev/dsx:Unknown rootkit
 		  file:${RKHROOTDIR}/dev/xdta:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
 		  file:${RKHROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
@@ -5861,17 +5885,20 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/unde/vrei/tu/sa/te/ascunzi/in/server:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/man/man1/..  /.dir:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/X11R6/include/X11/...:Unknown rootkit
+		  dir:${RKHROOTDIR}/usr/X11R6/lib/X11/.fonts/misc/...:Unknown rootkit
 		  dir:${RKHROOTDIR}/tmp/.sys:Suspicious directory name
 		  dir:${RKHROOTDIR}/tmp/':Suspicious directory name
 		  dir:${RKHROOTDIR}/tmp/.,:Suspicious directory name
 		  dir:${RKHROOTDIR}/tmp/,.,:Suspicious directory name
 		  dir:${RKHROOTDIR}/dev/shm/emilien:Suspicious directory name
 		  dir:${RKHROOTDIR}/var/tmp/.log:Suspicious directory name
-		  dir:${RKHROOTDIR}/tmp/zmeu/... :Suspicious directory name"
+		  dir:${RKHROOTDIR}/tmp/zmeu/... :Suspicious directory name
+		  dir:${RKHROOTDIR}/var/log/ssh:Suspicious directory name
+		  dir:${RKHROOTDIR}/dev/.ida:Suspicious directory name"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
-	KLDSTATKEYWORDS="backd00r backdoor"
+	KLDSTATKEYWORDS="backd00r backdoor darkside"
 
 
 	# Suspicious startup file strings
@@ -5889,6 +5916,9 @@ do_system_check_initialisation() {
 			 lbk.ko:LBK FreeBSD kernel module
 			 vlogger.o:THC-Vlogger kernel module
 			 cleaner.o:Cleaner kernel module
+			 cleaner:Possible Adore LKM rootkit component
+			 ava:Possible Adore LKM rootkit component
+			 tzava:Possible Adore LKM rootkit component
 			 mod_klgr.o:klgr, keyboard logger (kernel module)
 			 hydra:THC-Hydra (password capture)
 			 hydra.restore:THC-Hydra (password capture)
@@ -5902,11 +5932,17 @@ do_system_check_initialisation() {
 			 t0rnp:T0rn
 			 rx4u:Unknown rootkit
 			 rx2me:Unknown rootkit
+			 crontab:Unknown rootkit
+			 sshdu:Unknown rootkit
+			 glotzer:Unknown rootkit
+			 holber:Devil rootkit component
 			 xhide:XHide process name faker
 			 xh:possible XHide alternative name
 			 x:possible XHide alternative name
 			 h:possible XHide alternative name
-			 mech:IRC bot software
+			 emech:IRC bot software
+			 psybnc:IRC bot software
+			 mechpossible IRC bot software alternative name
 			 httpd.bin:possible IRC bot software alternative name
 			 mh:Dica-Kit Rootkit IRC bot software
 			 xl:Dica-Kit Rootkit
