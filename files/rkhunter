@@ -4902,6 +4902,32 @@ do_system_check_initialisation() {
 	W55808A_KSYMS=
 
 
+	# Adore Rootkit. OK, nobody calls it that but basically it uses Adore.
+	# In one commercial AV vendors naming scheme it's called Dextenea.
+	AKIT_FILES="${RKHROOTDIR}/usr/secure
+		    ${RKHROOTDIR}/usr/doc/sys/qrt
+		    ${RKHROOTDIR}/usr/doc/sys/run
+		    ${RKHROOTDIR}/usr/doc/sys/crond
+		    ${RKHROOTDIR}/usr/sbin/kfd
+		    ${RKHROOTDIR}/usr/doc/kern/var
+		    ${RKHROOTDIR}/usr/doc/kern/string.o
+		    ${RKHROOTDIR}/usr/doc/kern/ava
+		    ${RKHROOTDIR}/usr/doc/kern/adore.o
+		    ${RKHROOTDIR}/var/log/ssh/old"
+	AKIT_DIRS="${RKHROOTDIR}/lib/security/.config/ssh
+		   ${RKHROOTDIR}/usr/doc/kern
+		   ${RKHROOTDIR}/usr/doc/backup
+		   ${RKHROOTDIR}/usr/doc/backup/txt
+		   ${RKHROOTDIR}/lib/backup
+		   ${RKHROOTDIR}/lib/backup/txt
+		   ${RKHROOTDIR}/usr/doc/work
+		   ${RKHROOTDIR}/usr/doc/sys
+		   ${RKHROOTDIR}/var/log/ssh
+		   ${RKHROOTDIR}/usr/doc/.spool
+		   ${RKHROOTDIR}/usr/lib/kterm"
+	AKIT_KSYMS=
+
+
 	# AjaKit Rootkit
 	AJAKIT_FILES="${RKHROOTDIR}/dev/tux/.addr
 		      ${RKHROOTDIR}/dev/tux/.proc
@@ -6084,7 +6110,8 @@ do_system_check_initialisation() {
 		      phide_mod.o
 		      vlogger.o
 		      p2.ko
-		      xC.o"
+		      xC.o
+		      strings.o"
 
 	return
 }
@@ -7941,6 +7968,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${AJAKIT_FILES}
 	SCAN_DIRS=${AJAKIT_DIRS}
 	SCAN_KSYMS=${AJAKIT_KSYMS}
+	scanrootkit
+
+	# "Adore" Rootkit
+
+	SCAN_ROOTKIT="Adore Rootkit"
+	SCAN_FILES=${AKIT_FILES}
+	SCAN_DIRS=${AKIT_DIRS}
+	SCAN_KSYMS=${AKIT_KSYMS}
 	scanrootkit
 
 	# aPa Kit
@@ -13512,7 +13547,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # A comma-separated list of rootkits we check for.
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
-KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient (ark),
+KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
   Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX, 
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
