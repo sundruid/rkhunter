@@ -88,6 +88,7 @@
    verification, and be treated as non-packaged files.
  - Added cb Rootkit.
  - Added Fu Rootkit.
+ - Added ld-linuxv.so.1 LD_PRELOAD.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently

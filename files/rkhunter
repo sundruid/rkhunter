@@ -5288,6 +5288,13 @@ do_system_check_initialisation() {
 	KNARK_KSYMS=
 
 
+	# ld-linuxv.so LD_PRELOAD
+	LINUXV_FILES="${RKHROOTDIR}/lib/ld-linuxv.so.1"
+	LINUXV_DIRS="${RKHROOTDIR}/var/opt/_so_cache
+		     ${RKHROOTDIR}/var/opt/_so_cache/ld
+		     ${RKHROOTDIR}/var/opt/_so_cache/lc"
+	LINUXV_KSYMS=
+
 	# Lion Worm
 	LION_FILES="${RKHROOTDIR}/bin/in.telnetd
 		    ${RKHROOTDIR}/bin/mjy
@@ -8167,6 +8174,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${KNARK_FILES}
 	SCAN_DIRS=${KNARK_DIRS}
 	SCAN_KSYMS=${KNARK_KSYMS}
+	scanrootkit
+
+	# ld-linuxv.so LD_PRELOAD
+
+	SCAN_ROOTKIT="ld-linuxv.so"
+	SCAN_FILES=${LINUXV_FILES}
+	SCAN_DIRS=${LINUXV_DIRS}
+	SCAN_KSYMS=
 	scanrootkit
 
 	# Li0n Worm
@@ -13501,7 +13516,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Apache Worm, Ambient 
   Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX, 
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
-  Knark, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
+  Knark, ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
   Optic Kit (Tux), Oz, OSX, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
   RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin,
   Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
