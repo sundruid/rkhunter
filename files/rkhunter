@@ -5033,8 +5033,7 @@ do_system_check_initialisation() {
 		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/ps
 		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/pstree
 		  ${RKHROOTDIR}/usr/bin/.system/..%/.x/xC.o"
-	CB_DIRS="${RKHROOTDIR}/etc/rc.d/init.d
-		 ${RKHROOTDIR}/usr/bin/.zeen
+	CB_DIRS="${RKHROOTDIR}/usr/bin/.zeen
 		 ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare
 		 ${RKHROOTDIR}/usr/bin/.zeen/..%/scan
 		 ${RKHROOTDIR}/usr/bin/.system/..%"
@@ -5529,7 +5528,6 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/lib/libext-2.so.7
 		    ${RKHROOTDIR}/lib/lidps1.so
 		    ${RKHROOTDIR}/lib/libproc.a
-		    ${RKHROOTDIR}/lib/libproc.so
 		    ${RKHROOTDIR}/lib/libproc.so.2.0.6
 		    ${RKHROOTDIR}/lib/ldd.so/tks
 		    ${RKHROOTDIR}/lib/ldd.so/tkp
@@ -5946,6 +5944,10 @@ do_system_check_initialisation() {
 	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:Possible T0rn Rootkit MD5 hash database
 		  file:${RKHROOTDIR}/dev/pisu:Unknown rootkit
 		  file:${RKHROOTDIR}/dev/xdta:Dica-Kit Rootkit
+		  file:${RKHROOTDIR}/dev/saux:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/dev/hdx:Possible Linux.RST.B infection
+		  file:${RKHROOTDIR}/dev/hdx1:Possible Linux.RST.B infection
+		  file:${RKHROOTDIR}/dev/hdx2:Possible Linux.RST.B infection
 		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
 		  file:${RKHROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
 		  file:${RKHROOTDIR}/usr/info/.clib:Possible backdoor
@@ -5991,7 +5993,9 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/var/tmp/.log:Suspicious directory name
 		  dir:${RKHROOTDIR}/tmp/zmeu/... :Suspicious directory name
 		  dir:${RKHROOTDIR}/var/log/ssh:Suspicious directory name
-		  dir:${RKHROOTDIR}/dev/.ida:Suspicious directory name"
+		  dir:${RKHROOTDIR}/dev/ida:Suspicious directory name
+		  dir:${RKHROOTDIR}/lib/java:Suspicious directory name
+		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Suspicious directory name"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
