@@ -151,6 +151,7 @@
  - Improved Suspicious startup file strings test.
  - Improved Suspicious open files test.
  - Improved Known bad Linux kernel modules test.
+ - Improved Dreams Rootkit.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious

@@ -5157,9 +5157,26 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/usr/bin/sl2
 		      ${RKHROOTDIR}/usr/bin/logclear
 		      ${RKHROOTDIR}/usr/bin/(swapd)
+		      ${RKHROOTDIR}/usr/bin/initrd
+		      ${RKHROOTDIR}/usr/bin/crontabs
 		      ${RKHROOTDIR}/usr/bin/snfs
-		      ${RKHROOTDIR}/usr/lib/libsss"
-	DREAMS_DIRS="${RKHROOTDIR}/dev/ida/.hpd"
+		      ${RKHROOTDIR}/usr/lib/libsss
+		      ${RKHROOTDIR}/usr/lib/libsnf.log
+		      ${RKHROOTDIR}/usr/lib/libshtift/top
+		      ${RKHROOTDIR}/usr/lib/libshtift/ps
+		      ${RKHROOTDIR}/usr/lib/libshtift/netstat
+		      ${RKHROOTDIR}/usr/lib/libshtift/ls
+		      ${RKHROOTDIR}/usr/lib/libshtift/ifconfig
+		      ${RKHROOTDIR}/usr/include/linseed.h
+		      ${RKHROOTDIR}/usr/include/linpid.h
+		      ${RKHROOTDIR}/usr/include/linkey.h
+		      ${RKHROOTDIR}/usr/include/linconf.h
+		      ${RKHROOTDIR}/usr/include/iceseed.h
+		      ${RKHROOTDIR}/usr/include/icepid.h
+		      ${RKHROOTDIR}/usr/include/icekey.h
+		      ${RKHROOTDIR}/usr/include/iceconf.h" 
+	DREAMS_DIRS="${RKHROOTDIR}/dev/ida/.hpd
+		     ${RKHROOTDIR}/usr/lib/libshtift"
 	DREAMS_KSYMS=
 
 
@@ -5975,60 +5992,61 @@ do_system_check_initialisation() {
 
 	# Possible rootkit files and directories
 	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:Possible T0rn Rootkit MD5 hash database
-		  file:${RKHROOTDIR}/dev/pisu:Unknown rootkit
+		  file:${RKHROOTDIR}/dev/pisu:Possible rootkit component
 		  file:${RKHROOTDIR}/dev/xdta:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/dev/saux:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/dev/saux:Trojaned SSH daemon sniffer log
 		  file:${RKHROOTDIR}/dev/hdx:Possible Linux.RST.B infection
 		  file:${RKHROOTDIR}/dev/hdx1:Possible Linux.RST.B infection
 		  file:${RKHROOTDIR}/dev/hdx2:Possible Linux.RST.B infection
 		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
 		  file:${RKHROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
 		  file:${RKHROOTDIR}/usr/info/.clib:Possible backdoor
-		  file:${RKHROOTDIR}/usr/sbin/tcp.log:Possible sniffer
+		  file:${RKHROOTDIR}/usr/sbin/tcp.log:Possible sniffer log
 		  file:${RKHROOTDIR}/usr/bin/take/pid:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/sbin/create:MzOzD Local backdoor
 		  file:${RKHROOTDIR}/dev/ttypz:spwn login backdoor
 		  file:${RKHROOTDIR}/var/log/tcp.log:Possible beX2 Rootkit component
 		  file:${RKHROOTDIR}/usr/include/audit.h:Possible beX2 Rootkit component
-		  file:${RKHROOTDIR}/usr/bin/sourcemask:Unknown rootkit
-		  file:${RKHROOTDIR}/usr/bin/ras2xm:Unknown rootkit
+		  file:${RKHROOTDIR}/usr/bin/sourcemask:Possible rootkit component
+		  file:${RKHROOTDIR}/usr/bin/ras2xm:Possible rootkit component
 		  file:${RKHROOTDIR}/dev/xmx:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/usr/sbin/gpm.root:Unknown rootkit
-		  file:${RKHROOTDIR}/bin/vobiscum:Unknown rootkit
-		  file:${RKHROOTDIR}/bin/psr:Unknown rootkit
-		  file:${RKHROOTDIR}/dev/kdx:Unknown rootkit
-		  file:${RKHROOTDIR}/dev/dkx:Unknown rootkit
-		  file:${RKHROOTDIR}/usr/sbin/sshd3:Unknown rootkit
-		  file:${RKHROOTDIR}/usr/sbin/jcd:Unknown rootkit
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Unknown rootkit
-		  file:${RKHROOTDIR}/usr/sbin/atd2:Unknown rootkit
+		  file:${RKHROOTDIR}/usr/sbin/gpm.root:Possible rootkit component
+		  file:${RKHROOTDIR}/bin/vobiscum:Possible rootkit component
+		  file:${RKHROOTDIR}/bin/psr:Possible rootkit component
+		  file:${RKHROOTDIR}/dev/kdx:Possible rootkit component
+		  file:${RKHROOTDIR}/dev/dkx:Possible rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/sshd3:Possible rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/jcd:Possible rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Possible rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/atd2:Possible rootkit component
 		  file:${RKHROOTDIR}/home/httpd/cgi-bin/linux.cgi:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/home/httpd/cgi-bin/psid:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/home/httpd/cgi-bin/void.cgi:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/system:Unknown rootkit
-		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Unknown rootkit
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/system:Possible rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Possible rootkit component
 		  file:${RKHROOTDIR}/tmp/.ush:Dica-Kit Rootkit
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
-		  dir:${RKHROOTDIR}/usr/src/.lib:Suspicious directory name
+		  dir:${RKHROOTDIR}/usr/src/.lib:Possible rootkit component
 		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
 		  dir:${RKHROOTDIR}/lib/lblip.tk:Possible T0rn Rootkit directory with backdoored SSH-configuration
-		  dir:${RKHROOTDIR}/usr/sbin/...:Suspicious directory name
-		  dir:${RKHROOTDIR}/usr/share/.gun:Suspicious directory name
+		  dir:${RKHROOTDIR}/usr/sbin/...:Possible rootkit component
+		  dir:${RKHROOTDIR}/usr/share/.gun:Possible rootkit component
 		  dir:${RKHROOTDIR}/unde/vrei/tu/sa/te/ascunzi/in/server:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/man/man1/..  /.dir:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/X11R6/include/X11/...:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/X11R6/lib/X11/.fonts/misc/...:Unknown rootkit
-		  dir:${RKHROOTDIR}/tmp/.sys:Suspicious directory name
-		  dir:${RKHROOTDIR}/tmp/':Suspicious directory name
-		  dir:${RKHROOTDIR}/tmp/.,:Suspicious directory name
-		  dir:${RKHROOTDIR}/tmp/,.,:Suspicious directory name
-		  dir:${RKHROOTDIR}/dev/shm/emilien:Suspicious directory name
-		  dir:${RKHROOTDIR}/var/tmp/.log:Suspicious directory name
-		  dir:${RKHROOTDIR}/tmp/zmeu/... :Suspicious directory name
-		  dir:${RKHROOTDIR}/var/log/ssh:Suspicious directory name
-		  dir:${RKHROOTDIR}/dev/ida:Suspicious directory name
-		  dir:${RKHROOTDIR}/lib/java:Suspicious directory name
-		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Suspicious directory name"
+		  dir:${RKHROOTDIR}/tmp/.sys:Possible rootkit component
+		  dir:${RKHROOTDIR}/tmp/':Possible rootkit component
+		  dir:${RKHROOTDIR}/tmp/.,:Possible rootkit component
+		  dir:${RKHROOTDIR}/tmp/,.,:Possible rootkit component
+		  dir:${RKHROOTDIR}/dev/shm/emilien:Possible rootkit component
+		  dir:${RKHROOTDIR}/var/tmp/.log:Possible rootkit component
+		  dir:${RKHROOTDIR}/tmp/zmeu/... :Possible rootkit component
+		  dir:${RKHROOTDIR}/var/log/ssh:Possible rootkit component
+		  dir:${RKHROOTDIR}/dev/ida:Possible rootkit component
+		  dir:${RKHROOTDIR}/lib/java:Possible rootkit component
+		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Possible rootkit component
+		  dir:${RKHROOTDIR}/usr/lib/libshtift:Possible rootkit component"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
