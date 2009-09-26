@@ -6059,7 +6059,6 @@ do_system_check_initialisation() {
 			 ras2xm:Unknown rootkit
 			 vobiscum:Unknown rootkit
 			 sshd3:Unknown rootkit
-			 secure:Dica-Kit Rootkit
 			 system:Unknown rootkit
 			 t0rnsb:T0rn
 			 t0rns:T0rn
@@ -6072,8 +6071,6 @@ do_system_check_initialisation() {
 			 holber:Devil rootkit component
 			 xhide:XHide process name faker
 			 xh:possible XHide alternative name
-			 x:possible XHide alternative name
-			 h:possible XHide alternative name
 			 emech:IRC bot software
 			 psybnc:IRC bot software
 			 mechpossible IRC bot software alternative name
