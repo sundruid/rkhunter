@@ -5857,10 +5857,10 @@ do_system_check_initialisation() {
 		  ${RKHROOTDIR}/dev/pts/01/bin
 		  ${RKHROOTDIR}/usr/man/man1/xxxxxxbin"
 	URK_KSYMS=
-	# Also-see: /usr/lib/lpset (esniff), /var/lp/lpacct/ (files), /usr/lib/bnclp, /usr/lib/lpsys (identd).
-	# Also-see: /usr/lib/lptd (backdoor?), /sbin/rc2 and /sbin/rc3 containing string "/usr/lib/lpstart".
-	# Also-see: dos, psbnc, lpacct, USER, lp.
-
+	# Also-see: /usr/lib/lpset (esniff), /var/lp/lpacct/ (files), /usr/lib/bnclp, /usr/lib/lpsys (identd),
+	# Also-see: /usr/lib/lptd (backdoor?), /sbin/rc2 and /sbin/rc3 containing string "/usr/lib/lpstart",
+	# Also-see: dos, psbnc, lpacct, USER, lp,
+	# Also see: /etc/lpconfig vs /etc/ttyhash, uconv.inv vs urk.conf.
 
 	# VcKit Rootkit
 	VCKIT_FILES=
