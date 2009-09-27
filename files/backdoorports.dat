@@ -14,6 +14,8 @@ Version:2009092701
 6666:Possible rogue IRC bot:TCP:
 6667:Possible rogue IRC bot:TCP:
 6668:Possible rogue IRC bot:TCP:
+6669:Possible rogue IRC bot:TCP:
+7000:Possible rogue IRC bot:TCP:
 13000:Possible Universal Rootkit (URK) SSH server:TCP:
 14856:Optic Kit (Tux):TCP:
 25000:Possible Universal Rootkit (URK) component:TCP:
