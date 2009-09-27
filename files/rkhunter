@@ -5822,13 +5822,44 @@ do_system_check_initialisation() {
 	TUXTENDO_KSYMS=
 
 
-	# URK - Universal Rootkit
-	URK_FILES="${RKHROOTDIR}/usr/man/man1/xxxxxxbin/find
+	# Universal Rootkit by K2 (URK) Release 0.9.8
+	URK_FILES="${RKHROOTDIR}/dev/prom/sn.l
+		   ${RKHROOTDIR}/usr/lib/ldlibps.so
+		   ${RKHROOTDIR}/usr/lib/ldlibnet.so
+		   ${RKHROOTDIR}/dev/pts/01/uconf.inv
+		   ${RKHROOTDIR}/dev/pts/01/cleaner
+		   ${RKHROOTDIR}/dev/pts/01/bin/psniff
+		   ${RKHROOTDIR}/dev/pts/01/bin/du
+		   ${RKHROOTDIR}/dev/pts/01/bin/ls
+		   ${RKHROOTDIR}/dev/pts/01/bin/passwd
+		   ${RKHROOTDIR}/dev/pts/01/bin/ps
+		   ${RKHROOTDIR}/dev/pts/01/bin/psr
+		   ${RKHROOTDIR}/dev/pts/01/bin/su
+		   ${RKHROOTDIR}/dev/pts/01/bin/find
+		   ${RKHROOTDIR}/dev/pts/01/bin/netstat
+		   ${RKHROOTDIR}/dev/pts/01/bin/ping
+		   ${RKHROOTDIR}/dev/pts/01/bin/strings
+		   ${RKHROOTDIR}/dev/pts/01/bin/bash
 		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/du
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ls
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/passwd
 		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ps
-		   ${RKHROOTDIR}/tmp/conf.inf"
-	URK_DIRS="${RKHROOTDIR}/usr/man/man1/xxxxxxbin"
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/psr
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/su
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/find
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/netstat
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ping
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/strings
+		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/bash
+		   ${RKHROOTDIR}/tmp/conf.inv"
+	URK_DIRS="${RKHROOTDIR}/dev/prom
+		  ${RKHROOTDIR}/dev/pts/01
+		  ${RKHROOTDIR}/dev/pts/01/bin
+		  ${RKHROOTDIR}/usr/man/man1/xxxxxxbin"
 	URK_KSYMS=
+	# Also-see: /usr/lib/lpset (esniff), /var/lp/lpacct/ (files), /usr/lib/bnclp, /usr/lib/lpsys (identd).
+	# Also-see: /usr/lib/lptd (backdoor?), /sbin/rc2 and /sbin/rc3 containing string "/usr/lib/lpstart".
+	# Also-see: dos, psbnc, lpacct, USER, lp.
 
 
 	# VcKit Rootkit
@@ -5935,10 +5966,11 @@ do_system_check_initialisation() {
 		    netstat:syg:Possible trojaned netstat
 		    nscd:sshd_config:Possible backdoor shell installed (SSH)
                     ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
-		    ps:/dev/pts/01:SunOS Rootkit
+		    ps:/dev/pts/01:Universal Rootkit (URK)
 		    ps:tw33dl3:SunOS Rootkit
 		    ps:psniff:SunOS Rootkit
-		    ps:/usr/lib/ldlibps.so:Flea Linux Rootkit
+		    ps:uconf.inv:Universal Rootkit (URK)
+		    ps:lib/ldlibps.so:Flea Linux Rootkit or Universal Rootkit (URK)
 		    pstree:/usr/lib/ldlibpst.so:Flea Linux Rootkit
 		    ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
 		    ps:libproc.so.2.0.7:Fuckit Rootkit
@@ -6114,7 +6146,8 @@ do_system_check_initialisation() {
 			   ${TBD_FILES} ${TORN_FILES} ${TORN_DIRS}"
 
 
-	SNIFFER_FILES="${RKHROOTDIR}/usr/lib/libice.log"
+	SNIFFER_FILES="${RKHROOTDIR}/usr/lib/libice.log
+		       ${RKHROOTDIR}/dev/prom/sn.l"
 
 
 	# Known bad Linux kernel modules
@@ -8717,7 +8750,7 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${TUXTENDO_KSYMS}
 	scanrootkit
 
-	# URK - Universal RootKit
+	# Universal Rootkit by K2 (URK)
 
 	SCAN_ROOTKIT="URK Rootkit"
 	SCAN_FILES=${URK_FILES}
