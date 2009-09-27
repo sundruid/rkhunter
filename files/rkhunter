@@ -5202,6 +5202,7 @@ do_system_check_initialisation() {
 		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_random_seed
 		    ${RKHROOTDIR}/usr/bin/ssh2d
 		    ${RKHROOTDIR}/usr/lib/ldlibns.so
+		    ${RKHROOTDIR}/usr/lib/ldlibps.so
 		    ${RKHROOTDIR}/usr/lib/ldlibpst.so
 		    ${RKHROOTDIR}/usr/lib/ldlibdu.so
 		    ${RKHROOTDIR}/usr/lib/ldlibct.so"
@@ -5212,7 +5213,7 @@ do_system_check_initialisation() {
 
 
 	# FreeBSD Rootkit (FBRK) catering to versions and compile-time defaults used by: 
-	# 1.0 (1997, Method), 1.2 (1997, Method), 1.? (2001, Nyo)
+	# 1.0 (1997, Method), 1.2 (1997, Method), "ImperialS-FBRK 1.0" (2001, Nyo)
 	FREEBSD_RK_FILES="${RKHROOTDIR}/dev/ptyp
 			  ${RKHROOTDIR}/dev/ptyq
 			  ${RKHROOTDIR}/dev/ptyr
@@ -5231,7 +5232,10 @@ do_system_check_initialisation() {
 			  ${RKHROOTDIR}/usr/lib/.fx/sched_host.2
 			  ${RKHROOTDIR}/usr/lib/.fx/random_d.2
 			  ${RKHROOTDIR}/usr/lib/.fx/set_pid.2
+			  ${RKHROOTDIR}/usr/lib/.fx/setrgrp.2
+			  ${RKHROOTDIR}/usr/lib/.fx/TOHIDE
 			  ${RKHROOTDIR}/usr/lib/.fx/cons.saver
+			  ${RKHROOTDIR}/usr/lib/.fx/adore/ava/ava
 			  ${RKHROOTDIR}/usr/lib/.fx/adore/adore/adore.ko
 			  ${RKHROOTDIR}/bin/sysback
 			  ${RKHROOTDIR}/usr/local/bin/sysback"
@@ -5262,11 +5266,12 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/rkconf
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/password
 		      ${RKHROOTDIR}/dev/proc/fuckit/config/progs
-		      ${RKHROOTDIR}/dev/proc/system-bins/init
+		      ${RKHROOTDIR}/dev/proc/fuckit/system-bins/init
 		      ${RKHROOTDIR}/usr/lib/libcps.a
 		      ${RKHROOTDIR}/usr/lib/libtty.a"
 	FUCKIT_DIRS="${RKHROOTDIR}/dev/proc
 		     ${RKHROOTDIR}/dev/proc/fuckit
+		     ${RKHROOTDIR}/dev/proc/fuckit/system-bins
 		     ${RKHROOTDIR}/dev/proc/toolz"
 	FUCKIT_KSYMS=
 
@@ -6020,12 +6025,14 @@ do_system_check_initialisation() {
 		    rcfile:+#<HIDE_.*>:Enye LKM
 		    rcfile:bin/xchk:Optic Kit (Tux) Worm
 		    rcfile:bin/xsf:Optic Kit (Tux) Worm
-		    rcfile:/usr/bin/ssh2d:Flea Linux Rootkit
+		    rcfile:/usr/bin/ssh2d:Flea Linux Rootkit or Optic Kit (Tux variant) Rootkit or SunOS Rootkit 
 		    rcfile:/usr/sbin/xntps:SHV4 Rootkit
 		    rcfile:ttyload:Possible SHV5 Rootkit
 		    rcfile:/etc/rc.d/init.d/init:cb Rootkit
 		    rcfile:usr/bin/xfss:Devil Rootkit
 		    rcfile:/usr/sbin/rpc.netinet:FreeBSD (FBRK) Rootkit
+		    rcfile:/usr/lib/.fx/cons.saver:FreeBSD (FBRK) Rootkit
+		    rcfile:/usr/lib/.fx/xs:FreeBSD (FBRK) Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -6076,6 +6083,7 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/etc/rc.d/init.d/system:Possible rootkit component
 		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Possible rootkit component
 		  file:${RKHROOTDIR}/tmp/.ush:Dica-Kit Rootkit
+		  file:${RKHROOTDIR}/usr/lib/libhidefile.so:HIDEFILE envvar filehiding library
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Possible rootkit component
 		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed

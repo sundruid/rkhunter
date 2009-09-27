@@ -20,8 +20,10 @@ Version:2009092701
 13000:Possible Universal Rootkit (URK) SSH server:TCP:
 14856:Optic Kit (Tux):TCP:
 25000:Possible Universal Rootkit (URK) component:TCP:
+29812:FreeBSD (FBRK) Rootkit default backdoor port:TCP:
 31337:Historical backdoor port:TCP:
 47107:T0rn:TCP:
 47018:Possible Universal Rootkit (URK) component:TCP:
 60922:zaRwT.KiT:TCP:
+62883:Possible FreeBSD (FBRK) Rootkit default backdoor port:TCP:
 65535:FreeBSD Rootkit (FBRK) telnet port:TCP:
