@@ -5211,15 +5211,33 @@ do_system_check_initialisation() {
 	FLEA_KSYMS=
 
 
-	# FreeBSD Rootkit
-	FREEBSD_RK_FILES="${RKHROOTDIR}/usr/lib/.fx/sched_host.2
+	# FreeBSD Rootkit (FBRK) catering to versions and compile-time defaults used by: 
+	# 1.0 (1997, Method), 1.2 (1997, Method), 1.? (2001, Nyo)
+	FREEBSD_RK_FILES="${RKHROOTDIR}/dev/ptyp
+			  ${RKHROOTDIR}/dev/ptyq
+			  ${RKHROOTDIR}/dev/ptyr
+			  ${RKHROOTDIR}/dev/ptys
+			  ${RKHROOTDIR}/dev/ptyt
+			  ${RKHROOTDIR}/dev/fd/.88/freshb-bsd
+			  ${RKHROOTDIR}/dev/fd/.88/fresht
+			  ${RKHROOTDIR}/dev/fd/.88/zxsniff
+			  ${RKHROOTDIR}/dev/fd/.88/zxsniff.log
+			  ${RKHROOTDIR}/dev/fd/.99/.ttyf00
+			  ${RKHROOTDIR}/dev/fd/.99/.ttyp00
+			  ${RKHROOTDIR}/dev/fd/.99/.ttyq00
+			  ${RKHROOTDIR}/dev/fd/.99/.ttys00
+			  ${RKHROOTDIR}/dev/fd/.99/.pwsx00
+			  ${RKHROOTDIR}/etc/.acid
+			  ${RKHROOTDIR}/usr/lib/.fx/sched_host.2
 			  ${RKHROOTDIR}/usr/lib/.fx/random_d.2
 			  ${RKHROOTDIR}/usr/lib/.fx/set_pid.2
 			  ${RKHROOTDIR}/usr/lib/.fx/cons.saver
 			  ${RKHROOTDIR}/usr/lib/.fx/adore/adore/adore.ko
 			  ${RKHROOTDIR}/bin/sysback
 			  ${RKHROOTDIR}/usr/local/bin/sysback"
-	FREEBSD_RK_DIRS="${RKHROOTDIR}/usr/lib/.fx
+	FREEBSD_RK_DIRS="${RKHROOTDIR}/dev/fd/.88
+			 ${RKHROOTDIR}/dev/fd/.99
+			 ${RKHROOTDIR}/usr/lib/.fx
 			 ${RKHROOTDIR}/usr/lib/.fx/adore"
 	FREEBSD_RK_KSYMS=
 
@@ -6007,6 +6025,7 @@ do_system_check_initialisation() {
 		    rcfile:ttyload:Possible SHV5 Rootkit
 		    rcfile:/etc/rc.d/init.d/init:cb Rootkit
 		    rcfile:usr/bin/xfss:Devil Rootkit
+		    rcfile:/usr/sbin/rpc.netinet:FreeBSD (FBRK) Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -6147,7 +6166,8 @@ do_system_check_initialisation() {
 
 
 	SNIFFER_FILES="${RKHROOTDIR}/usr/lib/libice.log
-		       ${RKHROOTDIR}/dev/prom/sn.l"
+		       ${RKHROOTDIR}/dev/prom/sn.l
+		       ${RKHROOTDIR}/dev/fd/.88/zxsniff.log"
 
 
 	# Known bad Linux kernel modules

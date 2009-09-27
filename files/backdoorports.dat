@@ -7,6 +7,7 @@ Version:2009092701
 #       The protocol must be UDP or TCP.
 #
 
+1524:Possible FreeBSD (FBRK) Rootkit backdoor:TCP:
 1984:Fuckit Rootkit:TCP:
 2001:Scalper:UDP:
 2006:CB:TCP:
@@ -19,6 +20,8 @@ Version:2009092701
 13000:Possible Universal Rootkit (URK) SSH server:TCP:
 14856:Optic Kit (Tux):TCP:
 25000:Possible Universal Rootkit (URK) component:TCP:
+31337:Historical backdoor port:TCP:
 47107:T0rn:TCP:
 47018:Possible Universal Rootkit (URK) component:TCP:
 60922:zaRwT.KiT:TCP:
+65535:FreeBSD Rootkit (FBRK) telnet port:TCP:
