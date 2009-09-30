@@ -91,6 +91,7 @@
  - Added ld-linuxv.so.1 LD_PRELOAD.
  - Added Adore Rootkit aka strings.o rootkit aka Dextenea.
  - Added iLLogiC Rootkit.
+ - Added 'Spanish' Rootkit.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently

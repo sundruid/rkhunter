@@ -5724,6 +5724,28 @@ do_system_check_initialisation() {
 	SNEAKIN_KSYMS=
 
 
+	# 'Spanish' Rootkit
+	SPANISH_FILES="${RKHROOTDIR}/dev/ptyq
+		       ${RKHROOTDIR}/bin/ad
+		       ${RKHROOTDIR}/bin/ava
+		       ${RKHROOTDIR}/bin/server
+		       ${RKHROOTDIR}/usr/sbin/rescue
+		       ${RKHROOTDIR}/usr/share/.../chrps
+		       ${RKHROOTDIR}/usr/share/.../chrifconfig
+		       ${RKHROOTDIR}/usr/share/.../netstat
+		       ${RKHROOTDIR}/usr/share/.../linsniffer
+		       ${RKHROOTDIR}/usr/share/.../charbd
+		       ${RKHROOTDIR}/usr/share/.../charbd2
+		       ${RKHROOTDIR}/usr/share/.../charbd3
+		       ${RKHROOTDIR}/usr/share/.../charbd4
+		       ${RKHROOTDIR}/usr/man/tmp/update.tgz
+		       ${RKHROOTDIR}/var/lib/rpm/db.rpm
+		       ${RKHROOTDIR}/var/cache/man/.cat
+		       ${RKHROOTDIR}/var/spool/lpd/remote/.lpq"
+	SPANISH_DIRS="${RKHROOTDIR}/usr/share/..."
+	SPANISH_KSYMS= 
+
+
 	# Suckit Rootkit
 	SUCKIT_FILES="${RKHROOTDIR}/sbin/initsk12
 		      ${RKHROOTDIR}/sbin/initxrk
@@ -6012,6 +6034,7 @@ do_system_check_initialisation() {
 		    login:/usr/lib/.tbd:TBD Rootkit
 		    login:sendmail:Ambient (ark) Rootkit
 		    login:cocacola:cb Rootkit
+		    login:joao:Spanish Rootkit
 		    ls:/dev/ptyxx/.file:Dica-Kit Rootkit
 		    ls:/dev/ptyxx/.file:Ambient (ark) Rootkit
 		    ls:/dev/sgk:Possible Linux Rootkit (LRK4)
@@ -6077,6 +6100,7 @@ do_system_check_initialisation() {
 		    rcfile:/crtz.o:Illogic Rootkit or SunOS Rootkit
 		    rcfile:/dev/dos:Illogic Rootkit or SunOS Rootkit
 		    rcfile:/lpq:Illogic Rootkit or SunOS Rootkit
+		    rcfile:/usr/sbin/rescue:Spanish Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -8751,6 +8775,13 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${SNEAKIN_FILES}
 	SCAN_DIRS=${SNEAKIN_DIRS}
 	SCAN_KSYMS=${SNEAKIN_KSYMS}
+	scanrootkit
+
+	# 'Spanish' Rootkit
+	SCAN_ROOTKIT="'Spanish' Rootkit"
+	SCAN_FILES=${SPANISH_FILES}
+	SCAN_DIRS=${SPANISH_DIRS}
+	SCAN_KSYMS=${SPANISH_KSYMS}
 	scanrootkit
 
 	# Suckit Rootkit
@@ -13677,9 +13708,9 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, IntoXonia-NG, Irix, Kitko, Knark,
   ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), Oz, OSX,
   Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm,
-  Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Suckit, SunOS / NSDAP, SunOS Rootkit,
-  Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, 
-  Volc, weaponX, X-Org SunOS, zaRwT.KiT, ZK'
+  Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Spanish, Suckit, SunOS / NSDAP, 
+  SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, 
+  Vampire, VcKit, Volc, weaponX, X-Org SunOS, zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
