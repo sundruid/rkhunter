@@ -5314,13 +5314,6 @@ do_system_check_initialisation() {
 	IGNOKIT_KSYMS=
 
 
-	# ImperalsS-FBRK (FreeBSD Rootkit)
-	IMPFRB_FILES=
-	IMPFRB_DIRS="${RKHROOTDIR}/dev/fd/.88
-		     ${RKHROOTDIR}/dev/fd/.99"
-	IMPFRB_KSYMS=
-
-
 	# IntoXonia-NG Rootkit
 	INTOXONIA_FILES=
 	INTOXONIA_DIRS=
@@ -6109,7 +6102,7 @@ do_system_check_initialisation() {
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
-	KLDSTATKEYWORDS="backd00r backdoor darkside"
+	KLDSTATKEYWORDS="backd00r backdoor darkside rpldev rpldev_mod"
 
 
 	# Suspicious startup file strings
@@ -6183,9 +6176,11 @@ do_system_check_initialisation() {
 		      bkit-adore.o
 		      cleaner.o
 		      flkm.o
+		      mod_klgr.o
 		      phide_mod.o
 		      vlogger.o
 		      p2.ko
+		      rpldev.o
 		      xC.o
 		      strings.o"
 
@@ -8245,14 +8240,6 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${IGNOKIT_FILES}
 	SCAN_DIRS=${IGNOKIT_DIRS}
 	SCAN_KSYMS=${IGNOKIT_KSYMS}
-	scanrootkit
-
-	# ImperalsS-FBRK Rootkit
-
-	SCAN_ROOTKIT="ImperalsS-FBRK Rootkit"
-	SCAN_FILES=${IMPFRB_FILES}
-	SCAN_DIRS=${IMPFRB_DIRS}
-	SCAN_KSYMS=${IMPFRB_KSYMS}
 	scanrootkit
 
 	# IntoXonia-NG Rootkit
@@ -13624,15 +13611,14 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX, 
+  Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
-  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, ImperalsS-FBRK, IntoXonia-NG, Irix, Kitko,
-  Knark, ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara,
-  Optic Kit (Tux), Oz, OSX, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
-  RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin,
-  Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
-  TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, weaponX, X-Org SunOS,
-  zaRwT.KiT, ZK'
+  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, IntoXonia-NG, Irix, Kitko, Knark, ld-linuxv.so, 
+  Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), Oz, OSX, Phalanx, 
+  Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, 
+  SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, 
+  TBD (Telnet BackDoor), TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, 
+  weaponX, X-Org SunOS, zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
