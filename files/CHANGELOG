@@ -90,6 +90,7 @@
  - Added Fu Rootkit.
  - Added ld-linuxv.so.1 LD_PRELOAD.
  - Added Adore Rootkit aka strings.o rootkit aka Dextenea.
+ - Added iLLogiC Rootkit.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
@@ -153,7 +154,7 @@
  - Improved Known bad Linux kernel modules test.
  - Improved Dreams Rootkit.
  - Improved Universal Rootkit (URK)
- - Improved FreeBSD Rootkit (FBRK)
+ - Improved FreeBSD Rootkit (FBRK) and removed standalone ImperialS version.
 
  Bugfixes:
  - When using the Korn shell the application check could give a spurious

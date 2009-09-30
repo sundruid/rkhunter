@@ -5314,6 +5314,50 @@ do_system_check_initialisation() {
 	IGNOKIT_KSYMS=
 
 
+	# iLLogiC Rootkit (SunOS Rootkit variant)
+	ILLOGIC_FILES="${RKHROOTDIR}/dev/kmod
+		       ${RKHROOTDIR}/dev/dos
+		       ${RKHROOTDIR}/usr/lib/crth.o
+		       ${RKHROOTDIR}/usr/lib/crtz.o
+		       ${RKHROOTDIR}/etc/ld.so.hash
+		       ${RKHROOTDIR}/usr/bin/sia
+		       ${RKHROOTDIR}/usr/bin/ssh2d
+		       ${RKHROOTDIR}/lib/security/.config/sn
+		       ${RKHROOTDIR}/lib/security/.config/iver
+		       ${RKHROOTDIR}/lib/security/.config/uconf.inv
+		       ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key
+		       ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key.pub
+		       ${RKHROOTDIR}/lib/security/.config/ssh/sshport
+		       ${RKHROOTDIR}/lib/security/.config/ssh/ssh_random_seed
+		       ${RKHROOTDIR}/lib/security/.config/ava
+		       ${RKHROOTDIR}/lib/security/.config/cleaner
+		       ${RKHROOTDIR}/lib/security/.config/lpsched
+		       ${RKHROOTDIR}/lib/security/.config/sz
+		       ${RKHROOTDIR}/lib/security/.config/rcp
+		       ${RKHROOTDIR}/lib/security/.config/patcher
+		       ${RKHROOTDIR}/lib/security/.config/pg
+		       ${RKHROOTDIR}/lib/security/.config/crypt
+		       ${RKHROOTDIR}/lib/security/.config/utime
+		       ${RKHROOTDIR}/lib/security/.config/wget
+		       ${RKHROOTDIR}/lib/security/.config/instmod
+		       ${RKHROOTDIR}/lib/security/.config/bin/find
+		       ${RKHROOTDIR}/lib/security/.config/bin/du
+		       ${RKHROOTDIR}/lib/security/.config/bin/ls
+		       ${RKHROOTDIR}/lib/security/.config/bin/psr
+		       ${RKHROOTDIR}/lib/security/.config/bin/netstat
+		       ${RKHROOTDIR}/lib/security/.config/bin/su
+		       ${RKHROOTDIR}/lib/security/.config/bin/ping
+		       ${RKHROOTDIR}/lib/security/.config/bin/passwd"
+	ILLOGIC_DIRS="${RKHROOTDIR}/lib/security/.config
+		      ${RKHROOTDIR}/lib/security/.config/ssh
+		      ${RKHROOTDIR}/lib/security/.config/bin
+		      ${RKHROOTDIR}/lib/security/.config/backup
+		      ${RKHROOTDIR}/root/%%%/.dir
+		      ${RKHROOTDIR}/root/%%%/.dir/mass-scan
+		      ${RKHROOTDIR}/root/%%%/.dir/flood"
+	ILLOGIC_KSYMS=
+
+
 	# IntoXonia-NG Rootkit
 	INTOXONIA_FILES=
 	INTOXONIA_DIRS=
@@ -5953,7 +5997,8 @@ do_system_check_initialisation() {
 
 
 	# Evil strings
-	STRINGSCAN="hostname:phalanx:Phalanx Rootkit
+	STRINGSCAN="crond:LOGNAME=root:Illogic Rootkit
+		    hostname:phalanx:Phalanx Rootkit
 		    init:/dev/proc/fuckit:Fuckit Rootkit
 		    init:FUCK:Possible Suckit Rootkit found
 		    init:backdoor:Possible backdoored init file (Suckit)
@@ -6026,6 +6071,12 @@ do_system_check_initialisation() {
 		    rcfile:/usr/sbin/rpc.netinet:FreeBSD (FBRK) Rootkit
 		    rcfile:/usr/lib/.fx/cons.saver:FreeBSD (FBRK) Rootkit
 		    rcfile:/usr/lib/.fx/xs:FreeBSD (FBRK) Rootkit
+		    rcfile:/ssh2d:Illogic Rootkit or SunOS Rootkit
+		    rcfile:/dev/kmod:Illogic Rootkit or SunOS Rootkit
+		    rcfile:/crth.o:Illogic Rootkit or SunOS Rootkit
+		    rcfile:/crtz.o:Illogic Rootkit or SunOS Rootkit
+		    rcfile:/dev/dos:Illogic Rootkit or SunOS Rootkit
+		    rcfile:/lpq:Illogic Rootkit or SunOS Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -6077,6 +6128,7 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Possible rootkit component
 		  file:${RKHROOTDIR}/tmp/.ush:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/usr/lib/libhidefile.so:HIDEFILE envvar filehiding library
+		  file:${RKHROOTDIR}/etc/cron.d/kmod:Illogic Rootkit
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Possible rootkit component
 		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
@@ -6098,7 +6150,9 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/dev/ida:Possible rootkit component
 		  dir:${RKHROOTDIR}/lib/java:Possible rootkit component
 		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Possible rootkit component
-		  dir:${RKHROOTDIR}/usr/lib/libshtift:Possible rootkit component"
+		  dir:${RKHROOTDIR}/usr/lib/libshtift:Possible rootkit component
+		  dir:${RKHROOTDIR}/usr/src/.poop:Ramen worm
+		  dir:${RKHROOTDIR}/dev/wd4:possible IRC bot software"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -6143,7 +6197,7 @@ do_system_check_initialisation() {
 			 xh:possible XHide alternative name
 			 emech:IRC bot software
 			 psybnc:IRC bot software
-			 mechpossible IRC bot software alternative name
+			 mech:possible IRC bot software alternative name
 			 httpd.bin:possible IRC bot software alternative name
 			 mh:Dica-Kit Rootkit IRC bot software
 			 xl:Dica-Kit Rootkit
@@ -8240,6 +8294,13 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${IGNOKIT_FILES}
 	SCAN_DIRS=${IGNOKIT_DIRS}
 	SCAN_KSYMS=${IGNOKIT_KSYMS}
+	scanrootkit
+
+	# iLLogiC Rootkit (SunOS Rootkit variant)
+	SCAN_ROOTKIT="iLLogiC Rootkit"
+	SCAN_FILES=${ILLOGIC_FILES}
+	SCAN_DIRS=${ILLOGIC_DIRS}
+	SCAN_KSYMS=${ILLOGIC_KSYMS}
 	scanrootkit
 
 	# IntoXonia-NG Rootkit
@@ -13613,12 +13674,12 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
   Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
-  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, IntoXonia-NG, Irix, Kitko, Knark, ld-linuxv.so, 
-  Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), Oz, OSX, Phalanx, 
-  Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, 
-  SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, 
-  TBD (Telnet BackDoor), TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, 
-  weaponX, X-Org SunOS, zaRwT.KiT, ZK'
+  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, IntoXonia-NG, Irix, Kitko, Knark,
+  ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), Oz, OSX,
+  Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm,
+  Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Suckit, SunOS / NSDAP, SunOS Rootkit,
+  Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, 
+  Volc, weaponX, X-Org SunOS, zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
