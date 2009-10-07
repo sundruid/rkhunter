@@ -5029,6 +5029,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/tmp/.bkp"
 	BOBKIT_KSYMS=
 
+	# Boxer-0.99b3
 
 	# cb Rootkit 
 	# The '%' character represents a space.
@@ -5422,6 +5423,7 @@ do_system_check_initialisation() {
 	LION_DIRS=
 	LION_KSYMS=
 
+	# LKH-1.1
 
 	# Lockit (a.k.a. LJK2) Rootkit
 	LOCKIT_FILES="${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_config
@@ -5445,7 +5447,7 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/top
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1sauber
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1wted
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1parser
+		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1parse
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1sniff
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1addr
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1dir
@@ -5575,6 +5577,7 @@ do_system_check_initialisation() {
 
 	# R3dstorm Toolkit
 	REDSTORM_FILES="${RKHROOTDIR}/var/log/tk02/see_all
+			${RKHROOTDIR}/var/log/tk02/.scris
 			${RKHROOTDIR}/bin/.../sshd/sbin/sshd1
 			${RKHROOTDIR}/bin/.../hate/sk
 			${RKHROOTDIR}/bin/.../see_all"
@@ -5766,7 +5769,14 @@ do_system_check_initialisation() {
 
 
 	# SunOS / NSDAP Rootkit
-	NSDAP_FILES="${RKHROOTDIR}/usr/lib/vold/nsdap/.kit
+	NSDAP_FILES="${RKHROOTDIR}/dev/pts/01/55su
+		     ${RKHROOTDIR}/dev/pts/01/55ps
+		     ${RKHROOTDIR}/dev/pts/01/55ping
+		     ${RKHROOTDIR}/dev/pts/01/55login
+		     ${RKHROOTDIR}/dev/pts/01/PATCHER_COMPLETED
+		     ${RKHROOTDIR}/dev/prom/sn.l
+		     ${RKHROOTDIR}/dev/prom/dos
+		     ${RKHROOTDIR}/usr/lib/vold/nsdap/.kit
 		     ${RKHROOTDIR}/usr/lib/vold/nsdap/defines
 		     ${RKHROOTDIR}/usr/lib/vold/nsdap/patcher
 		     ${RKHROOTDIR}/usr/lib/vold/nsdap/pg
@@ -5777,8 +5787,24 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/usr/lib/vold/nsdap/sn2
 		     ${RKHROOTDIR}/usr/lib/vold/nsdap/sniffload
 		     ${RKHROOTDIR}/usr/lib/vold/nsdap/runsniff
-		     ${RKHROOTDIR}/usr/lib/lpset"
-	NSDAP_DIRS="${RKHROOTDIR}/usr/lib/vold/nsdap"
+		     ${RKHROOTDIR}/usr/lib/lpset
+		     ${RKHROOTDIR}/usr/lib/lpstart
+		     ${RKHROOTDIR}/usr/bin/mc68000
+		     ${RKHROOTDIR}/usr/bin/mc68010
+		     ${RKHROOTDIR}/usr/bin/mc68020
+		     ${RKHROOTDIR}/usr/ucb/bin/ps
+		     ${RKHROOTDIR}/usr/bin/m68k
+		     ${RKHROOTDIR}/usr/bin/sun2
+		     ${RKHROOTDIR}/usr/bin/mc68030
+		     ${RKHROOTDIR}/usr/bin/mc68040
+		     ${RKHROOTDIR}/usr/bin/sun3
+		     ${RKHROOTDIR}/usr/bin/sun3x
+		     ${RKHROOTDIR}/usr/bin/lso
+		     ${RKHROOTDIR}/usr/bin/u370"
+	NSDAP_DIRS="${RKHROOTDIR}/dev/pts/01
+		    ${RKHROOTDIR}/dev/prom
+		    ${RKHROOTDIR}/usr/lib/vold/nsdap
+		    ${RKHROOTDIR}/.pat"
 	NSDAP_KSYMS=
 
 
@@ -6101,6 +6127,7 @@ do_system_check_initialisation() {
 		    rcfile:/dev/dos:Illogic Rootkit or SunOS Rootkit
 		    rcfile:/lpq:Illogic Rootkit or SunOS Rootkit
 		    rcfile:/usr/sbin/rescue:Spanish Rootkit
+		    rcfile:/usr/lib/lpstart:SunOS NSDAP Rootkit or Universal Rootkit (URK)
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:Possible T0rn Rootkit
@@ -6124,6 +6151,10 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/dev/hdx:Possible Linux.RST.B infection
 		  file:${RKHROOTDIR}/dev/hdx1:Possible Linux.RST.B infection
 		  file:${RKHROOTDIR}/dev/hdx2:Possible Linux.RST.B infection
+		  file:${RKHROOTDIR}/dev/ptyy:Possible rootkit component
+		  file:${RKHROOTDIR}/dev/ptyu:Possible rootkit component
+		  file:${RKHROOTDIR}/dev/ptyv:Possible rootkit component
+		  file:${RKHROOTDIR}/dev/hdbb:Possible rootkit component
 		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
 		  file:${RKHROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
 		  file:${RKHROOTDIR}/usr/info/.clib:Possible backdoor
@@ -6153,6 +6184,8 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/tmp/.ush:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/usr/lib/libhidefile.so:HIDEFILE envvar filehiding library
 		  file:${RKHROOTDIR}/etc/cron.d/kmod:Illogic Rootkit
+		  file:${RKHROOTDIR}/usr/lib/dmis/dmisd:Trojaned SSH daemon
+		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Possible rootkit component
 		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
@@ -6176,11 +6209,16 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Possible rootkit component
 		  dir:${RKHROOTDIR}/usr/lib/libshtift:Possible rootkit component
 		  dir:${RKHROOTDIR}/usr/src/.poop:Ramen worm
-		  dir:${RKHROOTDIR}/dev/wd4:possible IRC bot software"
+		  dir:${RKHROOTDIR}/dev/wd4:possible IRC bot software
+		  dir:${RKHROOTDIR}/var/run/.tmp:Possible rootkit component
+		  dir:${RKHROOTDIR}/usr/man/man1/lib/.lib:Possible rootkit component
+		  dir:${RKHROOTDIR}/dev/portd:Possible rootkit component
+		  dir:${RKHROOTDIR}/dev/...:Possible rootkit component
+		  dir:${RKHROOTDIR}/usr/share/man/mansps:Possible rootkit component"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
-	KLDSTATKEYWORDS="backd00r backdoor darkside rpldev rpldev_mod"
+	KLDSTATKEYWORDS="backd00r backdoor darkside nekit rpldev rpldev_mod spapem_core spapem_genr00t"
 
 
 	# Suspicious startup file strings
@@ -6254,6 +6292,8 @@ do_system_check_initialisation() {
 		      bkit-adore.o
 		      cleaner.o
 		      flkm.o
+		      knark.o
+		      modhide.o
 		      mod_klgr.o
 		      phide_mod.o
 		      vlogger.o
