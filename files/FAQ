@@ -153,7 +153,8 @@ A.   The RKH source contains an rkhunter.spec file which will
 
 A.   Prior to any incident it is recommended that you have read
      "Intruder Detection Checklist". This is available from
-     http://www.cert.org/tech_tips/intruder_detection_checklist.html
+     http://www.cert.org/tech_tips/intruder_detection_checklist.html or
+     http://web.archive.org/web/20080109214340/http://www.cert.org/tech_tips/intruder_detection_checklist.html
      This document will tell you what to check, and makes it easier
      for you to find out and answer any questions.
 
