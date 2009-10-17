@@ -878,39 +878,55 @@ scanrootkit() {
 	for RKHTMPVAR2 in ${SCAN_FILES}; do
 		RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
-	#case "${SCANROOTKITMODE}" in 
-	#			THOROUGH) # Search the whole filesystem
-	#				  RKHTMPVAR=`basename "${RKHTMPVAR}"`
-	#				  RKHTMPVAR=`find "${RKHROOTDIR}/ -xdev -iname "${RKHTMPVAR}"`
-	#				  for RKHTMPVARITEM in $RKHTMPVAR; do
-	#					if [ -f "${RKHTMPVAR}" -o -b "${RKHTMPVAR}" -o -c "${RKHTMPVAR}" -o -L "${RKHTMPVAR}" -o -p "${RKHTMPVAR}" -o -S "${RKHTMPVAR}" ]; then
-	#						logAlert()
-	#					fi
-	#				  done
-	#				  ;;
-	#			*)
-		if [ -f "${RKHTMPVAR}" ]; then
-			#
-			# We first check to see if the file is whitelisted. Note that we use
-			# the un-translated file name. This allows us to check for filenames
-			# with spaces, but without causing problems for our space-delimited test.
-			#
+		#
+		# If the (currently undocumented) environment variable SCANROOTKITMODE is set to "THOROUGH"
+		# then this function will search (per rootkit) for filenames in all of the 'find "${RKHROOTDIR}/" -xdev' path.
+		# While still not optimal, as it still searches for only -=names=- as opposed to -=contents=-, this is one
+		# step away from the rigidity of searching in just known or (installation) default locations.
+		#
+		# DO NOT ENABLE THIS BY DEFAULT
+		# One would only want to activate this feature as part of a more thorough investigation which itself is 
+		# suggested you should base on incident response or forensic best practices and procedures.
+		# Apart from ameliorating the case with respect to functionality (e.g. reporting) this feature does not
+		# concern itself with efficiency so asking for improvements like whitelisting, de-duping or false positives is 
+		# out of the question. If you enable this feature I assert you have the knowledge to use it properly. 
+		#
 
-			RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
-
-			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR3} \"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "${RKHTMPVAR}" rootkit
-			else
-				SCAN_STATUS=1
-				FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
-			fi
-
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
-		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
-		fi
-	#				;;
-	#esac
+		case "${SCANROOTKITMODE}" in
+			THOROUGH) # Search the whole filesystem
+					RKHTMPVAR=`basename "${RKHTMPVAR}"`
+					RKHTMPVAR=`find "${RKHROOTDIR}/" -xdev -iname "${RKHTMPVAR}"`
+					for RKHTMPVARITEM in $RKHTMPVAR; do
+						if [ -f "${RKHTMPVAR}" -o -b "${RKHTMPVAR}" -o -c "${RKHTMPVAR}" -o -L "${RKHTMPVAR}" -o -p "${RKHTMPVAR}" -o -S "${RKHTMPVAR}" ]; then
+							SCAN_STATUS=1
+							FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
+							test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+						fi
+					done
+				;;
+				*) # Scan ze old vay
+					if [ -f "${RKHTMPVAR}" ]; then
+						#
+						# We first check to see if the file is whitelisted. Note that we use
+						# the un-translated file name. This allows us to check for filenames
+						# with spaces, but without causing problems for our space-delimited test.
+						#
+	
+						RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+	
+						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR3} \"`" ]; then
+							display --to LOG --type INFO FILE_PROP_WL "${RKHTMPVAR}" rootkit
+						else
+							SCAN_STATUS=1
+							FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
+						fi
+	
+						test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+					elif [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+					fi
+				;;
+		esac
 	done
 
 
