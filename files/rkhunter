@@ -879,17 +879,19 @@ scanrootkit() {
 		RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
 		#
-		# If the (currently undocumented) environment variable SCANROOTKITMODE is set to "THOROUGH"
-		# then this function will search (per rootkit) for filenames in all of the 'find "${RKHROOTDIR}/" -xdev' path.
-		# While still not optimal, as it still searches for only -=names=- as opposed to -=contents=-, this is one
-		# step away from the rigidity of searching in just known or (installation) default locations.
+		# If the option SCANROOTKITMODE is set to "THOROUGH" the scanrootkit()  function
+		# will search (on a per rootkit basis) for filenames in all of the directories (as defined
+		# by the result of running 'find "${RKHROOTDIR}/" -xdev'). While still not optimal, as it 
+		# still searches for only file names as opposed to file contents, this is one step away
+		# from the rigidity of searching in known (evidence) or default (installation) locations.
 		#
-		# DO NOT ENABLE THIS BY DEFAULT
-		# One would only want to activate this feature as part of a more thorough investigation which itself is 
-		# suggested you should base on incident response or forensic best practices and procedures.
+		# THIS OPTION SHOULD NOT BE ENABLED BY DEFAULT
+		# You should only activate this feature as part of a more thorough investigation which
+		# should be based on relevant best practices and procedures. 
 		# Apart from ameliorating the case with respect to functionality (e.g. reporting) this feature does not
 		# concern itself with efficiency so asking for improvements like whitelisting, de-duping or false positives is 
-		# out of the question. If you enable this feature I assert you have the knowledge to use it properly. 
+		# out of the question.
+		# Enabling this feature implies you have the knowledge to interprete results properly.
 		#
 
 		case "${SCANROOTKITMODE}" in
@@ -6120,6 +6122,7 @@ do_system_check_initialisation() {
 		    pstree:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    pgrep:libproc.so.2.0.7:Fuckit Rootkit
 		    pkill:libproc.so.2.0.7:Fuckit Rootkit
+		    ping:/bin/bash:Ping rootkit or other backdoor
 		    rpc.nfsd:cant open log:Possible sniffer installed
 		    rpc.nfsd:sniff.pid:Possible sniffer installed
 		    rpc.nfsd:tcp.log:Possible sniffer installed
@@ -6217,6 +6220,7 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/usr/lib/libhidefile.so:HIDEFILE envvar filehiding library
 		  file:${RKHROOTDIR}/etc/cron.d/kmod:Illogic Rootkit
 		  file:${RKHROOTDIR}/usr/lib/dmis/dmisd:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/lib/secure/libhij.so:Solaris Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Possible rootkit component
@@ -6262,15 +6266,15 @@ do_system_check_initialisation() {
 
 	# Suspicious open files
 	SUSP_FILES_INFO="backdoor:Generic backdoor
-			 adore.o:Adore LKM rootkit
+			 adore.o:Adore kernel module
 			 mod_rootme.so:Apache mod_rootme backdoor
-			 phide_mod.o:PID hider LKM
+			 phide_mod.o:Process hiding kernel module
 			 lbk.ko:LBK FreeBSD kernel module
 			 vlogger.o:THC-Vlogger kernel module
-			 cleaner.o:Cleaner kernel module
-			 cleaner:Possible Adore LKM rootkit component
-			 ava:Possible Adore LKM rootkit component
-			 tzava:Possible Adore LKM rootkit component
+			 cleaner.o:Adore kernel module
+			 cleaner:Possible Adore rootkit component
+			 ava:Possible Adore rootkit component
+			 tzava:Possible Adore rootkit component
 			 mod_klgr.o:klgr, keyboard logger (kernel module)
 			 hydra:THC-Hydra (password capture)
 			 hydra.restore:THC-Hydra (password capture)
@@ -6287,7 +6291,7 @@ do_system_check_initialisation() {
 			 sshdu:Unknown rootkit
 			 glotzer:Unknown rootkit
 			 holber:Devil rootkit component
-			 xhide:XHide process name faker
+			 xhide:Process hiding software
 			 xh:possible XHide alternative name
 			 emech:IRC bot software
 			 psybnc:IRC bot software
@@ -6295,7 +6299,8 @@ do_system_check_initialisation() {
 			 httpd.bin:possible IRC bot software alternative name
 			 mh:Dica-Kit Rootkit IRC bot software
 			 xl:Dica-Kit Rootkit
-			 write:Dica-Kit Rootkit"
+			 write:Dica-Kit Rootkit
+			 Phantasmagoria.o:Process hiding Linux kernel module"
 
 
 	# System startup file pathnames
