@@ -5858,9 +5858,12 @@ do_system_check_initialisation() {
 	SUNOSROOTKIT_KSYMS=
 
 
-	# Superkit Rootkit
-	SUPERKIT_FILES="${RKHROOTDIR}/usr/man/.sman/sk"
-	SUPERKIT_DIRS=
+	# Superkit Rootkit (Suckit 1.3b-based)
+	SUPERKIT_FILES="${RKHROOTDIR}/usr/man/.sman/sk/backsh
+			${RKHROOTDIR}/usr/man/.sman/sk/izbtrag
+			${RKHROOTDIR}/usr/man/.sman/sk/sksniff
+			${RKHROOTDIR}/var/www/cgi-bin/cgiback.cgi"
+	SUPERKIT_DIRS="${RKHROOTDIR}/usr/man/.sman/sk"
 	SUPERKIT_KSYMS=
 
 
@@ -5926,6 +5929,26 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib
 		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.backup"
 	TORN_KSYMS=
+
+
+	# trNkit
+	TRNKIT_FILES="${RKHROOTDIR}/usr/lib/libbins.la
+		      ${RKHROOTDIR}/usr/lib/libtcs.so
+		      ${RKHROOTDIR}/dev/.ttpy/ulogin.sh
+		      ${RKHROOTDIR}/dev/.ttpy/tcpshell.sh
+		      ${RKHROOTDIR}/dev/.ttpy/bupdu
+		      ${RKHROOTDIR}/dev/.ttpy/buloc
+		      ${RKHROOTDIR}/dev/.ttpy/buloc1
+		      ${RKHROOTDIR}/dev/.ttpy/buloc2
+		      ${RKHROOTDIR}/dev/.ttpy/stat
+		      ${RKHROOTDIR}/dev/.ttpy/backps
+		      ${RKHROOTDIR}/dev/.ttpy/tree
+		      ${RKHROOTDIR}/dev/.ttpy/topk
+		      ${RKHROOTDIR}/dev/.ttpy/wold
+		      ${RKHROOTDIR}/dev/.ttpy/whoold
+		      ${RKHROOTDIR}/dev/.ttpy/backdoors"
+	TRNKIT_DIRS=
+	TRKNIT_KSYMS=
 
 
 	# Trojanit Kit Rootkit
@@ -6084,6 +6107,8 @@ do_system_check_initialisation() {
 		    init:/dev/proc/fuckit:Fuckit Rootkit
 		    init:FUCK:Possible Suckit Rootkit found
 		    init:backdoor:Possible backdoored init file (Suckit)
+		    init:/usr/bin/rcpc:Portacelo Rootkit
+		    init:/usr/sbin/login:trNkit ulogin
 		    killall:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    login:vt200:Possible Linux Rootkit (LRK4)
 		    login:/usr/bin/xstat:Possible Linux Rootkit (LRK4)
@@ -6300,7 +6325,9 @@ do_system_check_initialisation() {
 			 mh:Dica-Kit Rootkit IRC bot software
 			 xl:Dica-Kit Rootkit
 			 write:Dica-Kit Rootkit
-			 Phantasmagoria.o:Process hiding Linux kernel module"
+			 Phantasmagoria.o:Process hiding Linux kernel module
+			 lkt.o:Portacelo Rootkit
+			 nlkt.o:Portacelo Rootkit"
 
 
 	# System startup file pathnames
