@@ -622,6 +622,15 @@ doInstall()  {
 			fi
 			;;
 		*.dat)
+			if [ "${FILE}" = "mirrors.dat" -a -f "${RKHINST_DB_DIR}/mirrors.dat" ]; then
+				RKHTMPVAR=`egrep '^(local|remote)=' ${RKHINST_DB_DIR}/mirrors.dat 2>/dev/null`
+
+				if [ -n "${RKHTMPVAR}" ]; then
+					echo " Installing ${FILE}: Locally modified - not overwritten"
+					continue
+				fi
+			fi
+
 			cp -f ./files/"${FILE}" "${RKHINST_DB_DIR}"
 			ERRCODE=$?
 

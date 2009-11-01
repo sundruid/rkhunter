@@ -207,6 +207,8 @@
  - When using the '--debug' option, and running the 'suspscan' test, the debug
    file itself could be logged as suspicious. It is now skipped from the test.
  - Ensure the /proc/ksyms or /proc/kallsyms file is readable before using it.
+ - If the mirrors.dat file has been locally modified to provide a mirror, then
+   the installer will no longer overwrite the file.
 
 -- 
 
