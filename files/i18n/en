@@ -1,4 +1,4 @@
-Version:2009091601
+Version:2009110101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -160,7 +160,7 @@ MIRRORS_ROTATED:Mirrors file '$1' has been rotated.
 MIRRORS_SF_DEFAULT:Using the SourceForge mirror: $1
 
 DOWNLOAD_CMD:Executing download command '$1'
-DOWNLOAD_FAIL:Download failed - $1 mirrors left.
+DOWNLOAD_FAIL:Download failed - $1 mirror(s) left.
 
 VERSIONCHECK_START:Checking rkhunter version...
 VERSIONCHECK_FAIL_ALL:Download failed: Unable to determine the latest program version number.
