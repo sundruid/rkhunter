@@ -5962,11 +5962,23 @@ do_system_check_initialisation() {
 
 
 	# Tuxtendo (Tuxkit) Rootkit
-	TUXTENDO_FILES="${RKHROOTDIR}/dev/tux/.addr
+	TUXTENDO_FILES="${RKHROOTDIR}/lib/libproc.so.2.0.7
+			${RKHROOTDIR}/usr/bin/xchk
+			${RKHROOTDIR}/usr/bin/xsf
+			${RKHROOTDIR}/dev/tux/suidsh
+			${RKHROOTDIR}/dev/tux/.addr
 			${RKHROOTDIR}/dev/tux/.cron
 			${RKHROOTDIR}/dev/tux/.file
 			${RKHROOTDIR}/dev/tux/.log
 			${RKHROOTDIR}/dev/tux/.proc
+			${RKHROOTDIR}/dev/tux/.iface
+			${RKHROOTDIR}/dev/tux/.pw
+			${RKHROOTDIR}/dev/tux/.df
+			${RKHROOTDIR}/dev/tux/ssh2/sshd2_config
+			${RKHROOTDIR}/dev/tux/ssh2/hostkey
+			${RKHROOTDIR}/dev/tux/ssh2/hostkey.pub
+			${RKHROOTDIR}/dev/tux/ssh2/logo
+			${RKHROOTDIR}/dev/tux/ssh2/random_seed
 			${RKHROOTDIR}/dev/tux/backup/crontab
 			${RKHROOTDIR}/dev/tux/backup/df
 			${RKHROOTDIR}/dev/tux/backup/dir
@@ -6051,10 +6063,12 @@ do_system_check_initialisation() {
 		   ${RKHROOTDIR}/usr/lib/volc/backup"
 	VOLC_KSYMS=
 
+
 	# weaponX 0.1
 	WEAPONX_FILES="${RKHROOTDIR}/System/Library/Extensions/WeaponX.kext"
 	WEAPONX_DIRS="${RKHROOTDIR}/tmp/..."
 	WEAPONX_KSYMS=
+
 
 	# X-Org SunOS Rootkit
 	XORGSUNOS_FILES="${RKHROOTDIR}/usr/lib/libX.a/bin/tmpfl
