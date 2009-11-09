@@ -10,7 +10,7 @@ Version:2009110901
 1524:Possible FreeBSD (FBRK) Rootkit backdoor:TCP:
 1984:Fuckit Rootkit:TCP:
 2001:Scalper:UDP:
-2006:CB:TCP:
+2006:CB Rootkit or w00tkit Rootkit SSH server:TCP:
 2128:MRK:TCP:
 6666:Possible rogue IRC bot:TCP:
 6667:Possible rogue IRC bot:TCP:
