@@ -8547,7 +8547,7 @@ rootkit_file_dir_checks() {
 	SCAN_ROOTKIT="ld-linuxv.so"
 	SCAN_FILES=${LINUXV_FILES}
 	SCAN_DIRS=${LINUXV_DIRS}
-	SCAN_KSYMS=
+	SCAN_KSYMS=${LINUXV_KSYMS}
 	scanrootkit
 
 	# Li0n Worm
@@ -8606,11 +8606,13 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${OPTICKIT_KSYMS}
 	scanrootkit
 
+	# OSX Rootkit 0.2.1
+
 	if [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
-		# OSX Rootkit 0.2.1
 		SCAN_ROOTKIT="OSX Rootkit"
 		SCAN_FILES="${OSXRK_FILES}"
 		SCAN_DIRS="${OSXRK_DIRS}"
+		SCAN_KSYMS=${OSXRK_KSYMS}
 		scanrootkit
 	fi
 
@@ -8961,6 +8963,7 @@ rootkit_file_dir_checks() {
 	scanrootkit
 
 	# 'Spanish' Rootkit
+
 	SCAN_ROOTKIT="'Spanish' Rootkit"
 	SCAN_FILES=${SPANISH_FILES}
 	SCAN_DIRS=${SPANISH_DIRS}
@@ -9078,6 +9081,7 @@ rootkit_file_dir_checks() {
 		SCAN_ROOTKIT="weaponX Rootkit"
 		SCAN_FILES=${WEAPONX_FILES}
 		SCAN_DIRS=${WEAPONX_DIRS}
+		SCAN_KSYMS=${WEAPONX_KSYMS}
 		scanrootkit
 	fi
 
