@@ -5936,7 +5936,7 @@ do_system_check_initialisation() {
 	TORN_KSYMS=
 
 
-	# trNkit
+	# trNkit Rootkit
 	TRNKIT_FILES="${RKHROOTDIR}/usr/lib/libbins.la
 		      ${RKHROOTDIR}/usr/lib/libtcs.so
 		      ${RKHROOTDIR}/dev/.ttpy/ulogin.sh
@@ -5953,7 +5953,7 @@ do_system_check_initialisation() {
 		      ${RKHROOTDIR}/dev/.ttpy/whoold
 		      ${RKHROOTDIR}/dev/.ttpy/backdoors"
 	TRNKIT_DIRS=
-	TRKNIT_KSYMS=
+	TRNKIT_KSYMS=
 
 
 	# Trojanit Kit Rootkit
@@ -9025,6 +9025,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${TORN_FILES}
 	SCAN_DIRS=${TORN_DIRS}
 	SCAN_KSYMS=${TORN_KSYMS}
+	scanrootkit
+
+	# TrNkit Rootkit
+
+	SCAN_ROOTKIT="trNkit Rootkit"
+	SCAN_FILES=${TRNKIT_FILES}
+	SCAN_DIRS=${TRNKIT_DIRS}
+	SCAN_KSYMS=${TRNKIT_KSYMS}
 	scanrootkit
 
 	# Trojanit Kit
@@ -13904,7 +13912,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), Oz, OSX,
   Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm,
   Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Spanish, Suckit, SunOS / NSDAP, 
-  SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn, Trojanit Kit, Tuxtendo, URK, 
+  SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, 
   Vampire, VcKit, Volc, w00tkit, weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.

@@ -93,6 +93,7 @@
  - Added iLLogiC rootkit check.
  - Added 'Spanish' rootkit check.
  - Added Xzibit rootkit check.
+ - Added trNkit rootkit check.
 
  Changes:
  - Removed the 'os_specific' test for OpenBSD. The *BSD test is currently
