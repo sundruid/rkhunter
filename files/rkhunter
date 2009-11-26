@@ -5428,7 +5428,7 @@ do_system_check_initialisation() {
 	KNARK_KSYMS=
 
 
-	# ld-linuxv.so LD_PRELOAD
+	# ld-linuxv.so (LD_PRELOAD shared library rootkit)
 	LINUXV_FILES="${RKHROOTDIR}/lib/ld-linuxv.so.1"
 	LINUXV_DIRS="${RKHROOTDIR}/var/opt/_so_cache
 		     ${RKHROOTDIR}/var/opt/_so_cache/ld
@@ -8542,9 +8542,9 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${KNARK_KSYMS}
 	scanrootkit
 
-	# ld-linuxv.so LD_PRELOAD
+	# ld-linuxv.so (LD_PRELOAD shared library rootkit)
 
-	SCAN_ROOTKIT="ld-linuxv.so"
+	SCAN_ROOTKIT="ld-linuxv.so Rootkit"
 	SCAN_FILES=${LINUXV_FILES}
 	SCAN_DIRS=${LINUXV_DIRS}
 	SCAN_KSYMS=${LINUXV_KSYMS}
