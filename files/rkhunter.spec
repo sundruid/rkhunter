@@ -119,6 +119,9 @@ fi
 
 
 %changelog
+* Fri Nov 27 2009 jhorne - 1.3.6
+- Spec sync.
+
 * Sat Jul 18 2009 jhorne - 1.3.5
 - Do not verify the checksum, size or mtime of the database
   files or the i18n files.
