@@ -488,7 +488,7 @@ to this:
  mirrors.dat  rkhunter_latest.dat    i18n    suspscan.dat
                                       ||
                                       ||
-                  1.3.4 ============ 1.3.5 ============ 1.3.6
+                  1.3.5 ============ 1.3.6 ============ 1.3.7
                   / | \              / | \              / | \
                  /  |  \            /  |  \            /  |  \
                cn  en  i18n.ver   cn  en  i18n.ver   cn  en  i18n.ver

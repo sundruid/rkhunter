@@ -24,7 +24,7 @@ of the GNU General Public License. See LICENSE for details.
 "
 
 APPNAME="rkhunter"
-APPVERSION="1.3.5"
+APPVERSION="1.3.6"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0750"
 RKHINST_MODE_RW="0640"
