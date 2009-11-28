@@ -12552,7 +12552,9 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
 				VERSION=`echo "${WHOLE_VERSION}" | egrep '^(named|BIND)[ 	][ 	]*[0-9]' | grep -v '/' | awk '{ print $2 }'`
 
-				if [ -n "`echo \"${VERSION}\" | grep '-'`" ]; then
+				if [ -n "`echo \"${VERSION}\" | grep '^[^-]*\.[0-9][0-9]*-P[^-]*-'`" ]; then
+					VERSION=`echo "${VERSION}" | cut -d'-' -f1-2`
+				elif [ -n "`echo \"${VERSION}\" | grep '^[^-]*\.[0-9][0-9]*-[^P]'`" ]; then
 					VERSION=`echo "${VERSION}" | cut -d'-' -f1`
 				fi
 
@@ -12563,6 +12565,10 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 			openssl)
 				WHOLE_VERSION=`${APP_CMD_FOUND} version 2>/dev/null`
 				VERSION=`echo "${WHOLE_VERSION}" | grep '^OpenSSL[ 	][ 	]*[0-9]' | cut -d' ' -f2`
+
+				if [ -n "`echo \"${VERSION}\" | grep '^[^-]*-fips'`" ]; then
+					VERSION=`echo "${VERSION}" | cut -d'-' -f1`
+				fi
 				;;
 			php)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
