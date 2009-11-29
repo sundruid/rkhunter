@@ -68,6 +68,9 @@ The latest version of this FAQ can be found at the RKH web site.
         installed. How it this possible?
    5.2) Can I be notified when a new release will be available?
 
+ 6. WHITELISTING EXAMPLES
+
+   6.1) Common whitelisting examples
 
 ===========================================================
 
@@ -406,7 +409,7 @@ A.   The first run of rkhunter after an installation will usually give
      message. Once the reason for the warning has been found, and you
      believe that rkhunter has given a false-positive result, then
      looking in the configuration file may show you that the relevant
-     item can be whitelisted.
+     item can be whitelisted. Also see WHITELISTING EXAMPLES below.
 
 
 3.8) When I used the '--propupd' option, Rootkit Hunter told me
@@ -594,3 +597,39 @@ A.   Yes, you can join the rkhunter-announce mailing list. This is
 
 ===========================================================
 
+6. WHITELISTING EXAMPLES
+========================
+
+6.1) After Rootkit Hunter has run you may encounter items in the log file
+     you would like to whitelist. First verify that the entries are
+     safe to add. The results of running these commands can be added to 
+     your rkhunter.conf. Please adjust the commands and the location of
+     your rkhunter.log and verify the results before adding them. Do not
+     automate adding whitelist entries to your rkhunter.conf. 
+
+     Allow script replacements ("properties" test):
+     awk -F"'" '/replaced by a script/ {print "SCRIPTWHITELIST="$2}' rkhunter.log
+
+     Allow processes using deleted files ("deleted_files" test):
+     awk '/Process: / {print "ALLOWPROCDELFILE="$3}' rkhunter.log | sort -u
+
+     Allow Xinetd services:
+     awk '/Found enabled xinetd service/ {print $NF}' rkhunter.log |\
+      xargs -iX grep -e "server[[:blank:]]" 'X' | awk '{print "XINETD_ALLOWED_SVC="$NF}'
+
+     Allow packet capturing applications ("packet_cap_apps" test):
+     awk -F"'" '/is listening on the network/ {print "ALLOWPROCLISTEN="$2}' rkhunter.log
+
+     Allow "suspicious" files ("filesystem" test):
+     grep '^\[..:..:..\][[:blank:]]\{6\}.*/dev/shm/.*:' rkhunter.log |\
+      awk '{print "ALLOWDEVFILE="$2}' | sed -e "s|:$||g"
+
+     Allow hidden directories ("filesystem" test):
+     awk '/Warning: Hidden directory/ {print "ALLOWHIDDENDIR="$6}' rkhunter.log
+
+     Allow hidden files ("filesystem" test):
+     awk '/Warning: Hidden file/ {print "ALLOWHIDDENFILE="$6}' rkhunter.log |\
+      sed -e "s|:$||g"
+
+
+===========================================================
