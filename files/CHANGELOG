@@ -78,6 +78,11 @@
    configured default language, and English (en), are always updated.
  - Added the ALLOWPROMISCIF configuration option. This can be used to
    specify network interfaces which are allowed to be in promiscuous mode.
+ - Added the SCANROOTKITMODE configuration option. If set to "THOROUGH" then
+   the scanrootkit function will search for filenames in all directories.
+   While still not optimal this is one step away from the rigidity of
+   searching only in known locations. Enabling this feature implies you have
+   the knowledge to interprete results properly.
  - Added OSX rootkit check.
  - Added weaponX rootkit check.
  - Added the PKGMGR_NO_VRFY configuration option. This allows specified

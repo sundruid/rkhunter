@@ -7963,6 +7963,16 @@ suspscan() {
 		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_THRESH "${SUSPSCAN_THRESH}"
 	fi
 
+	#
+	# Get the line threshold. This exists purely for performance reasons. 3000 seems sensible as
+	# Linux Kernel Modules don't exceed 2000 lines and for example most binaries in /bin don't exceed 3000 lines.
+	# Note this configuration option will remain unlisted in both the documentation or configuration file.
+	#
+
+	SUSPSCAN_LINETHRESH=`get_option 1 single SUSPSCAN_LINETHRESH` || exit 1
+	if [ -z "${SUSPSCAN_LINETHRESH}" ]; then
+		SUSPSCAN_LINETHRESH=3000
+	fi
 
 	#
 	# Start the test.
@@ -8063,7 +8073,7 @@ suspscan() {
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
 					SUSPSCAN_STRINGS=""
 
-					$STRINGS_CMD -n 4 "${SUSPSCAN_ITEM}" >${FILENAME} 2>&1
+					$STRINGS_CMD -n 4 "${SUSPSCAN_ITEM}" | head -n $SUSPSCAN_LINETHRESH >${FILENAME} 2>&1
 
 					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail -1` ; do
 

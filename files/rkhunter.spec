@@ -119,6 +119,9 @@ fi
 
 
 %changelog
+* Sun Nov 29 2009 unSpawn - 1.3.6
+- For changes please see the CHANGELOG.
+
 * Fri Nov 27 2009 jhorne - 1.3.6
 - Spec sync.
 
