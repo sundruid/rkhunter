@@ -23,6 +23,8 @@ software, and you are welcome to redistribute it under the terms
 of the GNU General Public License. See LICENSE for details.
 "
 
+# testing comment - jh
+
 APPNAME="rkhunter"
 APPVERSION="1.3.6"
 RKHINST_OWNER="0:0"
