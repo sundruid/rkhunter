@@ -12491,7 +12491,7 @@ do_app_checks() {
 		   openssl:OpenSSL
 		   php:PHP
 		   procmail:Procmail MTA
-		   proftpd:ProFTPd
+		   proftpd:ProFTPD
 		   sshd:OpenSSH"
 
 	APPS_TOTAL_COUNT=`echo "${APP_NAMES}" | wc -l | tr -d ' '`
@@ -12590,7 +12590,7 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				;;
 			proftpd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-				VERSION=`echo "${WHOLE_VERSION}" | grep 'ProFTPD[ 	][ 	]*Version[ 	][ 	]*[0-9]' | awk '{ print $4 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep 'ProFTPD[ 	][ 	]*Version[ 	][ 	]*[0-9]' | awk '{ print $3 }'`
 				;;
 			sshd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -t -d 2>&1`
