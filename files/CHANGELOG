@@ -26,6 +26,7 @@
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
+ - Make the apps test version number check case-independent.
 
 -- 
 

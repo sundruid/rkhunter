@@ -12621,10 +12621,10 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 
 			RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\./\\\./g'`
 
-			if [ -n "`echo \"${APP_WHITELIST}\" | grep \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
+			if [ -n "`echo \"${APP_WHITELIST}\" | grep -i \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
 				APP_RESULTS="${APP_RESULTS}
 ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%-1"
-			elif [ -n "`egrep \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" ${DB_PATH}/programs_bad.dat 2>&1`" ]; then
+			elif [ -n "`egrep -i \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" ${DB_PATH}/programs_bad.dat 2>&1`" ]; then
 				APPS_FAILED_COUNT=`expr ${APPS_FAILED_COUNT} + 1`
 
 				APP_RESULTS="${APP_RESULTS}
