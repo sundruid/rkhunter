@@ -27,6 +27,7 @@
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
  - Make the apps test version number check case-independent.
+ - Allow 'unhide' command to run on Linux systems.
 
 -- 
 

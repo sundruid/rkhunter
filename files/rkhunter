@@ -9779,7 +9779,7 @@ ${PROC} ${PID} ${FNAME}"
 		RKHTMPVAR="unhide"
 		UNHIDE_CMD=`find_cmd unhide`
 
-		if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		if [ "${OPERATING_SYSTEM}" = "Linux" -a -z "${UNHIDE_CMD}" ]; then
 			if [ -n "`uname -r | grep '^2\.6'`" ]; then
 				RKHTMPVAR="unhide-linux26"
 				UNHIDE_CMD=`find_cmd unhide-linux26`
