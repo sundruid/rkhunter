@@ -13215,10 +13215,10 @@ set_file_prop_dirs_files() {
 	fi
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide"
+
 		if [ -n "`uname -r | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
-		else
-			PROP_FILE_LIST="${PROP_FILE_LIST} unhide"
 		fi
         elif [ $SUNOS -eq 1 -o $BSDOS -eq 1 ]; then
 		PROP_FILE_LIST="${PROP_FILE_LIST} unhide"
