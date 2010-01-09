@@ -10945,34 +10945,32 @@ do_network_interface_checks() {
 		if [ -n "${IFCONFIG_CMD}" ]; then
 			PROMISCSCAN1=""; PROMISCSCAN2=""
 
-			IFWLIST=`get_option 2 single ALLOWPROMISCIF` || exit 1
+			IFWLIST=`get_option 2 multi ALLOWPROMISCIF` || exit 1
 
 			if [ -n "${IFWLIST}" ]; then
 				display --to LOG --type INFO NETWORK_PROMISC_WLIST "${IFWLIST}"
 
 				IFWLIST=`echo "${IFWLIST}" | tr ' ' '|'`
-			else
-				IFWLIST=" "
 			fi
 
 			case "${OPERATING_SYSTEM}" in
 			*BSD|AIX)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /pflog/ && $1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /pflog/ && $1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
 				;;
 			SunOS)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
 				;;
 			IRIX*)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
+				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
 				;;
 			*)
-				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^'"${IFWLIST}"'/ && /PROMISC/ { print }'`
+				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
 				;;
 			esac
 
 			if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
 				if [ -n "${IP_CMD}" ]; then
-					PROMISCSCAN2=`${IP_CMD} -s link | grep 'PROMISC'`
+					PROMISCSCAN2=`${IP_CMD} link | grep '^[0-9]' | grep -vE "^[0-9][0-9]*: (${IFWLIST}):" | grep 'PROMISC'`
 				else
 					display --to LOG --type INFO NETWORK_PROMISC_NO_IP
 				fi
@@ -10990,14 +10988,32 @@ do_network_interface_checks() {
 
 				display --to LOG --type WARNING NETWORK_PROMISC_IF
 
-				display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_1 "${PROMISCSCAN1}"
+				PROMISCSCAN1=`echo "${PROMISCSCAN1}" | awk '$0 !~ /^ / || /PROMISC/ { print }'`
+
+				display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_1
+
+				IFS=$IFSNL
+
+				for IFACE in ${PROMISCSCAN1}; do
+					display --to LOG --type PLAIN --log-indent 13 NAME "${IFACE}"
+				done
+
+				IFS=$RKHIFS
+
 
 				if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${PROMISCSCAN2}" ]; then
-					PROMISCSCAN2=`echo "${PROMISCSCAN2}" | cut -d: -f2`
+					display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_2
 
+					PROMISCSCAN2=`echo "${PROMISCSCAN2}" | cut -d: -f2-`
+
+					IFS=$IFSNL
+
+					# Only indent by 12 spaces here because the output starts with a space.
 					for IFACE in ${PROMISCSCAN2}; do
-						display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_2 "${IFACE}"
+						display --to LOG --type PLAIN --log-indent 12 NAME "${IFACE}"
 					done
+
+					IFS=$RKHIFS
 				fi
 			fi
 		else
