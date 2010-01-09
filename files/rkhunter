@@ -2327,7 +2327,7 @@ get_ports_option() {
 	# checks that it is valid.
 	#
 
-	RKHTMPVAR=`get_option 2 single PORT_WHITELIST` || exit 1
+	RKHTMPVAR=`get_option 2 multi PORT_WHITELIST` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		#
@@ -2959,7 +2959,7 @@ get_rtkt_whitelist_options() {
 	# There are no defaults.
 	#
 
-	RTKT_FILE_WHITELIST=`get_option 2 single RTKT_FILE_WHITELIST` || exit 1
+	RTKT_FILE_WHITELIST=`get_option 2 multi RTKT_FILE_WHITELIST` || exit 1
 
 	if [ -n "${RTKT_FILE_WHITELIST}" ]; then
 		#
@@ -2983,7 +2983,7 @@ get_rtkt_whitelist_options() {
 	fi
 
 
-	RTKT_DIR_WHITELIST=`get_option 2 single RTKT_DIR_WHITELIST` || exit 1
+	RTKT_DIR_WHITELIST=`get_option 2 multi RTKT_DIR_WHITELIST` || exit 1
 
 	if [ -n "${RTKT_DIR_WHITELIST}" ]; then
 		#
@@ -3017,7 +3017,7 @@ get_shared_lib_whitelist_option() {
 	# from the configuration file. There are no defaults.
 	#
 
-	SHARED_LIB_WHITELIST=`get_option 2 single SHARED_LIB_WHITELIST` || exit 1
+	SHARED_LIB_WHITELIST=`get_option 2 multi SHARED_LIB_WHITELIST` || exit 1
 
 	if [ -n "${SHARED_LIB_WHITELIST}" ]; then
 		SHARED_LIB_WHITELIST=" ${SHARED_LIB_WHITELIST} "
@@ -11526,7 +11526,7 @@ do_group_accounts_check() {
 		# We need to ignore any whitelisted UID 0 accounts.
 		#
 
-		UID0_WHITELIST=`get_option 2 single UID0_ACCOUNTS` || exit 1
+		UID0_WHITELIST=`get_option 2 multi UID0_ACCOUNTS` || exit 1
 		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
 		UID_LIST=""
@@ -11585,7 +11585,7 @@ ${RKHTMPVAR}"
 
 	WL_SEEN=""
 
-	PWD_WHITELIST=`get_option 2 single PWDLESS_ACCOUNTS` || exit 1
+	PWD_WHITELIST=`get_option 2 multi PWDLESS_ACCOUNTS` || exit 1
 	PWD_WHITELIST=" ${PWD_WHITELIST} "
 
 	PWD_PWDLESS_LIST=""
@@ -12519,7 +12519,7 @@ do_app_checks() {
 
 	APP_WHITELIST=""
 
-	RKHTMVAR=`get_option 2 single APP_WHITELIST` || exit 1
+	RKHTMVAR=`get_option 2 multi APP_WHITELIST` || exit 1
 
 	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[:upper:]' '[:lower:]'`
 

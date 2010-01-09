@@ -24,6 +24,8 @@
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
+ - Allow most of the whitelisting-type configuration options to
+   be specified more than once in the configuration file.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
