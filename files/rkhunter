@@ -10954,17 +10954,22 @@ do_network_interface_checks() {
 			fi
 
 			case "${OPERATING_SYSTEM}" in
-			*BSD|AIX)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /pflog/ && $1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
+			*BSD)
+				if [ -z "${IFWLIST}" ]; then
+					PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^pflog/ && /PROMISC/ { print }'`
+				else
+					PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^pflog/ && $1 !~ /^('${IFWLIST}'):$/ && /PROMISC/ { print }'`
+				fi
 				;;
-			SunOS)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
-				;;
-			IRIX*)
-				PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
+			SunOS|IRIX*|AIX)
+				if [ -z "${IFWLIST}" ]; then
+					PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '/PROMISC/ { print }'`
+				else
+					PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^('${IFWLIST}'):$/ && /PROMISC/ { print }'`
+				fi
 				;;
 			*)
-				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}')$/ && /PROMISC/ { print }'`
+				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}'):?$/ && /PROMISC/ { print }'`
 				;;
 			esac
 
