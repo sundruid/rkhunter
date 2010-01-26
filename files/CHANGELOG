@@ -32,6 +32,8 @@
  - Make the apps test version number check case-independent.
  - Ensure the promiscuous interface whitelisting is applied to both
    parts of the test. Corrected and tidied up the displayed output.
+ - Correct the test of rkhunter itself being changed to a non-script
+   file.
 
 -- 
 
