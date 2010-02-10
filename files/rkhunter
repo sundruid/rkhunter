@@ -7982,7 +7982,7 @@ suspscan() {
 	FOUNDDIRS=""
 	FILENAME="${SUSPSCAN_TEMP}/suspscan.$$.strings"
 
-	rm -f "${SUSPSCAN_TEMP}/suspscan.*.strings" >/dev/null 2>&1
+	rm -f ${SUSPSCAN_TEMP}/suspscan.*.strings >/dev/null 2>&1
 
 	#
 	# Set a temporary file to log scan results to.
@@ -8174,7 +8174,7 @@ suspscan() {
 		fi
 	done
 
-	rm -f "${SUSPSCAN_TEMP}/suspscan.*.strings" >/dev/null 2>&1
+	rm -f ${SUSPSCAN_TEMP}/suspscan.*.strings >/dev/null 2>&1
 
 
 	#
