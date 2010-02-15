@@ -7975,6 +7975,17 @@ suspscan() {
 	fi
 
 	#
+	# Get the debug flag value (defaults to 0). Setting this to 1 will cause verbose messages to be displayed
+	# which will result in more warnings than you will want. Changing the SUSPSCAN_DEBUG default value implies
+	# you know what you do and that you don't need help "fixing" things afterwards.
+	#
+
+	SUSPSCAN_DEBUG=`get_option 1 single SUSPSCAN_DEBUG` || exit 1
+	if [ -z "${SUSPSCAN_DEBUG}" ]; then
+		SUSPSCAN_DEBUG=0
+	fi
+
+	#
 	# Start the test.
 	#
 
@@ -7998,7 +8009,7 @@ suspscan() {
 		if [ -d "${SUSPSCAN_DIR}" ]; then
 			FOUND=0
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
+			if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 				echo "4 SUSPSCAN_DIR_CHECK "${SUSPSCAN_DIR}"" >> "${SUSPSCAN_TMPFILE}"
 			fi
 
@@ -8019,11 +8030,11 @@ suspscan() {
 
 						SUSPSCAN_ITEM=`${READLINK_CMD} -f ${RKHTMPVAR}`
 
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
+						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 							echo "6 SUSPSCAN_FILE_LINK_CHANGE "${RKHTMPVAR}" "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
 						fi
 					else
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
+						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 							echo "6 SUSPSCAN_FILE_SKIPPED_LINK "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
 						fi
 
@@ -8037,13 +8048,13 @@ suspscan() {
 				#
 
 				if [ ! -s "${SUSPSCAN_ITEM}" ]; then
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
+					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 						echo "6 SUSPSCAN_FILE_SKIPPED_EMPTY "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
 					fi
 
 					continue
 				elif [ -z "`${FIND_CMD} "${SUSPSCAN_ITEM}" -size -${SUSPSCAN_MAXSIZE}c 2>/dev/null`" ]; then
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
+					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 						echo "6 SUSPSCAN_FILE_SKIPPED_SIZE "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
 					fi
 
@@ -8139,13 +8150,10 @@ suspscan() {
 
 					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 						echo "6 SUSPSCAN_FILE_CHECK_DEBUG "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE" "$SUSPSCAN_HITCOUNT" "${SUSPSCAN_STRINGS}"" >> "${SUSPSCAN_TMPFILE}"
-					else
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							echo "6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"" >> "${SUSPSCAN_TMPFILE}"
-						fi
 					fi
 
 					if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
+						echo "6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"" >> "${SUSPSCAN_TMPFILE}"
 						echo "SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"" >> "${SUSPSCAN_TMPFILE}"
 					fi
 
@@ -8156,15 +8164,19 @@ suspscan() {
 				#
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'corrupted section header size'`" ]; then
-					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible UPX-compressed or Dexter01s obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
+					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
+						echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible UPX-compressed or Dexter01s obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
+					fi
 
 				#
 				# ELF ultimate compression kit (ELFuck)
 				#
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'invalid class invalid byte order'`" ]; then
-					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible ELFuck obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
-				elif [ $VERBOSE_LOGGING -eq 1 ]; then
+					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
+						echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible ELFuck obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
+					fi
+				elif [ $SUSPSCAN_DEBUG -eq 1 ]; then
 					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "${FTYPE}"" >> "${SUSPSCAN_TMPFILE}"
 				fi
 			done
@@ -8189,7 +8201,9 @@ suspscan() {
 					SUSPSCAN_FILE_SKIPPED_TYPE)
 						SUSP_SKIP_ITEM=`echo "$LINE" | cut -d ' ' -f 3`
 						SUSP_SKIP_MSG=`echo "$LINE" | cut -d ' ' -f 4-`
-						display --to LOG --type PLAIN --log-indent $LOGCHAR $LOGTYPE "${SUSP_SKIP_ITEM}" "${SUSP_SKIP_MSG}"
+						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
+							display --to LOG --type PLAIN --log-indent $LOGCHAR $LOGTYPE "${SUSP_SKIP_ITEM}" "${SUSP_SKIP_MSG}"
+						fi
 					;;
 					*)
 						display --to LOG --type PLAIN --log-indent $LINE
@@ -8202,7 +8216,7 @@ suspscan() {
 		esac
 	done
 
-	FOUNDDIRS=`grep "SUSPSCAN_FILE_CHECK" "${SUSPSCAN_TMPFILE}" | head -n 1`
+	FOUNDDIRS=`grep "^SUSPSCAN_FILE_CHECK" "${SUSPSCAN_TMPFILE}" | head -n 1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else
