@@ -1702,6 +1702,8 @@ get_rootdir_option() {
 	# Now check that the given option is usable.
 	#
 
+	test "${RKHROOTDIR}" = "/" && RKHROOTDIR=""
+
 	if [ -n "${RKHROOTDIR}" ]; then
 		if [ ! -d "${RKHROOTDIR}" ]; then
 			echo "The root directory does not exist: ${RKHROOTDIR}"

@@ -36,6 +36,9 @@
  - Correct the test of rkhunter itself being changed to a non-script
    file.
  - Ensure the suspscan test removes any files it creates. (Again!)
+ - The --rootdir/ROOTDIR configuration option now works correctly if
+   specified as '/'. Previously it caused the file properties file
+   entries to become a bit messed up.
 
 -- 
 
