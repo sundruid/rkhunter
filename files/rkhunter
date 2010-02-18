@@ -7999,8 +7999,8 @@ suspscan() {
 	# Set a temporary file to log scan results to.
 	#
 
-        get_temp_file "${RKHTMPDIR}/suspscan.tmp"
-        SUSPSCAN_TMPFILE=$TEMPFILE
+	get_temp_file "${RKHTMPDIR}/suspscan.tmp"
+	SUSPSCAN_TMPFILE=$TEMPFILE
 	touch ${SUSPSCAN_TMPFILE}
 
 
@@ -11689,6 +11689,9 @@ ${RKHTMPVAR}"
 		IFS=$IFSNL
 
 		for RKHTMPVAR in `grep '^[^:]*::' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`; do
+			# Ignore any NIS/YP entries
+			test "${RKHTMPVAR}" = "+" && continue
+
 			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
 
 			if [ -z "`echo \"${PWD_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
