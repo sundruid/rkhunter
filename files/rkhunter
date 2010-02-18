@@ -8001,6 +8001,7 @@ suspscan() {
 
         get_temp_file "${RKHTMPDIR}/suspscan.tmp"
         SUSPSCAN_TMPFILE=$TEMPFILE
+	touch ${SUSPSCAN_TMPFILE}
 
 
 	for DIR in ${SUSPSCAN_DIRS}; do
@@ -8216,7 +8217,7 @@ suspscan() {
 		esac
 	done
 
-	FOUNDDIRS=`grep "^SUSPSCAN_FILE_CHECK" "${SUSPSCAN_TMPFILE}" | head -n 1`
+	FOUNDDIRS=`grep "^6 SUSPSCAN_FILE_CHECK" "${SUSPSCAN_TMPFILE}" | head -n 1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else
