@@ -39,6 +39,12 @@
  - The --rootdir/ROOTDIR configuration option now works correctly if
    specified as '/'. Previously it caused the file properties file
    entries to become a bit messed up.
+ - The file properties immutable test checked the 'lsattr' command
+   against the rkhunter configuration file. However, if the file was
+   a symbolic link, then the test failed. Now the test checks 'lsattr'
+   against the file properties database file (rkhunter.dat). This file
+   cannot be a symbolic link (if it is then rkhunter gives an error
+   and stops).
 
 -- 
 

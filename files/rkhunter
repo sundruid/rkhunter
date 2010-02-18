@@ -6852,7 +6852,7 @@ file_properties_check() {
 			if [ -z "${LSATTR_CMD}" ]; then
 				SKIP_IMMUT=1
 				RKHTMPVAR="${RKHTMPVAR} immutable"
-			elif [ -z "`${LSATTR_CMD} ${CONFIGFILE} 2>/dev/null`" ]; then
+			elif [ -z "`${LSATTR_CMD} ${RKHDAT_FILE} 2>/dev/null`" ]; then
 				SKIP_IMMUT=1
 				RKHTMPVAR="${RKHTMPVAR} immutable-cmd"
 			fi
