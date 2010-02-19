@@ -68,6 +68,7 @@ The latest version of this FAQ can be found at the RKH web site.
         installed. How it this possible?
    5.2) Can I be notified when a new release will be available?
 
+
  6. WHITELISTING EXAMPLES
 
    6.1) Common whitelisting examples
@@ -599,12 +600,13 @@ A.   Yes, you can join the rkhunter-announce mailing list. This is
 6. WHITELISTING EXAMPLES
 ========================
 
-6.1) After Rootkit Hunter has run you may encounter items in the log file
-     you would like to whitelist. First verify that the entries are
-     safe to add. The results of running these commands can be added to 
-     your rkhunter.conf. Please adjust the commands and the location of
-     your rkhunter.log and verify the results before adding them. Do not
-     automate adding whitelist entries to your rkhunter.conf. 
+6.1) After Rootkit Hunter has run you may encounter items in the log
+     file you would like to whitelist. First verify that the entries
+     are safe to add. The results of running these commands can be
+     added to your 'rkhunter.conf.local' configuration file. Please
+     adjust the commands, and the location of your 'rkhunter.log' log
+     file, and verify the results before adding them. Do not automate
+     adding whitelist entries to your configuration file.
 
      Allow script replacements ("properties" test):
      awk -F"'" '/replaced by a script/ {print "SCRIPTWHITELIST="$2}' rkhunter.log
