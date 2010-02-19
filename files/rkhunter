@@ -896,7 +896,7 @@ scanrootkit() {
 
 		case "${SCANROOTKITMODE}" in
 			THOROUGH) # Search the whole filesystem
-					RKHTMPVAR=`basename "${RKHTMPVAR}"`
+					RKHTMPVAR=`${BASENAME_CMD} "${RKHTMPVAR}"`
 					RKHTMPVAR=`find "${RKHROOTDIR}/" -xdev -iname "${RKHTMPVAR}"`
 					for RKHTMPVARITEM in $RKHTMPVAR; do
 						if [ -f "${RKHTMPVAR}" -o -b "${RKHTMPVAR}" -o -c "${RKHTMPVAR}" -o -L "${RKHTMPVAR}" -o -p "${RKHTMPVAR}" -o -S "${RKHTMPVAR}" ]; then
@@ -12161,7 +12161,7 @@ do_dev_whitelist_check() {
 
 	test -z "${FNAME}" && return
 
-	FILE=`echo "${FNAME}" | cut -d: -f1 | sed -e "s:^${RKHROOTDIR}::"`
+	FILE=`echo "${RKHTMPVAR}" | sed -e "s:^${RKHROOTDIR}::"`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FILE} \"`" ]; then
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"

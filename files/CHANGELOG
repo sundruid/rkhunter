@@ -45,6 +45,8 @@
    against the file properties database file (rkhunter.dat). This file
    cannot be a symbolic link (if it is then rkhunter gives an error
    and stops).
+ - The ALLOWDEVFILE whitelisting now allows filenames to contain
+   colon (:) characters.
 
 -- 
 
