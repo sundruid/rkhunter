@@ -2197,12 +2197,16 @@ get_enable_option() {
 	# Check that the names we have been given are valid.
 	#
 
-	RKHTMPVAR=" all `echo ${KNOWN_TESTS}` "
+	RKHTMPVAR=" `echo ${KNOWN_TESTS}` "
 
 	for TEST_NAME in ${ENABLE_TESTS}; do
 		if [ "${TEST_NAME}" = "none" ]; then
-			echo "'none' cannot be used in the enable test list."
+			test $ENABLE_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
+			echo "'none' cannot be used in the${RKHTMPVAR} enable test list."
 			exit 1
+		elif [ "${TEST_NAME}" = "all" ]; then
+			ENABLE_TESTS="all"
+			break
 		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
 			echo "Unknown enable test name given: ${TEST_NAME}"
 			exit 1
@@ -2260,12 +2264,18 @@ get_disable_option() {
 	# Check that the names we have been given are valid.
 	#
 
-	RKHTMPVAR=" all none `echo ${KNOWN_TESTS}` "
+	RKHTMPVAR=" `echo ${KNOWN_TESTS}` "
 
 	for TEST_NAME in ${DISABLE_TESTS}; do
 		if [ "${TEST_NAME}" = "all" ]; then
-			echo "'all' cannot be used in the disable test list."
-			exit 1
+			if [ $ENDIS_OPT -eq 0 -o $ENABLE_OPT -eq 0 ]; then
+				test $ENDIS_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
+				echo "'all' cannot be used in the${RKHTMPVAR} disable test list."
+				exit 1
+			else
+				DISABLE_TESTS="all"
+				break
+			fi
 		elif [ "${TEST_NAME}" = "none" ]; then
 			DISABLE_TESTS="none"
 			break
@@ -3406,6 +3416,12 @@ get_configfile_options() {
 
 		get_enable_option
 		get_disable_option
+
+		if [ "${ENABLE_TESTS}" != "all" -a "${ENABLE_TESTS}" = "${DISABLE_TESTS}" ]; then
+			test $ENDIS_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
+			echo "The${RKHTMPVAR} enabled and disabled tests are the same."
+			exit 1
+		fi
 	fi
 
 	if [ $CHECK -eq 1 ]; then
@@ -13978,6 +13994,7 @@ DISABLE_TESTS=""
 
 # Set if the command-line options --enable or --disable have been used.
 ENDIS_OPT=0
+ENABLE_OPT=0
 
 # Set if the --list option has been used.
 LIST_OPT=""
@@ -14217,6 +14234,7 @@ while [ $# -ge 1 ]; do
 		*)
 			shift
 			ENDIS_OPT=1
+			ENABLE_OPT=1
 			ENABLE_TESTS="$1"
 			;;
 		esac

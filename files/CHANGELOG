@@ -27,6 +27,13 @@
  - Allow most of the whitelisting-type configuration options to
    be specified more than once in the configuration file.
  - NIS entries are now ignored when checking the password file.
+ - The use of '--disable all' on the command-line is now allowed
+   provided that the '--enable' option is also used, and not set
+   to 'none'. Disabling all the tests in the configuration file
+   will still give an error.
+ - If the enabled and disabled test name(s) are the same, then an
+   error will now be displayed. This only applies to certain
+   non-grouped test names.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
