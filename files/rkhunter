@@ -12801,7 +12801,20 @@ display_check_summary() {
 
 		if [ -n "${ROOTKIT_FAILED_NAMES}" ]; then
 			ROOTKIT_FAILED_NAMES=`echo "${ROOTKIT_FAILED_NAMES}" | sed -e 's/, $//'`
-			display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_NAMES "${ROOTKIT_FAILED_NAMES}"
+
+			IFS=","
+			RKHTMPVAR2=""
+
+			for RTKT_NAME in ${ROOTKIT_FAILED_NAMES}; do
+				if [ -z "`echo \" ${ROOTKIT_FAILED_NAMES},\" | grep \" ${RTKT_NAME},\"`" ]; then
+					RKHTMPVAR2="${RKHTMPVAR2}${RTKT_NAME}, "
+				fi
+			done
+
+			IFS=$RKHIFS
+			RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/^ *//; s/ *, $//'`
+
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_NAMES "${RKHTMPVAR2}"
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_CHKS_SKIPPED

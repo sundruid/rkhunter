@@ -54,6 +54,9 @@
    and stops).
  - The ALLOWDEVFILE whitelisting now allows filenames to contain
    colon (:) characters.
+ - The rootkit summary could list detected rootkit names more than once.
+   This has now been corrected, each rootkit name will only be
+   displayed once.
 
 -- 
 
