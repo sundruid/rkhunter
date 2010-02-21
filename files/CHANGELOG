@@ -56,7 +56,10 @@
    colon (:) characters.
  - The rootkit summary could list detected rootkit names more than once.
    This has now been corrected, each rootkit name will only be
-   displayed once.
+   displayed once. The rootkit count will also now only show the number
+   of unique rootkits found.
+ - It was possible for part of the summary to be displayed twice. This
+   has now been corrected so that it only displays once.
 
 -- 
 

@@ -12796,26 +12796,29 @@ display_check_summary() {
 	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_RKT_SCAN
 
 	if `check_test rootkits || check_test startup_malware`; then
-		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_COUNT $ROOTKIT_COUNT
-		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_FAILED $ROOTKIT_FAILED_COUNT
+		RKHTMPVAR2=""
 
 		if [ -n "${ROOTKIT_FAILED_NAMES}" ]; then
 			ROOTKIT_FAILED_NAMES=`echo "${ROOTKIT_FAILED_NAMES}" | sed -e 's/, $//'`
 
 			IFS=","
-			RKHTMPVAR2=""
 
 			for RTKT_NAME in ${ROOTKIT_FAILED_NAMES}; do
 				if [ -z "`echo \" ${ROOTKIT_FAILED_NAMES},\" | grep \" ${RTKT_NAME},\"`" ]; then
 					RKHTMPVAR2="${RKHTMPVAR2}${RTKT_NAME}, "
+				else
+					ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT - 1`
 				fi
 			done
 
 			IFS=$RKHIFS
 			RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/^ *//; s/ *, $//'`
-
-			display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_NAMES "${RKHTMPVAR2}"
 		fi
+
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_COUNT $ROOTKIT_COUNT
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_FAILED $ROOTKIT_FAILED_COUNT
+
+		test -n "${RKHTMPVAR2}" && display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_NAMES "${RKHTMPVAR2}"
 	else
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_CHKS_SKIPPED
 	fi
@@ -12836,7 +12839,7 @@ display_check_summary() {
 
 
 	#
-	# Display the amount of time the system checking took.
+	# Display the amount of time the system check took.
 	#
 
 	if [ $BEGINTIME -eq 0 ]; then
@@ -13007,6 +13010,8 @@ do_system_check() {
 	# Display the summary of the results.
 	#
 
+	RKH_WARN_DISPLYD=0
+
 	if [ $SHOW_SUMMARY -eq 1 ]; then
 		#
 		# Unfortunately we need to do a kludge here!
@@ -13024,6 +13029,7 @@ do_system_check() {
 		if [ $WARNING_COUNT -eq 0 ]; then
 			display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_NOT_FOUND
 		else
+			RKH_WARN_DISPLYD=1
 			display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND
 
 			if [ $NOLOG -eq 1 ]; then
@@ -13053,7 +13059,7 @@ do_system_check() {
 	#
 
 	if [ $WARNING_COUNT -gt 0 ]; then
-		if [ $SHOWWARNINGSONLY -eq 1 ]; then
+		if [ $SHOWWARNINGSONLY -eq 1 -a $RKH_WARN_DISPLYD -eq 0 ]; then
 			#
 			# Unfortunately we need to do a kludge again!
 			# By requesting that only warnings are shown,
