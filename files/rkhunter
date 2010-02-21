@@ -1149,6 +1149,19 @@ check_commands() {
 
 
 	#
+	# For Solaris systems we should use the 'gstrings' command
+	# rather than 'strings', if it is available.
+	#
+
+	if [ $SUNOS -eq 1 ]; then
+		if [ "${STRINGS_CMD}" != "DISABLED" -a "${STRINGS_CMD}" != "BUILTIN" ]; then
+			RKHTMPVAR=`find_cmd gstrings`
+			test -n "${RKHTMPVAR}" && STRINGS_CMD="${RKHTMPVAR}"
+		fi
+	fi
+
+
+	#
 	# Finally we must remove all the DISABLED commands.
 	#
 
@@ -9425,7 +9438,7 @@ possible_rootkit_string_checks() {
 			FOUNDFILE=1
 
 			for FNAME in ${RC_PATHS}; do
-				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep "${STRING}"`
+				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep -v '^#' | grep "${STRING}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
 					RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
@@ -12799,12 +12812,12 @@ display_check_summary() {
 		RKHTMPVAR2=""
 
 		if [ -n "${ROOTKIT_FAILED_NAMES}" ]; then
-			ROOTKIT_FAILED_NAMES=`echo "${ROOTKIT_FAILED_NAMES}" | sed -e 's/, $//'`
+			ROOTKIT_FAILED_NAMES=`echo "${ROOTKIT_FAILED_NAMES}" | sed -e 's/, */,/g; s/,$//'`
 
 			IFS=","
 
 			for RTKT_NAME in ${ROOTKIT_FAILED_NAMES}; do
-				if [ -z "`echo \" ${ROOTKIT_FAILED_NAMES},\" | grep \" ${RTKT_NAME},\"`" ]; then
+				if [ -z "`echo \" ${RKHTMPVAR2},\" | grep \" ${RTKT_NAME},\"`" ]; then
 					RKHTMPVAR2="${RKHTMPVAR2}${RTKT_NAME}, "
 				else
 					ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT - 1`
@@ -12812,7 +12825,7 @@ display_check_summary() {
 			done
 
 			IFS=$RKHIFS
-			RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/^ *//; s/ *, $//'`
+			RKHTMPVAR2=`echo "${RKHTMPVAR2}" | sed -e 's/, $//'`
 		fi
 
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_RKT_COUNT $ROOTKIT_COUNT

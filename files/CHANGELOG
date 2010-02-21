@@ -60,6 +60,9 @@
    of unique rootkits found.
  - It was possible for part of the summary to be displayed twice. This
    has now been corrected so that it only displays once.
+ - For system startup files (rc files), the rootkit strings check now
+   ignores comment lines (lines starting with '#'). For Solaris systems,
+   the 'gstrings' command is used rather than 'strings' if it exists.
 
 -- 
 
