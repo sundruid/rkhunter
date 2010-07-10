@@ -392,6 +392,11 @@ display() {
 	if [ -n "${MSG}" ]; then
 		LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
 
+		if [ $RKHCHKLOCALE -eq 1 ]; then
+			LINE1=`echo "${LINE1}" | ${ICONV_CMD} -f UTF-8 -t ${RKHCHRMAP} 2>/dev/null`
+			test $? -ne 0 && LINE1=""
+		fi
+
 		if [ -z "${LINE1}" ]; then
 			LANG_FILE="${DB_PATH}/i18n/en"
 			LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
@@ -606,7 +611,7 @@ get_option() {
 		OPTVAR=`echo "${OPTVAR}" | tr -d '" 	' | tr -d "'"`
 		;;
 	2)
-		OPTVAR=`echo "${OPTVAR}" | tr ',' ' ' | tr '	' ' ' | tr -s '	'`
+		OPTVAR=`echo "${OPTVAR}" | tr '	' ' ' | tr -s '	'`
 
 		#
 		# We must handle the MAIL_CMD option specially because it may
@@ -1257,6 +1262,20 @@ get_language_option() {
 			echo "The English language file must be present: ${DB_PATH}/i18n/en"
 			echo "If it has been deleted, then you will need to run 'rkhunter --update' with no other options."
 			exit 1
+		fi
+	fi
+
+	#
+	# Next sort out the locale used if the language is German.
+	#
+
+	if [ "${LANGUAGE}" = "de" ]; then
+		ICONV_CMD=`find_cmd iconv`
+		LOCALE_CMD=`find_cmd locale`
+
+		if [ -n "${ICONV_CMD}" -a -n "${LOCALE_CMD}" ]; then
+			RKHCHRMAP=`${LOCALE_CMD} charmap 2>/dev/null`
+			test -n "${RKHCHRMAP}" && RKHCHKLOCALE=1
 		fi
 	fi
 
@@ -4660,7 +4679,7 @@ do_i18n_update() {
 			fi
 
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
-				PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail -1 | cut -d: -f2`
+				PROG_VERS=`grep ${GREP_OPT} '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail -1 | cut -d: -f2`
 
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
@@ -13877,6 +13896,9 @@ ID_CMD="id"
 # Set if we don't want to wait for a keypress after each test.
 SKIP_KEY_PRESS=0
 
+# Does 'grep' need an extra option to check binary files?
+GREP_OPT=""
+
 # Is this the Gentoo operating system?
 GENTOO=0
 
@@ -13889,6 +13911,7 @@ case "${OPERATING_SYSTEM}" in
 *BSD)
 	BSDOS=1
 	HASH_FLD_IDX=4
+	GREP_OPT="-a"
 	;;
 SunOS)
 	SUNOS=1
@@ -13976,6 +13999,11 @@ RET_CODE=0
 # Initially there is no language, this will be set later.
 LANGUAGE=""
 UPDATE_LANG=""
+
+LOCALE_CMD=""
+ICONV_CMD=""
+RKHCHRMAP=""
+RKHCHKLOCALE=0
 
 # A space-separated list of test names we recognise.
 KNOWN_TESTS="strings properties hashes scripts immutable attributes

@@ -63,6 +63,13 @@
  - For system startup files (rc files), the rootkit strings check now
    ignores comment lines (lines starting with '#'). For Solaris systems,
    the 'gstrings' command is used rather than 'strings' if it exists.
+ - Allow *BSD 'grep' to work correctly with binary (i18n) files.
+ - Removed the configuration file option use of a comma as an option
+   separator. Now only spaces and tabs can be used. Use of a comma would
+   prevent known rootkit files and directories, as well as RCS files, from
+   being whitelisted correctly.
+ - When the German language is selected rkhunter will now try to display
+   messages using the correct encoding.
 
 -- 
 

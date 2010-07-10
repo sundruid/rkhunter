@@ -1,4 +1,4 @@
-Version:2009091601
+Version:2009091602
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -130,7 +130,7 @@ PRESSENTER:[<ENTER> um fortzufahren]
 TEST_SKIPPED_OS:Test '$1' übersprungen wegen des Betriebssystems: $2
 
 SUMMARY_TITLE1:Zusammenfassung der Systemüberprüfung
-SUMMARY_TITLE2:=====================
+SUMMARY_TITLE2:=====================================
 SUMMARY_PROP_SCAN:Dateieigenschaften-Überprüfung...
 SUMMARY_PROP_REQCMDS:Überprüfung der erforderlichen Befehle fehlgeschlagen
 SUMMARY_PROP_COUNT:Dateien überprüft: $1
