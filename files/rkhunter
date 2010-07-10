@@ -6411,9 +6411,9 @@ do_system_check_initialisation() {
 
 
 	# Suspicious startup file strings
-	RCLOCAL_STRINGS="/usr/bin/rpc.wall:Possible Linux Rootkit (LRK4)
-			 sshdd:Possible GasKit rootkit
-			 hidef:Possible part of Knark rootkit
+	RCLOCAL_STRINGS="/usr/bin/rpc.wall:Linux Rootkit (LRK4)
+			 sshdd:GasKit Rootkit
+			 hidef:Knark Rootkit
 			 /usr/bin/.etc:Dica-Kit Rootkit"
 
 
@@ -9445,12 +9445,14 @@ possible_rootkit_string_checks() {
 
 		FILE=`echo ${RKHTMPVAR} | cut -d: -f1`
 		FILESTRING=`echo ${RKHTMPVAR} | cut -d: -f2`
+
 		if [ `echo ${FILESTRING} | cut -c 1` = "+" ]; then
 			STRING=`echo ${FILESTRING} | cut -c 2-`
 			FILESTRING="${STRING}"
 		else
 			STRING=`echo ${FILESTRING} | sed -e 's/\./\\\./g'`
 		fi
+
 		INFO=`echo ${RKHTMPVAR} | cut -d: -f3`
 
 		if [ "${FILE}" = "rcfile" ]; then
@@ -11329,21 +11331,26 @@ do_system_startup_file_checks() {
 	for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
 		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
 
-		STR=`echo ${RKHTMPVAR} | cut -d: -f1`
-		STRING=`echo ${STR} | sed -e 's/\./\\\./g'`
-		RCSTRINGS="${RCSTRINGS} ${STRING}"
+		STRING=`echo ${RKHTMPVAR} | cut -d: -f1 | sed -e 's/\./\\\./g'`
 		INFO=`echo ${RKHTMPVAR} | cut -d: -f2`
+
+		RCSTRINGS="${RCSTRINGS}
+${STRING}:${INFO}"
 
 		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 	done
 
 	IFS=$RKHIFS
 
-	RCSTRINGS=`echo ${RCSTRINGS}`
+	RCSTRINGS=`echo "${RCSTRINGS}" | sed -e '/^$/d'`
 
 
 	for FNAME in ${RC_PATHS}; do
-		for STRING in ${RCSTRINGS}; do
+		IFS=$IFSNL
+
+		for STR in ${RCSTRINGS}; do
+			STRING=`echo ${STR} | cut -d: -f1`
+
 			if [ -n "`grep "${STRING}" ${FNAME} | egrep -v '^[ 	]*#'`" ]; then
 				RKHTMPVAR=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
@@ -11351,10 +11358,17 @@ do_system_startup_file_checks() {
 					display --to LOG --type INFO FILE_PROP_WL "${FNAME}" startup_malware
 				else
 					FOUND=1
-					FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${STR}:${INFO}"
+
+					STRING=`echo ${STRING} | sed -e 's/\\\//g'`
+					INFO=`echo ${STR} | cut -d: -f2`
+
+					FOUNDSTRINGS="${FOUNDSTRINGS}
+${FNAME}:${STRING}:${INFO}"
 				fi
 			fi
 		done
+
+		IFS=$RKHIFS
 	done
 
 
@@ -11367,14 +11381,13 @@ do_system_startup_file_checks() {
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_MALWARE
 
-		IFS="%"
+		IFS=$IFSNL
+
+		FOUNDSTRINGS=`echo "${FOUNDSTRINGS}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${FOUNDSTRINGS}; do
-			STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
-
-			test -z "${STRING}" && continue
-
 			FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
+			STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
 
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`

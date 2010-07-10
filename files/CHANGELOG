@@ -70,6 +70,8 @@
    being whitelisted correctly.
  - When the German language is selected rkhunter will now try to display
    messages using the correct encoding.
+ - The test of rootkit strings in the startup files could display the
+   wrong string and rootkit. It now displays the correct information.
 
 -- 
 
