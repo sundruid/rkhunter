@@ -6222,9 +6222,9 @@ do_system_check_initialisation() {
 		    hostname:phalanx:Phalanx Rootkit
 		    init:/dev/proc/fuckit:Fuckit Rootkit
 		    init:FUCK:Suckit Rootkit
-		    init:backdoor:Backdoored init file (Suckit)
+		    init:backdoor:Suckit Rootkit (backdoored init file)
 		    init:/usr/bin/rcpc:Portacelo Rootkit
-		    init:/usr/sbin/login:trNkit ulogin
+		    init:/usr/sbin/login:trNkit Rootkit ulogin
 		    killall:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    login:vt200:Linux Rootkit (LRK4)
 		    login:/usr/bin/xstat:Linux Rootkit (LRK4)
@@ -6277,7 +6277,7 @@ do_system_check_initialisation() {
 		    tcpd:/dev/xdta:Dica-Kit Rootkit
 		    top:/usr/lib/.tbd:TBD Rootkit
 		    top:/dev/ptyxx/.proc:Ambient (ark) Rootkit
-		    xtty:/bin/sh:Backdoor shell installed
+		    xtty:/bin/sh:Backdoor shell
 		    ttymon:fucknut:SHV5 Rootkit
 		    ttymon:lamersucks:SHV5 Rootkit
 		    ttymon:skillz:SHV5 Rootkit
@@ -6326,85 +6326,85 @@ do_system_check_initialisation() {
 
 
 	# Possible rootkit files and directories
-	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:Possible T0rn Rootkit MD5 hash database
-		  file:${RKHROOTDIR}/dev/pisu:Possible rootkit component
+	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:T0rn Rootkit MD5 hash database
+		  file:${RKHROOTDIR}/dev/pisu:Rootkit component
 		  file:${RKHROOTDIR}/dev/xdta:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/dev/saux:Trojaned SSH daemon sniffer log
-		  file:${RKHROOTDIR}/dev/hdx:Possible Linux.RST.B infection
-		  file:${RKHROOTDIR}/dev/hdx1:Possible Linux.RST.B infection
-		  file:${RKHROOTDIR}/dev/hdx2:Possible Linux.RST.B infection
-		  file:${RKHROOTDIR}/dev/ptyy:Possible rootkit component
-		  file:${RKHROOTDIR}/dev/ptyu:Possible rootkit component
-		  file:${RKHROOTDIR}/dev/ptyv:Possible rootkit component
-		  file:${RKHROOTDIR}/dev/hdbb:Possible rootkit component
+		  file:${RKHROOTDIR}/dev/hdx:Linux.RST.B infection
+		  file:${RKHROOTDIR}/dev/hdx1:Linux.RST.B infection
+		  file:${RKHROOTDIR}/dev/hdx2:Linux.RST.B infection
+		  file:${RKHROOTDIR}/dev/ptyy:Rootkit component
+		  file:${RKHROOTDIR}/dev/ptyu:Rootkit component
+		  file:${RKHROOTDIR}/dev/ptyv:Rootkit component
+		  file:${RKHROOTDIR}/dev/hdbb:Rootkit component
 		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
-		  file:${RKHROOTDIR}/tmp/.bash_history:Possible Lite5-r Rootkit
-		  file:${RKHROOTDIR}/usr/info/.clib:Possible backdoor
-		  file:${RKHROOTDIR}/usr/sbin/tcp.log:Possible sniffer log
+		  file:${RKHROOTDIR}/tmp/.bash_history:Lite5-r Rootkit
+		  file:${RKHROOTDIR}/usr/info/.clib:Backdoor component
+		  file:${RKHROOTDIR}/usr/sbin/tcp.log:Sniffer log
 		  file:${RKHROOTDIR}/usr/bin/take/pid:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/sbin/create:MzOzD Local backdoor
 		  file:${RKHROOTDIR}/dev/ttypz:spwn login backdoor
-		  file:${RKHROOTDIR}/var/log/tcp.log:Possible beX2 Rootkit component
-		  file:${RKHROOTDIR}/usr/include/audit.h:Possible beX2 Rootkit component
-		  file:${RKHROOTDIR}/usr/bin/sourcemask:Possible rootkit component
-		  file:${RKHROOTDIR}/usr/bin/ras2xm:Possible rootkit component
+		  file:${RKHROOTDIR}/var/log/tcp.log:beX2 Rootkit
+		  file:${RKHROOTDIR}/usr/include/audit.h:beX2 Rootkit
+		  file:${RKHROOTDIR}/usr/bin/sourcemask:Rootkit component
+		  file:${RKHROOTDIR}/usr/bin/ras2xm:Rootkit component
 		  file:${RKHROOTDIR}/dev/xmx:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/usr/sbin/gpm.root:Possible rootkit component
-		  file:${RKHROOTDIR}/bin/vobiscum:Possible rootkit component
-		  file:${RKHROOTDIR}/bin/psr:Possible rootkit component
-		  file:${RKHROOTDIR}/dev/kdx:Possible rootkit component
-		  file:${RKHROOTDIR}/dev/dkx:Possible rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/sshd3:Possible rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/jcd:Possible rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Possible rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/atd2:Possible rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/gpm.root:Rootkit component
+		  file:${RKHROOTDIR}/bin/vobiscum:Rootkit component
+		  file:${RKHROOTDIR}/bin/psr:Rootkit component
+		  file:${RKHROOTDIR}/dev/kdx:Rootkit component
+		  file:${RKHROOTDIR}/dev/dkx:Rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/sshd3:Rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/jcd:Rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/atd2:Rootkit component
 		  file:${RKHROOTDIR}/home/httpd/cgi-bin/linux.cgi:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/home/httpd/cgi-bin/psid:Dica-Kit Rootkit
 		  file:${RKHROOTDIR}/home/httpd/cgi-bin/void.cgi:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/system:Possible rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Possible rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/system:Rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Rootkit component
 		  file:${RKHROOTDIR}/tmp/.ush:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/usr/lib/libhidefile.so:HIDEFILE envvar filehiding library
+		  file:${RKHROOTDIR}/usr/lib/libhidefile.so:HIDEFILE envvar file-hiding library
 		  file:${RKHROOTDIR}/etc/cron.d/kmod:Illogic Rootkit
 		  file:${RKHROOTDIR}/usr/lib/dmis/dmisd:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/lib/secure/libhij.so:Solaris Trojaned SSH daemon
-		  file:${RKHROOTDIR}/usr/sbin/sshd3:Possible rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/crontab:Possible rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Possible rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/atd2:Possible rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/rc5.d/S93users:Possible rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/sshd3:Rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/crontab:Rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/atd2:Rootkit component
+		  file:${RKHROOTDIR}/etc/rc.d/rc5.d/S93users:Rootkit component
 		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
-		  dir:${RKHROOTDIR}/usr/src/.lib:Possible rootkit component
-		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Possible Eggdrop installed
-		  dir:${RKHROOTDIR}/lib/lblip.tk:Possible T0rn Rootkit directory with backdoored SSH-configuration
-		  dir:${RKHROOTDIR}/usr/sbin/...:Possible rootkit component
-		  dir:${RKHROOTDIR}/usr/share/.gun:Possible rootkit component
+		  dir:${RKHROOTDIR}/usr/src/.lib:Rootkit component
+		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Eggdrop (IRC bot)
+		  dir:${RKHROOTDIR}/lib/lblip.tk:T0rn Rootkit directory with backdoored SSH-configuration
+		  dir:${RKHROOTDIR}/usr/sbin/...:Rootkit component
+		  dir:${RKHROOTDIR}/usr/share/.gun:Rootkit component
 		  dir:${RKHROOTDIR}/unde/vrei/tu/sa/te/ascunzi/in/server:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/man/man1/..  /.dir:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/X11R6/include/X11/...:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/X11R6/lib/X11/.fonts/misc/...:Unknown rootkit
-		  dir:${RKHROOTDIR}/tmp/.sys:Possible rootkit component
-		  dir:${RKHROOTDIR}/tmp/':Possible rootkit component
-		  dir:${RKHROOTDIR}/tmp/.,:Possible rootkit component
-		  dir:${RKHROOTDIR}/tmp/,.,:Possible rootkit component
-		  dir:${RKHROOTDIR}/dev/shm/emilien:Possible rootkit component
-		  dir:${RKHROOTDIR}/var/tmp/.log:Possible rootkit component
-		  dir:${RKHROOTDIR}/tmp/zmeu/... :Possible rootkit component
-		  dir:${RKHROOTDIR}/var/log/ssh:Possible rootkit component
-		  dir:${RKHROOTDIR}/dev/ida:Possible rootkit component
-		  dir:${RKHROOTDIR}/lib/java:Possible rootkit component
-		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Possible rootkit component
-		  dir:${RKHROOTDIR}/usr/lib/libshtift:Possible rootkit component
+		  dir:${RKHROOTDIR}/tmp/.sys:Rootkit component
+		  dir:${RKHROOTDIR}/tmp/':Rootkit component
+		  dir:${RKHROOTDIR}/tmp/.,:Rootkit component
+		  dir:${RKHROOTDIR}/tmp/,.,:Rootkit component
+		  dir:${RKHROOTDIR}/dev/shm/emilien:Rootkit component
+		  dir:${RKHROOTDIR}/var/tmp/.log:Rootkit component
+		  dir:${RKHROOTDIR}/tmp/zmeu/... :Rootkit component
+		  dir:${RKHROOTDIR}/var/log/ssh:Rootkit component
+		  dir:${RKHROOTDIR}/dev/ida:Rootkit component
+		  dir:${RKHROOTDIR}/lib/java:Rootkit component
+		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Rootkit component
+		  dir:${RKHROOTDIR}/usr/lib/libshtift:Rootkit component
 		  dir:${RKHROOTDIR}/usr/src/.poop:Ramen worm
-		  dir:${RKHROOTDIR}/dev/wd4:possible IRC bot software
-		  dir:${RKHROOTDIR}/var/run/.tmp:Possible rootkit component
-		  dir:${RKHROOTDIR}/usr/man/man1/lib/.lib:Possible rootkit component
-		  dir:${RKHROOTDIR}/dev/portd:Possible rootkit component
-		  dir:${RKHROOTDIR}/dev/...:Possible rootkit component
-		  dir:${RKHROOTDIR}/usr/share/man/mansps:Possible rootkit component
-		  dir:${RKHROOTDIR}/lib/.so:Possible rootkit component
-		  dir:${RKHROOTDIR}/lib/.sso:Possible rootkit component"
+		  dir:${RKHROOTDIR}/dev/wd4:IRC bot
+		  dir:${RKHROOTDIR}/var/run/.tmp:Rootkit component
+		  dir:${RKHROOTDIR}/usr/man/man1/lib/.lib:Rootkit component
+		  dir:${RKHROOTDIR}/dev/portd:Rootkit component
+		  dir:${RKHROOTDIR}/dev/...:Rootkit component
+		  dir:${RKHROOTDIR}/usr/share/man/mansps:Rootkit component
+		  dir:${RKHROOTDIR}/lib/.so:Rootkit component
+		  dir:${RKHROOTDIR}/lib/.sso:Rootkit component"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -6426,9 +6426,9 @@ do_system_check_initialisation() {
 			 lbk.ko:LBK FreeBSD kernel module
 			 vlogger.o:THC-Vlogger kernel module
 			 cleaner.o:Adore kernel module
-			 cleaner:Possible Adore rootkit component
-			 ava:Possible Adore rootkit component
-			 tzava:Possible Adore rootkit component
+			 cleaner:Adore Rootkit
+			 ava:Adore Rootkit
+			 tzava:Adore Rootkit
 			 mod_klgr.o:klgr, keyboard logger (kernel module)
 			 hydra:THC-Hydra (password capture)
 			 hydra.restore:THC-Hydra (password capture)
@@ -6436,22 +6436,22 @@ do_system_check_initialisation() {
 			 vobiscum:Unknown rootkit
 			 sshd3:Unknown rootkit
 			 system:Unknown rootkit
-			 t0rnsb:T0rn
-			 t0rns:T0rn
-			 t0rnp:T0rn
+			 t0rnsb:T0rn Rootkit
+			 t0rns:T0rn Rootkit
+			 t0rnp:T0rn Rootkit
 			 rx4u:Unknown rootkit
 			 rx2me:Unknown rootkit
 			 crontab:Unknown rootkit
 			 sshdu:Unknown rootkit
 			 glotzer:Unknown rootkit
-			 holber:Devil rootkit component
+			 holber:Devil Rootkit
 			 xhide:Process hiding software
-			 xh:possible XHide alternative name
-			 emech:IRC bot software
-			 psybnc:IRC bot software
-			 mech:possible IRC bot software alternative name
-			 httpd.bin:possible IRC bot software alternative name
-			 mh:Dica-Kit Rootkit IRC bot software
+			 xh:Process hiding software (alternative of XHide)
+			 emech:IRC bot
+			 psybnc:IRC bot
+			 mech:IRC bot
+			 httpd.bin:IRC bot
+			 mh:Dica-Kit Rootkit IRC bot
 			 xl:Dica-Kit Rootkit
 			 write:Dica-Kit Rootkit
 			 Phantasmagoria.o:Process hiding Linux kernel module
@@ -9241,14 +9241,15 @@ possible_rootkit_file_dir_checks() {
 		case "${TYPE}" in
 		dir)
 			if [ -d "${FILE}" ]; then
-				RKHTMPVAR2=`echo "${FILE}" | sed -e 's/\./\\\./g'`
+				FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
-				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL_DIR "${FILE}" possible_rkt_files
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
 				else
 					FOUND=1
-					FOUNDDIRS="${FOUNDDIRS}%${FILE}:${INFO}"
+					FOUNDDIRS="${FOUNDDIRS}
+${FILE}:${INFO}"
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
 						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
@@ -9260,14 +9261,15 @@ possible_rootkit_file_dir_checks() {
 			;;
 		file)
 			if [ -f "${FILE}" ]; then
-				RKHTMPVAR2=`echo "${FILE}" | sed -e 's/\./\\\./g'`
+				FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
-				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL "${FILE}" possible_rkt_files
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
 				else
 					FOUND=1
-					FOUNDFILES="${FOUNDFILES}%${FILE}:${INFO}"
+					FOUNDFILES="${FOUNDFILES}
+${FILE}:${INFO}"
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
 						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
@@ -9295,13 +9297,13 @@ possible_rootkit_file_dir_checks() {
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_POSS_FILES_DIRS
 
-		IFS="%"
+		IFS=$IFSNL
+
+		FOUNDFILES=`echo "${FOUNDFILES}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${FOUNDFILES}; do
 			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
-
-			test -z "${FILE}" && continue
 
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
@@ -9312,8 +9314,6 @@ possible_rootkit_file_dir_checks() {
 		for RKHTMPVAR in ${FOUNDDIRS}; do
 			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
-
-			test -z "${FILE}" && continue
 
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
@@ -9465,7 +9465,6 @@ possible_rootkit_string_checks() {
 				if [ -n "${FOUNDSTRING}" ]; then
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
-#jh1
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
 						RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
 						display --to LOG --type INFO FILE_PROP_WL_STR "${FNAME}" "${RKHTMPVAR2}" possible_rkt_strings
@@ -9492,25 +9491,25 @@ ${FNAME}:${FILESTRING}:${INFO}"
 			IFS=$RKHIFS
 
 			for DIR in ${BINPATHS}; do
-				FILENAME="${RKHROOTDIR}${DIR}/${FILE}"
+				FNAME="${RKHROOTDIR}${DIR}/${FILE}"
 
-				if [ -f "${FILENAME}" ]; then
+				if [ -f "${FNAME}" ]; then
 					FOUNDFILE=1
-					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FILENAME} | grep "${STRING}"`
+					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep "${STRING}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
-						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\./\\\./g'`
+						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
 							RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
-							display --to LOG --type INFO FILE_PROP_WL_STR "${FILENAME}" "${RKHTMPVAR2}" possible_rkt_strings
+							display --to LOG --type INFO FILE_PROP_WL_STR "${FNAME}" "${RKHTMPVAR2}" possible_rkt_strings
 						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "${FILENAME}" possible_rkt_strings
+							display --to LOG --type INFO FILE_PROP_WL "${FNAME}" possible_rkt_strings
 						else
 							FOUND=1
 							STRINGFOUND=1
 							FOUNDSTRINGS="${FOUNDSTRINGS}
-${FILENAME}:${FILESTRING}:${INFO}"
+${FNAME}:${FILESTRING}:${INFO}"
 						fi
 					fi
 
@@ -9551,7 +9550,7 @@ ${FILENAME}:${FILESTRING}:${INFO}"
 		FOUNDSTRINGS=`echo "${FOUNDSTRINGS}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${FOUNDSTRINGS}; do
-			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
+			FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
 			if [ "`echo ${STRING} | cut -c 1`" = "+" ]; then
@@ -9563,7 +9562,7 @@ ${FILENAME}:${FILESTRING}:${INFO}"
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FILE}" "${INFO}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FNAME}" "${INFO}"
 		done
 
 		IFS=$RKHIFS
@@ -9913,20 +9912,20 @@ ${PROC} ${PID} ${FNAME}"
 	FOUND=0
 	FOUNDFILES=""
 
-	for FILE in ${LOGIN_BACKDOOR_FILES}; do
-		if [ -e "${FILE}" ]; then
-			RKHTMPVAR=`echo "${FILE}" | sed -e 's/\./\\\./g'`
+	for FNAME in ${LOGIN_BACKDOOR_FILES}; do
+		if [ -e "${FNAME}" ]; then
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
-			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "${FILE}" other_malware
+			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				display --to LOG --type INFO FILE_PROP_WL "${FNAME}" other_malware
 			else
 				FOUND=1
-				FOUNDFILES="${FOUNDFILES} ${FILE}"
+				FOUNDFILES="${FOUNDFILES} ${FNAME}"
 			fi
 
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FILE}"
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FNAME}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FILE}"
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "${FNAME}"
 		fi
 	done
 
@@ -9940,8 +9939,8 @@ ${PROC} ${PID} ${FNAME}"
 	else
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
 
-		for FILE in ${FOUNDFILES}; do
-			display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "${FILE}"
+		for FNAME in ${FOUNDFILES}; do
+			display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "${FNAME}"
 		done
 	fi
 
@@ -9959,9 +9958,9 @@ ${PROC} ${PID} ${FNAME}"
 
 	for DIR in ${SUSPICIOUS_DIRS}; do
 		if [ -d "${DIR}" ]; then
-			RKHTMPVAR=`echo "${DIR}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${DIR}" | sed -e 's/\./\\\./g'`
 
-			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL_DIR "${DIR}" other_malware
 			else
 				FOUND=1
@@ -10022,9 +10021,9 @@ ${PROC} ${PID} ${FNAME}"
 
 	for FNAME in ${SNIFFER_FILES}; do
 		if [ -f "${FNAME}" ]; then
-			RKHTMPVAR=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
-			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL "${FNAME}" other_malware
 			else
 				FOUND=1
@@ -11367,7 +11366,6 @@ ${STRING}:${INFO}"
 			if [ -n "${RKHTMPVAR}" ]; then
 				test -z "`echo \"${RKHTMPVAR}\" | egrep -v '^[ 	]*#'`" && continue
 
-#jh
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
 					STRING=`echo ${STRING} | sed -e 's/\\\//g'`
 					display --to LOG --type INFO FILE_PROP_WL_STR "${FNAME}" "${STRING}" startup_malware
