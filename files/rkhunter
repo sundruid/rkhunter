@@ -3013,6 +3013,7 @@ get_rtkt_whitelist_options() {
 		FOUND=0
 
 		for RKHTMPVAR2 in ${RTKT_FILE_WHITELIST}; do
+			RKHTMPVAR2=`echo "${RKHTMPVAR2}" | cut -d: -f1`
 			RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
 			if [ ! -f "${RKHTMPVAR}" ]; then
@@ -6220,15 +6221,15 @@ do_system_check_initialisation() {
 	STRINGSCAN="crond:LOGNAME=root:Illogic Rootkit
 		    hostname:phalanx:Phalanx Rootkit
 		    init:/dev/proc/fuckit:Fuckit Rootkit
-		    init:FUCK:Possible Suckit Rootkit found
-		    init:backdoor:Possible backdoored init file (Suckit)
+		    init:FUCK:Suckit Rootkit
+		    init:backdoor:Backdoored init file (Suckit)
 		    init:/usr/bin/rcpc:Portacelo Rootkit
 		    init:/usr/sbin/login:trNkit ulogin
 		    killall:/dev/ptyxx/.proc:Ambient (ark) Rootkit
-		    login:vt200:Possible Linux Rootkit (LRK4)
-		    login:/usr/bin/xstat:Possible Linux Rootkit (LRK4)
-		    login:/bin/envpc:Possible Linux Rootkit (LRK4)
-		    login:L4m3r0x:Possible Linux Rootkit (LRK4)
+		    login:vt200:Linux Rootkit (LRK4)
+		    login:/usr/bin/xstat:Linux Rootkit (LRK4)
+		    login:/bin/envpc:Linux Rootkit (LRK4)
+		    login:L4m3r0x:Linux Rootkit (LRK4)
 		    login:/lib/libext:SHV4 Rootkit
 		    login:/usr/sbin/login:Flea Linux Rootkit
 		    login:/usr/lib/.tbd:TBD Rootkit
@@ -6237,7 +6238,7 @@ do_system_check_initialisation() {
 		    login:joao:Spanish Rootkit
 		    ls:/dev/ptyxx/.file:Dica-Kit Rootkit
 		    ls:/dev/ptyxx/.file:Ambient (ark) Rootkit
-		    ls:/dev/sgk:Possible Linux Rootkit (LRK4)
+		    ls:/dev/sgk:Linux Rootkit (LRK4)
 		    ls:/var/lock/subsys/...datafile...:Ohhara Rootkit
 		    ls:/usr/lib/.tbd:TBD Rootkit
 		    netstat:/dev/proc/fuckit:Fuckit Rootkit
@@ -6247,8 +6248,8 @@ do_system_check_initialisation() {
 		    netstat:/dev/ttyoa:Sin Rootkit
 		    netstat:/usr/lib/ldlibns.so:Flea Linux Rootkit
 		    netstat:/dev/ptyxx/.addr:Ambient (ark) Rootkit
-		    netstat:syg:Possible trojaned netstat
-		    nscd:sshd_config:Possible backdoor shell installed (SSH)
+		    netstat:syg:Trojaned netstat
+		    nscd:sshd_config:Backdoor shell installed (SSH)
                     ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
 		    ps:/dev/pts/01:Universal Rootkit (URK)
 		    ps:tw33dl3:SunOS Rootkit
@@ -6262,21 +6263,21 @@ do_system_check_initialisation() {
 		    pstree:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    pgrep:libproc.so.2.0.7:Fuckit Rootkit
 		    pkill:libproc.so.2.0.7:Fuckit Rootkit
-		    ping:/bin/bash:Ping rootkit or other backdoor
-		    rpc.nfsd:cant open log:Possible sniffer installed
-		    rpc.nfsd:sniff.pid:Possible sniffer installed
-		    rpc.nfsd:tcp.log:Possible sniffer installed
+		    ping:/bin/bash:Ping Rootkit or other backdoor
+		    rpc.nfsd:cant open log:Sniffer installed
+		    rpc.nfsd:sniff.pid:Sniffer installed
+		    rpc.nfsd:tcp.log:Sniffer installed
 		    sshd:/dev/ptyxx:OpenBSD Rootkit
 		    sshd:/.config:SHV4 Rootkit
-		    sshd:+\\$.*\\$\!.*\!\!\\$:Possible backdoored ssh daemon installed
+		    sshd:+\\$.*\\$\!.*\!\!\\$:Backdoored SSH daemon installed
 		    xntps:/.config:SHV4 Rootkit
-		    syslogd:promiscuous:Possible sniffer installed
+		    syslogd:promiscuous:Sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
 		    syslogd:/dev/ptyxx/.log:Ambient (ark) Rootkit
 		    tcpd:/dev/xdta:Dica-Kit Rootkit
 		    top:/usr/lib/.tbd:TBD Rootkit
 		    top:/dev/ptyxx/.proc:Ambient (ark) Rootkit
-		    xtty:/bin/sh:Possible backdoor shell installed
+		    xtty:/bin/sh:Backdoor shell installed
 		    ttymon:fucknut:SHV5 Rootkit
 		    ttymon:lamersucks:SHV5 Rootkit
 		    ttymon:skillz:SHV5 Rootkit
@@ -6289,7 +6290,7 @@ do_system_check_initialisation() {
 		    rcfile:bin/xsf:Optic Kit (Tux) Worm
 		    rcfile:/usr/bin/ssh2d:Flea Linux Rootkit or Optic Kit (Tux variant) Rootkit or SunOS Rootkit 
 		    rcfile:/usr/sbin/xntps:SHV4 Rootkit
-		    rcfile:ttyload:Possible SHV5 Rootkit
+		    rcfile:ttyload:SHV5 Rootkit
 		    rcfile:/etc/rc.d/init.d/init:cb Rootkit or w00tkit Rootkit
 		    rcfile:usr/bin/xfss:Devil Rootkit
 		    rcfile:/usr/sbin/rpc.netinet:FreeBSD (FBRK) Rootkit
@@ -6304,13 +6305,13 @@ do_system_check_initialisation() {
 		    rcfile:/usr/sbin/rescue:Spanish Rootkit
 		    rcfile:/usr/lib/lpstart:SunOS NSDAP Rootkit or Universal Rootkit (URK)
 		    rcfile:/volc:Volc Rootkit
-		    rcfile:sourcemask:Possible rootkit component
-		    rcfile:/bin/vobiscum:Possible rootkit component
-		    rcfile:/usr/sbin/in.telnet:Possible rootkit component
+		    rcfile:sourcemask:Rootkit component
+		    rcfile:/bin/vobiscum:Rootkit component
+		    rcfile:/usr/sbin/in.telnet:Rootkit component
 		    rcfile:hdparm:Xzibit Rootkit
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
-		    ssh:t0rnkit:Possible T0rn Rootkit
+		    ssh:t0rnkit:T0rn Rootkit
 		    ssh:/dev/proc/fuckit:Fuckit Rootkit
 		    skill:libproc.so.2.0.7:Fuckit Rootkit
 		    snice:libproc.so.2.0.7:Fuckit Rootkit
@@ -9446,7 +9447,7 @@ possible_rootkit_string_checks() {
 		FILE=`echo ${RKHTMPVAR} | cut -d: -f1`
 		FILESTRING=`echo ${RKHTMPVAR} | cut -d: -f2`
 
-		if [ `echo ${FILESTRING} | cut -c 1` = "+" ]; then
+		if [ "`echo ${FILESTRING} | cut -c 1`" = "+" ]; then
 			STRING=`echo ${FILESTRING} | cut -c 2-`
 			FILESTRING="${STRING}"
 		else
@@ -9459,17 +9460,22 @@ possible_rootkit_string_checks() {
 			FOUNDFILE=1
 
 			for FNAME in ${RC_PATHS}; do
-				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep -v '^#' | grep "${STRING}"`
+				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | egrep -v '^[ 	]*#' | grep "${STRING}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
-					RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
-					if [ -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+#jh1
+					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
+						RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
+						display --to LOG --type INFO FILE_PROP_WL_STR "${FNAME}" "${RKHTMPVAR2}" possible_rkt_strings
+					elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:\"`" ]; then
+						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" possible_rkt_strings
+					else
 						FOUND=1
 						STRINGFOUND=1
-						FOUNDSTRINGS="${FOUNDSTRINGS}%${FNAME}:${FILESTRING}:${INFO}"
-					else
-						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" possible_rkt_strings
+						FOUNDSTRINGS="${FOUNDSTRINGS}
+${FNAME}:${FILESTRING}:${INFO}"
 					fi
 				fi
 			done
@@ -9493,14 +9499,18 @@ possible_rootkit_string_checks() {
 					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FILENAME} | grep "${STRING}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
-						RKHTMPVAR2=`echo "${FILENAME}" | sed -e 's/\./\\\./g'`
+						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\./\\\./g'`
 
-						if [ -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
+							RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
+							display --to LOG --type INFO FILE_PROP_WL_STR "${FILENAME}" "${RKHTMPVAR2}" possible_rkt_strings
+						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:\"`" ]; then
+							display --to LOG --type INFO FILE_PROP_WL "${FILENAME}" possible_rkt_strings
+						else
 							FOUND=1
 							STRINGFOUND=1
-							FOUNDSTRINGS="${FOUNDSTRINGS}%${FILENAME}:${FILESTRING}:${INFO}"
-						else
-							display --to LOG --type INFO FILE_PROP_WL "${FILENAME}" possible_rkt_strings
+							FOUNDSTRINGS="${FOUNDSTRINGS}
+${FILENAME}:${FILESTRING}:${INFO}"
 						fi
 					fi
 
@@ -9536,17 +9546,16 @@ possible_rootkit_string_checks() {
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_POSS_STRINGS
 
-		IFS="%"
+		IFS=$IFSNL
+
+		FOUNDSTRINGS=`echo "${FOUNDSTRINGS}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${FOUNDSTRINGS}; do
 			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
+			STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
-			test -z "${FILE}" && continue
-
-			FILESTRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
-
-			if [ `echo ${FILESTRING} | cut -c 1` = "+" ]; then
-				FILESTRING=`echo ${FILESTRING} | cut -c 2-`
+			if [ "`echo ${STRING} | cut -c 1`" = "+" ]; then
+				STRING=`echo ${STRING} | cut -c 2-`
 			fi
 
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
@@ -9554,7 +9563,7 @@ possible_rootkit_string_checks() {
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${FILESTRING}" "${FILE}" "${INFO}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "${FILE}" "${INFO}"
 		done
 
 		IFS=$RKHIFS
@@ -11348,13 +11357,21 @@ ${STRING}:${INFO}"
 	for FNAME in ${RC_PATHS}; do
 		IFS=$IFSNL
 
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+
 		for STR in ${RCSTRINGS}; do
 			STRING=`echo ${STR} | cut -d: -f1`
 
-			if [ -n "`grep "${STRING}" ${FNAME} | egrep -v '^[ 	]*#'`" ]; then
-				RKHTMPVAR=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+			RKHTMPVAR=`grep "${STRING}" ${FNAME}`
 
-				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+			if [ -n "${RKHTMPVAR}" ]; then
+				test -z "`echo \"${RKHTMPVAR}\" | egrep -v '^[ 	]*#'`" && continue
+
+#jh
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
+					STRING=`echo ${STRING} | sed -e 's/\\\//g'`
+					display --to LOG --type INFO FILE_PROP_WL_STR "${FNAME}" "${STRING}" startup_malware
+				elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:\"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL "${FNAME}" startup_malware
 				else
 					FOUND=1

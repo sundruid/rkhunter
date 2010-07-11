@@ -1,4 +1,4 @@
-Version:2010010801
+Version:2010071101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -262,6 +262,7 @@ FILE_PROP_DAT_MISSING_INFO:The file properties check will still run as there are
 
 FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
 FILE_PROP_WL:Found file '$1': it is whitelisted for the '$2' check.
+FILE_PROP_WL_STR:Found file '$1' and string '$2': they are whitelisted for the '$3' check.
 FILE_PROP_WL_DIR:Found directory '$1': it is whitelisted for the '$2' check.
 FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the rkhunter.dat file.
 FILE_PROP_CHANGED:The file properties have changed:
