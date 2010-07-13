@@ -75,6 +75,8 @@
    messages using the correct encoding.
  - The test of rootkit strings in the startup files could display the
    wrong string and rootkit. It now displays the correct information.
+ - The 'filesystem' check now correctly identifies non-standard
+   directories (e.g. setgid directory), and allows them to be whitelisted.
 
 -- 
 

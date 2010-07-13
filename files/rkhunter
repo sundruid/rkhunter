@@ -12238,8 +12238,9 @@ do_dev_whitelist_check() {
 	test -z "${FNAME}" && return
 
 	FILE=`echo "${RKHTMPVAR}" | sed -e "s:^${RKHROOTDIR}::"`
+	FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
-	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FILE} \"`" ]; then
+	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FNAMEGREP} \"`" ]; then
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"
 	else
 		FOUNDFILES="${FOUNDFILES}
@@ -12339,6 +12340,8 @@ do_filesystem_check() {
 			done
 		fi
 
+		FOUNDFILES=`echo "${FOUNDFILES}" | sed -e '/^$/d'`
+
 
 		#
 		# Now display the results.
@@ -12354,7 +12357,6 @@ do_filesystem_check() {
 			IFS=$IFSNL
 
 			for RKHTMPVAR in ${FOUNDFILES}; do
-				test -z "${RKHTMPVAR}" && continue
 				display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
 			done
 
@@ -12456,16 +12458,22 @@ do_filesystem_check() {
 
 
 		FILE=`echo "${FNAME}" | sed -e "s:^${RKHROOTDIR}::"`
+		FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
-		if [ "${FTYPE}" = "directory" ]; then
-			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \" ${FILE} \"`" ]; then
+		if [ -n "`echo \"${FTYPE}\" | grep 'directory'`" ]; then
+			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "${FNAME}"
 			else
-				FOUNDDIRS="${FOUNDDIRS}
+				if [ "${FTYPE}" = "directory" ]; then
+					FOUNDDIRS="${FOUNDDIRS}
 ${FNAME}"
+				else
+					FOUNDDIRS="${FOUNDDIRS}
+${FNAME}: ${FTYPE}"
+				fi
 			fi
 		else
-			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \" ${FILE} \"`" ]; then
+			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "${FNAME}"
 			else
 				FOUNDFILES="${FOUNDFILES}
@@ -12473,6 +12481,9 @@ ${FNAME}: ${FTYPE}"
 			fi
 		fi
 	done
+
+	FOUNDDIRS=`echo "${FOUNDDIRS}" | sed -e '/^$/d'`
+	FOUNDFILES=`echo "${FOUNDFILES}" | sed -e '/^$/d'`
 
 
 	#
@@ -12487,12 +12498,10 @@ ${FNAME}: ${FTYPE}"
 		IFS=$IFSNL
 
 		for RKHTMPVAR in ${FOUNDDIRS}; do
-			test -z "${RKHTMPVAR}" && continue
 			display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "${RKHTMPVAR}"
 		done
 
 		for RKHTMPVAR in ${FOUNDFILES}; do
-			test -z "${RKHTMPVAR}" && continue
 			display --to LOG --type WARNING FILESYSTEM_HIDDEN_FILE_FOUND "${RKHTMPVAR}"
 		done
 
