@@ -37,6 +37,8 @@
  - If the enabled and disabled test name(s) are the same, then an
    error will now be displayed. This only applies to certain
    non-grouped test names.
+ - The check of syslog remote logging no longer considers a
+   127.x.x.x address as being remote.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

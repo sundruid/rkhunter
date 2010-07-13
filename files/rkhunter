@@ -12197,14 +12197,14 @@ do_system_config_files_check() {
 		test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
 
 		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | egrep '/r?syslog\.conf$'`" ]; then
-			RKHTMPVAR=`egrep '^[^#].*[ 	](@|:omrelp:).' ${SYSLOG_CONFIG_FILE}`
+			RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' ${SYSLOG_CONFIG_FILE} | egrep -i -v '(@|:omrelp:)127\.'`
 		else
 			#
 			# For syslog-ng we must look for a destination
 			# block which uses TCP or UDP.
 			#
 
-			RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${SYSLOG_CONFIG_FILE} | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)'`
+			RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${SYSLOG_CONFIG_FILE} | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
 		fi
 
 		if [ -z "${RKHTMPVAR}" ]; then
