@@ -6744,6 +6744,7 @@ file_properties_check() {
 	SKIP_ATTR=0; SKIP_HASH=0; SKIP_IMMUT=0; SKIP_SCRIPT=0
 	USE_DAT_FILE=1
 	SKIP_IMMUT_OS=0
+	IMMUTABLE_SET=0
 	PROP_FILE_LIST_COUNT=0
 
 	#
@@ -7090,6 +7091,8 @@ file_properties_check() {
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
 		IMMUTWHITELIST=`get_option 1 multi IMMUTWHITELIST` || exit 1
+#jh - this option needs to be checked for '0' or '1', so it should be checked at the start of rkh.
+		IMMUTABLE_SET=`get_option 1 single IMMUTABLE_SET` || exit 1
 	fi
 
 	if [ $SKIP_SCRIPT -eq 0 ]; then
@@ -7658,6 +7661,14 @@ file_properties_check() {
 					RKHTMPVAR=`ls -lno ${FNAME} 2>&1 | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 				fi
 
+				#
+				# Reverse the test result if the immutable bit is always set.
+				#
+
+				if [ $IMMUTABLE_SET -eq 1 ]; then
+					test -n "${RKHTMPVAR}" && RKHTMPVAR="" || RKHTMPVAR="set"
+				fi
+
 				test -n "${RKHTMPVAR}" && TEST_RESULT="${TEST_RESULT} immutable"
 			fi
 		fi
@@ -7869,7 +7880,11 @@ file_properties_check() {
 					display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "${FNAME}"
 					;;
 				immutable)
-					display --to LOG --type WARNING FILE_PROP_IMMUT "${FNAME}"
+					if [ $IMMUTABLE_SET -eq 0 ]; then
+						display --to LOG --type WARNING FILE_PROP_IMMUT "${FNAME}"
+					else
+						display --to LOG --type WARNING FILE_PROP_IMMUT_NOT_SET "${FNAME}"
+					fi
 					;;
 				script)
 					test -n "${BASENAME_CMD}" && RKHTMPVAR4=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR4=`echo "${FNAME}" | sed -e 's:^.*/::'`

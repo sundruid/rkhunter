@@ -1,4 +1,4 @@
-Version:2010071101
+Version:2010071301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -299,6 +299,7 @@ FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file '$1'
 FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
 FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file '$1'
 FILE_PROP_IMMUT:File '$1' has the immutable-bit set.
+FILE_PROP_IMMUT_NOT_SET:File '$1' does not have the immutable-bit set.
 FILE_PROP_SCRIPT:The command '$1' has been replaced by a script: $2
 FILE_PROP_SCRIPT_RKH:The command '$1' has been replaced and is not a script: $2
 
