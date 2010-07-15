@@ -44,6 +44,8 @@
    non-grouped test names.
  - The check of syslog remote logging no longer considers a
    127.x.x.x address as being remote.
+ - In the configuration file the WEBCMD option has now changed
+   name to WEB_CMD. However, the old name will still be recognised.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
@@ -84,6 +86,9 @@
    wrong string and rootkit. It now displays the correct information.
  - The 'filesystem' check now correctly identifies non-standard
    directories (e.g. setgid directory), and allows them to be whitelisted.
+ - The UPDT_ON_OS_CHANGE option was defaulting to 1 rather than 0.
+ - The result of the libsafe check, a prelink command check, and a prelink
+   hash function check were not being reported.
 
 -- 
 

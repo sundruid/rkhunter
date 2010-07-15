@@ -622,7 +622,15 @@ get_option() {
 			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
 		fi
 
-		OPTVAR=`echo ${OPTVAR}`
+		#
+		# For any options other than the CMD ones, we can echo it in
+		# order to tidy it up. If we echoed the CMD ones, then any
+		# globbing could be expanded, and we don't want that.
+		#
+
+		if [ "${OPTV}" != "HASH_FUNC" -a -z "`echo \"${OPTV}\" | grep 'CMD$'`" ]; then
+			OPTVAR=`echo ${OPTVAR}`
+		fi
 		;;
 	*)
 		echo "Error: Invalid option type in get_option function: $*" >&2
@@ -903,7 +911,7 @@ scanrootkit() {
 			THOROUGH) # Search the whole filesystem
 					RKHTMPVAR=`${BASENAME_CMD} "${RKHTMPVAR}"`
 					RKHTMPVAR=`find "${RKHROOTDIR}/" -xdev -iname "${RKHTMPVAR}"`
-					for RKHTMPVARITEM in $RKHTMPVAR; do
+					for RKHTMPVARITEM in ${RKHTMPVAR}; do
 						if [ -f "${RKHTMPVAR}" -o -b "${RKHTMPVAR}" -o -c "${RKHTMPVAR}" -o -L "${RKHTMPVAR}" -o -p "${RKHTMPVAR}" -o -S "${RKHTMPVAR}" ]; then
 							SCAN_STATUS=1
 							FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
@@ -1090,6 +1098,16 @@ check_commands() {
 			if [ "${CFG_CMD}" = "DISABLED" -o "${CFG_CMD}" = "BUILTIN" ]; then
 				eval ${RKHTMPVAR}=\"${CFG_CMD}\"
 			else
+				#
+				# We must first check that the command name is valid.
+				# The user may have included globbing characters, or
+				# used multiple dots, and we do not allow that.
+
+				if [ -n "`echo \"${CFG_CMD}\" | egrep '(^[./!]*$)|\.\.|[*?]|(^[^a-zA-Z]*$)'`" ]; then
+					echo "Invalid ${RKHTMPVAR} configuration option: illegal command: ${CFG_CMD}"
+					exit 1
+				fi
+
 				#
 				# Check that the command is executable.
 				#
@@ -1764,12 +1782,22 @@ get_mailonwarn_option() {
 
 		test -z "${MAIL_CMD}" && MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
 
+		MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f1`
+
+		#
+		# Test to ensure that globbing and other invalid pathnames
+		# are not being given.
+		#
+
+		if [ -n "`echo \"${MCMD}\" | egrep '(^[./!]*$)|\.\.|[*?]|(^[^a-zA-Z]*$)'`" ]; then
+			echo "Invalid MAIL_CMD configuration option: illegal command: ${MCMD}"
+			exit 1
+		fi
 
 		#
 		# Check that the mail command is executable.
 		#
 
-		MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f1`
 		MC=`find_cmd ${MCMD}`
 
 		if [ -n "${MC}" ]; then
@@ -1803,15 +1831,32 @@ get_webcmd_option() {
 	# Get the option from the configuration file. If it is set,
 	# then we set the RKHWEBCMD_OPTS option as well if necessary.
 	#
+	# For backwards compatability we will also check for WEBCMD.
+	#
 
-	RKHWEBCMD=`get_option 2 single WEBCMD` || exit 1
+	RKHWEBCMD=`get_option 2 single WEB_CMD` || exit 1
+
+	if [ -z "${RKHWEBCMD}" ]; then
+		RKHWEBCMD=`get_option 2 single WEBCMD` || exit 1
+	fi
 
 	if [ -n "${RKHWEBCMD}" ]; then
+		WCMD=`echo "${RKHWEBCMD}" | cut -d' ' -f1`
+
+		#
+		# Test to ensure that globbing and other invalid pathnames
+		# are not being given.
+		#
+
+		if [ -n "`echo \"${WCMD}\" | egrep '(^[./!]*$)|\.\.|[*?]|(^[^a-zA-Z]*$)'`" ]; then
+			echo "Invalid WEB_CMD configuration option: illegal command: ${WCMD}"
+			exit 1
+		fi
+
 		#
 		# Check that the command is executable.
 		#
 
-		WCMD=`echo "${RKHWEBCMD}" | cut -d' ' -f1`
 		WC=`find_cmd ${WCMD}`
 
 		if [ -n "${WC}" ]; then
@@ -2389,7 +2434,7 @@ get_ports_option() {
 			if [ -n "`echo \"${RKHTMPVAR2}\" | grep '^/'`" ]; then
 				if [ ! -f "${RKHTMPVAR2}" ]; then
 					FOUND=1
-					echo "Non-existent pathname specified in PORT_WHITELIST configuration option: ${RKHTMPVAR2}"
+					echo "Invalid PORT_WHITELIST configuration option - non-existent pathname specified: ${RKHTMPVAR2}"
 				else
 					PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH} ${RKHTMPVAR2}"
 				fi
@@ -2398,7 +2443,7 @@ get_ports_option() {
 
 				if [ $PORT -gt 65535 ]; then
 					FOUND=1
-					echo "Invalid port specified in PORT_WHITELIST configuration option: ${RKHTMPVAR2}"
+					echo "Invalid PORT_WHITELIST configuration option - invalid port specified: ${RKHTMPVAR2}"
 				else
 					PORT_WHITELIST="${PORT_WHITELIST} ${RKHTMPVAR2}"
 				fi
@@ -2504,7 +2549,30 @@ get_epoch_date_cmd_option() {
 		return
 	elif [ -n "${EPOCH_DATE_CMD}" ]; then
 		RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
-		test -x "${RKHTMPVAR}" || EPOCH_DATE_CMD="NONE"
+		RKHTMPVAR2=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f2-`
+
+		#
+		# Test to ensure that globbing and other invalid pathnames
+		# are not being given.
+		#
+
+		if [ -n "`echo \"${RKHTMPVAR}\" | egrep '(^[./!]*$)|\.\.|[*?]|(^[^a-zA-Z]*$)'`" ]; then
+			echo "Invalid EPOCH_DATE_CMD configuration option: illegal command: ${RKHTMPVAR}"
+			exit 1
+		fi
+
+		#
+		# Check that the command exists and is executable.
+		#
+
+		EPOCH_DATE_CMD=`find_cmd ${RKHTMPVAR}`
+
+		if [ -n "${EPOCH_DATE_CMD}" ]; then
+			EPOCH_DATE_CMD="${EPOCH_DATE_CMD} ${RKHTMPVAR2}"
+		else
+			EPOCH_DATE_CMD="NONE"
+		fi
+
 		return
 	fi
 
@@ -2530,6 +2598,176 @@ get_epoch_date_cmd_option() {
 		done
 	fi
 
+	return
+}
+
+
+check_paths() {
+
+	#
+	# This function will check a supplied list of pathnames to
+	# ensure the files and directories exist. It will also
+	# check that directories such as '/' (root) are not present,
+	# nor are pathnames containing multiple dots.
+	#
+	# The function only checks the pathnames. It is not possible
+	# to modify the list in any way. The variable ERRCODE must be
+	# set to zero before this function is called, and will be
+	# set to one if any pathname fails a check.
+	#
+	# If the second parameter is set, then that name is used as the
+	# option name.
+	#
+
+	OPT_VALUE=$1
+	OPT_NAME=$2
+
+	test -z "${OPT_NAME}" && OPT_NAME=${OPT_VALUE}
+
+	RKHTMPVAR=`eval echo "\\$${OPT_VALUE}"`
+
+	test -z "${RKHTMPVAR}" && return
+
+	for FNAME in ${RKHTMPVAR}; do
+		#
+		# First check for anything which contains just dots,
+		# forward-slashes, asterisks etc. This means that
+		# '/' cannot be set.
+		#
+
+		if [ -n "`echo \"${FNAME}\" | egrep '(^[./*?!]*$)|\.\.|(^[^a-zA-Z]*$)'`" ]; then
+			ERRCODE=1
+			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
+			continue
+		fi
+
+		#
+		# This is as far as we go for the user file property names.
+		#
+
+		test "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" && continue
+
+		#
+		# Now we check to see if it is a simple file name.
+		#
+
+		if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+			ERRCODE=1
+			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
+		else
+			#
+			# This is as far as we go for the '/dev' file names.
+			#
+
+			test "${OPT_NAME}" = "ALLOWDEVFILES" && continue
+
+			# It's an absolute pathname. This could be a file or a directory.
+
+			if [ -f "${FNAME}" ]; then
+				:
+			elif [ -d "${FNAME}" ]; then
+				case "${OPT_NAME}" in
+				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST)
+					ERRCODE=1
+					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
+					;;
+				esac
+			elif [ -h "${FNAME}" ]; then
+				ERRCODE=1
+				RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
+				echo "Invalid ${OPT_NAME} configuration option: Invalid link: ${FNAME} -> ${RKHTMPVAR2}"
+			elif [ -e "${FNAME}" ]; then
+				ERRCODE=1
+				echo "Invalid ${OPT_NAME} configuration option: Not a file or directory: ${FNAME}"
+			else
+				ERRCODE=1
+				echo "Invalid ${OPT_NAME} configuration option: Non-existent file or directory: ${FNAME}"
+			fi
+		fi
+	done
+
+
+	return
+}
+
+
+check_is_digit() {
+
+	#
+	# This function checks to see if an option is a valid
+	# number or not. Typically it must be 0 or 1.
+	#
+
+	OPT_NAME=$1
+
+	RKHTMPVAR=`eval echo "\\$${OPT_NAME}"`
+
+	test -z "${RKHTMPVAR}" && return
+
+	if [ "${RKHTMPVAR}" != "0" -a "${RKHTMPVAR}" != "1" ]; then
+		ERRCODE=1
+		echo "Invalid ${OPT_NAME} configuration option: not a valid number: ${RKHTMPVAR}"
+	fi
+
+	return
+}
+
+
+get_phalanx2_option() {
+
+	#
+	# This is a specific function to get the PHALANX2_DIRTEST
+	# option. It must be a digit, and can only be tested for
+	# on Linux systems.
+	#
+
+	test "${OPERATING_SYSTEM}" != "Linux" && return
+
+	ROOTKIT_PHALANX2_DIRTESTVAL=`get_option 1 single PHALANX2_DIRTEST` || exit 1
+
+	if [ -n "${ROOTKIT_PHALANX2_DIRTESTVAL}" ]; then
+		ERRCODE=0
+
+		check_is_digit ROOTKIT_PHALANX2_DIRTESTVAL
+
+		test $ERRCODE -eq 1 && exit 1
+	else
+		ROOTKIT_PHALANX2_DIRTESTVAL=0
+	fi
+
+	return
+}
+
+
+get_dev_options() {
+
+	#
+	# This function processes the ALLOWDEVFILE option which is
+	# used to whitelist files allowed in the '/dev' directory.
+	#
+
+	ALLOWDEVFILES=`get_option 2 multi ALLOWDEVFILE` || exit 1
+
+	if [ -n "${ALLOWDEVFILES}" ]; then
+		#
+		# We 'echo' the variable so that any wildcards get expanded.
+		#
+
+		ALLOWDEVFILES=`echo ${ALLOWDEVFILES}`
+
+		ERRCODE=0
+
+		check_paths ALLOWDEVFILES
+
+		if [ $ERRCODE -eq 0 ]; then
+			ALLOWDEVFILES=" ${ALLOWDEVFILES} "
+		else
+			exit 1
+		fi
+	fi
+#jh
+#jh - options still to check: ALLOWHIDDENDIR  ALLOWHIDDENFILE  APP_WHITELIST
+#jh - suspscan options: SUSPSCAN_DIRS  SUSPSCAN_TEMP  SUSPSCAN_MAXSIZE  SUSPSCAN_THRESH  SUSPSCAN_LINETHRESH  SUSPSCAN_DEBUG
 	return
 }
 
@@ -2561,8 +2799,12 @@ get_if_prelinked() {
 			LIBSAFE_TEST1=`grep libsafe ${RKHROOTDIR}/etc/ld.so.preload 2>&1`
 		fi
 
-		if [ -n "${LDD_CMD}" -a -f "${RKHROOTDIR}/lib/libdl.so.?" ]; then
-			LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib/libdl.so.? | grep libsafe 2>&1`
+		if [ -n "${LDD_CMD}" ]; then
+			if [ -f "${RKHROOTDIR}/lib/libdl.so.?" ]; then
+				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib/libdl.so.? | grep libsafe 2>&1`
+			elif [ -f "${RKHROOTDIR}/lib64/libdl.so.?" ]; then
+				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib64/libdl.so.? | grep libsafe 2>&1`
+			fi
 		fi
 
 		if [ -z "${PRELINK_CMD}" ]; then
@@ -2631,8 +2873,15 @@ get_hash_function() {
 	#
 
 	if [ $HASH_OPT -eq 1 ]; then
+
 		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
-		HASH_FUNC=`echo ${HASH_FUNC}`
+
+		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+
+		# Stop globbing from being expanded.
+		if [ -z "`echo \"${HASH_CMD}\" | grep '[*?!]'`" ]; then
+			HASH_FUNC=`echo ${HASH_FUNC}`
+		fi
 
 		if [ -z "${HASH_FUNC}" ]; then
 			echo "Invalid '--hash' option: no hash function given."
@@ -2640,6 +2889,25 @@ get_hash_function() {
 		fi
 	else
 		HASH_FUNC=`get_option 2 single HASH_FUNC` || exit 1
+	fi
+
+	#
+	# Test to ensure that globbing and other invalid pathnames
+	# are not being given.
+	#
+
+	if [ -n "${HASH_FUNC}" ]; then
+		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+
+		if [ -n "`echo \"${HASH_CMD}\" | egrep '(^[./!]*$)|\.\.|[*?]|(^[^a-zA-Z]*$)'`" ]; then
+			if [ $HASH_OPT -eq 1 ]; then
+				echo "Invalid '--hash' option: illegal command: ${HASH_CMD}"
+			else
+				echo "Invalid HASH_FUNC configuration option: illegal command: ${HASH_CMD}"
+			fi
+
+			exit 1
+		fi
 	fi
 
 	if [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|SHA224|SHA256|SHA384|SHA512|NONE)$'`" ]; then
@@ -2734,26 +3002,26 @@ get_hash_function() {
 	if [ "${HASH_FUNC}" = "NONE" ]; then
 		:
 	elif [ -n "${HASH_FUNC}" ]; then
-		HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
-		HF=`find_cmd ${HCMD}`
+		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+		HF=`find_cmd ${HASH_CMD}`
 
 		if [ -n "${HF}" ]; then
 			#
 			# We rebuild the command to use the full pathname.
 			#
 
-			HCMD=`echo "${HASH_FUNC}" | cut -d' ' -f2-`
+			HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f2-`
 
-			if [ -z "${HCMD}" -o "${HCMD}" = "${HASH_FUNC}" ]; then
+			if [ -z "${HASH_CMD}" -o "${HASH_CMD}" = "${HASH_FUNC}" ]; then
 				HASH_FUNC=$HF
 			else
-				HASH_FUNC="${HF} ${HCMD}"
+				HASH_FUNC="${HF} ${HASH_CMD}"
 			fi
 		elif [ $HASH_OPT -eq 1 ]; then
-			echo "Invalid '--hash' option: command '${HCMD}' is non-existent or not executable."
+			echo "Invalid '--hash' option: command '${HASH_CMD}' is non-existent or not executable."
 			exit 1
 		else
-			echo "Invalid HASH_FUNC configuration option: command '${HCMD}' is non-existent or not executable."
+			echo "Invalid HASH_FUNC configuration option: command '${HASH_CMD}' is non-existent or not executable."
 			exit 1
 		fi
 	elif [ $HASH_OPT -eq 1 ]; then
@@ -2898,7 +3166,7 @@ get_hash_function() {
 	if [ $ERRCODE -eq 0 ]; then
 		test -n "${PKGMGRNOVRFY}" && PKGMGRNOVRFY=" ${PKGMGRNOVRFY} "
 	else
-		exit $ERRCODE
+		exit 1
 	fi
 
 	return
@@ -2908,9 +3176,9 @@ get_hash_function() {
 get_scan_mode_dev_option() {
 
 	#
-	# SCAN_MODE_DEV governs how we scan /dev for suspicious files.
-	# The two allowed options are "commented out" or LAZY.
-	# If commented out, the default, we do a thorough scan which
+	# SCAN_MODE_DEV governs how we scan '/dev' for suspicious files.
+	# The two allowed options are "THOROUGH" or "LAZY". If the option
+	# is commented out, the default, then we do a THOROUGH scan, which
 	# will increase the runtime of rkhunter.
 	#
 
@@ -3207,7 +3475,7 @@ get_os_info_options() {
 			exit 1
 		fi
 	else
-		UPDT_ON_OS_CHANGE=1
+		UPDT_ON_OS_CHANGE=0
 	fi
 
 	return
@@ -3240,15 +3508,21 @@ get_user_fileprop_list() {
 	# For example: USER_FILEPROP_FILES_DIRS="/opt/b* !/opt/backup"
 	#
 
-	LEAVE=0
-
-	RKHTMPVAR=`get_option 2 multi USER_FILEPROP_FILES_DIRS` || exit 1
+	FILENAMES=`get_option 2 multi USER_FILEPROP_FILES_DIRS` || exit 1
 
 	#
 	# We 'echo' the variable so that any wildcards get expanded.
 	#
 
-	RKHTMPVAR=`echo ${RKHTMPVAR}`
+	FILENAMES=`echo ${FILENAMES}`
+
+	#
+	# Next check the pathnames to ensure they are basically valid.
+	#
+
+	ERRCODE=0
+
+	check_paths FILENAMES USER_FILEPROP_FILES_DIRS
 
 
 	#
@@ -3257,75 +3531,60 @@ get_user_fileprop_list() {
 	# file properties file list.
 	#
 
-	for FNAME in ${RKHTMPVAR}; do
-		#
-		# First check for anything which contains just dots,
-		# forward-slashes, asterisks etc. This means that
-		# '/' cannot be set.
-		#
-
-		if [ -n "`echo \"${FNAME}\" | grep '^[./*?!]*$'`" ]; then
-			LEAVE=1
-			echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
-			continue
-		fi
-
+	for FNAME in ${FILENAMES}; do
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
 		#
-		# Next we check for any files or directories to be excluded.
+		# First check for any files or directories to be excluded.
 		#
 
 		if [ -n "`echo \"${FNAME}\" | grep '^!'`" ]; then
-			RKHTMPVAR2=`echo ${FNAME} | cut -c2-`
-			RKHTMPVAR2=`echo ${RKHTMPVAR2}`
+			RKHTMPVAR=`echo ${FNAME} | cut -c2-`
+			# Re-expand the name in case it has globbing characters.
+			RKHTMPVAR=`echo ${RKHTMPVAR}`
 
-			test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${RKHTMPVAR2}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP} ${RKHTMPVAR2}"
+			test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${RKHTMPVAR}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP} ${RKHTMPVAR}"
+
 			continue
 		fi
 
 
 		#
-		# Now we check to see if it is a simple file name.
+		# Now check to see if it is a simple file name.
 		#
 
 		if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 			# Next check to see if it is a simple file name.
 			# Check that it is not a pathname like 'abc/def'.
 			if [ -n "`echo \"${FNAME}\" | grep '[;&!:/]'`" ]; then
-				LEAVE=1
+				ERRCODE=1
 				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 			else
 				# Check that it hasn't already been set.
 				# If it has, then we just ignore it.
 
-				RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
-
-				if [ -z "`echo \" ${USER_SIMPLE_FILE_LIST} \" | grep \" ${RKHTMPVAR2} \"`" ]; then
+				if [ -z "`echo \" ${USER_SIMPLE_FILE_LIST} \" | grep \" ${FNAMEGREP} \"`" ]; then
 					test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST} ${FNAME}"
 				fi
 			fi
 		else
 			# It's an absolute pathname. This could be a file or a directory.
 
-			RKHTMPVAR2=""
-
 			if [ -f "${FNAME}" ]; then
 				# Check that it hasn't already been set.
 				# If it has, then we just ignore it.
 
-				RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
-
-				test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR2}$\"`" && continue
+				test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
 				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-					RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
+					RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
 
-					if [ -n "${RKHTMPVAR2}" ]; then
-						RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+					if [ -n "${RKHTMPVAR}" ]; then
+						FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
-						if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${RKHTMPVAR3}$\"`" ]; then
+						if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 							FNAME="${FNAME}
-${RKHTMPVAR2}"
+${RKHTMPVAR}"
 						fi
 					fi
 				fi
@@ -3335,7 +3594,7 @@ ${RKHTMPVAR2}"
 				#
 
 				if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
-					LEAVE=1
+					ERRCODE=1
 					echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 				else
 					test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
@@ -3343,17 +3602,17 @@ ${FNAME}"
 				fi
 			elif [ -d "${FNAME}" ]; then
 				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-					RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
+					RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
 
-					if [ -z "${RKHTMPVAR2}" ]; then
+					if [ -z "${RKHTMPVAR}" ]; then
 						continue
-					elif [ "${RKHTMPVAR2}" = "/" ]; then
-						LEAVE=1
+					elif [ "${RKHTMPVAR}" = "/" ]; then
+						ERRCODE=1
 						echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 						continue
 					fi
 
-					FNAME="${RKHTMPVAR2}"
+					FNAME="${RKHTMPVAR}"
 				fi
 
 				#
@@ -3362,30 +3621,101 @@ ${FNAME}"
 				#
 
 				if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
-					LEAVE=1
+					ERRCODE=1
 					echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 				else
-					RKHTMPVAR2=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
-					if [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${RKHTMPVAR2} \"`" ]; then
+					if [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${FNAMEGREP} \"`" ]; then
 						test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST} ${FNAME}"
 					fi
 				fi
 			elif [ -h "${FNAME}" ]; then
-				LEAVE=1
-				RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
-				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid link: ${FNAME} -> ${RKHTMPVAR2}"
+				ERRCODE=1
+				RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
+				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid link: ${FNAME} -> ${RKHTMPVAR}"
 			elif [ -e "${FNAME}" ]; then
-				LEAVE=1
+				ERRCODE=1
 				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Not a file or directory: ${FNAME}"
 			else
-				LEAVE=1
+				ERRCODE=1
 				echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Non-existent file or directory: ${FNAME}"
 			fi
 		fi
 	done
 
-	test $LEAVE -eq 1 && exit 1
+	test $ERRCODE -eq 1 && exit 1
+
+	return
+}
+
+
+get_properties_options() {
+
+	#
+	# This function gets any configuration options required for
+	# the file properties check and the properties file update.
+	#
+	# For options where filenames are specified, the existence
+	# of the filename is checked.
+	#
+
+	check_test hashes && HASH_CHECK_ENABLED=1
+	check_test attributes && HASH_CHECK_ENABLED=1
+
+
+	ERRCODE=0
+
+	ATTRWHITELIST=`get_option 2 multi ATTRWHITELIST` || exit 1
+
+	if [ -n "${ATTRWHITELIST}" ]; then
+		#
+		# We 'echo' the variable so that any wildcards get expanded.
+		#
+
+		ATTRWHITELIST=`echo ${ATTRWHITELIST}`
+
+		check_paths ATTRWHITELIST
+	fi
+
+
+	WRITEWHITELIST=`get_option 2 multi WRITEWHITELIST` || exit 1
+
+	if [ -n "${WRITEWHITELIST}" ]; then
+		WRITEWHITELIST=`echo ${WRITEWHITELIST}`
+
+		check_paths WRITEWHITELIST
+	fi
+
+
+	IMMUTWHITELIST=`get_option 2 multi IMMUTWHITELIST` || exit 1
+
+	if [ -n "${IMMUTWHITELIST}" ]; then
+		IMMUTWHITELIST=`echo ${IMMUTWHITELIST}`
+
+		check_paths IMMUTWHITELIST
+	fi
+
+
+	IMMUTABLE_SET=`get_option 1 single IMMUTABLE_SET` || exit 1
+
+	if [ -n "${IMMUTABLE_SET}" ]; then
+		check_is_digit IMMUTABLE_SET
+	else
+		IMMUTABLE_SET=0
+	fi
+
+
+	SCRIPTWHITELIST=`get_option 2 multi SCRIPTWHITELIST` || exit 1
+
+	if [ -n "${SCRIPTWHITELIST}" ]; then
+		SCRIPTWHITELIST=`echo ${SCRIPTWHITELIST}`
+
+		check_paths SCRIPTWHITELIST
+	fi
+
+
+	test $ERRCODE -ne 0 && exit 1
 
 	return
 }
@@ -3472,9 +3802,6 @@ get_configfile_options() {
 
 		get_rtkt_whitelist_options
 
-		check_test hashes && HASH_CHECK_ENABLED=1
-		check_test attributes && HASH_CHECK_ENABLED=1
-
 		check_test trojans && get_xinetd_option
 
 		check_test ports && get_ports_option
@@ -3484,6 +3811,10 @@ get_configfile_options() {
 		check_test shared_libs && get_shared_lib_whitelist_option
 
 		get_epoch_date_cmd_option
+
+		get_phalanx2_option
+
+		get_dev_options
 	fi
 
 
@@ -3510,6 +3841,8 @@ get_configfile_options() {
 		get_os_info_options
 
 		get_user_fileprop_list
+
+		get_properties_options
 	fi
 
 	#
@@ -3812,11 +4145,11 @@ rkh_dat_set_file_properties() {
 
 
 	if ! `check_test hashes` && test $ENDIS_OPT -eq 0; then
-		HCMD=""
+		HASH_CMD=""
 	elif [ -z "${PKGMGR}" -a "${HASH_FUNC}" = "NONE" ]; then
-		HCMD=""
+		HASH_CMD=""
 	else
-		HCMD="${HASH_FUNC}"
+		HASH_CMD="${HASH_FUNC}"
 	fi
 
 	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
@@ -3975,7 +4308,7 @@ ${DIR}:1"
 		fi
 
 
-		if [ -n "${HCMD}" ]; then
+		if [ -n "${HASH_CMD}" ]; then
 			if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				FILE_IS_PKGD=1
 				SYSHASH="ignore-prelink-dep-err"
@@ -4051,9 +4384,9 @@ ${DIR}:1"
 			fi
 
 			if [ $FILE_IS_PKGD -eq 0 ]; then
-				if [ "${HCMD}" != "NONE" ]; then
+				if [ "${HASH_CMD}" != "NONE" ]; then
 					SYSHASH=""
-					RKHTMPVAR=`${HCMD} ${FNAME} 2>&1`
+					RKHTMPVAR=`${HASH_CMD} ${FNAME} 2>&1`
 
 					if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 						DEPENDENCY_ERR=1
@@ -4064,7 +4397,7 @@ ${DIR}:1"
 				fi
 
 				if [ -z "${SYSHASH}" ]; then
-					if [ "${HCMD}" = "NONE" ]; then
+					if [ "${HASH_CMD}" = "NONE" ]; then
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
 							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "${FNAME}"
 						fi
@@ -6744,7 +7077,6 @@ file_properties_check() {
 	SKIP_ATTR=0; SKIP_HASH=0; SKIP_IMMUT=0; SKIP_SCRIPT=0
 	USE_DAT_FILE=1
 	SKIP_IMMUT_OS=0
-	IMMUTABLE_SET=0
 	PROP_FILE_LIST_COUNT=0
 
 	#
@@ -6874,22 +7206,21 @@ file_properties_check() {
 			fi
 		fi
 
-		if [ $PRELINKED -eq 1 ]; then
-			case $SKIP_HASH_MSG in
-			1)
-				SKIP_HASH=1
-				RKHTMPVAR="${RKHTMPVAR} prelink"
-				;;
-			2)
-				SKIP_HASH=1
-				RKHTMPVAR="${RKHTMPVAR} sha1"
-				;;
-			3)
-				SKIP_HASH=1
-				RKHTMPVAR="${RKHTMPVAR} libsafe"
-				;;
-			esac
-		fi
+
+		case $SKIP_HASH_MSG in
+		1)
+			SKIP_HASH=1
+			RKHTMPVAR="${RKHTMPVAR} prelink"
+			;;
+		2)
+			SKIP_HASH=1
+			RKHTMPVAR="${RKHTMPVAR} sha1"
+			;;
+		3)
+			SKIP_HASH=1
+			RKHTMPVAR="${RKHTMPVAR} libsafe"
+			;;
+		esac
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
@@ -6971,6 +7302,10 @@ file_properties_check() {
 		display --to LOG --type INFO FILE_PROP_IMMUT_OS
 	fi
 
+	if [ $IMMUTABLE_SET -eq 1 ]; then
+		display --to LOG --type INFO FILE_PROP_IMMUT_SET
+	fi
+
 	if [ -z "${RKHTMPVAR}" ]; then
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN FILE_PROP_CMDS
 	else
@@ -6980,6 +7315,7 @@ file_properties_check() {
 
 
 		RKHTMPVAR2=0
+
 		for TEST_RESULT in ${RKHTMPVAR}; do
 			case "${TEST_RESULT}" in
 			attr)
@@ -7069,35 +7405,13 @@ file_properties_check() {
 	fi
 
 	if [ $SKIP_HASH -eq 1 ]; then
-		HCMD=""
 		SYSHASH=""
+		HASH_CMD=""
 	else
-		HCMD="${HASH_FUNC}"
+		HASH_CMD="${HASH_FUNC}"
 	fi
 
 	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
-
-
-	#
-	# Set up some whitelist variables. There is no point
-	# recalculating the (static) whitelist as we look at
-	# each file. We may as well just do it the once here.
-	#
-
-	if [ $SKIP_ATTR -eq 0 ]; then
-		ATTRWHITELIST=`get_option 1 multi ATTRWHITELIST` || exit 1
-		WRITEWHITELIST=`get_option 1 multi WRITEWHITELIST` || exit 1
-	fi
-
-	if [ $SKIP_IMMUT -eq 0 ]; then
-		IMMUTWHITELIST=`get_option 1 multi IMMUTWHITELIST` || exit 1
-#jh - this option needs to be checked for '0' or '1', so it should be checked at the start of rkh.
-		IMMUTABLE_SET=`get_option 1 single IMMUTABLE_SET` || exit 1
-	fi
-
-	if [ $SKIP_SCRIPT -eq 0 ]; then
-		SCRIPTWHITELIST=`get_option 1 multi SCRIPTWHITELIST` || exit 1
-	fi
 
 
 	#
@@ -7417,13 +7731,13 @@ file_properties_check() {
 					test -z "${RKHHASH}" && TEST_RESULT="${TEST_RESULT} norkhhash"
 
 					if [ -z "${TEST_RESULT}" ]; then
-						if [ "${HCMD}" = "NONE" ]; then
+						if [ "${HASH_CMD}" = "NONE" ]; then
 							SYSHASH=""
 						else
-							SYSHASH=`${HCMD} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							SYSHASH=`${HASH_CMD} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 							if [ -z "${SYSHASH}" ]; then
-								if [ -n "`${HCMD} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${HASH_CMD} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
 										SYSHASH="${RKHHASH}"
 										display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FNAME}"
@@ -8744,9 +9058,7 @@ rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 		fi
 
-		ROOTKIT_PHALANX2_DIRTESTVAL=`get_option 1 single PHALANX2_DIRTEST` || exit 1
-
-		if [ "${ROOTKIT_PHALANX2_DIRTESTVAL}" = "1" ]; then
+		if [ $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
 			ROOTKIT_PHALANX2_DIRNAMES=`find ${RKHROOTDIR}/etc ${RKHROOTDIR}/usr -type d -iname "*.p2"`
 		else
 			ROOTKIT_PHALANX2_DIRNAMES="${RKHROOTDIR}/etc/khubd.p2 ${RKHROOTDIR}/etc/lolzz.p2 ${RKHROOTDIR}/usr/lib/zupzz.p2"
@@ -8770,7 +9082,7 @@ rootkit_file_dir_checks() {
 				fi
 			done
 
-		elif [ $VERBOSE_LOGGING -eq 1 -a "${ROOTKIT_PHALANX2_DIRTESTVAL}" = "1" ]; then
+		elif [ $VERBOSE_LOGGING -eq 1 -a $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "*.p2"
 		fi
 
@@ -9645,7 +9957,7 @@ malware_checks() {
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
 
-				ALLOWPROCDELFILES=`get_option 1 multi ALLOWPROCDELFILE` || exit 1
+				ALLOWPROCDELFILES=`get_option 2 multi ALLOWPROCDELFILE` || exit 1
 
 				IFS=$IFSNL
 
@@ -9713,7 +10025,7 @@ malware_checks() {
 					PROCWHITELISTED=0
 					PROCDELFILES_GIVEN=0
 
-					for RKHTMPVAR in $ALLOWPROCDELFILES; do
+					for RKHTMPVAR in ${ALLOWPROCDELFILES}; do
 						PROCDELFILES_GIVEN=0
 
 						if [ -n "`echo \"${RKHTMPVAR}\" | grep ':/'`" ]; then
@@ -9786,7 +10098,7 @@ ${PROC} ${PID} ${FNAME}"
 
 			IFS=$RKHIFS
 
-			for RKHTMPVAR in $WHITEPROC; do
+			for RKHTMPVAR in ${WHITEPROC}; do
 				if [ -n "`echo \"${RKHTMPVAR}\" | grep ':/'`" ]; then
 					PROC=`echo "${RKHTMPVAR}" | cut -d: -f1`
 					FNAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
@@ -11163,7 +11475,7 @@ do_network_interface_checks() {
 		# We only need to get the whitelisted processes once.
 		#
 
-		ALLOWPROCLISTENERS=`get_option 1 multi ALLOWPROCLISTEN` || exit 1
+		ALLOWPROCLISTENERS=`get_option 2 multi ALLOWPROCLISTEN` || exit 1
 
 
 		INODE_LIST=""
@@ -11235,7 +11547,7 @@ ${NAME} ${PID}"
 		IFS=$RKHIFS
 	fi
 
-	for NAME in $WHITEPROC; do
+	for NAME in ${WHITEPROC}; do
 		display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${NAME}"
 	done
 
@@ -12312,7 +12624,6 @@ do_filesystem_check() {
 
 		FDESCFS=0
 		FOUNDFILES=""
-		ALLOWDEVFILES=" "
 
 		if [ $BSDOS -eq 1 ]; then
 			RKHTMPVAR=`find_cmd mount`
@@ -12323,14 +12634,6 @@ do_filesystem_check() {
 				display --to LOG --type INFO NOT_FOUND_CMD "mount"
 			fi
 		fi
-
-		RKHTMPVAR=`get_option 1 multi ALLOWDEVFILE` || exit 1
-
-		for FNAME in ${RKHTMPVAR}; do
-			ALLOWDEVFILES="${ALLOWDEVFILES} ${FNAME}"
-		done
-
-		ALLOWDEVFILES="${ALLOWDEVFILES} "
 
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
@@ -13804,7 +14107,7 @@ help() {
 if [ $DEBUG_OPT -eq 1 -a "${MYSHELL}" = "ksh" ]; then
 	RKHTMPVAR=`typeset +f`
 
-	for RKHTMPVAR2 in $RKHTMPVAR; do
+	for RKHTMPVAR2 in ${RKHTMPVAR}; do
 		typeset -ft ${RKHTMPVAR2}
 	done
 fi

@@ -1,4 +1,4 @@
-Version:2010071301
+Version:2010071401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -243,6 +243,7 @@ STRINGS_CHECK:Check skipped - no 'strings' command found.
 FILE_PROP_START:Performing file properties checks
 FILE_PROP_CMDS:Checking for prerequisites
 FILE_PROP_IMMUT_OS:Skipping all immutable-bit checks. This check is only available for Linux systems.
+FILE_PROP_IMMUT_SET:The immutable-bit check will be reversed.
 FILE_PROP_SKIP_ATTR:Unable to find 'stat' command - all file attribute checks will be skipped.
 FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:
 FILE_PROP_SKIP_HASH_FUNC:The current hash function ($1) or package manager ($2) is incompatible with the hash function ($3) or package manager ($4) used to store the values.
