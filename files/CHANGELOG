@@ -46,6 +46,10 @@
    127.x.x.x address as being remote.
  - In the configuration file the WEBCMD option has now changed
    name to WEB_CMD. However, the old name will still be recognised.
+ - If the UPDT_ON_OS_CHANGE option is set, and an O/S change has been
+   detected, a message is now logged stating that an automatic
+   update will occur. Additionally, the output of the update is no
+   longer displayed (it looked confusing).
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

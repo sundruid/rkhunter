@@ -4454,19 +4454,24 @@ ${DIR}:1"
 		RKHTMPVAR="created"
 	fi
 
-	if [ $NOHASH_COUNT -eq 0 ]; then
-		if [ -n "${PROPUPD_OPT}" ]; then
-			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT
-		else
-			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
-		fi
+	# Don't display messages if this is an automatic update.
+	if [ $OS_CHANGED -eq 1 -a $UPDT_ON_OS_CHANGE -eq 1 ]; then
+		test $NOHASH_COUNT -gt 0 && RET_CODE=1
 	else
-		RET_CODE=1
-
-		if [ -n "${PROPUPD_OPT}" ]; then
-			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+		if [ $NOHASH_COUNT -eq 0 ]; then
+			if [ -n "${PROPUPD_OPT}" ]; then
+				display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT
+			else
+				display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
+			fi
 		else
-			display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+			RET_CODE=1
+
+			if [ -n "${PROPUPD_OPT}" ]; then
+				display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+			else
+				display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+			fi
 		fi
 	fi
 
@@ -13495,14 +13500,13 @@ check_os_info() {
 	# a change has occurred.
 	#
 
-	#
-	# First check if the host name has changed.
-	#
-
 	OS_CHANGED=0
 
 	display --to LOG --type PLAIN --nl OSINFO_START
 
+	#
+	# First check if the host name has changed.
+	#
 
 	if [ $WARN_ON_OS_CHANGE -eq 1 ]; then
 		IND_COUNT=9
@@ -13512,7 +13516,6 @@ check_os_info() {
 		OSINFO_WARNING="INFO"
 		display --to LOG --type INFO FILE_PROP_NO_OS_WARNING
 	fi
-
 
 	OLD_HOST=`grep '^Host:' ${RKHDAT_FILE} | cut -d: -f2-`
 
@@ -13588,13 +13591,15 @@ check_os_info() {
 
 	if [ $OS_CHANGED -eq 1 ]; then
 		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_MSG1
-		display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_MSG2
 
-		if [ $WARN_ON_OS_CHANGE -eq 1 -a $UPDT_ON_OS_CHANGE -eq 0 ]; then
-			display --to LOG --type WARNING --nl PROPUPD_WARN
+		if [ $UPDT_ON_OS_CHANGE -eq 0 ]; then
+			display --to LOG --type PLAIN --log-indent $IND_COUNT OSINFO_MSG2
+
+			test $WARN_ON_OS_CHANGE -eq 1 && display --to LOG --type WARNING --nl PROPUPD_WARN
+		else
+			PROP_UPDATE=1
+			display --to LOG --type INFO OSINFO_DO_UPDT
 		fi
-
-		test $UPDT_ON_OS_CHANGE -eq 1 && PROP_UPDATE=1
 	else
 		display --to LOG --type INFO OSINFO_END
 	fi

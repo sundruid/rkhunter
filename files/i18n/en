@@ -1,4 +1,4 @@
-Version:2010071401
+Version:2010071701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -179,7 +179,7 @@ UPDATE_I18N_NO_VERS:No i18n language file version numbers can be found.
 UPDATE_SKIPPED:Language file update skipped at users request.
 
 OSINFO_START:Checking if the O/S has changed since last time...
-OSINFO_END:Nothing seems to have changed
+OSINFO_END:Nothing seems to have changed.
 OSINFO_HOST_CHANGE1:The host name has changed since the last run:
 OSINFO_HOST_CHANGE2:Old host value: $1    New value: $2
 OSINFO_OSVER_CHANGE1:The O/S name or version has changed since the last run:
@@ -189,6 +189,7 @@ OSINFO_ARCH_CHANGE1:The system seems to have changed CPU type:
 OSINFO_ARCH_CHANGE2:Old CPU value: $1    New value: $2
 OSINFO_MSG1:Because of the change(s) the file properties checks may give some false-positive results.
 OSINFO_MSG2:You may need to re-run rkhunter with the '--propupd' option.
+OSINFO_DO_UPDT:The file properties file will be automatically updated.
 
 SET_FILE_PROP_START:Getting file properties...
 SET_FILE_PROP_DIR_FILE_COUNT:Found $1 files in $2
