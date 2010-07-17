@@ -2615,8 +2615,9 @@ check_paths() {
 	# set to zero before this function is called, and will be
 	# set to one if any pathname fails a check.
 	#
-	# If the second parameter is set, then that name is used as the
-	# option name.
+	# The first parameter is the list of pathnames to check. The
+	# second parameter is the option name to be used in the error
+	# messages.
 	#
 
 	OPT_VALUE=$1
@@ -2630,58 +2631,103 @@ check_paths() {
 
 	for FNAME in ${RKHTMPVAR}; do
 		#
-		# First check for anything which contains just dots,
-		# forward-slashes, asterisks etc. This means that
-		# '/' cannot be set.
+		# First check for anything which contains just dots, asterisks
+		# etc. Also check that '/' has not been set.
 		#
 
-		if [ -n "`echo \"${FNAME}\" | egrep '(^[./*?!]*$)|\.\.|(^[^a-zA-Z]*$)'`" ]; then
+		if [ -n "`echo \"${FNAME}\" | egrep '(^[./*?!]*$)|/\.\./|(^[^a-zA-Z]*$)'`" ]; then
 			ERRCODE=1
 			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
 			continue
 		fi
 
 		#
-		# This is as far as we go for the user file property names.
+		# For the user file properties list none of the filenames may
+		# contain a colon character, because they are going to be
+		# stored in a colon-separated record.
 		#
 
-		test "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" && continue
+		if [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
+			if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
+				ERRCODE=1
+				echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
+				continue
+			fi
+		fi
 
 		#
-		# Now we check to see if it is a simple file name.
+		# Next we check to see if it is a relative pathname.
 		#
 
-		if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+		if [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
+			ERRCODE=1
+			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
+		elif [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+			#
+			# Now we check to see if it is a simple file name.
+			#
+
+			#
+			# Simple file names are allowed for the user property files.
+			#
+
+			test "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" && continue
+
 			ERRCODE=1
 			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
 		else
 			#
-			# This is as far as we go for the '/dev' file names.
+			# It's an absolute pathname. This could be a file, a directory,
+			# some other file type, or a non-existent name.
+			#
+
+			#
+			# This is as far as we go for the '/dev' file names. They can
+			# be anything, and may not even exist all the time.
 			#
 
 			test "${OPT_NAME}" = "ALLOWDEVFILES" && continue
 
-			# It's an absolute pathname. This could be a file or a directory.
+			#
+			# Now test for the different file types.
+			#
 
 			if [ -f "${FNAME}" ]; then
-				:
+				if [ "${OPT_NAME}" = "ALLOWHIDDENDIRS" ]; then
+					ERRCODE=1
+					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
+				fi
 			elif [ -d "${FNAME}" ]; then
 				case "${OPT_NAME}" in
-				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST)
+				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILES)
 					ERRCODE=1
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
 					;;
 				esac
 			elif [ -h "${FNAME}" ]; then
 				ERRCODE=1
-				RKHTMPVAR2=`${READLINK_CMD} -f ${FNAME}`
-				echo "Invalid ${OPT_NAME} configuration option: Invalid link: ${FNAME} -> ${RKHTMPVAR2}"
+
+				if [ $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR2=" -> `${READLINK_CMD} -f ${FNAME}`"
+				else
+					RKHTMPVAR2=""
+				fi
+
+				echo "Invalid ${OPT_NAME} configuration option: Invalid link found: ${FNAME}${RKHTMPVAR}"
 			elif [ -e "${FNAME}" ]; then
+				#
+				# This is as far as we go for the hidden files. A hidden
+				# 'file' can actually be anything other than a directory.
+				#
+
+				test "${OPT_NAME}" = "ALLOWHIDDENFILES" && continue
+
 				ERRCODE=1
-				echo "Invalid ${OPT_NAME} configuration option: Not a file or directory: ${FNAME}"
+				test "${OPT_NAME}" = "ALLOWHIDDENDIRS" && RKHTMPVAR2="directory" || RKHTMPVAR2="file or directory"
+				echo "Invalid ${OPT_NAME} configuration option: Not a ${RKHTMPVAR2}: ${FNAME}"
 			else
 				ERRCODE=1
-				echo "Invalid ${OPT_NAME} configuration option: Non-existent file or directory: ${FNAME}"
+				echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: ${FNAME}"
 			fi
 		fi
 	done
@@ -2766,8 +2812,62 @@ get_dev_options() {
 		fi
 	fi
 #jh
-#jh - options still to check: ALLOWHIDDENDIR  ALLOWHIDDENFILE  APP_WHITELIST
+#jh - options still to check: APP_WHITELIST
 #jh - suspscan options: SUSPSCAN_DIRS  SUSPSCAN_TEMP  SUSPSCAN_MAXSIZE  SUSPSCAN_THRESH  SUSPSCAN_LINETHRESH  SUSPSCAN_DEBUG
+#jh - checkthe user_filedir_prop thing - we must NOT allow simple names with wildcards 'eg. top*' and they must be tested for before wilcard expansion.
+#jh -            after the check_paths we must also check to see if the names have been repeated
+	return
+}
+
+
+get_hidden_options() {
+
+	#
+	# This function processes the ALLOWHIDDENFILE and ALLOWHIDDENDIR
+	# options which are used to whitelist hidden files and directories.
+	#
+
+	ALLOWHIDDENFILES=`get_option 2 multi ALLOWHIDDENFILE` || exit 1
+
+	if [ -n "${ALLOWHIDDENFILES}" ]; then
+		#
+		# We 'echo' the variable so that any wildcards get expanded.
+		#
+
+		ALLOWHIDDENFILES=`echo ${ALLOWHIDDENFILES}`
+
+		ERRCODE=0
+
+		check_paths ALLOWHIDDENFILES
+
+		if [ $ERRCODE -eq 0 ]; then
+			ALLOWHIDDENFILES=" ${ALLOWHIDDENFILES} "
+		else
+			exit 1
+		fi
+	fi
+
+
+	ALLOWHIDDENDIRS=`get_option 2 multi ALLOWHIDDENDIR` || exit 1
+
+	if [ -n "${ALLOWHIDDENDIRS}" ]; then
+		#
+		# We 'echo' the variable so that any wildcards get expanded.
+		#
+
+		ALLOWHIDDENDIRS=`echo ${ALLOWHIDDENDIRS}`
+
+		ERRCODE=0
+
+		check_paths ALLOWHIDDENDIRS
+
+		if [ $ERRCODE -eq 0 ]; then
+			ALLOWHIDDENDIRS=" ${ALLOWHIDDENDIRS} "
+		else
+			exit 1
+		fi
+	fi
+
 	return
 }
 
@@ -3514,6 +3614,7 @@ get_user_fileprop_list() {
 	# We 'echo' the variable so that any wildcards get expanded.
 	#
 
+#jh - no dont do this yet
 	FILENAMES=`echo ${FILENAMES}`
 
 	#
@@ -3815,6 +3916,8 @@ get_configfile_options() {
 		get_phalanx2_option
 
 		get_dev_options
+
+		get_hidden_options
 	fi
 
 
@@ -12735,33 +12838,6 @@ do_filesystem_check() {
 
 
 	#
-	# Get the whitelisted files and directories.
-	#
-
-	ALLOWHIDDENDIRS=" "
-	ALLOWHIDDENFILES=" "
-
-	if [ -n "${LOOKINDIRS}" ]; then
-		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENDIR` || exit 1
-
-		for DIR in ${RKHTMPVAR}; do
-			ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} ${DIR}"
-		done
-
-		ALLOWHIDDENDIRS="${ALLOWHIDDENDIRS} "
-
-
-		RKHTMPVAR=`get_option 1 multi ALLOWHIDDENFILE` || exit 1
-
-		for FNAME in ${RKHTMPVAR}; do
-			ALLOWHIDDENFILES="${ALLOWHIDDENFILES} ${FNAME}"
-		done
-
-		ALLOWHIDDENFILES="${ALLOWHIDDENFILES} "
-	fi
-
-
-	#
 	# Next we look for any whitelisted files and directories. We also
 	# exclude certain types of files, and Gentoo zero-sized files.
 	#
@@ -12777,7 +12853,7 @@ do_filesystem_check() {
 
 		FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
 
-		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|TDB database|empty'`" && continue
+		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|empty'`" && continue
 
 
 		FILE=`echo "${FNAME}" | sed -e "s:^${RKHROOTDIR}::"`

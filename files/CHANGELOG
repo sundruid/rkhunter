@@ -50,6 +50,9 @@
    detected, a message is now logged stating that an automatic
    update will occur. Additionally, the output of the update is no
    longer displayed (it looked confusing).
+ - Removed the automatic exception of TDB database files from the
+   'filesystem' check. (This seems to have been introduced in version
+   1.1.3, but we have whitelisting now.)
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
