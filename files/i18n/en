@@ -1,4 +1,4 @@
-Version:2010071701
+Version:2010072901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -194,9 +194,13 @@ OSINFO_DO_UPDT:The file properties file will be automatically updated.
 SET_FILE_PROP_START:Getting file properties...
 SET_FILE_PROP_DIR_FILE_COUNT:Found $1 files in $2
 SET_FILE_PROP_FILE_COUNT:File $1: searched for $2 files, found $3
+SET_FILE_PROP_FILE_COUNT_BL:File $1: searched for $2 files, found $3, broken links $4
 SET_FILE_PROP_FILE_COUNT_PROPOPT:File $1: searched for $2 files, found $3 of $4
+SET_FILE_PROP_FILE_COUNT_PROPOPT_BL:File $1: searched for $2 files, found $3 of $4, broken links $5
 SET_FILE_PROP_FILE_COUNT_NOHASH:File $1: searched for $2 files, found $3, missing hashes $4
+SET_FILE_PROP_FILE_COUNT_NOHASH_BL:File $1: searched for $2 files, found $3, missing hashes $4, broken links $5
 SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT:File $1: searched for $2 files, found $3 of $4, missing hashes $5
+SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT_BL:File $1: searched for $2 files, found $3 of $4, missing hashes $5, broken links $6
 
 PROPUPD_START:Starting file properties data update...
 PROPUPD_OSINFO_START:Collecting O/S info...
@@ -271,10 +275,12 @@ FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
 FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
+FILE_PROP_NO_SYSHASH_BL:The file is a broken link: $1
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
 FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.
 FILE_PROP_IGNORE_PRELINK_DEP_ERR:Ignoring prelink dependency error for file '$1'
 FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
+FILE_PROP_SYSHASH_UNAVAIL_BL:Current hash: Unavailable (possible broken link)
 FILE_PROP_SYSHASH:Current hash: $1
 FILE_PROP_RKHHASH:Stored hash : $1
 FILE_PROP_NO_RKHHASH:No hash value found for file '$1' in the rkhunter.dat file.
@@ -564,14 +570,10 @@ SUSPSCAN_DIRS:Directories to check are: $1
 SUSPSCAN_NO_DIRS:No directories specified: using defaults ($1)
 SUSPSCAN_TEMP:Temporary directory to use: $1
 SUSPSCAN_NO_TEMP:No temporary directory specified: using default ($1)
-SUSPSCAN_TEMP_NOT_EXIST:The suspscan temporary directory does not exist: $1
-SUSPSCAN_TEMP_NO_WRITE:The suspscan temporary directory is not writable: $1
 SUSPSCAN_SIZE:Maximum file size to check (in bytes): $1
 SUSPSCAN_NO_SIZE:No maximum file size specified: using default ($1)
-SUSPSCAN_SIZE_INVALID:The suspscan maximum file size is invalid: $1
 SUSPSCAN_THRESH:Score threshold is set to: $1
 SUSPSCAN_NO_THRESH:No score threshold specified: using default ($1)
-SUSPSCAN_THRESH_INVALID:The suspscan score threshold is invalid: $1
 SUSPSCAN_DIR_CHECK:Checking directory: '$1'
 SUSPSCAN_DIR_CHECK_NO_FILES:No suitable files found to check.
 SUSPSCAN_FILE_CHECK:File checked: Name: '$1' Score: $2

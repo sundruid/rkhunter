@@ -53,6 +53,16 @@
  - Removed the automatic exception of TDB database files from the
    'filesystem' check. (This seems to have been introduced in version
    1.1.3, but we have whitelisting now.)
+ - The file properties test now handles broken links. These were
+   previously reported as an error. If there are any broken links,
+   then the '--propupd' option will report how many have been found.
+ - The old configuration options LOCAL_RC_PATH and SYSTEM_RC_DIR
+   have now been removed. They were replaced by STARTUP_PATHS at
+   version 1.3.6.
+ - Most of the configuration options which take a list of pathnames,
+   and which are not set in the provided config file, can now be
+   specified more than once. They are all now space-separated lists
+   as well.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
@@ -96,6 +106,10 @@
  - The UPDT_ON_OS_CHANGE option was defaulting to 1 rather than 0.
  - The result of the libsafe check, a prelink command check, and a prelink
    hash function check were not being reported.
+ - The 'filesystem' check would ignore files with spaces in their name if
+   the default setting of SCAN_MODE_DEV was used. This has now been
+   corrected, filenames with spaces in them are checked regardless of the
+   configuration option setting.
 
 -- 
 
