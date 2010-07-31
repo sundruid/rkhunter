@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.13"
+INSTALLER_VERSION="1.2.14"
 INSTALLER_COPYRIGHT="Copyright 2003-2010, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -36,6 +36,10 @@ USE_CVS=0
 ERRCODE=0
 OVERWRITE=0
 STRIPROOT=""
+
+RPM_USING_ROOT=0
+TGZ_USING_ROOT=0
+DEB_USING_ROOT=0
 
 umask 027
 
@@ -155,7 +159,12 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			;;
 		RPM)
 			if [ -n "${RPM_BUILD_ROOT}" ]; then
-				PREFIX="${RPM_BUILD_ROOT}/usr/local"
+				if [ "${RPM_BUILD_ROOT}" = "/" ]; then
+					RPM_USING_ROOT=1
+					PREFIX="/usr/local"
+				else
+					PREFIX="${RPM_BUILD_ROOT}/usr/local"
+				fi
 			else
 				echo "RPM installation chosen but \$RPM_BUILD_ROOT variable not found: exiting."
 				exit 1
@@ -163,7 +172,12 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			;;
 		DEB)
 			if [ -n "${DEB_BUILD_ROOT}" ]; then
-				PREFIX="${DEB_BUILD_ROOT}/usr"
+				if [ "${DEB_BUILD_ROOT}" = "/" ]; then
+					DEB_USING_ROOT=1
+					PREFIX="/usr"
+				else
+					PREFIX="${DEB_BUILD_ROOT}/usr"
+				fi
 			else
 				echo "DEB installation chosen but \$DEB_BUILD_ROOT variable not found: exiting."
 				exit 1
@@ -171,7 +185,12 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			;;
 		TGZ)
 			if [ -n "${TGZ_BUILD_ROOT}" ]; then
-				PREFIX="${TGZ_BUILD_ROOT}/usr"
+				if [ "${TGZ_BUILD_ROOT}" = "/" ]; then
+					TGZ_USING_ROOT=1
+					PREFIX="/usr"
+				else
+					PREFIX="${TGZ_BUILD_ROOT}/usr"
+				fi
 			else
 				echo "TGZ installation chosen but \$TGZ_BUILD_ROOT variable not found: exiting."
 				exit 1
@@ -201,13 +220,25 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			SYSCONFIGDIR="${PREFIX}/etc"
 			;;
 		RPM)
-			SYSCONFIGDIR="${RPM_BUILD_ROOT}/etc"
+			if [ $RPM_USING_ROOT -eq 1 ]; then
+				SYSCONFIGDIR="/etc"
+			else
+				SYSCONFIGDIR="${RPM_BUILD_ROOT}/etc"
+			fi
 			;;
 		DEB)
-			SYSCONFIGDIR="${DEB_BUILD_ROOT}/etc"
+			if [ $DEB_USING_ROOT -eq 1 ]; then
+				SYSCONFIGDIR="/etc"
+			else
+				SYSCONFIGDIR="${DEB_BUILD_ROOT}/etc"
+			fi
 			;;
 		TGZ)
-			SYSCONFIGDIR="${TGZ_BUILD_ROOT}/etc"
+			if [ $TGZ_USING_ROOT -eq 1 ]; then
+				SYSCONFIGDIR="/etc"
+			else
+				SYSCONFIGDIR="${TGZ_BUILD_ROOT}/etc"
+			fi
 			;;
 		*)
 			SYSCONFIGDIR="/etc"
@@ -234,13 +265,25 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			fi
 
 			BINDIR="${PREFIX}/bin"
-			VARDIR="${RPM_BUILD_ROOT}/var"
+
+			if [ $RPM_USING_ROOT -eq 1 ]; then
+				VARDIR="/var"
+			else
+				VARDIR="${RPM_BUILD_ROOT}/var"
+			fi
+
 			SHAREDIR="${PREFIX}/share"
 			;;
 		DEB)
 			BINDIR="${PREFIX}/bin"
 			LIBDIR="${PREFIX}/lib"
-			VARDIR="${DEB_BUILD_ROOT}/var"
+
+			if [ $DEB_USING_ROOT -eq 1 ]; then
+				VARDIR="/var"
+			else
+				VARDIR="${DEB_BUILD_ROOT}/var"
+			fi
+
 			SHAREDIR="${PREFIX}/share"
 			;;
 		TGZ)
@@ -251,7 +294,13 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			fi
 
 			BINDIR="${PREFIX}/bin"
-			VARDIR="${TGZ_BUILD_ROOT}/var"
+
+			if [ $TGZ_USING_ROOT -eq 1 ]; then
+				VARDIR="/var"
+			else
+				VARDIR="${TGZ_BUILD_ROOT}/var"
+			fi
+
 			SHAREDIR="${PREFIX}/share"
 			;;
 		*)
@@ -789,20 +838,22 @@ doInstall()  {
 
 			echo "" >>"${RKHINST_ETC_DIR}/${FILE}"
 
-			if [ -n "${RPM_BUILD_ROOT}" ]; then
+			if [ -n "${RPM_BUILD_ROOT}" -a $RPM_USING_ROOT -eq 0 ]; then
 				echo "INSTALLDIR=${PREFIX}" | sed "s|${RPM_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${RPM_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" | sed "s|${RPM_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
-			elif [ -n "${TGZ_BUILD_ROOT}" ]; then
+			elif [ -n "${TGZ_BUILD_ROOT}" -a $TGZ_USING_ROOT -eq 0 ]; then
 				echo "INSTALLDIR=${PREFIX}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "DBDIR=${RKHINST_DB_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "TMPDIR=${RKHINST_TMP_DIR}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" | sed "s|${TGZ_BUILD_ROOT}||g" >>"${RKHINST_ETC_DIR}/${FILE}"
-			# Debian builds are handled with a patch during the build process.
-			elif [ -z "${DEB_BUILD_ROOT}" ]; then
+			elif [ -n "${DEB_BUILD_ROOT}" ]; then
+				# Debian builds are handled with a patch during the build process.
+				:
+			else
 				echo "INSTALLDIR=${PREFIX}" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "DBDIR=${RKHINST_DB_DIR}" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >>"${RKHINST_ETC_DIR}/${FILE}"

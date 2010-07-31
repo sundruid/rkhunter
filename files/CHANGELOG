@@ -110,6 +110,8 @@
    the default setting of SCAN_MODE_DEV was used. This has now been
    corrected, filenames with spaces in them are checked regardless of the
    configuration option setting.
+ - If the installer is used with the RPM, TGZ or DEB layout options,
+   and '/' is the build root, then this will now build correctly.
 
 -- 
 
