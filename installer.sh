@@ -124,7 +124,7 @@ showExamples() { # Show examples
 
 showVersion() { echo "${INSTALLER_NAME} ${INSTALLER_VERSION} ${INSTALLER_LICENSE}"; return; }
 
-selectTemplate() { # Take input from the "--installdir parameter"
+selectTemplate() { # Take input from the "--install parameter"
 	case "$1" in
 	/usr|/usr/local|default|custom_*|RPM|DEB|TGZ)
 		case "$1" in
@@ -247,7 +247,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 
 		case "$1" in
 		custom_*)
-			if [ "${UNAMEM}" = "x86_64" ]; then
+			if [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
 				LIBDIR="${PREFIX}/lib64"
 			else
 				LIBDIR="${PREFIX}/lib"
@@ -258,7 +258,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			SHAREDIR="${PREFIX}/share"
 			;;
 		RPM)
-			if [ "${UNAMEM}" = "x86_64" ]; then
+			if [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
 				LIBDIR="${PREFIX}/lib64"
 			else
 				LIBDIR="${PREFIX}/lib"
@@ -287,7 +287,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 			SHAREDIR="${PREFIX}/share"
 			;;
 		TGZ)
-			if [ "${UNAMEM}" = "x86_64" ]; then
+			if [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
 				LIBDIR="${PREFIX}/lib64"
 			else
 				LIBDIR="${PREFIX}/lib"
@@ -377,7 +377,7 @@ selectTemplate() { # Take input from the "--installdir parameter"
 # /etc/sysconfig/rkhunter (config for cronjob)
 # /etc/logrotate.d/rkhunter
 
-showTemplate() { # Take input from the "--installdir parameter"
+showTemplate() { # Take input from the "--install parameter"
 	case "$1" in
 	custom_.)
 		# Dump *everything* in the current dir.
