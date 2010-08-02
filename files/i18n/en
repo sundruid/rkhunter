@@ -1,4 +1,4 @@
-Version:2010072901
+Version:2010080201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -368,8 +368,11 @@ ROOTKIT_POSS_STRINGS_FOUND:Found string '$1' in file '$2'. Possible rootkit: $3
 
 ROOTKIT_MALWARE_START:Performing malware checks
 ROOTKIT_MALWARE_SUSP_FILES:Checking running processes for suspicious files
-ROOTKIT_MALWARE_SUSP_FILES_FOUND:One or more of these files were found: $1
-ROOTKIT_MALWARE_SUSP_FILES_FOUND:Check the output of the lsof command 'lsof -F n -w -n'
+ROOTKIT_MALWARE_SUSP_FILES_FOUND:The following processes are using suspicious files:
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_UID:UID: $1    PID: $2
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_CMD:Command: $1
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_PATH:Pathname: $1
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_RTKT:Possible Rootkit: $1
 ROOTKIT_MALWARE_HIDDEN_PROCS:Checking for hidden processes
 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND:Hidden processes found: $1
 ROOTKIT_MALWARE_DELETED_FILES:Checking running processes for deleted files

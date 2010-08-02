@@ -64,6 +64,10 @@
    and which are not set in the provided config file, can now be
    specified more than once. They are all now space-separated lists
    as well.
+ - The 'suspicious files' check in the 'running_procs' test now displays
+   each found file individually. Additionally the warning will include
+   the command being executed, the PID, the user id, the full pathname
+   that appears to be suspicious, and the possible rootkit name.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

@@ -10476,20 +10476,12 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type INFO STARTING_TEST running_procs
 
 		if [ -n "${LSOF_CMD}" ]; then
-			SUSP_FILES=""
+			#
+			# First get a temporary file to store the output.
+			#
 
-			IFS=$IFSNL
-
-			for RKHTMPVAR in ${SUSP_FILES_INFO}; do
-				RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
-
-				FILENAME=`echo ${RKHTMPVAR} | cut -d: -f1 | sed -e 's/\./\\\./g'`
-				SUSP_FILES="${SUSP_FILES}|${FILENAME}"
-			done
-
-			IFS=$RKHIFS
-
-			SUSP_FILES=`echo "${SUSP_FILES}" | sed -e 's/^|//'`
+			get_temp_file "${RKHTMPDIR}/lsofprocs.out"
+			RKHLSOF_FILE=$TEMPFILE
 
 			#
 			# If we have the 'sort' and 'uniq' commands available,
@@ -10498,19 +10490,82 @@ ${PROC} ${PID} ${FNAME}"
 			#
 
 			if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-				FILENAME=`${LSOF_CMD} -wnlP -F n | grep '^n/' | sed -e 's/^n//' | ${SORT_CMD} | ${UNIQ_CMD} | egrep "/(${SUSP_FILES})\$"`
+				${LSOF_CMD} -wnlP +c 0 2>&1 | ${SORT_CMD} | ${UNIQ_CMD} >${RKHLSOF_FILE}
 			else
-				FILENAME=`${LSOF_CMD} -wnlP -F n | grep '^n/' | sed -e 's/^n//' | egrep "/(${SUSP_FILES})\$"`
+				${LSOF_CMD} -wnlP +c 0 >${RKHLSOF_FILE} 2>&1
 			fi
 
-			if [ -z "${FILENAME}" ]; then
+			#
+			# Now loop through the known suspicious filenames,
+			# and see if any are in the lsof output.
+			#
+
+			FOUND=0
+			SUSP_FILES=""
+
+			IFS=$IFSNL
+
+			for RKHTMPVAR in ${SUSP_FILES_INFO}; do
+				RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
+
+				FNAME=`echo ${RKHTMPVAR} | cut -d: -f1`
+
+				FNAMEGREP=`echo ${FNAME} | sed -e 's/\./\\\./g'`
+
+				FILENAME=`grep "/${FNAMEGREP}$" ${RKHLSOF_FILE}`
+
+				if [ -n "${FILENAME}" ]; then
+					FOUND=1
+
+					INFO=`echo ${RKHTMPVAR} | cut -d: -f2`
+
+					ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+					ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
+
+					#
+					# It is possible that more than one line of output was found.
+					# So we must loop through them and record them all.
+					#
+
+					for FNAME in ${FILENAME}; do
+						SUSP_FILES="${SUSP_FILES}
+${RKHTMPVAR}:${FNAME}"
+					done
+				fi
+			done
+
+			IFS=$RKHIFS
+
+			rm -f ${RKHLSOF_FILE} >/dev/null 2>&1
+
+			if [ $FOUND -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
 			else
-				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
+				display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_FILES_FOUND
 
-				SUSP_FILES=`echo "${SUSP_FILES}" | sed -e 's/|/, /g'`
-				SUSP_FILES=`echo "${SUSP_FILES}" | sed -e 's/\\\././g'`
-				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SUSP_FILES_FOUND "${SUSP_FILES}"
+				IFS=$IFSNL
+
+				SUSP_FILES=`echo "${SUSP_FILES}" | sed -e '/^$/d'`
+
+				for FILENAME in ${SUSP_FILES}; do
+					INFO=`echo ${FILENAME} | cut -d: -f2`
+					RKHTMPVAR=`echo ${FILENAME} | cut -d: -f3-`
+
+					FOUNDINFO=`echo "${RKHTMPVAR}" | awk '{ print $1 }'`
+					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_SUSP_FILES_FOUND_CMD "${FOUNDINFO}"
+
+					FOUNDINFO=`echo "${RKHTMPVAR}" | awk '{ print $3 }'`
+					RKHTMPVAR2=`echo "${RKHTMPVAR}" | awk '{ print $2 }'`
+					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_UID "${FOUNDINFO}" "${RKHTMPVAR2}"
+
+					FOUNDINFO=`echo "${RKHTMPVAR}" | awk '{ print $9 }'`
+					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_PATH "${FOUNDINFO}"
+
+					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_RTKT "${INFO}"
+				done
+
+				IFS=$RKHIFS
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
