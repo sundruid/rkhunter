@@ -119,6 +119,13 @@
    configuration option setting.
  - If the installer is used with the RPM, TGZ or DEB layout options,
    and '/' is the build root, then this will now build correctly.
+ - The ALLOW_SSH_ROOT_USER configuration option can no longer be set
+   to 'yes' if the 'PermitRootLogin' option is not set in the SSH
+   configuration file. A value of 'unset' must be used.
+ - The ALLOW_SSH_PROT_V1 configuration option can no longer be set
+   to '1' if the 'Protocol' option is not set in the SSH configuration
+   file. A value of '2' must be used. (The use of '1' in this instance
+   was an undocumented, but allowed setting.)
 
 -- 
 
