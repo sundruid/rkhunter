@@ -10512,25 +10512,39 @@ ${PROC} ${PID} ${FNAME}"
 
 				FNAMEGREP=`echo ${FNAME} | sed -e 's/\./\\\./g'`
 
-				FILENAME=`grep "/${FNAMEGREP}$" ${RKHLSOF_FILE}`
+				FOUNDFILES=`grep "/${FNAMEGREP}$" ${RKHLSOF_FILE}`
 
-				if [ -n "${FILENAME}" ]; then
-					FOUND=1
+				if [ -n "${FOUNDFILES}" ]; then
+					FOUND=0
 
 					INFO=`echo ${RKHTMPVAR} | cut -d: -f2`
-
-					ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
-					ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
 					#
 					# It is possible that more than one line of output was found.
 					# So we must loop through them and record them all.
 					#
 
-					for FNAME in ${FILENAME}; do
-						SUSP_FILES="${SUSP_FILES}
+					for FNAME in ${FOUNDFILES}; do
+						#
+						# See if the filename has been whitelisted.
+						#
+
+						FILENAME=`echo "${FNAME}" | sed -e 's/^.*[ 	]\([^ 	][^ 	]*\)$/\1/'`
+						FNAMEGREP=`echo ${FILENAME} | sed -e 's/\./\\\./g'`
+
+						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+							display --to LOG --type INFO FILE_PROP_WL "${FILENAME}" running_procs
+						else
+							FOUND=1
+							SUSP_FILES="${SUSP_FILES}
 ${RKHTMPVAR}:${FNAME}"
+						fi
 					done
+
+					if [ $FOUND -eq 1 ]; then
+						ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+						ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
+					fi
 				fi
 			done
 

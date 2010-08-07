@@ -30,6 +30,8 @@
    set). The configuration file option IMMUTABLE_SET can be set
    to '1' to enable this. By default it is '0'.
  - The installer now supports the ppc64 architecture.
+ - The RTKT_FILE_WHITELIST option can be used to whitelist
+   reported 'suspicious files' found in the 'running_procs' test.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
