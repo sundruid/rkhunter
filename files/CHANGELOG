@@ -126,6 +126,9 @@
    to '1' if the 'Protocol' option is not set in the SSH configuration
    file. A value of '2' must be used. (The use of '1' in this instance
    was an undocumented, but allowed setting.)
+ - NetBSD, FreeBSD and OSX would print out an error regarding the 'print'
+   command. They would also display the locking messages incorrectly. Both
+   of these have now been corrected.
 
 -- 
 

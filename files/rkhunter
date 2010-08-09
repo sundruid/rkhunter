@@ -30,9 +30,21 @@
 # by default on Solaris systems.
 #
 
+BSDOS=0
+SUNOS=0
+
 OPERATING_SYSTEM=`uname 2>/dev/null`
 
-if [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+case "${OPERATING_SYSTEM}" in
+*BSD)
+	BSDOS=1
+	;;
+SunOS)
+	SUNOS=1
+	;;
+esac
+
+if [ $SUNOS -eq 1 ]; then
 	# Simple SunOS test of RANDOM to see if we are now running bash or ksh.
 	if [ -z "$RANDOM" ]; then
 		# If the 'which' output contains a space, then it is probably an error.
@@ -98,11 +110,18 @@ fi
 # the 'echo -e' command is valid or not. We set ECHOOPT accordingly.
 #
 
+#
+# Unfortunately *BSD doesn't seem to allow capturing of unknown commands.
+# So we must alias 'print' to something valid, but which will fail.
+#
+
+test $BSDOS -eq 1 && alias print=false
+
 if [ "`print "rkh-ksh-string-test" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
 	alias echo='print'
 	ECHOOPT="--"
 	MYSHELL=ksh
-elif [ "${OPERATING_SYSTEM}" = "SunOS" ]; then
+elif [ $SUNOS -eq 1 ]; then
 	# For Solaris, if we are not running ksh, then it must be bash.
 	MYSHELL=bash
 	ECHOOPT="-e"
@@ -123,7 +142,7 @@ else
 	# Now test the 'echo -e' command.
 	#
 
-	if [ "`echo -e \"rkh-ksh-string-test\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
+	if [ "`echo -e \"rkh-ksh\tstring-test\" 2>/dev/null`" = "rkh-ksh	string-test" ]; then
 		ECHOOPT="-e"
 	else
 		ECHOOPT=""
@@ -132,12 +151,16 @@ fi
 
 
 #
-# We now perform a similar test to see if 'echo -n' is valid
-# or not. We set ECHON accordingly.
+# We now perform a similar test to see if 'echo -n', or "\c", is valid
+# or not. Unfortunately on some systems both '-e' and '-n' are valid,
+# but not together. The "\c" option works in these cases. So we set
+# ECHON accordingly.
 #
 
-if [ "`echo -n \"rkh-ksh-string-test\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
+if [ "`echo -n -e \"rkh-ksh-string-test\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
 	ECHON="-n"
+elif [ "`echo -e \"rkh-ksh-string-test\c\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
+	ECHON="c"
 else
 	ECHON=""
 fi
@@ -484,7 +507,11 @@ display() {
 			NLLOOP=`expr ${NLLOOP} - 1`
 		done
 
-		echo $NONL $ECHOOPT "${LINE1}"
+		if [ "${NONL}" = "c" ]; then
+			echo $ECHOOPT "${LINE1}\c"
+		else
+			echo $NONL $ECHOOPT "${LINE1}"
+		fi
 	fi
 
 	if [ $WRITETOLOG -eq 1 ]; then
