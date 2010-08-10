@@ -412,7 +412,7 @@ ROOTKIT_OS_START:Performing $1 specific checks
 ROOTKIT_OS_SKIPPED:No specific tests available
 ROOTKIT_OS_BSD_SOCKNET:Checking sockstat and netstat commands
 ROOTKIT_OS_BSD_SOCKNET_FOUND:Differences found between sockstat and netstat output:
-ROOTKIT_OS_BSD_SOCKNET_OUTPUT:$1 output: $2
+ROOTKIT_OS_BSD_SOCKNET_OUTPUT:$1 output (ports in use): $2
 ROOTKIT_OS_FREEBSD_KLD:Checking for KLD backdoors
 ROOTKIT_OS_FREEBSD_KLD_FOUND:Found possible FreeBSD KLD backdoor. 'kldstat -v' command shows string '$1'
 ROOTKIT_OS_FREEBSD_PKGDB:Checking package database

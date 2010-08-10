@@ -11177,16 +11177,27 @@ bsd_specific_checks() {
 	# This function performs tests specific to the BSD O/S.
 	#
 
+	#
+	# We check that the output of sockstat and netstat for
+	# local listening sockets is the same.
+	#
 
 	SOCKSTAT_CMD=`find_cmd sockstat`
 
 	if [ -n "${SOCKSTAT_CMD}" -a -n "${NETSTAT_CMD}" -a -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} -n | grep '\*[:.]\*' | cut -c1-55 | grep '\*[:.]' | cut -c39-47 | grep -v '\*' | tr -d ' ' | ${SORT_CMD} | ${UNIQ_CMD}`
-		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an | egrep -v 'TIME_WAIT|ESTABLISHED|SYN_SENT|CLOSE_WAIT|LAST_ACK|SYN_RECV|CLOSING' | cut -c1-44 | grep '\*\.' | cut -c24-32 | grep -v '\*' | tr -d ' ' | tr -d '\t' | ${SORT_CMD} | ${UNIQ_CMD}`
+		test "${OPERATING_SYSTEM}" = "NetBSD" && RKHTMPVAR="-n" || RKHTMPVAR=""
+
+#jh		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | grep '\*[:.]\*' | cut -c1-55 | grep '\*[:.]' | cut -c39-47 | grep -v '\*' | tr -d ' ' | ${SORT_CMD} | ${UNIQ_CMD}`
+		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '{ print $6 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | ${SORT_CMD} | ${UNIQ_CMD}`
+#jh		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an | egrep -v 'TIME_WAIT|ESTABLISHED|SYN_SENT|CLOSE_WAIT|LAST_ACK|SYN_RECV|CLOSING' | cut -c1-44 | grep '\*\.' | cut -c24-32 | grep -v '\*' | tr -d ' ' | tr -d '\t' | ${SORT_CMD} | ${UNIQ_CMD}`
+		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an |  awk '{ print $4 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | ${SORT_CMD} | ${UNIQ_CMD}`
 
 		if [ "${SOCKSTAT_OUTPUT}" = "${NETSTAT_OUTPUT}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 		else
+			SOCKSTAT_OUTPUT=`echo $SOCKSTAT_OUTPUT`
+			NETSTAT_OUTPUT=`echo $NETSTAT_OUTPUT`
+
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 
 			display --to LOG --type WARNING ROOTKIT_OS_BSD_SOCKNET_FOUND
@@ -14096,7 +14107,7 @@ set_file_prop_dirs_files() {
 				gtail gtest gtouch guname guniq gusers gwc gwho gwhoami
 				inetadm nawk truss"
 	elif [ "${OPERATING_SYSTEM}" = "FreeBSD" ]; then
-		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload"
+		PROP_FILE_LIST="${PROP_FILE_LIST} kldload kldstat kldunload procstat"
 	fi
 
 	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then

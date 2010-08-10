@@ -129,6 +129,9 @@
  - NetBSD, FreeBSD and OSX would print out an error regarding the 'print'
    command. They would also display the locking messages incorrectly. Both
    of these have now been corrected.
+ - The sockstat/netstat output check for *BSD systems gave a spurious
+   error message because FreeBSD/OpenBSD sockstat did not support the '-n'
+   option. This has been fixed, but NetBSD systems will still use it.
 
 -- 
 
