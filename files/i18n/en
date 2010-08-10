@@ -1,4 +1,4 @@
-Version:2010081001
+Version:2010081002
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -85,6 +85,8 @@ CONFIG_MIRRORS_MODE2:Only remote mirrors will be used
 FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
 CMD_ERROR:The command '$1' gave error code $2.
+
+DB_MISSING:
 
 SYS_PRELINK:System is using prelinking
 SYS_NO_PRELINK:System is not using prelinking

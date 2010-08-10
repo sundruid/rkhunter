@@ -70,6 +70,10 @@
    each found file individually. Additionally the warning will include
    the command being executed, the PID, the user id, the full pathname
    that appears to be suspicious, and the possible rootkit name.
+ - Reverted a change to the 'os_specific' test so that it will show the
+   test as being skipped for O/S's which have no specific tests. Without
+   this if the test was enabled on its own, then nothing at all was
+   displayed.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

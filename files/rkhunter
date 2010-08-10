@@ -8697,6 +8697,11 @@ suspscan() {
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
 		display --to LOG --type INFO NOT_FOUND_CMD "strings"
 		return
+	elif [ ! -f "${DB_PATH}/suspscan.dat" ]; then
+#jh - check all test for when .dat file is missing, should output some test name and a warning. also include msg from NETWORK_PORTS_FILE_MISSING
+		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type PLAIN --log-indent 9 DB_MISSING "suspscan.dat"
+		return
 	fi
 
 	#
@@ -11465,15 +11470,7 @@ os_specific_checks() {
 	#
 
 	case "${OPERATING_SYSTEM}" in
-	OpenBSD)
-		#
-		# There are no specific tests for OpenBSD at present, so we just
-		# return. We do not want to log or display anything.
-		#
-
-		return
-		;;
-	*BSD)
+	FreeBSD|NetBSD)
 		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 		display --to LOG --type INFO STARTING_TEST os_specific
 
@@ -11488,9 +11485,8 @@ os_specific_checks() {
 		linux_specific_checks
 		;;
 	*)
-		display --to LOG --type PLAIN --nl ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color YELLOW --result SKIPPED ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 		display --to LOG --type INFO STARTING_TEST os_specific
-
 		display --to LOG --type INFO ROOTKIT_OS_SKIPPED
 		;;
 	esac
