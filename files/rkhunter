@@ -11187,9 +11187,7 @@ bsd_specific_checks() {
 	if [ -n "${SOCKSTAT_CMD}" -a -n "${NETSTAT_CMD}" -a -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
 		test "${OPERATING_SYSTEM}" = "NetBSD" && RKHTMPVAR="-n" || RKHTMPVAR=""
 
-#jh		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | grep '\*[:.]\*' | cut -c1-55 | grep '\*[:.]' | cut -c39-47 | grep -v '\*' | tr -d ' ' | ${SORT_CMD} | ${UNIQ_CMD}`
 		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '{ print $6 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | ${SORT_CMD} | ${UNIQ_CMD}`
-#jh		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an | egrep -v 'TIME_WAIT|ESTABLISHED|SYN_SENT|CLOSE_WAIT|LAST_ACK|SYN_RECV|CLOSING' | cut -c1-44 | grep '\*\.' | cut -c24-32 | grep -v '\*' | tr -d ' ' | tr -d '\t' | ${SORT_CMD} | ${UNIQ_CMD}`
 		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an |  awk '{ print $4 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | ${SORT_CMD} | ${UNIQ_CMD}`
 
 		if [ "${SOCKSTAT_OUTPUT}" = "${NETSTAT_OUTPUT}" ]; then
