@@ -1181,48 +1181,69 @@ scanrootkit() {
 		# still searches for only file names as opposed to file contents, this is one step away
 		# from the rigidity of searching in known (evidence) or default (installation) locations.
 		#
-		# THIS OPTION SHOULD NOT BE ENABLED BY DEFAULT
+		# THIS OPTION SHOULD NOT BE ENABLED BY DEFAULT.
+		#
 		# You should only activate this feature as part of a more thorough investigation which
 		# should be based on relevant best practices and procedures. 
 		# Apart from ameliorating the case with respect to functionality (e.g. reporting) this feature does not
-		# concern itself with efficiency so asking for improvements like whitelisting, de-duping or false positives is 
+		# concern itself with efficiency so asking for improvements like whitelisting, de-duping or false-positives is 
 		# out of the question.
-		# Enabling this feature implies you have the knowledge to interprete results properly.
+		#
+		# Enabling this feature implies you have the knowledge to interpret the results properly.
 		#
 
 		case "${SCANROOTKITMODE}" in
-			THOROUGH) # Search the whole filesystem
-					RKHTMPVAR=`${BASENAME_CMD} "${RKHTMPVAR}"`
-					RKHTMPVAR=`find "${RKHROOTDIR}/" -xdev -iname "${RKHTMPVAR}"`
-					for RKHTMPVARITEM in ${RKHTMPVAR}; do
-						if [ -f "${RKHTMPVAR}" -o -b "${RKHTMPVAR}" -o -c "${RKHTMPVAR}" -o -L "${RKHTMPVAR}" -o -p "${RKHTMPVAR}" -o -S "${RKHTMPVAR}" ]; then
+		THOROUGH) # Search the whole filesystem
+				test -n "${BASENAME_CMD}" && FNAME=`${BASENAME_CMD} "${RKHTMPVAR}"` || FNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
+
+#jh - will this find files with spaces in it or is something like -print0 required?
+				FILENAMES=`find "${RKHROOTDIR}/" -xdev -name "${FNAME}"`
+
+				if [ -z "${FILENAMES}" ]; then
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+				else
+					FOUND=0
+
+					IFS=$IFSNL
+
+					for FNAME in ${FILENAMES}; do
+						if [ -f "${FNAME}" -o -b "${FNAME}" -o -c "${FNAME}" -o -h "${FNAME}" -o -p "${FNAME}" -o -S "${FNAME}" ]; then
+							FOUND=1
 							SCAN_STATUS=1
-							FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
-							test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+							FILE_FOUND="${FILE_FOUND} ${FNAME}"
 						fi
 					done
-				;;
-				*) # Scan ze old vay
-					if [ -f "${RKHTMPVAR}" ]; then
-						#
-						# We first check to see if the file is whitelisted. Note that we use
-						# the un-translated file name. This allows us to check for filenames
-						# with spaces, but without causing problems for our space-delimited test.
-						#
-	
-						RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
-	
-						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${RKHTMPVAR3} \"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "${RKHTMPVAR}" rootkit
-						else
-							SCAN_STATUS=1
-							FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
-						fi
-	
-						test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
-					elif [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+
+					IFS=$RKHIFS
+
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						test $FOUND -eq 0 && FOUND="NOT_FOUND" || FOUND="FOUND"
+						display --to LOG --type PLAIN --result ${FOUND} --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
 					fi
+				fi
+				;;
+			*) # Scan ze old vay
+				if [ -f "${RKHTMPVAR}" ]; then
+					#
+					# We first check to see if the file is whitelisted. Note that we use
+					# the un-translated file name. This allows us to check for filenames
+					# with spaces, but without causing problems for our space-delimited test.
+					#
+
+					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+
+#jh - but if a file has a space in it then the whitelisting wont work? Needs to use NL as separator.
+					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+						display --to LOG --type INFO FILE_PROP_WL "${RKHTMPVAR}" rootkit
+					else
+						SCAN_STATUS=1
+						FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
+					fi
+
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+				elif [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
+				fi
 				;;
 		esac
 	done
@@ -1244,9 +1265,9 @@ scanrootkit() {
 			# names with spaces, but without causing problems for our space-delimited test.
 			#
 
-			RKHTMPVAR3=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
 
-			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${RKHTMPVAR3} \"`" ]; then
+			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL_DIR "${RKHTMPVAR}" rootkit
 			else
 				SCAN_STATUS=1
@@ -1269,9 +1290,9 @@ scanrootkit() {
 	if [ -n "${SCAN_KSYMS}" ]; then
 		for KS in ${SCAN_KSYMS}; do
 			if [ -n "${KSYMS_FILE}" ]; then
-				KSYM=`echo "${KS}" | sed -e 's/\./\\\./g'`
+				FNAMEGREP=`echo "${KS}" | sed -e 's/\./\\\./g'`
 
-				if [ -n "`grep \"${KSYM}\" ${KSYMS_FILE}`" ]; then
+				if [ -n "`grep \"${FNAMEGREP}\" ${KSYMS_FILE}`" ]; then
 					SCAN_STATUS=1
 					KSYM_FOUND="${KSYM_FOUND} ${KS}"
 
@@ -8869,7 +8890,7 @@ suspscan() {
 				test ! -e "${SUSPSCAN_ITEM}" && continue
 
 				#
-				# Adding "text" to the egrep below widens scope at the expense of more false positives and extending running time:
+				# Adding "text" to the egrep below widens scope at the expense of more false-positives and extending running time.
 				#
 
 				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
@@ -8882,7 +8903,7 @@ suspscan() {
 					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail -1` ; do
 
 						#
-						# Break off if the score already exceeds threshold
+						# Break off if the score already exceeds the threshold.
 						#
 
 						if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
@@ -8892,7 +8913,7 @@ suspscan() {
 						SUSPSCAN_TERM="${SUSPSCAN_STRING}"
 
 						#
-						# Searchterm with class
+						# Searchterm with class.
 						#
 
 						case "${SUSPSCAN_STRING}" in
@@ -8903,7 +8924,7 @@ suspscan() {
 						esac
 
 						#
-						# Searchterm with multiplier
+						# Searchterm with multiplier.
 						#
 
 						case "${SUSPSCAN_STRING}" in
@@ -8953,7 +8974,7 @@ suspscan() {
 					unset SUSPSCAN_TERM
 
 				#
-				# Compressed or obfuscated
+				# Compressed or obfuscated.
 				#
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'corrupted section header size'`" ]; then
@@ -8962,7 +8983,7 @@ suspscan() {
 					fi
 
 				#
-				# ELF ultimate compression kit (ELFuck)
+				# ELF ultimate compression kit (ELFuck).
 				#
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'invalid class invalid byte order'`" ]; then
@@ -11566,7 +11587,6 @@ do_network_port_checks() {
 	# if any known backdoor ports are being used.
 	#
 
-#jh
 	if `check_test ports`; then
 		display --to LOG --type INFO STARTING_TEST ports
 	else
@@ -11935,25 +11955,29 @@ do_network_interface_checks() {
 	# was disabled, or if the lsof command is not present.
 	#
 
-	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
-		display --to LOG --type INFO TEST_SKIPPED_OS 'packet_cap_apps' '/proc/net/packet required.'
-		return
-	fi
-
 	if `check_test packet_cap_apps`; then
+		# Ensure the test section is displayed and logged if required.
+		if ! `check_test promisc`; then
+			display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_INTERFACE_START
+		fi
+
 		display --to LOG --type INFO STARTING_TEST packet_cap_apps
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
 		return
 	fi
 
-	if [ ! -f "/proc/net/packet" ]; then
+	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
+		display --to LOG --type INFO TEST_SKIPPED_OS 'packet_cap_apps' '/proc/net/packet required.'
+		return
+	elif [ ! -f "/proc/net/packet" ]; then
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
-		display --to LOG --type WARNING NETWORK_PACKET_CAP_CHECK_NO_FILE "/proc/net/packet"
+		display --to LOG --type WARNING NETWORK_PACKET_CAP_CHECK_NO_FILE '/proc/net/packet'
 		return
 	elif [ -z "${LSOF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD "lsof"
+		display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
 		return
 	fi
 
