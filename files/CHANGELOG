@@ -74,6 +74,9 @@
    test as being skipped for O/S's which have no specific tests. Without
    this if the test was enabled on its own, then nothing at all was
    displayed.
+ - More rigorous testing of the various '.dat' files before each test
+   which uses them has now been included. If a problem is found, then
+   a warning is displayed.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

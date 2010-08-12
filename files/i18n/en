@@ -1,4 +1,4 @@
-Version:2010081002
+Version:2010081201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -86,8 +86,6 @@ FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
 CMD_ERROR:The command '$1' gave error code $2.
 
-DB_MISSING:
-
 SYS_PRELINK:System is using prelinking
 SYS_NO_PRELINK:System is not using prelinking
 SYS_SELINUX:SELinux is enabled
@@ -155,10 +153,10 @@ SUMMARY_LOGFILE_COPIED:Log file copied to $1
 
 CREATED_TEMP_FILE:Created temporary file '$1'
 
-MIRRORS_NO_FILE:The mirrors file '$1' does not exist.
-MIRRORS_NO_MIRRORS:The mirrors file '$1' has no required mirrors in it.
-MIRRORS_NO_VERSION:The mirrors file '$1' has no version number - resetting to zero.
-MIRRORS_ROTATED:Mirrors file '$1' has been rotated.
+MIRRORS_NO_FILE:The mirrors file does not exist: $1
+MIRRORS_NO_MIRRORS:The mirrors file has no required mirrors in it: $1
+MIRRORS_NO_VERSION:The mirrors file has no version number - resetting to zero: $1
+MIRRORS_ROTATED:The mirrors file has been rotated: $1
 MIRRORS_SF_DEFAULT:Using the SourceForge mirror: $1
 
 DOWNLOAD_CMD:Executing download command '$1'
@@ -516,10 +514,10 @@ FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 
 CHECK_APPS:Checking application versions...
-APPS_NONE_FOUND:No known applications found - all checks skipped.
-APPS_DAT_MISSING:All application version checks skipped.
-APPS_DAT_MISSING:The file of unsecure application versions (programs_bad.dat) is missing or empty.
-APPS_DAT_MISSING:If it has been deleted, then you will need to run 'rkhunter --update'.
+APPS_NONE_FOUND:No known applications found - all version checks skipped.
+APPS_DAT_MISSING:The file of unsecure application versions is missing or empty: $1
+APPS_DAT_MISSING:Run 'rkhunter --update' to restore the default file.
+APPS_DAT_NOTAFILE:The file of unsecure application versions is not a file: $1
 APPS_NOT_FOUND:Application '$1' not found.
 APPS_CHECK:Checking version of $1
 APPS_CHECK_WL:Found application '$1': it is whitelisted.
@@ -532,9 +530,9 @@ APPS_TOTAL_COUNT:Applications checked: $1 out of $2
 
 CHECK_NETWORK:Checking the network...
 NETWORK_PORTS_START:Performing check for backdoor ports
-NETWORK_PORTS_FILE_MISSING:All backdoor port checks skipped.
-NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports (backdoorports.dat) is missing or empty.
-NETWORK_PORTS_FILE_MISSING:If it has been deleted, then you will need to run 'rkhunter --update'.
+NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports is missing or empty: $1
+NETWORK_PORTS_FILE_MISSING:Run 'rkhunter --update' to restore the default file.
+NETWORK_PORTS_FILE_NOTAFILE:The file of known backdoor ports is not a file: $1
 NETWORK_PORTS_UNKNOWN_NETSTAT:All backdoor port checks skipped.
 NETWORK_PORTS_UNKNOWN_NETSTAT:Unknown netstat command format with this O/S.
 NETWORK_PORTS_DISABLE_PATHS:Disabling pathnames and '*' in PORT_WHITELIST setting: no 'lsof' command present.
@@ -589,6 +587,9 @@ SUSPSCAN_FILE_SKIPPED_LINK:File ignored: symbolic link: '$1'
 SUSPSCAN_FILE_SKIPPED_TYPE:File ignored: wrong type: '$1': '$2'
 SUSPSCAN_FILE_SKIPPED_SIZE:File ignored: too big: '$1'
 SUSPSCAN_FILE_LINK_CHANGE:Symbolic link found: '$1' -> '$2'
+SUSPSCAN_DAT_MISSING:The data file of suspicious contents is missing or empty: $1
+SUSPSCAN_DAT_MISSING:Run 'rkhunter --update' to restore the default file.
+SUSPSCAN_DAT_NOTAFILE:The data file of suspicious contents is not a file: $1
 
 LIST_TESTS:Current test names:
 LIST_GROUPED_TESTS:Grouped test names:

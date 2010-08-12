@@ -1635,7 +1635,7 @@ get_logfile_option() {
 		if [ -z "${RKHLOGFILE}" ]; then
 			RET_CODE=1
 			RKHLOGFILE="${DFLT_LOGFILE}"
-			echo "Default logfile will be used (${RKHLOGFILE})."
+			echo "The default logfile will be used (${RKHLOGFILE})."
 		fi
 	fi
 
@@ -3695,7 +3695,7 @@ get_shared_lib_whitelist_option() {
 get_mirror_options() {
 
 	#
-	# This function gets the mirror file options.
+	# This function gets the mirrors file options.
 	#
 
 	#
@@ -3716,19 +3716,39 @@ get_mirror_options() {
 	fi
 
 	#
-	# Now check that the mirror file is writable if necessary.
+	# Now check that the mirrors file is usable.
 	#
 
-	if [ $VERSIONCHECK -eq 1 -a $ROTATE_MIRRORS -eq 1 ]; then
-		if [ ! -w "${DB_PATH}/mirrors.dat" ]; then
-			echo "Mirror file is not writable: ${DB_PATH}/mirrors.dat"
-			exit 1
+	if [ -e "${DB_PATH}/mirrors.dat" -a \( ! -f "${DB_PATH}/mirrors.dat" -o -h "${DB_PATH}/mirrors.dat" \) ]; then
+		echo "The mirrors file is not a file: ${DB_PATH}/mirrors.dat"
+		exit 1
+	fi
+
+	if [ $VERSIONCHECK -eq 1 ]; then
+		if [ $ROTATE_MIRRORS -eq 0 ]; then
+			# The mirrors file only needs to be readable.
+			if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
+				RET_CODE=1
+				echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
+				echo "Run 'rkhunter --update'" to restore the default mirrors file.
+				echo "The default mirror will be used."
+			fi
+		else
+			# The mirrors file needs to be writable.
+			if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
+				echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
+				echo "Run 'rkhunter --update'" to restore the default mirrors file.
+				exit 1
+			elif [ ! -w "${DB_PATH}/mirrors.dat" ]; then
+				echo "The mirrors file is not writable: ${DB_PATH}/mirrors.dat"
+				exit 1
+			fi
 		fi
 	fi
 
 
 	#
-	# Next we see if the mirror file is to be updated when
+	# Next we see if the mirrors file is to be updated when
 	# we use the '--update' option.
 	#
 
@@ -8677,8 +8697,8 @@ suspscan() {
 	#
 
 	if `check_test suspscan`; then
-		display --to LOG --type PLAIN --log-indent 2 --nl SUSPSCAN_START
-		display --to LOG --type INFO STARTING_TEST suspscan
+		display --to LOG --type INFO --nl STARTING_TEST suspscan
+		display --to LOG --type PLAIN --log-indent 2 SUSPSCAN_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST suspscan
 		return
@@ -8697,10 +8717,20 @@ suspscan() {
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
 		display --to LOG --type INFO NOT_FOUND_CMD "strings"
 		return
-	elif [ ! -f "${DB_PATH}/suspscan.dat" ]; then
-#jh - check all test for when .dat file is missing, should output some test name and a warning. also include msg from NETWORK_PORTS_FILE_MISSING
-		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
-		display --to LOG --type PLAIN --log-indent 9 DB_MISSING "suspscan.dat"
+	fi
+#jh - go through all tests; should not just return, but should provide 'warning' or 'skipped' - see 'ports' test.
+
+	#
+	# Now check that the suspscan data file is usable.
+	#
+
+	if [ ! -e "${DB_PATH}/suspscan.dat" -o ! -s "${DB_PATH}/suspscan.dat" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type WARNING --log-indent 9 SUSPSCAN_DAT_MISSING "${DB_PATH}/suspscan.dat"
+		return
+	elif [ ! -f "${DB_PATH}/suspscan.dat" -o -h "${DB_PATH}/suspscan.dat" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
+		display --to LOG --type WARNING --log-indent 9 SUSPSCAN_DAT_NOTAFILE "${DB_PATH}/suspscan.dat"
 		return
 	fi
 
@@ -11459,7 +11489,9 @@ os_specific_checks() {
 	# This function performs any O/S specific tests.
 	#
 
-	if ! `check_test os_specific`; then
+	if `check_test os_specific`; then
+		display --to LOG --type INFO STARTING_TEST os_specific
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST os_specific
 		return
 	fi
@@ -11472,7 +11504,6 @@ os_specific_checks() {
 	case "${OPERATING_SYSTEM}" in
 	FreeBSD|NetBSD)
 		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
-		display --to LOG --type INFO STARTING_TEST os_specific
 
 		bsd_specific_checks
 
@@ -11480,13 +11511,11 @@ os_specific_checks() {
 		;;
 	Linux)
 		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
-		display --to LOG --type INFO STARTING_TEST os_specific
 
 		linux_specific_checks
 		;;
 	*)
 		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color YELLOW --result SKIPPED ROOTKIT_OS_START "${OPERATING_SYSTEM}"
-		display --to LOG --type INFO STARTING_TEST os_specific
 		display --to LOG --type INFO ROOTKIT_OS_SKIPPED
 		;;
 	esac
@@ -11537,6 +11566,7 @@ do_network_port_checks() {
 	# if any known backdoor ports are being used.
 	#
 
+#jh
 	if `check_test ports`; then
 		display --to LOG --type INFO STARTING_TEST ports
 	else
@@ -11550,7 +11580,8 @@ do_network_port_checks() {
 	#
 
 	if [ -z "${LSOF_CMD}" -a -z "${NETSTAT_CMD}" ]; then
-		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "lsof or netstat command required"
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
+		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "lsof or netstat command required."
 		return
 	fi
 
@@ -11558,19 +11589,31 @@ do_network_port_checks() {
 	# Systems with a modified kernel must also skip this test.
 	#
 
-	test $GRSECINSTALLED -eq 1 && return
+	if [ $GRSECINSTALLED -eq 1 ]; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
+		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "grsecurity installed."
+		return
+	fi
 
+	#
+	# Check that the backdoor ports data file is usable.
+	#
+
+	if [ ! -e "${DB_PATH}/backdoorports.dat" -o ! -s "${DB_PATH}/backdoorports.dat" ]; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+		display --to LOG --type WARNING NETWORK_PORTS_FILE_MISSING "${DB_PATH}/backdoorports.dat"
+		return
+	elif [ ! -f "${DB_PATH}/backdoorports.dat" -o -h "${DB_PATH}/backdoorports.dat" ]; then
+		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+		display --to LOG --type WARNING NETWORK_PORTS_FILE_NOTAFILE "${DB_PATH}/backdoorports.dat"
+		return
+	fi
 
 	#
 	# Next we do some further testing and the initial logging.
 	#
 
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_PORTS_START
-
-	if [ ! -s "${DB_PATH}/backdoorports.dat" ]; then
-		display --to SCREEN+LOG --type WARNING --screen-indent 4 NETWORK_PORTS_FILE_MISSING
-		return
-	elif [ -z "${LSOF_CMD}" ]; then
+	if [ -z "${LSOF_CMD}" ]; then
 		case "${OPERATING_SYSTEM}" in
 		*BSD|Linux|AIX|SunOS|Darwin|IRIX*)
 			#
@@ -11582,11 +11625,14 @@ do_network_port_checks() {
 			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
 			;;
 		*)
-			display --to SCREEN+LOG --type WARNING --screen-indent 4 NETWORK_PORTS_UNKNOWN_NETSTAT
+			display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+			display --to LOG --type WARNING NETWORK_PORTS_UNKNOWN_NETSTAT
 			return
 			;;
 		esac
 	fi
+
+	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_PORTS_START
 
 	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 
@@ -11890,7 +11936,7 @@ do_network_interface_checks() {
 	#
 
 	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
-		display --to LOG --type INFO TEST_SKIPPED_OS 'packet_cap_apps' '/proc/net/packet required'
+		display --to LOG --type INFO TEST_SKIPPED_OS 'packet_cap_apps' '/proc/net/packet required.'
 		return
 	fi
 
@@ -13314,8 +13360,7 @@ do_app_checks() {
 	#
 
 	if `check_test apps`; then
-		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl --nl-after CHECK_APPS
-		display --to LOG --type INFO STARTING_TEST apps
+		display --to LOG --type INFO --nl STARTING_TEST apps
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST apps
 		return
@@ -13323,13 +13368,20 @@ do_app_checks() {
 
 
 	#
-	# First we check that our apps data file is present.
+	# First we check that our apps data file is usable.
 	#
 
-	if [ ! -s "${DB_PATH}/programs_bad.dat" ]; then
-		display --to SCREEN+LOG --type WARNING --screen-indent 2 APPS_DAT_MISSING
+	if [ ! -e "${DB_PATH}/programs_bad.dat" -o ! -s "${DB_PATH}/programs_bad.dat" ]; then
+		display --to SCREEN+LOG --type PLAIN --color RED --nl --result WARNING CHECK_APPS
+		display --to LOG --type WARNING APPS_DAT_MISSING "${DB_PATH}/programs_bad.dat"
+		return
+	elif [ ! -f "${DB_PATH}/programs_bad.dat" -o -h "${DB_PATH}/programs_bad.dat" ]; then
+		display --to SCREEN+LOG --type PLAIN --color RED --nl --result WARNING CHECK_APPS
+		display --to LOG --type WARNING APPS_DAT_NOTAFILE "${DB_PATH}/programs_bad.dat"
 		return
 	fi
+
+	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl --nl-after CHECK_APPS
 
 
 	#
@@ -13515,7 +13567,8 @@ ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 	#
 
 	if [ $APPS_COUNT -eq 0 ]; then
-		display --to SCREEN+LOG --type WARNING APPS_NONE_FOUND
+		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl --result SKIPPED CHECK_APPS
+		display --to LOG --type INFO APPS_NONE_FOUND
 	else
 		IFS=$IFSNL
 
