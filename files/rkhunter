@@ -186,7 +186,7 @@ display() {
 	#
 	# Syntax: display --to <destination> --type <type>
 	#		  [--screen-indent <n>] [--log-indent <n>]
-	#		  [--nl [<n>]] [--nl-after] [--log-nl] [--nonl]
+	#		  [--nl [<n>]] [--nl-after] [--log-nl] [--screen-nl] [--nonl]
 	#		  [--result <result> --color <colour>]
 	#		  <message index> [optional message arguments]
 	#
@@ -201,6 +201,8 @@ display() {
 	# number can be used to indicate how many blank lines should
 	# be displayed on the screen.
 	# The --log-nl option outputs a blank line only in the log file.
+	# The --screen-nl option outputs a blank line on the screen
+	# regardless of whether SCREEN was specified or not.
 	# The --nl-after option outputs a blank line on the screen after
 	# the message.
 	# The --nonl option is only to be used in special cases where we
@@ -218,7 +220,7 @@ display() {
 	#
 
 	WARN_MSG=0; NL=0; NLAFTER=0; LOGINDENT=0; SCREENINDENT=0
-	LOGNL=0
+	LOGNL=0; SCREENNL=0
 	WRITETO=''; TYPE=''; RESULT=''; COLOR=''; MSG=''
 	LINE1=''; LOGLINE1=''; SPACES=''; NONL=''
 
@@ -320,6 +322,9 @@ display() {
 			;;
 		--log-nl)
 			LOGNL=1
+			;;
+		--screen-nl)
+			SCREENNL=1
 			;;
 		--nl-after)
 			NLAFTER=1
@@ -467,6 +472,7 @@ display() {
 	# We now check to see if a result is to be output. If it is,
 	# then we need to space-out the line and color the result.
 	#
+
 	if [ -n "${RESULT}" ]; then
 		if [ $WRITETOTTY -eq 1 ]; then
 			LINE1_NUM=`echo "${LINE1}" | wc -c | tr -d ' '`
@@ -499,6 +505,10 @@ display() {
 	# lines, and then the first line. If this is a warning message we
 	# write to the log file any additional lines.
 	#
+
+	if [ $SCREENNL -eq 1 ]; then
+		test $QUIET -eq 0 -a $SHOWWARNINGSONLY -eq 0 -a $NOTTY -eq 0 && echo ""
+	fi
 
 	if [ $WRITETOTTY -eq 1 ]; then
 		NLLOOP=$NL
@@ -7283,8 +7293,8 @@ strings_check() {
 	#
 
 	if `check_test strings`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STRINGS_CHECK_START
-		display --to LOG --type INFO STARTING_TEST strings
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST strings
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 STRINGS_CHECK_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST strings
 		return
@@ -7321,9 +7331,9 @@ strings_check() {
 
 		if [ -z "${STRING_SEEN}" ]; then
 			STRINGSFAILED=1
-			display --to LOG --type WARNING --result WARNING STRINGS_SCANNING_BAD "${STRING}"
+			display --to LOG --type WARNING --result WARNING --log-indent 2 STRINGS_SCANNING_BAD "${STRING}"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result OK STRINGS_SCANNING_OK "${STRING}"
+			display --to LOG --type PLAIN --result OK --log-indent 2 STRINGS_SCANNING_OK "${STRING}"
 		fi
 	done
 
@@ -7357,8 +7367,8 @@ shared_libs_check() {
 	#
 
 	if `check_test shared_libs`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SHARED_LIBS_START
-		display --to LOG --type INFO STARTING_TEST shared_libs
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST shared_libs
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 SHARED_LIBS_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs
 		return
@@ -7378,9 +7388,9 @@ shared_libs_check() {
 	done
 
 	if [ -z "${VARFOUND}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_VAR
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_VAR
 	else
-		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_VAR
+		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_VAR
 		display --to LOG --type WARNING SHARED_LIBS_PRELOAD_VAR_FOUND "${VARFOUND}"
 	fi
 
@@ -7407,16 +7417,16 @@ shared_libs_check() {
 		done
 
 		if [ -n "${RKHLIBLIST}" ]; then
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_FILE
 
 			for FNAME in ${RKHLIBLIST}; do
 				display --to LOG --type WARNING SHARED_LIBS_PRELOAD_LIB_FOUND "${FNAME}"
 			done
 		else
-			display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+			display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_FILE
 		fi
 	else
-		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SHARED_LIBS_PRELOAD_FILE
+		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_FILE
 	fi
 
 
@@ -7426,7 +7436,7 @@ shared_libs_check() {
 	#
 
 	if `check_test shared_libs_path`; then
-		display --to LOG --type INFO STARTING_TEST shared_libs_path
+		display --to LOG --type INFO --log-nl STARTING_TEST shared_libs_path
 
 		if [ -n "${LDD_CMD}" ]; then
 			if [ -n "${LD_LIBRARY_PATH}" ]; then
@@ -7474,22 +7484,21 @@ shared_libs_check() {
 				LD_LIBRARY_PATH="${LD_LIBRARY_PATH_SAVED}"
 				export LD_LIBRARY_PATH
 
-
 				if [ $LD_LIBR_FAILED -eq 0 ]; then
-					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 SHARED_LIBS_PATH
+					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PATH
 				else
-					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 SHARED_LIBS_PATH
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 SHARED_LIBS_PATH
 					display --to LOG --type WARNING SHARED_LIBS_PATH_BAD "${LD_LIBRARY_PATH}"
 				fi
 			else
-				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 SHARED_LIBS_PATH
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PATH
 			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SHARED_LIBS_PATH
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 --log-indent 2 SHARED_LIBS_PATH
 			display --to LOG --type INFO NOT_FOUND_CMD "ldd"
 		fi
 	else
-		display --to LOG --type INFO USER_DISABLED_TEST shared_libs_path
+		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs_path
 	fi
 
 	return
@@ -7564,8 +7573,8 @@ file_properties_check() {
 		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
 		return
 	else
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILE_PROP_START
-		display --to LOG --type INFO STARTING_TEST properties
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST properties
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 FILE_PROP_START
 	fi
 
 
@@ -7747,11 +7756,11 @@ file_properties_check() {
 	fi
 
 	if [ -z "${RKHTMPVAR}" ]; then
-		display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN FILE_PROP_CMDS
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result OK --color GREEN FILE_PROP_CMDS
 	else
 		SUMMARY_PROP_REQCMDS=1
 
-		display --to SCREEN+LOG --type WARNING --screen-indent 4 --result WARNING --color RED FILE_PROP_CMDS
+		display --to SCREEN+LOG --type WARNING --screen-indent 4 --log-indent 2 --result WARNING --color RED FILE_PROP_CMDS
 
 
 		RKHTMPVAR2=0
@@ -7917,7 +7926,7 @@ file_properties_check() {
 				if [ -n "${RKHLINE}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${FNAME}"
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
 					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${FNAME}"
 				fi
 
@@ -8479,9 +8488,9 @@ file_properties_check() {
 		#
 
 		if [ -z "${TEST_RESULT}" ]; then
-			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result OK --color GREEN NAME "${FNAME}"
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result OK --color GREEN NAME "${FNAME}"
 		else
-			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${FNAME}"
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
 
 			PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
@@ -8695,7 +8704,7 @@ file_properties_check() {
 				PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 				PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --result WARNING --color RED NAME "${FNAME}"
+				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
 				display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${FNAME}"
 			fi
 		done
@@ -8739,7 +8748,6 @@ suspscan() {
 		display --to LOG --type INFO NOT_FOUND_CMD "strings"
 		return
 	fi
-#jh - go through all tests; should not just return, but should provide 'warning' or 'skipped' - see 'ports' test.
 
 	#
 	# Now check that the suspscan data file is usable.
@@ -9053,8 +9061,8 @@ do_system_commands_checks() {
 	#
 
 	if `check_test system_commands`; then
-		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_SYS_COMMANDS
-		display --to LOG --type INFO STARTING_TEST system_commands
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST system_commands
+		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_SYS_COMMANDS
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_commands
 		return
@@ -9081,8 +9089,8 @@ rootkit_file_dir_checks() {
 	#
 
 	if `check_test known_rkts`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_FILES_DIRS_START
-		display --to LOG --type INFO STARTING_TEST known_rkts
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST known_rkts
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_FILES_DIRS_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST known_rkts
 		return
@@ -9973,11 +9981,8 @@ possible_rootkit_file_dir_checks() {
 	#
 
 	if `check_test possible_rkt_files`; then
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_POSS_FILES_DIRS_LOG
-		fi
-
-		display --to LOG --type INFO STARTING_TEST possible_rkt_files
+		display --to LOG --type INFO --nl STARTING_TEST possible_rkt_files
+		display --to LOG --type PLAIN --log-indent 2 ROOTKIT_POSS_FILES_DIRS_LOG
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_files
 		return
@@ -10154,11 +10159,11 @@ possible_rootkit_string_checks() {
 	#
 
 	if `check_test possible_rkt_strings`; then
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_POSS_STRINGS_LOG
-		fi
+		display --to LOG --type INFO --nl STARTING_TEST possible_rkt_strings
 
-		display --to LOG --type INFO STARTING_TEST possible_rkt_strings
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --log-indent 2 ROOTKIT_POSS_STRINGS_LOG
+		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_strings
 		return
@@ -10339,8 +10344,8 @@ additional_rootkit_checks() {
 	#
 
 	if `check_test additional_rkts`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_ADD_START
-		display --to LOG --type INFO STARTING_TEST additional_rkts
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST additional_rkts
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_ADD_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST additional_rkts
 		return
@@ -10366,8 +10371,8 @@ malware_checks() {
 	#
 
 	if `check_test malware`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_MALWARE_START
-		display --to LOG --type INFO STARTING_TEST malware
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST malware
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_MALWARE_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST malware
 		return
@@ -10379,7 +10384,7 @@ malware_checks() {
 	#
 
 	if `check_test deleted_files`; then
-		display --to LOG --type INFO STARTING_TEST deleted_files
+		display --to LOG --type INFO --nl STARTING_TEST deleted_files
 
 		if [ -n "${LSOF_CMD}" ]; then
 			FOUND=0
@@ -10556,7 +10561,7 @@ ${PROC} ${PID} ${FNAME}"
 	#
 
 	if `check_test running_procs`; then
-		display --to LOG --type INFO STARTING_TEST running_procs
+		display --to LOG --type INFO --nl STARTING_TEST running_procs
 
 		if [ -n "${LSOF_CMD}" ]; then
 			#
@@ -10678,7 +10683,7 @@ ${RKHTMPVAR}:${FNAME}"
 	#
 
 	if `check_test hidden_procs`; then
-		display --to LOG --type INFO STARTING_TEST hidden_procs
+		display --to LOG --type INFO --nl STARTING_TEST hidden_procs
 
 		RKHTMPVAR="unhide"
 		UNHIDE_CMD=`find_cmd unhide`
@@ -10723,11 +10728,11 @@ ${RKHTMPVAR}:${FNAME}"
 	#
 
 	if `check_test other_malware`; then
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR_LOG
-		fi
+		display --to LOG --type INFO --nl STARTING_TEST other_malware
 
-		display --to LOG --type INFO STARTING_TEST other_malware
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR_LOG
+		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST other_malware
 		return
@@ -11024,7 +11029,13 @@ trojan_checks() {
 	# This function performs some trojan specific checks.
 	#
 
-	if ! `check_test trojans`; then
+	if `check_test trojans`; then
+		if ! `check_test malware`; then
+			display --to SCREEN --type PLAIN --screen-indent 2 --nl ROOTKIT_MALWARE_START
+		fi
+
+		display --to LOG --type INFO --nl STARTING_TEST trojans
+	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST trojans
 		return
 	fi
@@ -11052,9 +11063,7 @@ trojan_checks() {
 		RKHTMPVAR="LOG"
 	fi
 
-	display --to "${RKHTMPVAR}" --type PLAIN --nl --screen-indent 2 ROOTKIT_TROJAN_START
-
-	display --to LOG --type INFO STARTING_TEST trojans
+	display --to "${RKHTMPVAR}" --type PLAIN --screen-indent 2 ROOTKIT_TROJAN_START
 
 
 	#
@@ -11511,7 +11520,7 @@ os_specific_checks() {
 	#
 
 	if `check_test os_specific`; then
-		display --to LOG --type INFO STARTING_TEST os_specific
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST os_specific
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST os_specific
 		return
@@ -11524,19 +11533,19 @@ os_specific_checks() {
 
 	case "${OPERATING_SYSTEM}" in
 	FreeBSD|NetBSD)
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 
 		bsd_specific_checks
 
 		test "${OPERATING_SYSTEM}" = "FreeBSD" && freebsd_specific_checks
 		;;
 	Linux)
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 
 		linux_specific_checks
 		;;
 	*)
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color YELLOW --result SKIPPED ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 		display --to LOG --type INFO ROOTKIT_OS_SKIPPED
 		;;
 	esac
@@ -11554,8 +11563,8 @@ do_rootkit_checks() {
 	#
 
 	if `check_test rootkits`; then
-		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_ROOTKITS
-		display --to LOG --type INFO STARTING_TEST rootkits
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST rootkits
+		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_ROOTKITS
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST rootkits
 		return
@@ -11588,7 +11597,7 @@ do_network_port_checks() {
 	#
 
 	if `check_test ports`; then
-		display --to LOG --type INFO STARTING_TEST ports
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST ports
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST ports
 		return
@@ -11600,7 +11609,7 @@ do_network_port_checks() {
 	#
 
 	if [ -z "${LSOF_CMD}" -a -z "${NETSTAT_CMD}" ]; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
 		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "lsof or netstat command required."
 		return
 	fi
@@ -11610,7 +11619,7 @@ do_network_port_checks() {
 	#
 
 	if [ $GRSECINSTALLED -eq 1 ]; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
 		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "grsecurity installed."
 		return
 	fi
@@ -11620,11 +11629,11 @@ do_network_port_checks() {
 	#
 
 	if [ ! -e "${DB_PATH}/backdoorports.dat" -o ! -s "${DB_PATH}/backdoorports.dat" ]; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
 		display --to LOG --type WARNING NETWORK_PORTS_FILE_MISSING "${DB_PATH}/backdoorports.dat"
 		return
 	elif [ ! -f "${DB_PATH}/backdoorports.dat" -o -h "${DB_PATH}/backdoorports.dat" ]; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
 		display --to LOG --type WARNING NETWORK_PORTS_FILE_NOTAFILE "${DB_PATH}/backdoorports.dat"
 		return
 	fi
@@ -11645,14 +11654,14 @@ do_network_port_checks() {
 			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
 			;;
 		*)
-			display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
 			display --to LOG --type WARNING NETWORK_PORTS_UNKNOWN_NETSTAT
 			return
 			;;
 		esac
 	fi
 
-	display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_PORTS_START
+	display --to SCREEN+LOG --type PLAIN --screen-indent 2 NETWORK_PORTS_START
 
 	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 
@@ -11857,8 +11866,8 @@ do_network_interface_checks() {
 	#
 
 	if `check_test promisc`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_INTERFACE_START
-		display --to LOG --type INFO STARTING_TEST promisc
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST promisc
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 NETWORK_INTERFACE_START
 
 
 		if [ -n "${IFCONFIG_CMD}" ]; then
@@ -11961,7 +11970,7 @@ do_network_interface_checks() {
 			display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_INTERFACE_START
 		fi
 
-		display --to LOG --type INFO STARTING_TEST packet_cap_apps
+		display --to LOG --type INFO --nl STARTING_TEST packet_cap_apps
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
 		return
@@ -12084,8 +12093,8 @@ do_network_checks() {
 	#
 
 	if `check_test network`; then
-		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_NETWORK
-		display --to LOG --type INFO STARTING_TEST network
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST network
+		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_NETWORK
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST network
 		return
@@ -12109,8 +12118,8 @@ do_system_startup_file_checks() {
 	#
 
 	if `check_test startup_files`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 STARTUP_FILES_START
-		display --to LOG --type INFO STARTING_TEST startup_files
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST startup_files
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 STARTUP_FILES_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_files
 		return
@@ -12133,9 +12142,9 @@ do_system_startup_file_checks() {
 	#
 
 	if `check_test startup_malware`; then
-		display --to LOG --type INFO STARTING_TEST startup_malware
+		display --to LOG --type INFO --nl STARTING_TEST startup_malware
 	else
-		display --to LOG --type INFO USER_DISABLED_TEST startup_malware
+		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_malware
 		return
 	fi
 
@@ -12442,8 +12451,8 @@ do_group_accounts_check() {
 	#
 
 	if `check_test group_accounts`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 ACCOUNTS_START
-		display --to LOG --type INFO STARTING_TEST group_accounts
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST group_accounts
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ACCOUNTS_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST group_accounts
 		return
@@ -12680,10 +12689,10 @@ ${RKHTMPVAR}"
 
 	if `check_test passwd_changes`; then
 		RKHTMPVAR=0
-		display --to LOG --type INFO STARTING_TEST passwd_changes
+		display --to LOG --type INFO --nl STARTING_TEST passwd_changes
 	else
 		RKHTMPVAR=1
-		display --to LOG --type INFO USER_DISABLED_TEST passwd_changes
+		display --to LOG --type INFO --nl USER_DISABLED_TEST passwd_changes
 	fi
 
 	if [ $RKHTMPVAR -eq 1 ]; then
@@ -12731,10 +12740,10 @@ ${RKHTMPVAR}"
 
 	if `check_test group_changes`; then
 		RKHTMPVAR=0
-		display --to LOG --type INFO STARTING_TEST group_changes
+		display --to LOG --type INFO --nl STARTING_TEST group_changes
 	else
 		RKHTMPVAR=1
-		display --to LOG --type INFO USER_DISABLED_TEST group_changes
+		display --to LOG --type INFO --nl USER_DISABLED_TEST group_changes
 	fi
 
 	if [ $RKHTMPVAR -eq 1 ]; then
@@ -12848,8 +12857,8 @@ do_system_config_files_check() {
 	#
 
 	if `check_test system_configs`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 SYSTEM_CONFIGS_START
-		display --to LOG --type INFO STARTING_TEST system_configs
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST system_configs
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 SYSTEM_CONFIGS_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs
 		return
@@ -13106,8 +13115,8 @@ do_filesystem_check() {
 	#
 
 	if `check_test filesystem`; then
-		display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 FILESYSTEM_START
-		display --to LOG --type INFO STARTING_TEST filesystem
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST filesystem
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 FILESYSTEM_START
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST filesystem
 		return
@@ -13335,8 +13344,8 @@ do_local_host_checks() {
 	#
 
 	if `check_test local_host`; then
-		display --to SCREEN+LOG --type PLAIN --color YELLOW --nl CHECK_LOCALHOST
-		display --to LOG --type INFO STARTING_TEST local_host
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST local_host
+		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_LOCALHOST
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST local_host
 		return
@@ -13384,7 +13393,7 @@ do_app_checks() {
 	#
 
 	if `check_test apps`; then
-		display --to LOG --type INFO --nl STARTING_TEST apps
+		display --to LOG --type INFO --screen-nl --nl STARTING_TEST apps
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST apps
 		return
@@ -13396,16 +13405,16 @@ do_app_checks() {
 	#
 
 	if [ ! -e "${DB_PATH}/programs_bad.dat" -o ! -s "${DB_PATH}/programs_bad.dat" ]; then
-		display --to SCREEN+LOG --type PLAIN --color RED --nl --result WARNING CHECK_APPS
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING CHECK_APPS
 		display --to LOG --type WARNING APPS_DAT_MISSING "${DB_PATH}/programs_bad.dat"
 		return
 	elif [ ! -f "${DB_PATH}/programs_bad.dat" -o -h "${DB_PATH}/programs_bad.dat" ]; then
-		display --to SCREEN+LOG --type PLAIN --color RED --nl --result WARNING CHECK_APPS
+		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING CHECK_APPS
 		display --to LOG --type WARNING APPS_DAT_NOTAFILE "${DB_PATH}/programs_bad.dat"
 		return
 	fi
 
-	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl --nl-after CHECK_APPS
+	display --to SCREEN+LOG --type PLAIN --color YELLOW --nl-after CHECK_APPS
 
 
 	#
