@@ -1185,7 +1185,7 @@ scanrootkit() {
 		RKHTMPVAR=`echo "${RKHTMPVAR2}" | tr '%' ' '`
 
 		#
-		# If the option SCANROOTKITMODE is set to "THOROUGH" the scanrootkit()  function
+		# If the option SCANROOTKITMODE is set to "THOROUGH" the scanrootkit() function
 		# will search (on a per rootkit basis) for filenames in all of the directories (as defined
 		# by the result of running 'find "${RKHROOTDIR}/" -xdev'). While still not optimal, as it 
 		# still searches for only file names as opposed to file contents, this is one step away
@@ -1206,7 +1206,6 @@ scanrootkit() {
 		THOROUGH) # Search the whole filesystem
 				test -n "${BASENAME_CMD}" && FNAME=`${BASENAME_CMD} "${RKHTMPVAR}"` || FNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
 
-#jh - will this find files with spaces in it or is something like -print0 required?
 				FILENAMES=`find "${RKHROOTDIR}/" -xdev -name "${FNAME}"`
 
 				if [ -z "${FILENAMES}" ]; then
@@ -1217,10 +1216,11 @@ scanrootkit() {
 					IFS=$IFSNL
 
 					for FNAME in ${FILENAMES}; do
-						if [ -f "${FNAME}" -o -b "${FNAME}" -o -c "${FNAME}" -o -h "${FNAME}" -o -p "${FNAME}" -o -S "${FNAME}" ]; then
+						if [ \( -f "${FNAME}" -a -s "${FNAME}" \) -o -b "${FNAME}" -o -c "${FNAME}" -o -h "${FNAME}" -o -p "${FNAME}" -o -S "${FNAME}" ]; then
 							FOUND=1
 							SCAN_STATUS=1
-							FILE_FOUND="${FILE_FOUND} ${FNAME}"
+							FILE_FOUND="${FILE_FOUND}
+${FNAME}"
 						fi
 					done
 
@@ -1242,12 +1242,12 @@ scanrootkit() {
 
 					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
 
-#jh - but if a file has a space in it then the whitelisting wont work? Needs to use NL as separator.
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "${RKHTMPVAR}" rootkit
+						display --to LOG --type INFO FILE_PROP_WL "${RKHTMPVAR}" known_rkts
 					else
 						SCAN_STATUS=1
-						FILE_FOUND="${FILE_FOUND} ${RKHTMPVAR2}"
+						FILE_FOUND="${FILE_FOUND}
+${RKHTMPVAR}"
 					fi
 
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
@@ -1278,10 +1278,11 @@ scanrootkit() {
 			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
 
 			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL_DIR "${RKHTMPVAR}" rootkit
+				display --to LOG --type INFO FILE_PROP_WL_DIR "${RKHTMPVAR}" known_rkts
 			else
 				SCAN_STATUS=1
-				DIR_FOUND="${DIR_FOUND} ${RKHTMPVAR2}"
+				DIR_FOUND="${DIR_FOUND}
+${RKHTMPVAR}"
 			fi
 
 			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${RKHTMPVAR}"
@@ -1304,7 +1305,8 @@ scanrootkit() {
 
 				if [ -n "`grep \"${FNAMEGREP}\" ${KSYMS_FILE}`" ]; then
 					SCAN_STATUS=1
-					KSYM_FOUND="${KSYM_FOUND} ${KS}"
+					KSYM_FOUND="${KSYM_FOUND}
+${KS}"
 
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND  --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -1334,19 +1336,27 @@ scanrootkit() {
 		# Log any files, directories or ksyms found.
 		#
 
+		IFS=$IFSNL
+
+		FILE_FOUND=`echo "${FILE_FOUND}" | sed -e '/^$/d'`
+
 		for RKHTMPVAR in ${FILE_FOUND}; do
-			RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '%' ' '`
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_FILE_FOUND "${RKHTMPVAR}"
 		done
 
+		DIR_FOUND=`echo "${DIR_FOUND}" | sed -e '/^$/d'`
+
 		for RKHTMPVAR in ${DIR_FOUND}; do
-			RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '%' ' '`
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${RKHTMPVAR}"
 		done
+
+		KSYM_FOUND=`echo "${KSYM_FOUND}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${KSYM_FOUND}; do
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_KSYM_FOUND "${RKHTMPVAR}"
 		done
+
+		IFS=$RKHIFS
 	fi
 
 	return
@@ -7109,6 +7119,7 @@ do_system_check_initialisation() {
 
 
 	# Possible rootkit files and directories
+	# The '%' character represents a space.
 	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:T0rn Rootkit MD5 hash database
 		  file:${RKHROOTDIR}/dev/pisu:Rootkit component
 		  file:${RKHROOTDIR}/dev/xdta:Dica-Kit Rootkit
@@ -7164,7 +7175,7 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/usr/sbin/...:Rootkit component
 		  dir:${RKHROOTDIR}/usr/share/.gun:Rootkit component
 		  dir:${RKHROOTDIR}/unde/vrei/tu/sa/te/ascunzi/in/server:Unknown rootkit
-		  dir:${RKHROOTDIR}/usr/man/man1/..  /.dir:Unknown rootkit
+		  dir:${RKHROOTDIR}/usr/man/man1/..%%/.dir:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/X11R6/include/X11/...:Unknown rootkit
 		  dir:${RKHROOTDIR}/usr/X11R6/lib/X11/.fonts/misc/...:Unknown rootkit
 		  dir:${RKHROOTDIR}/tmp/.sys:Rootkit component
@@ -7173,7 +7184,7 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/tmp/,.,:Rootkit component
 		  dir:${RKHROOTDIR}/dev/shm/emilien:Rootkit component
 		  dir:${RKHROOTDIR}/var/tmp/.log:Rootkit component
-		  dir:${RKHROOTDIR}/tmp/zmeu/... :Rootkit component
+		  dir:${RKHROOTDIR}/tmp/zmeu/...%:Rootkit component
 		  dir:${RKHROOTDIR}/var/log/ssh:Rootkit component
 		  dir:${RKHROOTDIR}/dev/ida:Rootkit component
 		  dir:${RKHROOTDIR}/lib/java:Rootkit component
@@ -9757,7 +9768,7 @@ rootkit_file_dir_checks() {
 
 				for FNAME in `${FIND_CMD} "${RKHROOTDIR}${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAME} \"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" rootkit
+						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" known_rkts
 					elif `grep -i 'sinar' ${FNAME} >/dev/null 2>&1`; then
 						FOUND=1
 						FOUNDINDIR="FOUND"
@@ -10003,45 +10014,47 @@ possible_rootkit_file_dir_checks() {
 		FILE=`echo ${RKHTMPVAR} | cut -d: -f2`
 		INFO=`echo ${RKHTMPVAR} | cut -d: -f3`
 
+		FNAME=`echo "${FILE}" | tr '%' ' '`
+
 		case "${TYPE}" in
 		dir)
-			if [ -d "${FILE}" ]; then
+			if [ -d "${FNAME}" ]; then
 				FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL_DIR "${FILE}" possible_rkt_files
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
+					display --to LOG --type INFO FILE_PROP_WL_DIR "${FNAME}" possible_rkt_files
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FNAME}"
 				else
 					FOUND=1
 					FOUNDDIRS="${FOUNDDIRS}
-${FILE}:${INFO}"
+${FNAME}:${INFO}"
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FNAME}"
 					fi
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FILE}"
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "${FNAME}"
 			fi
 			;;
 		file)
-			if [ -f "${FILE}" ]; then
+			if [ -f "${FNAME}" ]; then
 				FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "${FILE}" possible_rkt_files
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
+					display --to LOG --type INFO FILE_PROP_WL "${FNAME}" possible_rkt_files
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FNAME}"
 				else
 					FOUND=1
 					FOUNDFILES="${FOUNDFILES}
-${FILE}:${INFO}"
+${FNAME}:${INFO}"
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FNAME}"
 					fi
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FILE}"
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "${FNAME}"
 			fi
 			;;
 		*)
@@ -10075,6 +10088,8 @@ ${FILE}:${INFO}"
 
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_FILE_FOUND "${FILE}" "${INFO}"
 		done
+
+		FOUNDDIRS=`echo "${FOUNDDIRS}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${FOUNDDIRS}; do
 			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
