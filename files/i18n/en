@@ -1,4 +1,4 @@
-Version:2010081201
+Version:2010081601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -120,6 +120,9 @@ ATTRUPD_OK:Current file attributes will be stored
 ATTRUPD_OLD_DISABLED:Previous file attributes were disabled: no file attributes were stored
 ATTRUPD_OLD_NOSTATCMD:Previous file attributes were disabled: no 'stat' command found: no file attributes were stored
 ATTRUPD_OLD_OK:Previous file attributes were stored
+
+RKHDAT_ADD_NEW_ENTRY:Adding file entry to the 'rkhunter.dat' file: $1
+RKHDAT_DEL_OLD_ENTRY:Deleting non-existent file entry from the 'rkhunter.dat' file: $1
 
 GRSECINSTALLED:Found grsecurity installed
 

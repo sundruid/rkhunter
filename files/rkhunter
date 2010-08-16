@@ -718,6 +718,10 @@ check_paths() {
 	fi
 
 
+	#
+	# Now check each pathname in the option.
+	#
+
 	for FNAME in ${RKHTMPVAR}; do
 		#
 		# For the user file property list we have
@@ -793,12 +797,16 @@ check_paths() {
 			#
 
 			#
-			# This is as far as we go for the '/dev' file names, and the package
-			# manager pathnames. Both of these can be anything, and may not even
-			# exist all the time.
+			# This is as far as we go for some options. These pathnames may,
+			# or may not exist, or may be things other than just files and
+			# directories.
 			#
 
-			test "${OPT_NAME}" = "ALLOWDEVFILE" -o "${OPT_NAME}" = "PKGMGR_NO_VRFY" && continue
+			case "${OPT_NAME}" in
+			EXISTWHITELIST|ALLOWDEVFILE|PKGMGR_NO_VRFY)
+				continue
+				;;
+			esac
 
 			#
 			# Now test for the different file types.
@@ -806,14 +814,14 @@ check_paths() {
 
 			if [ -f "${FNAME}" ]; then
 				case "${OPT_NAME}" in
-				ALLOWHIDDENDIRS|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|ROOTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|ROOTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
 					ERRCODE=1
 					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
 					;;
 				esac
 			elif [ -d "${FNAME}" ]; then
 				case "${OPT_NAME}" in
-				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILES|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|RTKT_FILE_WHITELIST|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|WEBCMD|*_CMD)
+				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILE|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|RTKT_FILE_WHITELIST|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|WEBCMD|*_CMD)
 					ERRCODE=1
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
 					;;
@@ -841,12 +849,12 @@ check_paths() {
 				# a regular file. So we allow them.
 				#
 
-				test "${OPT_NAME}" = "ALLOWHIDDENFILES" -o "${OPT_NAME}" = "RTKT_FILE_WHITELIST" && continue
+				test "${OPT_NAME}" = "ALLOWHIDDENFILE" -o "${OPT_NAME}" = "RTKT_FILE_WHITELIST" && continue
 
 				ERRCODE=1
 
 				case "${OPT_NAME}" in
-				ALLOWHIDDENDIRS|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|ROOTDIR|SSH_CONFIG_DIR|RTKT_DIR_WHITELIST|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|ROOTDIR|SSH_CONFIG_DIR|RTKT_DIR_WHITELIST|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
 					RKHTMPVAR2="directory"
 					;;
 				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|WEBCMD|*_CMD)
@@ -869,9 +877,13 @@ check_paths() {
 					;;
 				esac
 
-				if [ $STRICT -eq 1 ]; then
-					ERRCODE=1
-					echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: ${FNAME}"
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+
+				if [ -z "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+					if [ $STRICT -eq 1 ]; then
+						ERRCODE=1
+						echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: ${FNAME}"
+					fi
 				fi
 			fi
 		fi
@@ -2133,6 +2145,40 @@ get_rootdir_option() {
 }
 
 
+get_existwl_option() {
+
+	#
+	# This function gets the configuration option used to whitelist
+	# files and directories from existing on the system. That is, they
+	# may or may not exist at the time of checking, but either way it
+	# will not cause an error.
+	#
+	# This option must be processed before other options because it will
+	# be used to whitelist some subsequent configuration option pathnames.
+	#
+
+	ERRCODE=0
+
+	EXISTWHITELIST=`get_option 2 multi EXISTWHITELIST` || exit 1
+
+	if [ -n "${EXISTWHITELIST}" ]; then
+		#
+		# We 'echo' the variable so that any wildcards get expanded.
+		#
+
+		EXISTWHITELIST=`echo ${EXISTWHITELIST}`
+
+		check_paths EXISTWHITELIST
+
+		test $ERRCODE -eq 1 && exit 1
+
+		EXISTWHITELIST=" ${EXISTWHITELIST} "
+	fi
+
+	return
+}
+
+
 get_mailonwarn_option() {
 
 	#
@@ -3051,7 +3097,7 @@ get_hidden_options() {
 
 		ALLOWHIDDENFILES=`echo ${ALLOWHIDDENFILES}`
 
-		check_paths ALLOWHIDDENFILES
+		check_paths ALLOWHIDDENFILES ALLOWHIDDENFILE
 
 		test $ERRCODE -eq 1 && exit 1
 
@@ -3070,7 +3116,7 @@ get_hidden_options() {
 
 		ALLOWHIDDENDIRS=`echo ${ALLOWHIDDENDIRS}`
 
-		check_paths ALLOWHIDDENDIRS
+		check_paths ALLOWHIDDENDIRS ALLOWHIDDENDIR
 
 		test $ERRCODE -eq 1 && exit 1
 
@@ -4200,6 +4246,8 @@ get_configfile_options() {
 	fi
 
 	if [ $CHECK -eq 1 ]; then
+		get_existwl_option
+
 		test $NOMOW -eq 0 && get_mailonwarn_option
 
 		get_ssh_options
@@ -7516,6 +7564,80 @@ shared_libs_check() {
 }
 
 
+updt_rkhdat() {
+
+	#
+	# This function is part of the file properties check. It is
+	# used to add and remove entries from the rkhunter.dat file.
+	#
+
+	get_temp_file "${RKHTMPDIR}/rkhunter.dat"
+	RKHDAT_TMPFILE=$TEMPFILE
+
+	get_temp_file "${RKHTMPDIR}/rkhunter.dat2"
+	RKHDAT_TMPFILE2=$TEMPFILE
+
+	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE}"
+	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE2}"
+
+	cp -f -p ${RKHDAT_FILE} ${RKHDAT_TMPFILE}
+
+
+	IFS=$IFSNL
+
+	OLDRKHENTRIES=`echo "${OLDRKHENTRIES}" | sed -e '/^$/d'`
+
+	for FNAME in ${OLDRKHENTRIES}; do
+		FILENAME=`echo "${FNAME}" | cut -d: -f2`
+
+		display --to LOG --type INFO RKHDAT_DEL_OLD_ENTRY "${FILENAME}"
+
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's:/:\\\/:g'`
+
+		sed -e "/^${FNAMEGREP}$/d" ${RKHDAT_TMPFILE} >${RKHDAT_TMPFILE2}
+
+		cp -f ${RKHDAT_TMPFILE2} ${RKHDAT_TMPFILE}
+	done
+
+
+	NEWRKHENTRIES=`echo "${NEWRKHENTRIES}" | sed -e '/^$/d'`
+
+	for FNAME in ${NEWRKHENTRIES}; do
+		FILENAME=`echo "${FNAME}" | cut -d: -f2`
+
+		display --to LOG --type INFO RKHDAT_ADD_NEW_ENTRY "${FILENAME}"
+
+		echo "${FNAME}" >>${RKHDAT_TMPFILE}
+	done
+
+	IFS=$RKHIFS
+
+
+	#
+	# Now put the new rkhunter.dat file in place.
+	#
+
+	cp -f -p ${RKHDAT_FILE} ${RKHDAT_FILE}.old >/dev/null 2>&1
+	cp -f ${RKHDAT_TMPFILE} ${RKHDAT_FILE} >/dev/null 2>&1
+	ERRCODE=$?
+
+	if [ $ERRCODE -ne 0 ]; then
+		RET_CODE=1
+		display --to LOG --type INFO CMD_ERROR "cp ${RKHDAT_TMPFILE} ${RKHDAT_FILE}" $ERRCODE
+		display --to SCREEN+LOG --type WARNING PROPUPD_ERROR $ERRCODE
+	else
+		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
+	fi
+
+	chmod 640 ${RKHDAT_FILE} >/dev/null 2>&1
+
+	rm -f ${RKHDAT_TMPFILE} ${RKHDAT_TMPFILE2} >/dev/null 2>&1
+
+
+	return
+}
+
+
 file_properties_check() {
 
 	#
@@ -7533,11 +7655,14 @@ file_properties_check() {
 	#
 
 	TEST_RESULT=""
+	NEWRKHENTRIES=""
+	OLDRKHENTRIES=""
 	WHITELIST_RESULT=""
 	SKIP_ATTR=0; SKIP_HASH=0; SKIP_IMMUT=0; SKIP_SCRIPT=0
 	USE_DAT_FILE=1
 	SKIP_IMMUT_OS=0
 	PROP_FILE_LIST_COUNT=0
+	ADDNEWENTRY=0
 
 	#
 	# In order to disable the whole test we have to check if
@@ -7893,11 +8018,13 @@ file_properties_check() {
 	VERIFIED_PKG_LIST=""
 
 	for FNAME in `cat ${RKH_FILEPROP_LIST}`; do
+		FILENAME=""
 		FNAMEGREP=""
 		TEST_RESULT=""
 		WHITELIST_RESULT=""
 
 		NOVRFYFILE=0
+		ADDNEWENTRY=0
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
 		HASH_TEST_PASSED=0
@@ -7927,14 +8054,33 @@ file_properties_check() {
 
 			FILENAME=`echo "${FNAME}" | sed -e "s:^${RDIR}::"`
 
-			FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+			FNAMEGREP=`echo "${FILENAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
 
 			RKHLINE=`grep "^File:${FNAMEGREP}:" ${RKHDAT_FILE}`
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
-				TEST_RESULT="${TEST_RESULT} norkhline"
+				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+					#
+					# We need to add the file to the rkhunter.dat file.
+					# We add a dummy entry to start with, but it must contain values.
+					#
+
+					ADDNEWENTRY=1
+					RKHLINE="File:${FILENAME}:1:1:1:1:1:1:1::"
+				else
+					TEST_RESULT="${TEST_RESULT} norkhline"
+				fi
 			elif [ $FILE_EXISTS -eq 0 ]; then
-				if [ -n "${RKHLINE}" ]; then
+				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+					if [ -n "${RKHLINE}" ]; then
+						#
+						# We need to remove the file from the rkhunter.dat file.
+						#
+
+						OLDRKHENTRIES="${OLDRKHENTRIES}
+${RKHLINE}"
+					fi
+				elif [ -n "${RKHLINE}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
@@ -7945,7 +8091,7 @@ file_properties_check() {
 			fi
 		elif [ $FILE_EXISTS -eq 1 ]; then
 			RKHLINE=""
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
 		else
 			continue
 		fi
@@ -7954,6 +8100,14 @@ file_properties_check() {
 		#
 		# Start the tests.
 		#
+
+		SYSUID=0
+		SYSGID=0
+		SYSDTM=0
+		SYSSIZE=0
+		SYSPERM=0
+		SYSINODE=0
+		SYSHASH=""
 
 		if [ $USE_DAT_FILE -eq 1 -a -n "${RKHLINE}" ]; then
 			FDATA=""
@@ -8398,6 +8552,30 @@ file_properties_check() {
 					fi
 				fi
 			fi
+
+
+			#
+			# If we are adding this file to the rkhunter.dat file, then we
+			# need to remove any failed test results caused by the file
+			# currently being missing. We then add the file to the list of
+			# files to be added, and include the detected system attributes
+			# of the file.
+			#
+
+			if [ $ADDNEWENTRY -eq 1 ]; then
+				if [ -n "${TEST_RESULT}" ]; then
+					for RKHTMPVAR in ${TEST_RESULT}; do
+						case "${RKHTMPVAR}" in 
+						hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged)
+							TEST_RESULT=`echo "${TEST_RESULT}" | sed -e "s/ ${RKHTMPVAR}//"`
+							;;
+						esac
+					done
+				fi
+
+				NEWRKHENTRIES="${NEWRKHENTRIES}
+File:${FILENAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::"
+			fi
 		fi
 
 
@@ -8712,14 +8890,30 @@ file_properties_check() {
 	if [ $USE_DAT_FILE -eq 1 ]; then
 		for FNAME in `grep '^File:' ${RKHDAT_FILE} | cut -d: -f2`; do
 			if [ -z "`grep \"^${FNAME}$\" ${RKH_FILEPROP_LIST}`" ]; then
-				PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
-				PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAME} \"`" ]; then
+					#
+					# Remove the entry from the rkhunter.dat file.
+					#
 
-				display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
-				display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${FNAME}"
+					OLDRKHENTRIES="${OLDRKHENTRIES}
+File:${FNAME}:.*"
+				else
+					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
+					PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
+					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${FNAME}"
+				fi
 			fi
 		done
 	fi
+
+
+	#
+	# Finally, add or remove any specified entries to/from the rkhunter.dat file.
+	#
+
+	test -n "${OLDRKHENTRIES}" -o -n "${NEWRKHENTRIES}" && updt_rkhdat
 
 
 	return
@@ -13206,12 +13400,12 @@ do_filesystem_check() {
 			IFS=$RKHIFS
 		fi
 
-		FOUNDFILES=`echo "${FOUNDFILES}" | sed -e '/^$/d'`
-
 
 		#
 		# Now display the results.
 		#
+
+		FOUNDFILES=`echo "${FOUNDFILES}" | sed -e '/^$/d'`
 
 		if [ -z "${FOUNDFILES}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
@@ -15041,6 +15235,10 @@ SHOW_LOCK_MSGS=1
 
 # This gets set if the unlock command-line option is used.
 UNLOCK=0
+
+# This gets set if any files or directories need
+# whitelisting from 'existence' checks.
+EXISTWHITELIST=""
 
 
 ######################################################################

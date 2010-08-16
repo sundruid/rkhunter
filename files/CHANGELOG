@@ -32,6 +32,10 @@
  - The installer now supports the ppc64 architecture.
  - The RTKT_FILE_WHITELIST option can be used to whitelist
    reported 'suspicious files' found in the 'running_procs' test.
+ - Using the EXISTWHITELIST configuration option it is now possible
+   to whitelist files and directories that might not always be
+   present on the system. Whitelisted items are, in effect,
+   whitelisted from 'existence' checks.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
@@ -77,6 +81,13 @@
  - More rigorous testing of the various '.dat' files before each test
    which uses them has now been included. If a problem is found, then
    a warning is displayed.
+ - The ALLOW_SSH_ROOT_USER configuration option can no longer be set
+   to 'yes' if the 'PermitRootLogin' option is not set in the SSH
+   configuration file. A value of 'unset' must be used.
+ - The ALLOW_SSH_PROT_V1 configuration option can no longer be set
+   to '1' if the 'Protocol' option is not set in the SSH configuration
+   file. A value of '2' must be used. (The use of '1' in this instance
+   was an undocumented, but allowed setting.)
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
@@ -126,13 +137,6 @@
    configuration option setting.
  - If the installer is used with the RPM, TGZ or DEB layout options,
    and '/' is the build root, then this will now build correctly.
- - The ALLOW_SSH_ROOT_USER configuration option can no longer be set
-   to 'yes' if the 'PermitRootLogin' option is not set in the SSH
-   configuration file. A value of 'unset' must be used.
- - The ALLOW_SSH_PROT_V1 configuration option can no longer be set
-   to '1' if the 'Protocol' option is not set in the SSH configuration
-   file. A value of '2' must be used. (The use of '1' in this instance
-   was an undocumented, but allowed setting.)
  - NetBSD, FreeBSD and OSX would print out an error regarding the 'print'
    command. They would also display the locking messages incorrectly. Both
    of these have now been corrected.
