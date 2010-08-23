@@ -2621,11 +2621,11 @@ sort_test_lists() {
 
 	if [ -n "${SORT_CMD}" ]; then
 		if [ -n "${UNIQ_CMD}" ]; then
-			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD} | tr '\n' ' '`
-			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD} | tr '\n' ' '`
+			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD}`
+			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD}`
 		else
-			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
-			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
+			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD}`
+			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD}`
 		fi
 
 		ENABLE_TESTS=`echo ${ENABLE_TESTS}`
@@ -2803,6 +2803,60 @@ check_test_options() {
 
 	sort_test_lists 1
 
+
+	#
+	# Finally, we temporarily expand the disabled test names and temporarily
+	# remove any matching names from the enabled test list. Although these
+	# tests would never run, we need to do this in order to see if the user
+	# has given us an invalid list of tests.
+	#
+
+	if [ "${DISABLE_TESTS}" != "none" ]; then
+		TEMP_EN_TESTS="${ENABLE_TESTS}"
+		TEMP_DIS_TESTS="${DISABLE_TESTS}"
+
+		for TEST_NAME in ${TEMP_DIS_TESTS}; do
+			for RKHTMPVAR in ${GROUPED_TESTS}; do
+				GROUP_NAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
+
+				if [ -n "`echo \"${RKHTMPVAR}\" | grep ':'`" ]; then
+					GROUP_TESTS=`echo "${RKHTMPVAR}" | cut -d: -f2-`
+				else
+					GROUP_TESTS=""
+				fi
+
+				if [ "${TEST_NAME}" = "${GROUP_NAME}" ]; then
+					TEMP_DIS_TESTS="${TEMP_DIS_TESTS} `echo \"${GROUP_TESTS}\" | tr ':' ' '`"
+					break
+				elif [ -z "${GROUP_TESTS}" ]; then
+					continue
+				elif [ -n "`echo \":${GROUP_TESTS}:\" | grep \":${TEST_NAME}:\"`" ]; then
+					TEMP_DIS_TESTS="${TEMP_DIS_TESTS} ${GROUP_NAME}"
+				fi
+			done
+		done
+
+		TEMP_DIS_TESTS=" `echo ${TEMP_DIS_TESTS}` "
+
+
+		#
+		# Now loop through the enabled tests and remove any matches.
+		#
+
+		for TEST_NAME in ${TEMP_EN_TESTS}; do
+			if [ -n "`echo \"${TEMP_DIS_TESTS}\" | grep \" ${TEST_NAME} \"`" ]; then
+				TEMP_EN_TESTS=`echo " ${TEMP_EN_TESTS} " | sed -e "s/ ${TEST_NAME} / /"`
+			fi
+		done
+
+		TEMP_EN_TESTS=`echo ${TEMP_EN_TESTS}`
+
+		if [ -z "${TEMP_EN_TESTS}" ]; then
+			test $ENABLE_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
+			echo "Invalid${RKHTMPVAR} enabled test list - no tests to run."
+			exit 1
+		fi
+	fi
 
 	return
 }
@@ -4114,7 +4168,7 @@ get_user_fileprop_list() {
 	N=0
 	ERRCODE=0
 
-	RKHTMPVAR=`echo "${FILENAMES}" | tr '\n' ' '`
+	RKHTMPVAR=`echo ${FILENAMES}`
 
 	while :; do
 		N=`expr $N + 1`
