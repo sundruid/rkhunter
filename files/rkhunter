@@ -2606,63 +2606,179 @@ get_locking_options() {
 }
 
 
-get_enable_option() {
+sort_test_lists() {
 
 	#
-	# If the option is not specified on the command-line, then
-	# get it from the configuration file. We validate the test
-	# names given against the list of known test names. By default
-	# all tests are enabled.
+	# This function is used to sort the list of test names for
+	# enabled and disabled tests. The first parameter determines
+	# which list is to be sorted:
+	#
+	#	1: enabled tests
+	#	2: disabled tests
 	#
 
-	if [ $ENDIS_OPT -eq 1 ]; then
-		if [ -n "${ENABLE_TESTS}" ]; then
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
-			ENABLE_TESTS=`echo ${ENABLE_TESTS}`
+	RKHTMPVAR=$1
 
-			if [ -z "${ENABLE_TESTS}" ]; then
-				echo "Invalid '--enable' option - no test names given."
-				exit 1
-			else
-				ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
-			fi
-
-
-			#
-			# We do a simple test here to see if just one test
-			# name was given. If it was then we skip the key
-			# press feature since it is most likely that the user
-			# doesn't want that. We also check that only the
-			# --enable option has been given, and that the test
-			# name is not 'all'.
-			#
-
-			if [ "${ENABLE_TESTS}" != "all" -a -z "`echo \"${ENABLE_TESTS}\" | grep ' '`" ]; then
-				SKIP_KEY_PRESS=1
-			fi
+	if [ -n "${SORT_CMD}" ]; then
+		if [ -n "${UNIQ_CMD}" ]; then
+			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD} | tr '\n' ' '`
+			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD} | tr '\n' ' '`
+		else
+			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
+			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
 		fi
-	else
-		ENABLE_TESTS=`get_option 2 single ENABLE_TESTS` || exit 1
-		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
+
+		ENABLE_TESTS=`echo ${ENABLE_TESTS}`
+		DISABLE_TESTS=`echo ${DISABLE_TESTS}`
 	fi
 
-	test -z "${ENABLE_TESTS}" && ENABLE_TESTS="all"
-
 
 	#
-	# We now need to look for group names in our list, and expand
-	# them to the individual test names. This allows us to then
-	# check against specific test names as well as group names.
-	# We also need to check if a given test name is part of a group.
-	# If it is, then we must add the group name.
+	# Finally, test to see if the current lists are the same.
 	#
+
+	if [ "${ENABLE_TESTS}" = "${DISABLE_TESTS}" ]; then
+		test $ENDIS_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
+		echo "The${RKHTMPVAR} enabled and disabled tests are the same."
+		exit 1
+	fi
+
+	return
+}
+
+
+check_test_options() {
+
+	#
+	# This function is called after we have obtained the enabled and
+	# disabled test names. It will check that the test names are valid,
+	# and remove any enabled test names from the disabled list.
+	#
+
+	#
+	# First we loop through the enabled and disabled test names, and see
+	# if the special names of 'all' or 'none' are used. If so, then these
+	# will either override all the other test names in the list, or be an
+	# error. We also look for any invalid test names.
+	#
+
+	SEEN=0
+
+	RKHTMPVAR=" `echo ${KNOWN_TESTS}` "
 
 	for TEST_NAME in ${ENABLE_TESTS}; do
 		if [ "${TEST_NAME}" = "all" ]; then
-			ENABLE_TESTS="all"
-			break
+			SEEN=1
+		elif [ "${TEST_NAME}" = "none" ]; then
+			test $ENABLE_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
+			echo "'none' cannot be used in the${RKHTMPVAR} enabled test list."
+			exit 1
+		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
+			echo "Unknown enabled test name given: ${TEST_NAME}"
+			exit 1
 		fi
+	done
 
+	test $SEEN -eq 1 && ENABLE_TESTS="all"
+
+
+	#
+	# For the disabled tests we need to loop through the
+	# command-line and configuration file test names separately.
+	#
+
+	SEEN=0
+
+	for TEST_NAME in ${CL_DISABLE_TESTS}; do
+		if [ "${TEST_NAME}" = "none" ]; then
+			SEEN=1
+		elif [ "${TEST_NAME}" = "all" ]; then
+			echo "'all' cannot be used in the disabled test list."
+			exit 1
+		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
+			echo "Unknown disabled test name given: ${TEST_NAME}"
+			exit 1
+		fi
+	done
+
+	if [ $USECF -eq 1 ]; then
+		for TEST_NAME in ${CONFIG_DISABLE_TESTS}; do
+			if [ "${TEST_NAME}" = "none" ]; then
+				SEEN=1
+			elif [ "${TEST_NAME}" = "all" ]; then
+				echo "'all' cannot be used in the configured disabled test list."
+				exit 1
+			elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
+				echo "Unknown disabled test name in the configuration file: ${TEST_NAME}"
+				exit 1
+			fi
+		done
+	fi
+
+	test $SEEN -eq 1 && DISABLE_TESTS="none"
+
+
+	#
+	# If we are to run all the tests, then we use whatever
+	# disabled tests the user has given us.
+	#
+
+	test "${ENABLE_TESTS}" = "all" && return
+
+
+	#
+	# Now we can loop through the command-line enabled specific test names,
+	# and remove them from the disabled list. We need to do this otherwise
+	# the tests would not run. We don't bother to do this for the configuration
+	# file enabled tests because we assume the user has already checked this.
+	#
+
+	if [ $ENABLE_OPT -eq 1 -a "${DISABLE_TESTS}" != "none" ]; then
+		#
+		# First get a list of just the group test names.
+		#
+
+		GROUP_TEST_NAMES=""
+
+		for RKHTMPVAR in ${GROUPED_TESTS}; do
+			GROUP_TEST_NAMES="${GROUP_TEST_NAMES} `echo "${RKHTMPVAR}" | cut -d: -f1`"
+		done
+
+		GROUP_TEST_NAMES=" `echo ${GROUP_TEST_NAMES}` "
+
+
+		#
+		# Now loop through the specific test names.
+		#
+
+		DISABLE_TESTS=" ${DISABLE_TESTS} "
+
+		for TEST_NAME in ${ENABLE_TESTS}; do
+			if [ -z "`echo \"${GROUP_TEST_NAMES}\" | grep \" ${TEST_NAME} \"`" ]; then
+				if [ -n "`echo \"${DISABLE_TESTS}\" | grep \" ${TEST_NAME} \"`" ]; then
+					DISABLE_TESTS=`echo "${DISABLE_TESTS}" | sed -e "s/ ${TEST_NAME} / /"`
+				fi
+			fi
+		done
+
+		DISABLE_TESTS=`echo ${DISABLE_TESTS}`
+
+		if [ -z "${DISABLE_TESTS}" ]; then
+			DISABLE_TESTS="none"
+		else
+			sort_test_lists 2
+		fi
+	fi
+
+
+	#
+	# Next we expand the enabled test group names. This will leave us
+	# with a list of specific test names, and their associated group test
+	# names. We also need to check if a given test name is part of a
+	# group. If it is, then we must add the group name.
+	#
+
+	for TEST_NAME in ${ENABLE_TESTS}; do
 		for RKHTMPVAR in ${GROUPED_TESTS}; do
 			GROUP_NAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
 
@@ -2683,26 +2799,61 @@ get_enable_option() {
 		done
 	done
 
+	ENABLE_TESTS=`echo ${ENABLE_TESTS}`
+
+	sort_test_lists 1
+
+
+	return
+}
+
+
+get_enable_option() {
 
 	#
-	# Check that the names we have been given are valid.
+	# This function gets the enabled test names from the command-line
+	# or the configuration file as required. The test names will be
+	# checked later on. By default all tests are enabled.
 	#
 
-	RKHTMPVAR=" `echo ${KNOWN_TESTS}` "
+	#
+	# Get the command-line test names. These override
+	# the configuration file enabled test names.
+	#
 
-	for TEST_NAME in ${ENABLE_TESTS}; do
-		if [ "${TEST_NAME}" = "none" ]; then
-			test $ENABLE_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
-			echo "'none' cannot be used in the${RKHTMPVAR} enable test list."
+	if [ $ENABLE_OPT -eq 1 ]; then
+		ENABLE_TESTS=`echo "${CL_ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+		ENABLE_TESTS=`echo ${ENABLE_TESTS}`
+
+		if [ -z "${ENABLE_TESTS}" ]; then
+			echo "Invalid '--enable' option - no test names given."
 			exit 1
-		elif [ "${TEST_NAME}" = "all" ]; then
-			ENABLE_TESTS="all"
-			break
-		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
-			echo "Unknown enable test name given: ${TEST_NAME}"
-			exit 1
+		else
+			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 		fi
-	done
+
+
+		#
+		# We do a simple test here to see if just one test was enabled.
+		# If it was then we skip the key press feature since it is most
+		# likely that the user doesn't want that. The test name cannot be
+		# 'all'.
+		#
+
+		if [ "${ENABLE_TESTS}" != "all" -a -z "`echo \"${ENABLE_TESTS}\" | grep ' '`" ]; then
+			SKIP_KEY_PRESS=1
+		fi
+	else
+		#
+		# We get the configuration file entries by default.
+		#
+
+		ENABLE_TESTS=`get_option 2 single ENABLE_TESTS` || exit 1
+		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
+
+		# The system default.
+		test -z "${ENABLE_TESTS}" && ENABLE_TESTS="all"
+	fi
 
 	return
 }
@@ -2711,10 +2862,9 @@ get_enable_option() {
 get_disable_option() {
 
 	#
-	# If the option is not specified on the command-line, then
-	# get it from the configuration file. We validate the test
-	# names given against the list of known test names. By default
-	# no tests are disabled.
+	# This function gets the disabled test names from the command-line
+	# and the configuration file if required. The test names will be
+	# checked later on. By default no tests are disabled.
 	#
 	# Note: disabled tests are always compared against the list
 	# of enabled tests. Hence, if we used
@@ -2724,57 +2874,38 @@ get_disable_option() {
 	# the '--disable' option in the example above is not necessary.
 	#
 
-	if [ $ENDIS_OPT -eq 1 ]; then
-		if [ -n "${DISABLE_TESTS}" ]; then
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
-			DISABLE_TESTS=`echo ${DISABLE_TESTS}`
+	#
+	# Get the command-line test names.
+	#
 
-			if [ -z "${DISABLE_TESTS}" ]; then
-				echo "Invalid '--disable' option - no test names given."
-				exit 1
-			fi
+	if [ -n "${CL_DISABLE_TESTS}" ]; then
+		CL_DISABLE_TESTS=`echo "${CL_DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+		CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
+
+		if [ -z "${CL_DISABLE_TESTS}" ]; then
+			echo "Invalid '--disable' option - no test names given."
+			exit 1
 		fi
-	else
-		DISABLE_TESTS=`get_option 2 single DISABLE_TESTS` || exit 1
 	fi
 
+	#
+	# Get the configuration file test names
+	# unless specifically requested not to do so.
+	#
+
+	if [ $USECF -eq 1 ]; then
+		CONFIG_DISABLE_TESTS=`get_option 2 single DISABLE_TESTS` || exit 1
+	fi
+
+	DISABLE_TESTS="${CL_DISABLE_TESTS} ${CONFIG_DISABLE_TESTS}"
+	DISABLE_TESTS=`echo ${DISABLE_TESTS}`
+
 	if [ -z "${DISABLE_TESTS}" ]; then
+		# The system default.
 		DISABLE_TESTS="none"
 	else
 		DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 	fi
-
-
-	#
-	# Note that we do not need to check the disabled test names
-	# against the group names. If a disabled test name does not appear
-	# in the enabled list then it will, by default, be ignored. If
-	# a group name appears in the enabled and disabled lists, then
-	# it will be disabled.
-	#
-	# Check that the names we have been given are valid.
-	#
-
-	RKHTMPVAR=" `echo ${KNOWN_TESTS}` "
-
-	for TEST_NAME in ${DISABLE_TESTS}; do
-		if [ "${TEST_NAME}" = "all" ]; then
-			if [ $ENDIS_OPT -eq 0 -o $ENABLE_OPT -eq 0 ]; then
-				test $ENDIS_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
-				echo "'all' cannot be used in the${RKHTMPVAR} disable test list."
-				exit 1
-			else
-				DISABLE_TESTS="all"
-				break
-			fi
-		elif [ "${TEST_NAME}" = "none" ]; then
-			DISABLE_TESTS="none"
-			break
-		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
-			echo "Unknown disable test name given: ${TEST_NAME}"
-			exit 1
-		fi
-	done
 
 	return
 }
@@ -4238,11 +4369,7 @@ get_configfile_options() {
 		get_enable_option
 		get_disable_option
 
-		if [ "${ENABLE_TESTS}" != "all" -a "${ENABLE_TESTS}" = "${DISABLE_TESTS}" ]; then
-			test $ENDIS_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
-			echo "The${RKHTMPVAR} enabled and disabled tests are the same."
-			exit 1
-		fi
+		check_test_options
 	fi
 
 	if [ $CHECK -eq 1 ]; then
@@ -7818,9 +7945,15 @@ file_properties_check() {
 			if [ -z "${LSATTR_CMD}" ]; then
 				SKIP_IMMUT=1
 				RKHTMPVAR="${RKHTMPVAR} immutable"
-			elif [ -z "`${LSATTR_CMD} ${RKHDAT_FILE} 2>/dev/null`" ]; then
-				SKIP_IMMUT=1
-				RKHTMPVAR="${RKHTMPVAR} immutable-cmd"
+			else
+				for FNAME in ${CONFIGFILE} ${LOCALCONFIGFILE} ${DB_PATH}/*.dat ${DB_PATH}/i18n/*; do
+					test -f "${FNAME}" -a ! -h "${FNAME}" && break
+				done
+
+				if [ -z "`${LSATTR_CMD} ${FNAME} 2>/dev/null`" ]; then
+					SKIP_IMMUT=1
+					RKHTMPVAR="${RKHTMPVAR} immutable-cmd"
+				fi
 			fi
 		fi
 	fi
@@ -14783,6 +14916,8 @@ help() {
 	echo $ECHOOPT "     -l, --logfile [file]              Write to a logfile"
 	echo $ECHOOPT "                                       (Default is $DFLT_LOGFILE)"
 	echo $ECHOOPT "         --noappend-log                Do not append to the logfile, overwrite it"
+	echo $ECHOOPT "         --nocf                        Do not use the configuration file entries"
+	echo $ECHOOPT "                                       for disabled tests (only valid with --disable)"
 	echo $ECHOOPT "         --nocolors                    Use black and white output"
 	echo $ECHOOPT "         --nolog                       Do not write to a logfile"
 	echo $ECHOOPT "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
@@ -15128,12 +15263,18 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
 DISABLE_TESTS=""
+CL_ENABLE_TESTS=""
+CL_DISABLE_TESTS=""
+CONFIG_DISABLE_TESTS=""
 
-# Set if the command-line options --enable or --disable have been used.
+# These get set if the '--enable' or '--disable' command-line options have been used.
 ENDIS_OPT=0
 ENABLE_OPT=0
 
-# Set if the --list option has been used.
+# This gets set to zero if the '--nocf' command-line option is used.
+USECF=1
+
+# This gets set if the '--list' command-line option is used.
 LIST_OPT=""
 
 # Space-filled line used for the display function.
@@ -15233,7 +15374,7 @@ USE_LOCKING=0
 LOCK_TIMEOUT=0
 SHOW_LOCK_MSGS=1
 
-# This gets set if the unlock command-line option is used.
+# This gets set if the '--unlock' command-line option is used.
 UNLOCK=0
 
 # This gets set if any files or directories need
@@ -15284,7 +15425,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${BINPATHS}" ]; then
-			echo "No command directories specified."
+			echo "No command directories specified with '--bindir' option."
 			exit 1
 		fi
 		;;
@@ -15306,7 +15447,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${CONFIGFILE}" ]; then
-			echo "No configuration file specified."
+			echo "No configuration file specified with '--configfile' option."
 			exit 1
 		fi
 		;;
@@ -15334,7 +15475,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${DB_PATH}" ]; then
-			echo "No database directory specified."
+			echo "No database directory specified with '--dbdir' option."
 			exit 1
 		fi
 		;;
@@ -15345,43 +15486,45 @@ while [ $# -ge 1 ]; do
 		CATLOGFILE=1
 		;;
 	--disable)
-		DISABLE_TESTS=""
+		RKHTMPVAR="$2"
 
-		case "$2" in
+		case "${RKHTMPVAR}" in
 		"")
 			;;
 		-*)
+			RKHTMPVAR=""
 			;;
 		*)
 			shift
 			ENDIS_OPT=1
-			DISABLE_TESTS="$1"
+			CL_DISABLE_TESTS="${CL_DISABLE_TESTS} ${RKHTMPVAR}"
 			;;
 		esac
 
-		if [ -z "${DISABLE_TESTS}" ]; then
-			echo "No tests specified to disable."
+		if [ -z "${RKHTMPVAR}" ]; then
+			echo "No tests specified with '--disable' option."
 			exit 1
 		fi
 		;;
 	--enable)
-		ENABLE_TESTS=""
+		RKHTMPVAR="$2"
 
-		case "$2" in
+		case "${RKHTMPVAR}" in
 		"")
 			;;
 		-*)
+			RKHTMPVAR=""
 			;;
 		*)
 			shift
 			ENDIS_OPT=1
 			ENABLE_OPT=1
-			ENABLE_TESTS="$1"
+			CL_ENABLE_TESTS="${CL_ENABLE_TESTS} ${RKHTMPVAR}"
 			;;
 		esac
 
-		if [ -z "${ENABLE_TESTS}" ]; then
-			echo "No tests specified to enable."
+		if [ -z "${RKHTMPVAR}" ]; then
+			echo "No tests specified with '--enable' option."
 			exit 1
 		fi
 		;;
@@ -15401,7 +15544,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${HASH_FUNC}" ]; then
-			echo "No hash function specified."
+			echo "No hash function specified with '--hash' option."
 			exit 1
 		fi
 		;;
@@ -15438,7 +15581,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${LANGUAGE}" ]; then
-			echo "No language specified."
+			echo "No language specified with '$1' option."
 			exit 1
 		fi
 		;;
@@ -15472,6 +15615,9 @@ while [ $# -ge 1 ]; do
 		APPEND_LOG=0
 		APPEND_OPT=1
 		;;
+	--nocf)
+		USECF=0
+		;;
 	--nocolors | --no-colors | --nocolor | --no-color)
 		COLORS=0
 		;;
@@ -15503,7 +15649,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${PKGMGR}" ]; then
-			echo "No package manager specified."
+			echo "No package manager specified with '--pkgmgr' option."
 			exit 1
 		fi
 		;;
@@ -15544,7 +15690,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${RKHROOTDIR}" ]; then
-			echo "No root directory specified."
+			echo "No root directory specified with '$1' option."
 			exit 1
 		fi
 		;;
@@ -15584,7 +15730,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${RKHTMPDIR}" ]; then
-			echo "No temporary directory specified."
+			echo "No temporary directory specified with '--tmpdir' option."
 			exit 1
 		fi
 		;;
@@ -15642,13 +15788,23 @@ fi
 
 #
 # We need to see if we are to run a check before we get to the
-# configuration file processing. Basically if either of the
-# --enable or --disable options are used, and this is not a
+# configuration file processing code. Basically if either of the
+# '--enable' or '--disable' options are used, and this is not a
 # property update run, then we will do a check. For update runs
 # only the 'hashes' or 'attributes' tests are likely to be named.
 #
 
-test $ENDIS_OPT -eq 1 -a $PROP_UPDATE -eq 0 && CHECK=1
+if [ $ENDIS_OPT -eq 1 ]; then
+	CL_ENABLE_TESTS=`echo ${CL_ENABLE_TESTS}`
+	CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
+
+	# The '--nocf' option is only for disabled tests.
+	test -z "${CL_DISABLE_TESTS}" && USECF=1
+
+	test $PROP_UPDATE -eq 0 && CHECK=1
+else
+	USECF=1
+fi
 
 
 #

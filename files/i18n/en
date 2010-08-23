@@ -1,4 +1,4 @@
-Version:2010081601
+Version:2010082301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -582,7 +582,6 @@ SUSPSCAN_NO_SIZE:No maximum file size specified: using default ($1)
 SUSPSCAN_THRESH:Score threshold is set to: $1
 SUSPSCAN_NO_THRESH:No score threshold specified: using default ($1)
 SUSPSCAN_DIR_CHECK:Checking directory: '$1'
-SUSPSCAN_DIR_CHECK_NO_FILES:No suitable files found to check.
 SUSPSCAN_FILE_CHECK:File checked: Name: '$1' Score: $2
 SUSPSCAN_FILE_CHECK_DEBUG:File checked: Name: '$1' Score: $2 Hitcount: $3 Hits: ($4)
 SUSPSCAN_FILE_SKIPPED_EMPTY:File ignored: empty: '$1'

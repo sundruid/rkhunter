@@ -1,5 +1,5 @@
 .\" rkhunter - RootKit Hunter
-.TH rkhunter 8 "September, 2008"
+.TH rkhunter 8 "August, 2010"
 
 .SH NAME
 rkhunter \- RootKit Hunter
@@ -209,7 +209,7 @@ option is used, and \fB\-\-propupd\fP is not specified, then the
 \fB\-\-check\fP command option is assumed. If only one test name, other than
 \fIall\fP, is given, then the \fB\-\-skip\-keypress\fP option is also assumed.
 Read the README file for more information about test names. By default all
-tests are enabled. All tests will be listed below under TESTS.
+tests are enabled. All the test names are listed below under TESTS.
 
 .IP "\fB\-\-hash {MD5 | SHA1 | SHA224 | SHA256 | SHA384 | SHA512 |\fP"
 \fB NONE | <command>}\fP
@@ -246,6 +246,14 @@ it is run. Any previously existing logfile is moved out of the way, and has
 .IP \fB\-\-noappend\-log\fP
 This option reverts \fBrkhunter\fP to its default behaviour of creating a new
 log file rather than appending to it.
+
+.IP \fB\-\-nocf\fP
+.br
+This option is only valid when the command\-line \fB\-\-disable\fP option is used.
+When the \fB\-\-disable\fP option is used, by default, the configuration file
+option to disable tests is also used to determine which tests to run. If only the
+\fB\-\-disable\fP option is to be used to determine which tests to run, then
+\fB\-\-nocf\fP must be given.
 
 .IP \fB\-\-nocolors\fP
 This option causes the result of each test to not be displayed in a specific

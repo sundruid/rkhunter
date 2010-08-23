@@ -88,6 +88,15 @@
    to '1' if the 'Protocol' option is not set in the SSH configuration
    file. A value of '2' must be used. (The use of '1' in this instance
    was an undocumented, but allowed setting.)
+ - The '--enable' and '--disable' command-line options may now be used
+   more than once on the command-line.
+ - The default behaviour when the command-line option '--disable' is
+   used has been changed. Rkhunter will now also include the
+   configuration file option used to disable tests, in order to
+   determine overall which tests to run. This is more intuitive for the
+   user. If the previous behaviour of only the '--disable' option being
+   used to determine which tests to run, then the new '--nocf' option
+   must also be used.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
@@ -103,9 +112,9 @@
  - The file properties immutable test checked the 'lsattr' command
    against the rkhunter configuration file. However, if the file was
    a symbolic link, then the test failed. Now the test checks 'lsattr'
-   against the file properties database file (rkhunter.dat). This file
-   cannot be a symbolic link (if it is then rkhunter gives an error
-   and stops).
+   against several of the rkhunter installed files, looking for a
+   regular, non-link, file. These include the configuration file, the
+   rkhunter database files, and the language files.
  - The ALLOWDEVFILE whitelisting now allows filenames to contain
    colon (:) characters.
  - The rootkit summary could list detected rootkit names more than once.

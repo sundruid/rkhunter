@@ -320,19 +320,22 @@ file permissions test, and so it cannot be specifically enabled or disabled.
 RKH can be told to enable or disable one or more of the tests by using the
 '--enable' and '--disable' command-line options. Alternatively, the RKH
 configuration file options 'ENABLE_TESTS' and 'DISABLE_TESTS' can be used.
-Note, however, that if either command-line option is used then the
-configuration file options, for both enabled and disabled tests, are ignored.
-The program defaults if no options are used at all are to enable all tests and
-to disable no tests. For this purpose the enable options can use the special
-test name 'all', and the disable options can use the name 'none'. To specify
+By default, if the command-line '--disable' option is used, then the
+configuration file option 'DISABLE_TESTS' is also used to determine which tests
+to run. If only the command-line option is to be used to determine which tests
+to run, then the '--nocf' option must also be given. The program defaults, if
+no options are used at all, are to enable all tests and to disable no tests.
+For this purpose the enable options can use the special test name 'all', and
+the disable options can use the name 'none'. The enable options cannot use the
+name 'none', and the disable options cannot use the name 'all'. To specify
 more than one test name, specify them as a comma-separated list. For example:
 
     rkhunter --enable 'rootkits,hashes'
 
 Note that in the above example no disabled test list was specified. As such, it
-will default to the program default value - '--disable none'. If multiple use
-of the options are given on the command-line, then the last values seen will
-be used.
+will default to the value of the configuration file option (DISABLE_TESTS), or
+ultimately to the program default value of 'none'. The command-line options
+'--enable' and '--disable' may be used more than once on the command-line.
 
 The supplied RKH configuration file will have some tests already disabled.
 These are generally CPU and/or I/O intensive tests, or ones which may be prone
@@ -354,8 +357,10 @@ Similarly, to run all the tests except the rootkit tests, then use:
 
     rkhunter --disable rootkits
 
-In this example RKH will assume the enabled test list of '--enable all'. In the
-previous example, '--disable none' will have been assumed.
+In this example RKH will assume the value of the configuration file option
+(ENABLE_TESTS) for the enabled test list, or ultimately the program default
+of 'all'. In the previous example, the value of DISABLED_TESTS or, ultimately,
+'none' will have been used for the disabled tests list.
 
 If a combination of enabled and disabled tests are specified, then RKH will
 disable a test if it is specified in the enable list. So, for example:
@@ -368,7 +373,7 @@ run is ignored, because that is part of the 'malware' test. RKH will always
 look to see what tests to disable first. It will then run any enabled tests
 that are left.
 
-By default RKH will log what tests names have been enabled and disabled.
+By default RKH will log what test names have been enabled and disabled.
 Additionally it will log each test name that it is about to execute. When
 initially run RKH may skip some tests due to missing commands or files. It is
 usually possible to omit these tests by including them in the DISABLE_TESTS
