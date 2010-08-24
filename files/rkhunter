@@ -11092,13 +11092,28 @@ ${RKHTMPVAR}:${FNAME}"
 		fi
 
 		if [ -n "${UNHIDE_CMD}" ]; then
-			HIDDEN_PROCS=`${UNHIDE_CMD} sys | grep '^F' | awk -F':' '{ print $2 }'`
+			HIDDEN_PROCS=`${UNHIDE_CMD} sys | grep '^[FC]'`
 
 			if [ -z "${HIDDEN_PROCS}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 			else
+
+				if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
+					HIDDEN_PROCS=`echo ${HIDDEN_PROCS} | sed -e 's/ \(F[^:]*: [0-9]*\)/\n\1/g; s/ $//' | ${SORT_CMD} | ${UNIQ_CMD}`
+				else
+					HIDDEN_PROCS=`echo ${HIDDEN_PROCS} | sed -e 's/ \(F[^:]*: [0-9]*\)/\n\1/g; s/ $//'`
+				fi
+
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
-				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND "${HIDDEN_PROCS}"
+				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND
+
+				IFS=$IFSNL
+
+				for RKHTMPVAR in ${HIDDEN_PROCS}; do
+					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
+				done
+
+				IFS=$RKHIFS
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
