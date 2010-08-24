@@ -36,6 +36,9 @@
    to whitelist files and directories that might not always be
    present on the system. Whitelisted items are, in effect,
    whitelisted from 'existence' checks.
+ - Added a new test to check for hidden network ports being used.
+   It is called 'hidden_ports'. This test is disabled by default,
+   and will only run if the 'unhide-tcp' command is present.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.

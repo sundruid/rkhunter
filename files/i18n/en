@@ -1,4 +1,4 @@
-Version:2010082401
+Version:2010082402
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -546,6 +546,9 @@ NETWORK_PORTS_TRUSTED_WHITELIST:Network $1 port $2 is being used by $3: the path
 NETWORK_PORTS_PORT_WHITELIST:Network $1 port $2 is being used: the port is whitelisted.
 NETWORK_PORTS_FOUND:Network $1 port $2 is being used${3}. Possible rootkit: $4
 NETWORK_PORTS_FOUND:Use the 'lsof -i' or 'netstat -an' command to check this.
+NETWORK_HIDDEN_PORTS:Performing check for hidden ports
+NETWORK_HIDDEN_PORTS_FOUND:Hidden ports found:
+NETWORK_HIDDEN_PORTS_PID:Port number: $1
 NETWORK_INTERFACE_START:Performing checks on the network interfaces
 NETWORK_PROMISC_WLIST:Network interfaces allowed to be in promiscuous mode: $1
 NETWORK_PROMISC_CHECK:Checking for promiscuous interfaces
