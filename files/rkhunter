@@ -4159,6 +4159,8 @@ get_user_fileprop_list() {
 
 	FILENAMES=`get_option 2 multi USER_FILEPROP_FILES_DIRS` || exit 1
 
+	test -z "${FILENAMES}" && return
+
 	#
 	# We must first check to see if any of the names are simple names but
 	# with wildcard characters included. This is a little messy, but we
@@ -4169,6 +4171,9 @@ get_user_fileprop_list() {
 	ERRCODE=0
 
 	RKHTMPVAR=`echo ${FILENAMES}`
+
+	# Single pathnames won't have a space in them.
+	test -n "`echo \"${RKHTMPVAR}\" | grep ' '`" && RKHTMPVAR2=1 || RKHTMPVAR2=0
 
 	while :; do
 		N=`expr $N + 1`
@@ -4181,6 +4186,8 @@ get_user_fileprop_list() {
 			ERRCODE=1
 			echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 		fi
+
+		test $RKHTMPVAR2 -eq 0 && break
 	done
 
 	#
