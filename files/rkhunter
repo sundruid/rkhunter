@@ -12013,8 +12013,13 @@ do_network_port_checks() {
 	# if any known backdoor ports are being used.
 	#
 
+	if `check_test ports || check_test hidden_ports`; then
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --nl NETWORK_PORTS_START
+	fi
+
 	if `check_test ports`; then
-		display --to LOG --type INFO --screen-nl --nl STARTING_TEST ports
+		display --to LOG --type INFO STARTING_TEST ports
+		display --to LOG --type PLAIN --log-indent 2 NETWORK_PORTS_BACKDOOR_LOG
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST ports
 		return
@@ -12026,7 +12031,7 @@ do_network_port_checks() {
 	#
 
 	if [ -z "${LSOF_CMD}" -a -z "${NETSTAT_CMD}" ]; then
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color YELLOW --result SKIPPED NETWORK_PORTS_BACKDOOR
 		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "lsof or netstat command required."
 		return
 	fi
@@ -12036,7 +12041,7 @@ do_network_port_checks() {
 	#
 
 	if [ $GRSECINSTALLED -eq 1 ]; then
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color YELLOW --result SKIPPED NETWORK_PORTS_BACKDOOR
 		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "grsecurity installed."
 		return
 	fi
@@ -12046,11 +12051,11 @@ do_network_port_checks() {
 	#
 
 	if [ ! -e "${DB_PATH}/backdoorports.dat" -o ! -s "${DB_PATH}/backdoorports.dat" ]; then
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color RED --result WARNING NETWORK_PORTS_BACKDOOR
 		display --to LOG --type WARNING NETWORK_PORTS_FILE_MISSING "${DB_PATH}/backdoorports.dat"
 		return
 	elif [ ! -f "${DB_PATH}/backdoorports.dat" -o -h "${DB_PATH}/backdoorports.dat" ]; then
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color RED --result WARNING NETWORK_PORTS_BACKDOOR
 		display --to LOG --type WARNING NETWORK_PORTS_FILE_NOTAFILE "${DB_PATH}/backdoorports.dat"
 		return
 	fi
@@ -12071,14 +12076,12 @@ do_network_port_checks() {
 			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
 			;;
 		*)
-			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result WARNING NETWORK_PORTS_START
+			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color RED --result WARNING NETWORK_PORTS_BACKDOOR
 			display --to LOG --type WARNING NETWORK_PORTS_UNKNOWN_NETSTAT
 			return
 			;;
 		esac
 	fi
-
-	display --to SCREEN+LOG --type PLAIN --screen-indent 2 NETWORK_PORTS_START
 
 	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 
@@ -12086,6 +12089,8 @@ do_network_port_checks() {
 	#
 	# Now do the test.
 	#
+
+	FOUNDPORT=0
 
 	IFS=$IFSNL
 
@@ -12236,38 +12241,56 @@ do_network_port_checks() {
 
 
 		#
-		# Now display the result.
+		# Now log the result.
 		#
 
 		case "${FOUND}" in
 		path_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WHITELISTED --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
+			fi
 			;;
 		trusted_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WHITELISTED --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
+			fi
 			;;
 		port_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WHITELISTED --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
+			fi
 			;;
 		"")
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result NOT_FOUND --color GREEN NETWORK_PORTS "${PROTO}" "${PORT}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --log-indent 4 --result NOT_FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
+			fi
 			;;
 		*)
-			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --result WARNING --color RED NETWORK_PORTS "${PROTO}" "${PORT}"
+			FOUNDPORT=1
+			display --to LOG --type PLAIN --log-indent 4 --result FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 
-			if [ -n "${FNAME}" ]; then
-				display --to LOG --type WARNING NETWORK_PORTS_FOUND "${PROTO}" "${PORT}" " by ${FNAME}" "${DESCRIPTION}"
-			else
-				display --to LOG --type WARNING NETWORK_PORTS_FOUND "${PROTO}" "${PORT}" "" "${DESCRIPTION}"
-			fi
+			test -n "${FNAME}" && FNAME=" by ${FNAME}"
+
+			display --to LOG --type WARNING NETWORK_PORTS_BKDOOR_FOUND "${PROTO}" "${PORT}" "${FNAME}" "${DESCRIPTION}"
 			;;
 		esac
 	done
 
 	IFS=$RKHIFS
+
+
+	#
+	# Finally show the overall result on the screen.
+	#
+
+	if [ $FOUNDPORT -eq 0 ]; then
+		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color GREEN --result NONE_FOUND NETWORK_PORTS_BACKDOOR
+	else
+		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color RED --result WARNING NETWORK_PORTS_BACKDOOR
+	fi
 
 	return
 }
@@ -12281,7 +12304,7 @@ do_network_hidden_port_checks() {
 	#
 
 	if `check_test hidden_ports`; then
-		display --to LOG --type INFO --screen-nl --nl STARTING_TEST hidden_ports
+		display --to LOG --type INFO --nl STARTING_TEST hidden_ports
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_ports
 		return
@@ -12341,9 +12364,12 @@ do_network_interface_checks() {
 	# network interface packets.
 	#
 
+	if `check_test promisc || check_test packet_cap_apps`; then
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --nl NETWORK_INTERFACE_START
+	fi
+
 	if `check_test promisc`; then
-		display --to LOG --type INFO --screen-nl --nl STARTING_TEST promisc
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 NETWORK_INTERFACE_START
+		display --to LOG --type INFO STARTING_TEST promisc
 
 
 		if [ -n "${IFCONFIG_CMD}" ]; then
@@ -12441,11 +12467,6 @@ do_network_interface_checks() {
 	#
 
 	if `check_test packet_cap_apps`; then
-		# Ensure the test section is displayed and logged if required.
-		if ! `check_test promisc`; then
-			display --to SCREEN+LOG --type PLAIN --nl --screen-indent 2 NETWORK_INTERFACE_START
-		fi
-
 		display --to LOG --type INFO --nl STARTING_TEST packet_cap_apps
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
@@ -12581,8 +12602,6 @@ do_network_checks() {
 	do_network_hidden_port_checks
 
 	do_network_interface_checks
-
-	keypresspause
 
 	return
 }

@@ -100,6 +100,10 @@
    user. If the previous behaviour of only the '--disable' option being
    used to determine which tests to run, then the new '--nocf' option
    must also be used.
+ - The network 'ports' test no longer displays the details of the test
+   on the screen, but just shows the overall result. This brings the test
+   format more inline with the other tests. The result of individual
+   ports being checked is still logged as before.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
