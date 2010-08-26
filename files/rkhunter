@@ -2619,18 +2619,11 @@ sort_test_lists() {
 
 	RKHTMPVAR=$1
 
-	if [ -n "${SORT_CMD}" ]; then
-		if [ -n "${UNIQ_CMD}" ]; then
-			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD}`
-			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD}`
-		else
-			test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD}`
-			test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | ${SORT_CMD}`
-		fi
+	test $RKHTMPVAR -eq 1 && ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr ' ' '\n' | sort | uniq`
+	test $RKHTMPVAR -eq 2 && DISABLE_TESTS=`echo ${DISABLE_TESTS} | tr ' ' '\n' | sort | uniq`
 
-		ENABLE_TESTS=`echo ${ENABLE_TESTS}`
-		DISABLE_TESTS=`echo ${DISABLE_TESTS}`
-	fi
+	ENABLE_TESTS=`echo ${ENABLE_TESTS}`
+	DISABLE_TESTS=`echo ${DISABLE_TESTS}`
 
 
 	#
@@ -10974,17 +10967,7 @@ ${PROC} ${PID} ${FNAME}"
 			get_temp_file "${RKHTMPDIR}/lsofprocs.out"
 			RKHLSOF_FILE=$TEMPFILE
 
-			#
-			# If we have the 'sort' and 'uniq' commands available,
-			# then the output will be less and avoids listing any
-			# duplicate processes.
-			#
-
-			if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-				${LSOF_CMD} -wnlP +c 0 2>&1 | ${SORT_CMD} | ${UNIQ_CMD} >${RKHLSOF_FILE}
-			else
-				${LSOF_CMD} -wnlP +c 0 >${RKHLSOF_FILE} 2>&1
-			fi
+			${LSOF_CMD} -wnlP +c 0 2>&1 | sort | uniq >${RKHLSOF_FILE}
 
 			#
 			# Now loop through the known suspicious filenames,
@@ -11104,11 +11087,7 @@ ${RKHTMPVAR}:${FNAME}"
 			if [ -z "${HIDDEN_PROCS}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 			else
-				if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-					HIDDEN_PROCS=`echo ${HIDDEN_PROCS} | sed -e 's/ \(F[^:]*: [0-9]*\)/\n\1/g; s/ $//' | ${SORT_CMD} | ${UNIQ_CMD}`
-				else
-					HIDDEN_PROCS=`echo ${HIDDEN_PROCS} | sed -e 's/ \(F[^:]*: [0-9]*\)/\n\1/g; s/ $//'`
-				fi
+				HIDDEN_PROCS=`echo ${HIDDEN_PROCS} | sed -e 's/ \(F[^:]*: [0-9]*\)/\n\1/g; s/ $//' | sort | uniq`
 
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND
@@ -11666,11 +11645,11 @@ bsd_specific_checks() {
 
 	SOCKSTAT_CMD=`find_cmd sockstat`
 
-	if [ -n "${SOCKSTAT_CMD}" -a -n "${NETSTAT_CMD}" -a -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
+	if [ -n "${SOCKSTAT_CMD}" -a -n "${NETSTAT_CMD}" ]; then
 		test "${OPERATING_SYSTEM}" = "NetBSD" && RKHTMPVAR="-n" || RKHTMPVAR=""
 
-		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '{ print $6 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | ${SORT_CMD} | ${UNIQ_CMD}`
-		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an |  awk '{ print $4 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | ${SORT_CMD} | ${UNIQ_CMD}`
+		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '{ print $6 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
+		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an |  awk '{ print $4 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
 
 		if [ "${SOCKSTAT_OUTPUT}" = "${NETSTAT_OUTPUT}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
@@ -11689,8 +11668,6 @@ bsd_specific_checks() {
 
 		test -z "${SOCKSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "sockstat"
 		test -z "${NETSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "netstat"
-		test -z "${SORT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "sort"
-		test -z "${UNIQ_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "uniq"
 	fi
 
 	return
@@ -11786,14 +11763,13 @@ linux_loaded_modules() {
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "${RKHROOTDIR}/proc/modules"
-	elif [ -z "${LSMOD_CMD}" -o -z "${SORT_CMD}" ]; then
+	elif [ -z "${LSMOD_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "lsmod"
-		test -z "${SORT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "sort"
 	else
-		PROC_OUTPUT=`cat ${RKHROOTDIR}/proc/modules | cut -d' ' -f1 | ${SORT_CMD}`
-		LSMOD_OUTPUT=`${LSMOD_CMD} | grep -v 'Size *Used *by' | cut -d' ' -f1 | ${SORT_CMD}`
+		PROC_OUTPUT=`cat ${RKHROOTDIR}/proc/modules | cut -d' ' -f1 | sort`
+		LSMOD_OUTPUT=`${LSMOD_CMD} | grep -v 'Size *Used *by' | cut -d' ' -f1 | sort`
 
 
 		if [ -n "${PROC_OUTPUT}" -a -n "${LSMOD_OUTPUT}" ]; then
@@ -12333,11 +12309,7 @@ do_network_hidden_port_checks() {
 	if [ -z "${HIDDEN_PORTS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
 	else
-		if [ -n "${SORT_CMD}" -a -n "${UNIQ_CMD}" ]; then
-			HIDDEN_PORTS=`echo ${HIDDEN_PORTS} | tr ' ' '\n' | ${SORT_CMD} | ${UNIQ_CMD}`
-		else
-			HIDDEN_PORTS=`echo ${HIDDEN_PORTS} | tr ' ' '\n'`
-		fi
+		HIDDEN_PORTS=`echo ${HIDDEN_PORTS} | tr ' ' '\n' | sort | uniq`
 
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
 		display --to LOG --type WARNING --log-indent 2 NETWORK_HIDDEN_PORTS_FOUND
@@ -14817,12 +14789,8 @@ display_tests() {
 	# could be confusing if it was included.
 	#
 
-	RKHTMPVAR2="all none ${KNOWN_TESTS}"
-
-	if [ -n "${SORT_CMD}" ]; then
-		RKHTMPVAR2=`echo "${RKHTMPVAR2}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
-		GROUPED_TESTS=`echo "${GROUPED_TESTS}" | tr ' ' '\n' | ${SORT_CMD} | tr '\n' ' '`
-	fi
+	RKHTMPVAR2=`echo "all none ${KNOWN_TESTS}" | tr ' ' '\n' | sort | tr '\n' ' '`
+	GROUPED_TESTS=`echo "${GROUPED_TESTS}" | tr ' ' '\n' | sort | tr '\n' ' '`
 
 
 	display --to SCREEN --type PLAIN --nl LIST_TESTS
@@ -14894,13 +14862,7 @@ display_tests() {
 		# Finally, sort our list of test names and display them.
 		#
 
-		TEST_NAMES=`echo "${TEST_NAMES}" | sed -e 's/^://'`
-
-		if [ -n "${SORT_CMD}" ]; then
-			TEST_NAMES=`echo "${TEST_NAMES}" | tr ':' '\n' | ${SORT_CMD} | tr '\n' ' '`
-		else
-			TEST_NAMES=`echo "${TEST_NAMES}" | tr ':' ' '`
-		fi
+		TEST_NAMES=`echo "${TEST_NAMES}" | sed -e 's/^://' | tr ':' '\n' | sort | tr '\n' ' '`
 
 		echo "    ${GROUP_NAME} => ${TEST_NAMES}"
 	done
@@ -14916,11 +14878,7 @@ display_languages() {
 	# languages in a basic format of 10 per line.
 	#
 
-	KNOWN_LANGS=`ls -1 ${DB_PATH}/i18n 2>/dev/null`
-
-	if [ -n "${SORT_CMD}" ]; then
-		KNOWN_LANGS=`echo "${KNOWN_LANGS}" | ${SORT_CMD}`
-	fi
+	KNOWN_LANGS=`ls -1 ${DB_PATH}/i18n 2>/dev/null | sort`
 
 
 	display --to SCREEN --type PLAIN --nl LIST_LANGS
@@ -15338,10 +15296,10 @@ SPACEDPATH=`echo ${PATH} | tr ':' ' '`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl pgrep ps pwd readlink sort stat strings uniq"
+CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl pgrep ps pwd readlink stat strings"
 
 # Commands that are required to exist for RKH to run.
-REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed tail touch tr uname wc"
+REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed sort tail touch tr uname uniq wc"
 
 # List of commands used to download files from the web. This list is 
 # used by the '--update' and '--versioncheck' options. Preferred commands
