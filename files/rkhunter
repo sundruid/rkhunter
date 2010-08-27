@@ -4626,9 +4626,10 @@ rkh_dat_get_os_info() {
 				OSNAME=`grep '^DISTRIB_DESCRIPTION=' ${RELEASE} | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
 				;;
 			${RKHROOTDIR}/etc/gentoo-release)
-				GENTOO=1
 				if [ -h ${RKHROOTDIR}/etc/make.profile ]; then
-					OSNAME="Gentoo `ls -l ${RKHROOTDIR}/etc/make.profile 2>/dev/null | sed -e 's/^.*\/\([^\/]*\)$/\1/'`"
+					OSNAME="Gentoo `ls -l ${RKHROOTDIR}/etc/make.profile 2>/dev/null | sed -e 's;^.*/\([^/]*/[^/]*\)$;\1;' | tr '/' ' '`"
+				else
+					OSNAME="Gentoo"
 				fi
 				;;
 			${RKHROOTDIR}/var/ipcop/general-functions.pl)
@@ -13742,14 +13743,10 @@ do_filesystem_check() {
 
 	#
 	# Next we look for any whitelisted files and directories. We also
-	# exclude certain types of files, and Gentoo zero-sized files.
+	# exclude certain types of files.
 	#
 
 	for FNAME in ${LOOKINDIRS}; do
-		if [ $GENTOO -eq 1 ]; then
-			test ! -s "${FNAME}" -a -n "`echo \"${FNAME}\" | grep '/\.keep$'`" && continue
-		fi
-
 		if [ $FDESCFS -eq 1 ]; then
 			test -n "`echo \"${FNAME}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
 		fi
@@ -15232,9 +15229,6 @@ SKIP_KEY_PRESS=0
 
 # Does 'grep' need an extra option to check binary files?
 GREP_OPT=""
-
-# Is this the Gentoo operating system?
-GENTOO=0
 
 # Set the O/S type if necessary.
 BSDOS=0
