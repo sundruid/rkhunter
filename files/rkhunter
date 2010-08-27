@@ -12033,16 +12033,6 @@ do_network_port_checks() {
 	fi
 
 	#
-	# Systems with a modified kernel must also skip this test.
-	#
-
-	if [ $GRSECINSTALLED -eq 1 ]; then
-		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color YELLOW --result SKIPPED NETWORK_PORTS_BACKDOOR
-		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "grsecurity installed."
-		return
-	fi
-
-	#
 	# Check that the backdoor ports data file is usable.
 	#
 
@@ -15302,9 +15292,6 @@ TOTAL_SCANTIME=""
 # This will be set if a warning message is logged.
 WARNING_COUNT=0
 
-# Set if grsecurity is installed.
-GRSECINSTALLED=0
-
 # Ksyms or kallsyms file used in some checks.
 KSYMS_FILE=""
 
@@ -16341,15 +16328,6 @@ fi
 
 
 #
-# See if we have grsecurity installed.
-#
-
-if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "`uname -a | grep 'grsec'`" ]; then
-	GRSECINSTALLED=1
-fi
-
-
-#
 # Before writing anything to the screen or log file, we need to
 # set some variables.
 #
@@ -16512,8 +16490,6 @@ if [ $NOLOG -eq 0 ]; then
 	done
 
 	test -n "${RKHWEBCMD}" && display --to LOG --type INFO FOUND_CMD "${RKHWEBCMD_BASE}" "${RKHWEBCMD}"
-
-	test $GRSECINSTALLED -eq 1 && display --to LOG --type INFO GRSECINSTALLED
 fi
 
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then

@@ -1,4 +1,4 @@
-Version:2010082701
+Version:2010082702
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -123,8 +123,6 @@ ATTRUPD_OLD_OK:Previous file attributes were stored
 
 RKHDAT_ADD_NEW_ENTRY:Adding file entry to the 'rkhunter.dat' file: $1
 RKHDAT_DEL_OLD_ENTRY:Deleting non-existent file entry from the 'rkhunter.dat' file: $1
-
-GRSECINSTALLED:Found grsecurity installed
 
 SYSLOG_ENABLED:Using syslog for some logging - facility/priority level is '$1'.
 SYSLOG_DISABLED:Disabling use of syslog at users request.

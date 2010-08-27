@@ -107,6 +107,8 @@
    ports being checked is still logged as before.
  - The 'sort' and 'uniq' commands are now required to be on the system
    in order to run rkhunter.
+ - Grsecurity-enabled systems may now run the network 'ports' test. If
+   this causes a problem, then that particular test can be disabled.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
