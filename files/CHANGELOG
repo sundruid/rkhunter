@@ -39,6 +39,7 @@
  - Added a new test to check for hidden network ports being used.
    It is called 'hidden_ports'. This test is disabled by default,
    and will only run if the 'unhide-tcp' command is present.
+ - Added support for DragonFly BSD.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.

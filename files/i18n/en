@@ -1,4 +1,4 @@
-Version:2010082601
+Version:2010082701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -421,6 +421,8 @@ ROOTKIT_OS_FREEBSD_KLD_FOUND:Found possible FreeBSD KLD backdoor. 'kldstat -v' c
 ROOTKIT_OS_FREEBSD_PKGDB:Checking package database
 ROOTKIT_OS_FREEBSD_PKGDB_NOTOK:The package database seems to have inconsistencies.
 ROOTKIT_OS_FREEBSD_PKGDB_NOTOK:This may not be a security issue, but running 'pkgdb -F' may help diagnose the problem.
+ROOTKIT_OS_DFLY_PKGDB_NOTOK:The package database seems to have inconsistencies.
+ROOTKIT_OS_DFLY_PKGDB_NOTOK:This may not be a security issue, but running 'pkg_admin check' may help diagnose the problem.
 ROOTKIT_OS_LINUX_LKM:Checking loaded kernel modules
 ROOTKIT_OS_LINUX_LKM_FOUND:Differences found between the lsmod command and the /proc/modules file:
 ROOTKIT_OS_LINUX_LKM_OUTPUT:$1 output: $2
