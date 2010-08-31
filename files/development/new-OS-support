@@ -108,6 +108,8 @@ system.
 
 
 11) Does the 'date +%s' command show the number of seconds since the epoch?
+    Does it also understand "date --date '5 seconds ago'"? If not then perl
+    will be needed.
 
 This is used by RKH in order to add to filenames to make them random.
 

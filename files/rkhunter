@@ -3869,7 +3869,7 @@ get_startup_paths_option() {
 			# Check that the given files and directories are usable.
 			#
 
-			check_paths STARTUP_PATHS STARTUP_PATHS STRICT
+			check_paths STARTUP_PATHS STARTUP_PATHS
 
 			test $ERRCODE -eq 1 && exit 1
 
@@ -3878,10 +3878,10 @@ get_startup_paths_option() {
 
 				if [ ! -r "${FNAME}" ]; then
 					ERRCODE=1
-					echo "Invalid STARTUP_PATHS configuration option: ${RKHTMPVAR} is not readable: ${FNAME}"
+					echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is not readable: ${FNAME}"
 				elif [ ! -s "${FNAME}" ]; then
 					ERRCODE=1
-					echo "Invalid STARTUP_PATHS configuration option: ${RKHTMPVAR} is empty: ${FNAME}"
+					echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is empty: ${FNAME}"
 				fi
 			done
 
@@ -4608,13 +4608,20 @@ rkh_dat_get_os_info() {
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		REL_FILES="${RKHROOTDIR}${OS_VERSION_FILE}"
 	else
-		REL_FILES="${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/lunar.release ${RKHROOTDIR}/etc/ROCK-VERSION ${RKHROOTDIR}/etc/GoboLinuxVersion ${RKHROOTDIR}/etc/kanotix-version ${RKHROOTDIR}/etc/sidux-version ${RKHROOTDIR}/etc/knoppix-version ${RKHROOTDIR}/etc/zenwalk-version ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
+		REL_FILES="${RKHROOTDIR}/etc/system-release ${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/lunar.release ${RKHROOTDIR}/etc/ROCK-VERSION ${RKHROOTDIR}/etc/GoboLinuxVersion ${RKHROOTDIR}/etc/kanotix-version ${RKHROOTDIR}/etc/sidux-version ${RKHROOTDIR}/etc/knoppix-version ${RKHROOTDIR}/etc/zenwalk-version ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
 	fi
 
 	RKH_LSB_SEEN=0
 
 	for FNAME in ${REL_FILES}; do
-		if [ -f "${FNAME}" -a ! -h "${FNAME}" ]; then
+		test ! -f "${FNAME}" && continue
+
+		if [ "${FNAME}" = "${RKHROOTDIR}/etc/system-release" ]; then
+			RKH_IN_LSB=0
+			RELEASE=$FNAME
+			OSNAME=`cat ${FNAME}`
+			break
+		elif [ ! -h "${FNAME}" ]; then
 			RELEASE=$FNAME
 
 			RKH_IN_LSB=0
