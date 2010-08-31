@@ -3876,7 +3876,13 @@ get_startup_paths_option() {
 			for FNAME in ${STARTUP_PATHS}; do
 				test -f "${FNAME}" && RKHTMPVAR="file" || RKHTMPVAR="directory"
 
-				if [ ! -r "${FNAME}" ]; then
+				if [ -h "${FNAME}" ]; then
+					ERRCODE=1
+					echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is a link: ${FNAME}"
+				elif [ ! -e "${FNAME}" ]; then
+					ERRCODE=1
+					echo "Invalid STARTUP_PATHS configuration option: the name does not exist: ${FNAME}"
+				elif [ ! -r "${FNAME}" ]; then
 					ERRCODE=1
 					echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is not readable: ${FNAME}"
 				elif [ ! -s "${FNAME}" ]; then
