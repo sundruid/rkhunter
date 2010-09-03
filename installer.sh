@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.14"
+INSTALLER_VERSION="1.2.15"
 INSTALLER_COPYRIGHT="Copyright 2003-2010, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -419,7 +419,7 @@ useCVS() {
 		echo "Unable to find the 'cvs' command."
 		exit 1
 	else
-		cvs -z3 -d:pserver:anonymous@rkhunter.cvs.sourceforge.net:/cvsroot/rkhunter co rkhunter
+		cvs -z3 -d:pserver:anonymous@rkhunter.cvs.sourceforge.net:/cvsroot/rkhunter co rkhunter >/dev/null 2>&1
 		ERRCODE=$?
 
 		if [ $ERRCODE -eq 0 ]; then
@@ -603,14 +603,14 @@ doInstall()  {
 	umask 022
 	for DIR in ${RKHDIR_LIST}; do
 		if [ -d "${DIR}" ]; then
-			if [ -w "${PREFIX}" ]; then
+			if [ -w "${DIR}" ]; then
 				echo "  Directory ${DIR}: exists and is writable."
 			else
 				echo "  Directory ${DIR}: exists, but it is not writable. Exiting."
 				exit 1
 			fi
 		else
-			mkdir -p ${DIR}
+			mkdir -p ${DIR} >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -625,14 +625,14 @@ doInstall()  {
 
 	for DIR in ${RKHINST_DIRS_EXCEP}; do
 		if [ -d "${DIR}" ]; then
-			if [ -w "${PREFIX}" ]; then
+			if [ -w "${DIR}" ]; then
 				echo "  Directory ${DIR}: exists and is writable."
 			else
 				echo "  Directory ${DIR}: exists, but it is not writable. Exiting."
 				exit 1
 			fi
 		else
-			mkdir -p "${DIR}"
+			mkdir -p ${DIR} >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -659,7 +659,7 @@ doInstall()  {
 	for FILE in ${RKHINST_SCRIPT_FILES} ${RKHINST_DB_FILES} ${RKHINST_MAN_FILES}; do
 		case "${FILE}" in
 		*.pl|*.sh)
-			cp -f ./files/"${FILE}" "${RKHINST_SCRIPT_DIR}"
+			cp -f ./files/"${FILE}" "${RKHINST_SCRIPT_DIR}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -680,7 +680,7 @@ doInstall()  {
 				fi
 			fi
 
-			cp -f ./files/"${FILE}" "${RKHINST_DB_DIR}"
+			cp -f ./files/"${FILE}" "${RKHINST_DB_DIR}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -692,7 +692,7 @@ doInstall()  {
 			fi
 			;;
 		*.8)
-			cp -f ./files/"${FILE}" "${RKHINST_MAN_DIR}"
+			cp -f ./files/"${FILE}" "${RKHINST_MAN_DIR}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -709,7 +709,7 @@ doInstall()  {
 
 	# Application documents
 	for FILE in ${RKHINST_DOC_FILES}; do
-		cp -f ./files/"${FILE}" "${RKHINST_DOC_DIR}"
+		cp -f ./files/"${FILE}" "${RKHINST_DOC_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
 
 		if [ $ERRCODE -eq 0 ]; then
@@ -726,7 +726,7 @@ doInstall()  {
 	ERRCODE=0
 
 	for FILE in `find ./files/i18n -type f`; do
-		cp "${FILE}" "${RKHINST_LANG_DIR}"
+		cp "${FILE}" "${RKHINST_LANG_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
 
 		test $ERRCODE -ne 0 && break
@@ -744,7 +744,7 @@ doInstall()  {
 	for FILE in ${RKHINST_BIN_FILES}; do
 		case "${RKHINST_LAYOUT}" in
 		RPM|DEB|TGZ)	
-			cp -f ./files/"${FILE}" "${RKHINST_BIN_DIR}/${FILE}"
+			cp -f ./files/"${FILE}" "${RKHINST_BIN_DIR}/${FILE}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -791,7 +791,7 @@ doInstall()  {
 
 			NEWFILE="${FILE}.${RANDVAL}"
 
-			cp -f "./files/${FILE}" "${RKHINST_ETC_DIR}/${NEWFILE}"
+			cp -f "./files/${FILE}" "${RKHINST_ETC_DIR}/${NEWFILE}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -825,7 +825,7 @@ doInstall()  {
 				;;
 			esac
 		else
-			cp -f "./files/${FILE}" "${RKHINST_ETC_DIR}"
+			cp -f "./files/${FILE}" "${RKHINST_ETC_DIR}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -870,7 +870,7 @@ doInstall()  {
 			STR=`grep "${PREFIX}" "${FILE}"`
 
 			if [ -n "${STR}" ]; then
-				sed -i "s|${STRIPROOT}||g" "${FILE}"
+				sed -i "s|${STRIPROOT}||g" "${FILE}" >/dev/null 2>&1
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -932,7 +932,7 @@ doRemove()  {
 
 	# Standalone removal involves just deleting the 'files' subdirectory.
 	if [ "$PREFIX" = "." ]; then
-		rm -rf ./files
+		rm -rf ./files >/dev/null 2>&1
 		ERRCODE=$?
 
 		if [ $ERRCODE -eq 0 ]; then
@@ -950,7 +950,7 @@ doRemove()  {
 	# Man page
 	for FILE in ${RKHINST_MAN_FILES}; do
 		if [ -f "${RKHINST_MAN_DIR}/${FILE}" ]; then
-			rm -f "${RKHINST_MAN_DIR}/${FILE}"
+			rm -f "${RKHINST_MAN_DIR}/${FILE}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -965,7 +965,7 @@ doRemove()  {
 	# Application
 	for FILE in ${RKHINST_BIN_FILES}; do
 		if [ -f "${RKHINST_BIN_DIR}/${FILE}" ]; then
-			rm -f "${RKHINST_BIN_DIR}/${FILE}"
+			rm -f "${RKHINST_BIN_DIR}/${FILE}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -980,7 +980,7 @@ doRemove()  {
 	# Configuration file
 	for FILE in ${RKHINST_ETC_FILE}; do
 		if [ -f "${RKHINST_ETC_DIR}/${FILE}" ]; then
-			rm -f "${RKHINST_ETC_DIR}/${FILE}"
+			rm -f "${RKHINST_ETC_DIR}/${FILE}" >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -eq 0 ]; then
@@ -1007,7 +1007,7 @@ doRemove()  {
 		case "${DIR}" in 
 		*/${APPNAME}) 
 			if [ -d "${DIR}" ]; then
-				rm -rf "${DIR}"
+				rm -rf "${DIR}" >/dev/null 2>&1
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -1024,7 +1024,7 @@ doRemove()  {
 
 			for RKHAPPDIR in ${DIR}/${APPNAME}-*; do
 				if [ -d "${RKHAPPDIR}" ]; then
-					rm -rf "${RKHAPPDIR}"
+					rm -rf "${RKHAPPDIR}" >/dev/null 2>&1
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
@@ -1039,7 +1039,7 @@ doRemove()  {
 			DIR=`dirname "${DIR}"`
 
 			if [ -d "${DIR}" ]; then
-				rm -rf "${DIR}"
+				rm -rf "${DIR}" >/dev/null 2>&1
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
