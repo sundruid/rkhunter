@@ -24,8 +24,8 @@ present on the system, then RKH will not run.
 
 The current list of required commands is:
 
-     awk  cat  chmod  chown  cp  cut  date  egrep  grep
-     head  ls  mv  sed  tail  touch  tr  uname  wc
+     awk  cat  chmod  chown  cp  cut  date  egrep  grep  head
+     ls  mv  sed  sort  tail  touch  tr  uname  uniq  wc
 
 ==============================================================================
 
@@ -116,8 +116,12 @@ This is used by RKH in order to add to filenames to make them random.
 
 12) Is the 'stat' command present on the system, and if so, does the
 'stat -c '%i 0%a %u %g %s %Y:' /etc/motd' command work?
+If not try using 'stat -f ...'.
 
 This should display some numbers relating to the ('/etc/motd') file attributes.
 If it doesn't work, then we may need to see the man page for the 'stat'
 command.
+
+13) Does the grep command need the '-a' option, or some other option, in
+order to treat binary (language) files as text files. See GREP_OPT in RKH.
 

@@ -161,6 +161,8 @@ if [ "`echo -n -e \"rkh-ksh-string-test\" 2>/dev/null`" = "rkh-ksh-string-test" 
 	ECHON="-n"
 elif [ "`echo -e \"rkh-ksh-string-test\c\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
 	ECHON="c"
+elif [ "`echo \"rkh-ksh-string-test\c\" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
+	ECHON="c"
 else
 	ECHON=""
 fi
@@ -1913,7 +1915,7 @@ add_extra_dirs() {
 		test -d /usr/pkg/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/bin"
 		test -d /usr/pkg/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/sbin"
 		test -d /usr/pkg/libexec && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/libexec"
-	elif [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
+	elif [ $MACOSX -eq 1 ]; then
 		#
 		# Cater for Fink (Mac OS X) additional software.
 		#
@@ -3082,7 +3084,7 @@ get_shadow_file_option() {
 		fi
 	elif [ -s "${RKHROOTDIR}/etc/shadow" ]; then
 		SHADOW_FILE="${RKHROOTDIR}/etc/shadow"
-	elif [ $BSDOS -eq 1 -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
+	elif [ \( $BSDOS -eq 1 -o $MACOSX -eq 1 \) -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
 		SHADOW_FILE="${RKHROOTDIR}/etc/master.passwd"
 	elif [ -f "${RKHROOTDIR}/etc/tcb/root/shadow" ]; then
 		HAVE_TCB_SHADOW=1
@@ -3210,7 +3212,7 @@ get_phalanx2_option() {
 	# on Linux systems.
 	#
 
-	test "${OPERATING_SYSTEM}" != "Linux" && return
+	test $LINUXOS -eq 0 && return
 
 	ERRCODE=0
 
@@ -3591,19 +3593,13 @@ get_hash_function() {
 		test -z "${HF}" && HF=`find_cmd sha${SHA_SIZE}`
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA1 Digest::SHA256 2>&1`
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA1 Digest::SHA256 Digest::SHA::PurePerl 2>&1`
 
-			if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::SHA installed'`" ]; then
-				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA512 $SHA_SIZE"
-			elif [ $SHA_SIZE -eq 256 -o $SHA_SIZE -eq 384 -o $SHA_SIZE -eq 512 ]; then
-				if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::SHA256 installed'`" ]; then
-					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA256 $SHA_SIZE"
-				else
-					HASH_FUNC=""
-				fi
+			if [ -z "`echo ${MOD_INSTALLED} | grep 'NOT'`" ]; then
+				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA$SHA_SIZE $SHA_SIZE"
 			elif [ $SHA_SIZE -eq 1 ]; then
-				if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::SHA1 installed'`" ]; then
-					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA1 $SHA_SIZE"
+				if [ -n "`echo ${MOD_INSTALLED} | grep 'Digest::SHA1 installed'`" ]; then
+					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha1.pl"
 				else
 					HASH_FUNC=""
 				fi
@@ -4713,12 +4709,12 @@ rkh_dat_get_os_info() {
 		OSNAME="OpenBSD `uname -r 2>/dev/null`"
 		;;
 	Darwin)
-		OSNAME=`sw_vers 2>/dev/null | grep '^ProductName:' | sed -e 's/ProductName: *//'`
-		OSNAME="${OSNAME} `sw_vers 2>/dev/null | grep '^ProductVersion:' | sed -e 's/ProductVersion: *//'`"
+		OSNAME=`sw_vers 2>/dev/null | grep '^ProductName:' | sed -e 's/ProductName:[ 	]*//'`
+		OSNAME="${OSNAME} `sw_vers 2>/dev/null | grep '^ProductVersion:' | sed -e 's/ProductVersion:[ 	]*//'`"
 #		OSNAME="${OSNAME} `sysctl kern.version 2>/dev/null | sed -e 's/^kern.version = //' | cut -d: -f1`"
 
 		if [ -n "`sysctl -a 2>/dev/null | egrep '^(hw\.optional\.x86_64|hw\.optional\.64bitops|hw\.cpu64bit_capable).*1$'`" ]; then
-			OSNAME="${OSNAME} (64-bit)"
+			OSNAME="${OSNAME} (64-bit capable)"
 		fi
 		;;
 	AIX)
@@ -4803,7 +4799,7 @@ rkh_dat_set_file_properties() {
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
 			INODECMD="${STAT_CMD} --modeoct --raw --ino"
-		elif [ $BSDOS -eq 1 ]; then
+		elif [ $BSDOS -eq 1 -o $MACOSX -eq 1 ]; then
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
 			INODECMD="${STAT_CMD} -f '%i'"
 		else
@@ -7890,7 +7886,7 @@ file_properties_check() {
 	# confusing).
 	#
 
-	if [ $BSDOS -eq 0 -a "${OPERATING_SYSTEM}" != "Linux" ]; then
+	if [ $BSDOS -eq 0 -a $LINUXOS -eq 0 ]; then
 		if [ $SKIP_IMMUT -eq 0 ]; then
 			SKIP_IMMUT=1
 			SKIP_IMMUT_OS=1
@@ -8181,7 +8177,7 @@ file_properties_check() {
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
 			INODECMD="${STAT_CMD} --modeoct --raw --ino"
-		elif [ $BSDOS -eq 1 ]; then
+		elif [ $BSDOS -eq 1 -o $MACOSX -eq 1 ]; then
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
 			INODECMD="${STAT_CMD} -f '%i'"
 		else
@@ -9860,7 +9856,7 @@ rootkit_file_dir_checks() {
 
 	# OSX Rootkit 0.2.1
 
-	if [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
+	if [ $MACOSX -eq 1 ]; then
 		SCAN_ROOTKIT="OSX Rootkit"
 		SCAN_FILES="${OSXRK_FILES}"
 		SCAN_DIRS="${OSXRK_DIRS}"
@@ -9894,7 +9890,7 @@ rootkit_file_dir_checks() {
 
 	# Phalanx2 Rootkit (extended tests)
 
-	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+	if [ $LINUXOS -eq 1 ]; then
 		SCAN_ROOTKIT="Phalanx2 Rootkit (extended tests)"
 
 		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
@@ -10335,7 +10331,7 @@ rootkit_file_dir_checks() {
 
 	# weaponX Rootkit
 
-	if [ "${OPERATING_SYSTEM}" = "Darwin" ]; then
+	if [ $MACOSX -eq 1 ]; then
 		SCAN_ROOTKIT="weaponX Rootkit"
 		SCAN_FILES=${WEAPONX_FILES}
 		SCAN_DIRS=${WEAPONX_DIRS}
@@ -10761,9 +10757,7 @@ additional_rootkit_checks() {
 		return
 	fi
 
-	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
-		suckit_extra_checks
-	fi
+	test $LINUXOS -eq 1 && suckit_extra_checks
 
 	possible_rootkit_file_dir_checks
 
@@ -11088,7 +11082,7 @@ ${RKHTMPVAR}:${FNAME}"
 		RKHTMPVAR="unhide"
 		UNHIDE_CMD=`find_cmd unhide`
 
-		if [ "${OPERATING_SYSTEM}" = "Linux" -a -z "${UNHIDE_CMD}" ]; then
+		if [ $LINUXOS -eq 1 -a -z "${UNHIDE_CMD}" ]; then
 			if [ -n "`uname -r | grep '^2\.6'`" ]; then
 				RKHTMPVAR="unhide-linux26"
 				UNHIDE_CMD=`find_cmd unhide-linux26`
@@ -12399,7 +12393,7 @@ do_network_interface_checks() {
 				;;
 			esac
 
-			if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+			if [ $LINUXOS -eq 1 ]; then
 				if [ -n "${IP_CMD}" ]; then
 					PROMISCSCAN2=`${IP_CMD} link | grep '^[0-9]' | grep -vE "^[0-9][0-9]*: (${IFWLIST}):" | grep 'PROMISC'`
 				else
@@ -12432,7 +12426,7 @@ do_network_interface_checks() {
 				IFS=$RKHIFS
 
 
-				if [ "${OPERATING_SYSTEM}" = "Linux" -a -n "${PROMISCSCAN2}" ]; then
+				if [ $LINUXOS -eq 1 -a -n "${PROMISCSCAN2}" ]; then
 					display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_2
 
 					PROMISCSCAN2=`echo "${PROMISCSCAN2}" | cut -d: -f2-`
@@ -12469,7 +12463,7 @@ do_network_interface_checks() {
 		return
 	fi
 
-	if [ "${OPERATING_SYSTEM}" != "Linux" ]; then
+	if [ $LINUXOS -eq 0 ]; then
 		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
 		display --to LOG --type INFO TEST_SKIPPED_OS 'packet_cap_apps' '/proc/net/packet required.'
 		return
@@ -14678,7 +14672,7 @@ set_file_prop_dirs_files() {
 		PROP_FILE_LIST="${PROP_FILE_LIST} fstat kldload kldstat kldunload procstat"
 	fi
 
-	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+	if [ $LINUXOS -eq 1 ]; then
 		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp"
 
 		if [ -n "`uname -r | grep '^2\.6'`" ]; then
@@ -15247,8 +15241,13 @@ GREP_OPT=""
 BSDOS=0
 SUNOS=0
 IRIXOS=0
+MACOSX=0
+LINUXOS=0
 
 case "${OPERATING_SYSTEM}" in
+Linux)
+	LINUXOS=1
+	;;
 *BSD|DragonFly)
 	BSDOS=1
 	HASH_FLD_IDX=4
@@ -15259,6 +15258,9 @@ SunOS)
 	;;
 IRIX*)
 	IRIXOS=1
+	;;
+Darwin)
+	MACOSX=1
 	;;
 esac
 
