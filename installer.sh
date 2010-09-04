@@ -132,7 +132,7 @@ selectTemplate() { # Take input from the "--install parameter"
 			PREFIX="/usr/local"
 			;;
 		custom_*)
-			PREFIX=`echo "${RKHINST_LAYOUT}" | sed 's/custom_//g'`
+			PREFIX=`echo "${RKHINST_LAYOUT}" | sed 's|custom_||g'`
 
 			case "${PREFIX}" in
 			.)
@@ -140,11 +140,13 @@ selectTemplate() { # Take input from the "--install parameter"
 					echo "Standalone installation into ${PWD}/files"
 				fi
 				;;
-			.*|/.*)
+			.*|/.*|*//*)
 				echo "Bad installation directory chosen. Exiting."
 				exit 1
 				;;
 			*)
+				test "${PREFIX}" = "/" && PREFIX=""
+
 				if [ "${RKHINST_ACTION}" = "install" ]; then
 					RKHTMPVAR=`echo "${PATH}" | grep "${PREFIX}/bin"`
 
@@ -206,7 +208,7 @@ selectTemplate() { # Take input from the "--install parameter"
 			;;
 		*)
 			if [ "${RKHINST_ACTION}" = "install" ]; then
-				if [ ! -d "${PREFIX}" ]; then
+				if [ -n "${PREFIX}" -a ! -d "${PREFIX}" ]; then
 					echo "Bad installation directory chosen: non-existent directory. Exiting."
 					echo "Perhaps run \"mkdir -p ${PREFIX}\" first?"
 					exit 1
@@ -386,7 +388,9 @@ showTemplate() { # Take input from the "--install parameter"
 	*)
 		selectTemplate "$1"
 
-		echo "Install into:       ${PREFIX}"
+		test -z "${PREFIX}" && RKHTMPVAR="/" || RKHTMPVAR="${PREFIX}"
+
+		echo "Install into:       ${RKHTMPVAR}"
 		echo "Application:        ${RKHINST_BIN_DIR}"
 
 		if [ $OVERWRITE -eq 0 ]; then
@@ -528,7 +532,9 @@ doInstall()  {
 		;;
 	*) 
 		# Check PREFIX
-		if [ -d "${PREFIX}" ]; then
+		if [ -z "${PREFIX}" ]; then
+			:
+		elif [ -d "${PREFIX}" ]; then
 			if [ -w "${PREFIX}" ]; then
 				echo " Checking installation directory \"$PREFIX\": it exists and is writable."
 
@@ -803,7 +809,10 @@ doInstall()  {
 			fi
 
 			echo "" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
-			echo "INSTALLDIR=${PREFIX}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
+
+			test -z "${PREFIX}" && RKHTMPVAR="/" || RKHTMPVAR="${PREFIX}"
+
+			echo "INSTALLDIR=${RKHTMPVAR}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
 			echo "DBDIR=${RKHINST_DB_DIR}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
 			echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
 			echo "TMPDIR=${RKHINST_TMP_DIR}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
@@ -854,7 +863,9 @@ doInstall()  {
 				# Debian builds are handled with a patch during the build process.
 				:
 			else
-				echo "INSTALLDIR=${PREFIX}" >>"${RKHINST_ETC_DIR}/${FILE}"
+				test -z "${PREFIX}" && RKHTMPVAR="/" || RKHTMPVAR="${PREFIX}"
+
+				echo "INSTALLDIR=${RKHTMPVAR}" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "DBDIR=${RKHINST_DB_DIR}" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "SCRIPTDIR=${RKHINST_SCRIPT_DIR}" >>"${RKHINST_ETC_DIR}/${FILE}"
 				echo "TMPDIR=${RKHINST_TMP_DIR}" >>"${RKHINST_ETC_DIR}/${FILE}"
@@ -908,13 +919,14 @@ doInstall()  {
 
 doRemove()  {
 	RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
-	RKHINST_DIRS_POST="$VARDIR $SHAREDIR $PREFIX"
 
 	echo "Starting uninstallation"
 	echo ""
 
 	# Check the PREFIX
-	if [ -d "${PREFIX}" ]; then
+	if [ -z "${PREFIX}" ]; then
+		:
+	elif [ -d "${PREFIX}" ]; then
 		if [ -w "${PREFIX}" ]; then
 			echo "Checking installation directory \"$PREFIX\": it exists and is writable."
 		else
