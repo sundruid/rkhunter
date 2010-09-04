@@ -9801,7 +9801,7 @@ rootkit_file_dir_checks() {
 	# OSX Inqtana (Variant A)
 
 	if [ $MACOSX -eq 1 ]; then
-		SCAN_ROOTKIT="OS X Inqtana Worm (Variant A)"
+		SCAN_ROOTKIT="Inqtana Worm (Variant A)"
 		SCAN_FILES=${INQTANAA_FILES}
 		SCAN_DIRS=${INQTANAA_DIRS}
 		SCAN_KSYMS=${INQTANAA_KSYMS}
@@ -9811,7 +9811,7 @@ rootkit_file_dir_checks() {
 	# OSX Inqtana (Variant B)
 
 	if [ $MACOSX -eq 1 ]; then
-		SCAN_ROOTKIT="OS X Inqtana Worm (Variant B)"
+		SCAN_ROOTKIT="Inqtana Worm (Variant B)"
 		SCAN_FILES=${INQTANAB_FILES}
 		SCAN_DIRS=${INQTANAB_DIRS}
 		SCAN_KSYMS=${INQTANAB_KSYMS}
@@ -9821,7 +9821,7 @@ rootkit_file_dir_checks() {
 	# OSX Inqtana (Variant C)
 
 	if [ $MACOSX -eq 1 ]; then
-		SCAN_ROOTKIT="OS X Inqtana Worm (Variant C)"
+		SCAN_ROOTKIT="Inqtana Worm (Variant C)"
 		SCAN_FILES=${INQTANAC_FILES}
 		SCAN_DIRS=${INQTANAC_DIRS}
 		SCAN_KSYMS=${INQTANAC_KSYMS}

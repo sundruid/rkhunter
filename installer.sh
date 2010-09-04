@@ -141,7 +141,7 @@ selectTemplate() { # Take input from the "--install parameter"
 				fi
 				;;
 			.*|/.*|*//*)
-				echo "Bad installation directory chosen. Exiting."
+				echo "Invalid layout directory chosen. Exiting."
 				exit 1
 				;;
 			*)
@@ -209,7 +209,7 @@ selectTemplate() { # Take input from the "--install parameter"
 		*)
 			if [ "${RKHINST_ACTION}" = "install" ]; then
 				if [ -n "${PREFIX}" -a ! -d "${PREFIX}" ]; then
-					echo "Bad installation directory chosen: non-existent directory. Exiting."
+					echo "Invalid installation directory chosen: non-existent directory. Exiting."
 					echo "Perhaps run \"mkdir -p ${PREFIX}\" first?"
 					exit 1
 				fi
@@ -1168,13 +1168,13 @@ else
 		showTemplate $RKHINST_LAYOUT
 		;;
 	remove)	# Clean active window
-		clear
 		selectTemplate $RKHINST_LAYOUT
+		clear
 		doRemove
 		;;
 	install) # Clean active window
-		clear
 		selectTemplate $RKHINST_LAYOUT
+		clear
 		doInstall
 		;;
 	esac
