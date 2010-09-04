@@ -6478,16 +6478,26 @@ do_system_check_initialisation() {
 	ILLOGIC_KSYMS=
 
 
+	# OSX Inqtana (Variant A)
+	INQTANAA_FILES="${RKHROOTDIR}/Users/w0rm-support.tgz
+			${RKHROOTDIR}/Users/InqTest.class
+			${RKHROOTDIR}/Users/com.openbundle.plist
+			${RKHROOTDIR}/Users/com.pwned.plist
+			${RKHROOTDIR}/Users/libavetanaBT.jnilib"
+	INQTANAA_DIRS="${RKHROOTDIR}/Users/de
+		       ${RKHROOTDIR}/Users/javax"
+	INQTANAA_KSYMS=
+
+
 	# OSX Inqtana (Variant B)
 	INQTANAB_FILES="${RKHROOTDIR}/Users/w0rms.love.apples.tgz
 			${RKHROOTDIR}/Users/InqTest.class
 			${RKHROOTDIR}/Users/InqTest.java
 			${RKHROOTDIR}/Users/libavetanaBT.jnilib
-			${RKHROOTDIR}/Users/de
-			${RKHROOTDIR}/Users/javax
 			${RKHROOTDIR}/Users/InqTanaHandler
 			${RKHROOTDIR}/Users/InqTanaHandler.bundle"
-	INQTANAB_DIRS=
+	INQTANAB_DIRS="${RKHROOTDIR}/Users/de
+		       ${RKHROOTDIR}/Users/javax"
 	INQTANAB_KSYMS=
 
 
@@ -6496,12 +6506,11 @@ do_system_check_initialisation() {
 			${RKHROOTDIR}/Users/InqTest.class
 			${RKHROOTDIR}/Users/InqTest.java
 			${RKHROOTDIR}/Users/libavetanaBT.jnilib
-			${RKHROOTDIR}/Users/de
-			${RKHROOTDIR}/Users/javax
 			${RKHROOTDIR}/Users/environment.plist
 			${RKHROOTDIR}/Users/pwned.c
 			${RKHROOTDIR}/Users/pwned.dylib"
-	INQTANAC_DIRS=
+	INQTANAC_DIRS="${RKHROOTDIR}/Users/de
+		       ${RKHROOTDIR}/Users/javax"
 	INQTANAC_KSYMS=
 
 
@@ -9788,6 +9797,16 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${ILLOGIC_DIRS}
 	SCAN_KSYMS=${ILLOGIC_KSYMS}
 	scanrootkit
+
+	# OSX Inqtana (Variant A)
+
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="OS X Inqtana Worm (Variant A)"
+		SCAN_FILES=${INQTANAA_FILES}
+		SCAN_DIRS=${INQTANAA_DIRS}
+		SCAN_KSYMS=${INQTANAA_KSYMS}
+		scanrootkit
+	fi
 
 	# OSX Inqtana (Variant B)
 
@@ -15434,11 +15453,11 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, IntoXonia-NG, Irix, Kitko, Knark,
   ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, 
-  Inqtana-B, Inqtana-C, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
-  RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Spanish,
-  Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn,
-  trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit, weaponX, Xzibit,
-  X-Org SunOS, zaRwT.KiT, ZK'
+  Inqtana-A, Inqtana-B, Inqtana-C, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
+  RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
+  Sneakin, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
+  TeLeKiT, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit, weaponX,
+  Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
