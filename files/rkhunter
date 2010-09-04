@@ -6478,6 +6478,33 @@ do_system_check_initialisation() {
 	ILLOGIC_KSYMS=
 
 
+	# OSX Inqtana (Variant B)
+	INQTANAB_FILES="${RKHROOTDIR}/Users/w0rms.love.apples.tgz
+			${RKHROOTDIR}/Users/InqTest.class
+			${RKHROOTDIR}/Users/InqTest.java
+			${RKHROOTDIR}/Users/libavetanaBT.jnilib
+			${RKHROOTDIR}/Users/de
+			${RKHROOTDIR}/Users/javax
+			${RKHROOTDIR}/Users/InqTanaHandler
+			${RKHROOTDIR}/Users/InqTanaHandler.bundle"
+	INQTANAB_DIRS=
+	INQTANAB_KSYMS=
+
+
+	# OSX Inqtana (Variant C)
+	INQTANAC_FILES="${RKHROOTDIR}/Users/applec0re.tgz
+			${RKHROOTDIR}/Users/InqTest.class
+			${RKHROOTDIR}/Users/InqTest.java
+			${RKHROOTDIR}/Users/libavetanaBT.jnilib
+			${RKHROOTDIR}/Users/de
+			${RKHROOTDIR}/Users/javax
+			${RKHROOTDIR}/Users/environment.plist
+			${RKHROOTDIR}/Users/pwned.c
+			${RKHROOTDIR}/Users/pwned.dylib"
+	INQTANAC_DIRS=
+	INQTANAC_KSYMS=
+
+
 	# IntoXonia-NG Rootkit
 	INTOXONIA_FILES=
 	INTOXONIA_DIRS=
@@ -6634,14 +6661,17 @@ do_system_check_initialisation() {
 	OPTICKIT_KSYMS=
 
 
-	# OSX Rootkit 0.2.1
+	# OSX Rootkit 0.2.1 (OSXRK)
 	OSXRK_FILES="${RKHROOTDIR}/dev/.rk/nc
 		     ${RKHROOTDIR}/dev/.rk/diepu
-		     ${RKHROOTDIR}/dev/.rk/backd"
+		     ${RKHROOTDIR}/dev/.rk/backd
+		     ${RKHROOTDIR}/Library/StartupItems/opener
+		     ${RKHROOTDIR}/Library/StartupItems/opener.sh
+		     ${RKHROOTDIR}/System/Library/StartupItems/opener
+		     ${RKHROOTDIR}/System/Library/StartupItems/opener.sh"
 	OSXRK_DIRS="${RKHROOTDIR}/dev/.rk
-		    ${RKHROOTDIR}/users/LDAP-daemon
-		    ${RKHROOTDIR}/tmp/.work
-		    ${RKHROOTDIR}/Library/StartupItems/opener"
+		    ${RKHROOTDIR}/Users/LDAP-daemon
+		    ${RKHROOTDIR}/tmp/.work"
 	OSXRK_KSYMS=
 
 
@@ -9752,11 +9782,32 @@ rootkit_file_dir_checks() {
 	scanrootkit
 
 	# iLLogiC Rootkit (SunOS Rootkit variant)
+
 	SCAN_ROOTKIT="iLLogiC Rootkit"
 	SCAN_FILES=${ILLOGIC_FILES}
 	SCAN_DIRS=${ILLOGIC_DIRS}
 	SCAN_KSYMS=${ILLOGIC_KSYMS}
 	scanrootkit
+
+	# OSX Inqtana (Variant B)
+
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="OS X Inqtana Worm (Variant B)"
+		SCAN_FILES=${INQTANAB_FILES}
+		SCAN_DIRS=${INQTANAB_DIRS}
+		SCAN_KSYMS=${INQTANAB_KSYMS}
+		scanrootkit
+	fi
+
+	# OSX Inqtana (Variant C)
+
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="OS X Inqtana Worm (Variant C)"
+		SCAN_FILES=${INQTANAC_FILES}
+		SCAN_DIRS=${INQTANAC_DIRS}
+		SCAN_KSYMS=${INQTANAC_KSYMS}
+		scanrootkit
+	fi
 
 	# IntoXonia-NG Rootkit
 
@@ -9857,7 +9908,7 @@ rootkit_file_dir_checks() {
 	# OSX Rootkit 0.2.1
 
 	if [ $MACOSX -eq 1 ]; then
-		SCAN_ROOTKIT="OSX Rootkit"
+		SCAN_ROOTKIT="OS X Rootkit"
 		SCAN_FILES="${OSXRK_FILES}"
 		SCAN_DIRS="${OSXRK_DIRS}"
 		SCAN_KSYMS=${OSXRK_KSYMS}
@@ -15382,11 +15433,12 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, IntoXonia-NG, Irix, Kitko, Knark,
-  ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSX, Oz,
-  Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm,
-  Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Spanish, Suckit, SunOS / NSDAP, 
-  SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, 
-  Vampire, VcKit, Volc, w00tkit, weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
+  ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, 
+  Inqtana-B, Inqtana-C, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit, RH-Sharpe'"'"'s,
+  RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Spanish,
+  Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, T0rn,
+  trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit, weaponX, Xzibit,
+  X-Org SunOS, zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
