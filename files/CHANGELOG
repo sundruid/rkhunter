@@ -41,6 +41,9 @@
    and will only run if the 'unhide-tcp' command is present.
  - Added support for DragonFly BSD.
  - Added Inqtana worm check (variants A, B and C).
+ - It is now possible to whitelist a combined pathname and port number
+   with the PORT_WHITELIST configuration option. Details are in the
+   configuration file.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.

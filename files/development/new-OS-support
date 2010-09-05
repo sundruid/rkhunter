@@ -125,3 +125,7 @@ command.
 13) Does the grep command need the '-a' option, or some other option, in
 order to treat binary (language) files as text files. See GREP_OPT in RKH.
 
+14) Does the 'readlink' command exist, and if so does it support the '-f'
+option to get the full pathname. If not, then the builtin command may be
+required.
+

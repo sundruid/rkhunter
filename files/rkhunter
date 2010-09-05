@@ -3028,21 +3028,70 @@ get_ports_option() {
 
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
 			if [ -n "`echo \"${RKHTMPVAR2}\" | grep '^/'`" ]; then
-				if [ ! -f "${RKHTMPVAR2}" ]; then
+				PORT=0
+				FNAME=""
+				PROTO=""
+
+				# Dig out the port number, if present.
+				if [ -n "`echo \"${RKHTMPVAR2}\" | grep '.:[1-9][0-9]*$'`" ]; then
+					PORT=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([1-9][0-9]*\)$/\1/'`
+
+					if [ $PORT -gt 65535 ]; then
+						FOUND=1
+						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: ${RKHTMPVAR2}"
+					fi
+
+					# If the port is present, then the protocol must be as well.
+					if [ -n "`echo \"${RKHTMPVAR2}\" | grep '.:[^:][^:]*:[1-9][0-9]*$'`" ]; then
+						PROTO=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([^:][^:]*\):[1-9][0-9]*$/\1/'`
+
+						PROTO=`echo ${PROTO} | tr '[:lower:]' '[:upper:]'`
+
+						if [ "${PROTO}" != "TCP" -a "${PROTO}" != "UDP" ]; then
+							FOUND=1
+							echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: ${RKHTMPVAR2}"
+						fi
+					else
+						FOUND=1
+						echo "Invalid PORT_WHITELIST configuration option - no protocol specified: ${RKHTMPVAR2}"
+					fi
+				fi
+
+				# Dig out the pathname.
+				if [ $PORT -gt 0 ]; then
+					FNAME=`echo "${RKHTMPVAR2}" | sed -e 's/^\(.*\):[^:]*:[1-9][0-9]*$/\1/'`
+				else
+					FNAME="${RKHTMPVAR2}"
+				fi
+
+				if [ ! -e "${FNAME}" ]; then
 					FOUND=1
 					echo "Invalid PORT_WHITELIST configuration option - non-existent pathname specified: ${RKHTMPVAR2}"
+				elif [ ! -f "${FNAME}" ]; then
+					FOUND=1
+					echo "Invalid PORT_WHITELIST configuration option - pathname specified is not a file: ${RKHTMPVAR2}"
 				else
-					PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH} ${RKHTMPVAR2}"
+					if [ $PORT -gt 0 ]; then
+						PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH} ${FNAME}:${PROTO}:${PORT}"
+					else
+						PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH} ${FNAME}"
+					fi
 				fi
-			elif [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
+			elif [ -n "`echo \"${RKHTMPVAR2}\" | grep '^[^:][^:]*:[1-9][0-9]*$'`" ]; then
+				PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
 				PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
+
+				if [ "${PROTO}" != "TCP" -a "${PROTO}" != "UDP" ]; then
+					FOUND=1
+					echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: ${RKHTMPVAR2}"
+				fi
 
 				if [ $PORT -gt 65535 ]; then
 					FOUND=1
 					echo "Invalid PORT_WHITELIST configuration option - invalid port specified: ${RKHTMPVAR2}"
-				else
-					PORT_WHITELIST="${PORT_WHITELIST} ${RKHTMPVAR2}"
 				fi
+
+				PORT_WHITELIST="${PORT_WHITELIST} ${PROTO}:${PORT}"
 			else
 				FOUND=1
 				echo "Invalid entry specified in PORT_WHITELIST configuration option: ${RKHTMPVAR2}"
@@ -3051,7 +3100,7 @@ get_ports_option() {
 
 		test $FOUND -eq 1 && exit 1
 
-		PORT_WHITELIST=`echo " ${PORT_WHITELIST} " | tr '[:lower:]' '[:upper:]'`
+		PORT_WHITELIST=" ${PORT_WHITELIST} "
 		PORT_WHITELIST_PATH=" ${PORT_WHITELIST_PATH} "
 	fi
 
@@ -3437,14 +3486,14 @@ get_if_prelinked() {
 		#
 
 		if [ -f "${RKHROOTDIR}/etc/ld.so.preload" ]; then
-			LIBSAFE_TEST1=`grep libsafe ${RKHROOTDIR}/etc/ld.so.preload 2>&1`
+			LIBSAFE_TEST1=`grep 'libsafe' ${RKHROOTDIR}/etc/ld.so.preload 2>&1`
 		fi
 
 		if [ -n "${LDD_CMD}" ]; then
 			if [ -f "${RKHROOTDIR}/lib/libdl.so.?" ]; then
-				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib/libdl.so.? | grep libsafe 2>&1`
+				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib/libdl.so.? | grep 'libsafe' 2>&1`
 			elif [ -f "${RKHROOTDIR}/lib64/libdl.so.?" ]; then
-				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib64/libdl.so.? | grep libsafe 2>&1`
+				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib64/libdl.so.? | grep 'libsafe' 2>&1`
 			fi
 		fi
 
@@ -9342,7 +9391,7 @@ suspscan() {
 				# Adding "text" to the egrep below widens scope at the expense of more false-positives and extending running time.
 				#
 
-				if [ -n "`echo \"${FTYPE}\" | grep -vi compres | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
+				if [ -n "`echo \"${FTYPE}\" | grep -v -i 'compres' | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
 					FOUND=1
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
 					SUSPSCAN_STRINGS=""
@@ -9479,7 +9528,7 @@ suspscan() {
 		esac
 	done
 
-	FOUNDDIRS=`grep "^6 SUSPSCAN_FILE_CHECK" "${SUSPSCAN_TMPFILE}" | head -n 1`
+	FOUNDDIRS=`grep '^6 SUSPSCAN_FILE_CHECK' ${SUSPSCAN_TMPFILE} | head -n 1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else
@@ -10701,7 +10750,7 @@ possible_rootkit_string_checks() {
 			FOUNDFILE=1
 
 			for FNAME in ${RC_PATHS}; do
-				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | egrep -v '^[ 	]*#' | grep "${STRING}"`
+				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep -v '^[ 	]*#' | grep "${STRING}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
@@ -12212,6 +12261,7 @@ do_network_port_checks() {
 				if [ $HAVE_READLINK -eq 1 ]; then
 					RKHTMPVAR=""
 
+#jh - does osx support 'readink -f' - if not does this bit work okay?
 					if [ $SOL_PROC -eq 1 ]; then
 						test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
 					elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
@@ -12282,7 +12332,10 @@ do_network_port_checks() {
 
 			if [ -n "${LSOF_CMD}" ]; then
 				if [ -n "${FNAME}" ]; then
-					if [ -n "`echo \"${PORT_WHITELIST_PATH}\" | grep \" ${FNAME} \"`" ]; then
+					if [ -n "`echo \"${PORT_WHITELIST_PATH}\" | grep \" ${FNAME}:${PROTO}:${PORT} \"`" ]; then
+						RKHTMPVAR2=1
+						FOUND="path_whitelisted"
+					elif [ -n "`echo \"${PORT_WHITELIST_PATH}\" | grep \" ${FNAME} \"`" ]; then
 						RKHTMPVAR2=1
 						FOUND="path_whitelisted"
 					elif [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
