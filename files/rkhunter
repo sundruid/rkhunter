@@ -4654,7 +4654,9 @@ rkh_dat_get_os_info() {
 	# contain their O/S release information.
 	#
 
-	ARCH=`uname -m 2>/dev/null`
+	ARCH=""
+	OSNAME=""
+	RELEASE=""
 
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		REL_FILES="${RKHROOTDIR}${OS_VERSION_FILE}"
@@ -4806,6 +4808,15 @@ rkh_dat_get_os_info() {
 			test -n "${RKHTMPVAR}" && OSNAME="${RKHTMPVAR} ${OSNAME}"
 		fi
 	fi
+
+
+	#
+	# If some things have still not been set, then set them now.
+	#
+
+	test -z "${ARCH}" && ARCH=`uname -m 2>/dev/null`
+	test -z "${OSNAME}" && OSNAME="`uname` `uname -r 2>/dev/null`"
+
 
 	return
 }
@@ -5290,12 +5301,7 @@ do_prop_update() {
 	# but for others we call functions to obtain what is wanted.
 	#
 
-	ARCH=""
-	OSNAME=""
-	RELEASE=""
-
 	rkh_dat_set_version
-
 
 	display --to LOG --type PLAIN PROPUPD_OSINFO_START
 
