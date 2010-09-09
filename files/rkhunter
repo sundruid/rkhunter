@@ -7071,6 +7071,16 @@ do_system_check_initialisation() {
 	TELEKIT_KSYMS=
 
 
+	# OSX Togroot Rootkit
+	TOGROOT_FILES="${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/Info.plist
+		       ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/pbdevelopment.plist
+		       ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/MacOS/togrootkext"
+	TOGROOT_DIRS="${RKHROOTDIR}/System/Library/Extensions/Togroot.kext
+		      ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents
+		      ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/MacOS"
+	TOGROOT_KSYMS=
+
+
 	# T0rn (and misc) Rootkit
 	TORN_FILES="${RKHROOTDIR}/dev/.lib/lib/lib/t0rns
 		    ${RKHROOTDIR}/dev/.lib/lib/lib/du
@@ -10389,6 +10399,15 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${TELEKIT_KSYMS}
 	scanrootkit
 
+	# OSX Togroot Rootkit
+
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="Togroot Rootkit"
+		SCAN_FILES=${TOGROOT_FILES}
+		SCAN_DIRS=${TOGROOT_DIRS}
+		SCAN_KSYMS=${TOGROOT_KSYMS}
+		scanrootkit
+	fi
 
 	# T0rn Rootkit
 
@@ -10919,7 +10938,7 @@ malware_checks() {
 			FOUND=0
 			WHITEPROC=""; BLACKPROC=""
 
-			DELE_FILES=`${LSOF_CMD} -wnlP ${SOLARISX} | grep '(dele' | head -n 1`
+			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele' | head -n 1`
 
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
@@ -10928,7 +10947,7 @@ malware_checks() {
 
 				IFS=$IFSNL
 
-				for LINE in `${LSOF_CMD} -wnlP ${SOLARISX} | grep '(dele'`; do
+				for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele'`; do
 					PROC=""
 
 					PID=`echo "${LINE}" | awk '{ print $2 }'`
@@ -10959,9 +10978,9 @@ malware_checks() {
 
 					if [ -z "${PROC}" ]; then
 						if [ $SUNOS -eq 1 ]; then
-							PROC=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
 						else
-							PROC=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 						fi
 
 						test -z "${PROC}" && PROC=`echo "${LINE}" | awk '{ print $1 }'`
@@ -12267,7 +12286,6 @@ do_network_port_checks() {
 				if [ $HAVE_READLINK -eq 1 ]; then
 					RKHTMPVAR=""
 
-#jh - does osx support 'readink -f' - if not does this bit work okay?
 					if [ $SOL_PROC -eq 1 ]; then
 						test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
 					elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
@@ -12279,12 +12297,13 @@ do_network_port_checks() {
 
 				if [ -z "${FNAME}" ]; then
 					if [ $SUNOS -eq 1 ]; then
-						FNAME=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+						FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
 					else
-						FNAME=`${LSOF_CMD} -wnlP -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+						FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 					fi
 				fi
 
+#jh
 				if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
 					FOUND="${FNAME}"
 					break
@@ -15515,8 +15534,8 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Inqtana-A, Inqtana-B, Inqtana-C, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
-  TeLeKiT, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit, weaponX,
-  Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
+  TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
+  weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""

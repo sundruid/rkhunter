@@ -44,6 +44,7 @@
  - It is now possible to whitelist a combined pathname and port number
    with the PORT_WHITELIST configuration option. Details are in the
    configuration file.
+ - Added Togroot rootkit check.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
