@@ -418,25 +418,26 @@ that a file has changed when in fact it has been automatically updated by the
 system.
 
 The currently available package managers are 'RPM' for RedHat/RPM-based
-systems, 'DPKG' for Debian-based systems, and 'BSD' for *BSD systems. It is
-also possible to specify 'NONE' to indicate not to use a package manager.
-The program default is 'NONE'.
+systems, 'DPKG' for Debian-based systems, 'BSD' for *BSD systems, and
+'SOLARIS' for Solaris systems. It is also possible to specify 'NONE' to
+indicate not to use a package manager. The program default is 'NONE'.
 
-Any file which is not part of a package is treated as before, that is, the
-HASH_FUNC configuration file option, or the '--hash' command-line option, will
-be used.
+Any file which is not part of a package, and for the 'SOLARIS' package
+manager, is treated as before, that is, the HASH_FUNC configuration file
+option, or the '--hash' command-line option, will be used.
 
-It should be noted that all the package managers provide an MD5 hash value for
-a file. However, the 'RPM' package manager can provide other file property
-values as well, such as the file permissions, uid, gid, modification time and
-so on. During the file properties check all of these values will be used,
-rather than the ones stored in the rkhunter.dat file.
+It should be noted that all the package managers, except 'SOLARIS', provide
+an MD5 hash value for a file. However, the 'RPM' and 'SOLARIS' package
+managers can provide other file property values as well, such as the file
+permissions, uid, gid, modification time and so on. During the file
+properties check all of these values will be used, rather than the ones
+stored in the rkhunter.dat file.
 
 It should also be noted that the 'DPKG' and 'BSD' package manager options
 only provide the files MD5 hash value. As such, during the file properties
 check, all the other current file properties will be re-calculated as before,
 and compared against the values in the rkhunter.dat file. Hence, only the 'RPM'
-package manager offers any real benefit in using a package manager.
+and 'SOLARIS' package managers offer any real benefits in using a package manager.
 
 NOTE: It is possible for a package manager database to become maliciously
 corrupted. To that extent the use of the package manager options with RKH

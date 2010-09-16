@@ -3822,6 +3822,12 @@ get_hash_function() {
 			fi
 		fi
 		;;
+	SOLARIS)
+		if [ ! -f "/var/sadm/install/contents" ]; then
+			echo "Unable to find package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
+			exit 1
+		fi
+		;;
 	*)
 		echo "Invalid package manager given: ${PKGMGR}"
 		exit 1
@@ -4963,11 +4969,14 @@ ${DIR}:1"
 
 
 		#
-		# Now start to get the file info by seeing if we
-		# are using a package manager.
+		# Now start to get the file info by seeing if we are using a
+		# package manager. If we are, then get the package name and
+		# any other info we can excarot the hash value. That will be
+		# dealt with afterwards.
 		#
 
-		if [ "${PKGMGR}" = "RPM" ]; then
+		case "${PKGMGR}" in
+		RPM)
 			#
 			# First see if the file is exempt or belongs to a package.
 			#
@@ -5023,14 +5032,107 @@ ${DIR}:1"
 
 					RKHTMPVAR2=""
 
-					test $PRELINKED -eq 0 && RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+					if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
+						RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+					fi
 
 					FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 				else
 					display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
 				fi
 			fi
-		fi
+			;;
+		DPKG)
+			#
+			# First see if the file is exempt or part of a known package.
+			#
+
+			if [ $NOVRFYFILE -eq 1 ]; then
+				ERRCODE=1
+			else
+				RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
+				ERRCODE=$?
+			fi
+
+			if [ $ERRCODE -eq 0 ]; then
+				#
+				# Now we sort out the base part of the package name.
+				#
+
+				PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
+			fi
+			;;
+		BSD)
+			#
+			# First see if the file is exempt or part of a known package.
+			#
+
+			if [ $NOVRFYFILE -eq 1 ]; then
+				ERRCODE=1
+			else
+				RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+				ERRCODE=$?
+			fi
+
+			if [ $ERRCODE -eq 0 ]; then
+				#
+				# Now we sort out the base part of the package name.
+				#
+
+				PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
+			fi
+			;;
+		SOLARIS)
+#jh - contents format:
+# /var/uucp/.Sequence d none 0755 uucp uucp SUNWbnur
+# /var/uucp/.Status d none 0755 uucp uucp SUNWbnur
+# /var/yp d none 0755 root bin SUNWnisr SUNWypr
+# /var/yp/Makefile e renameold 0555 root bin 18686 60214 1273527812 SUNWypr
+# /var/yp/aliases e preserve 0555 root bin 153 12266 1018134990 SUNWnisr
+# /var/yp/binding d none 0755 root bin SUNWnisr SUNWypr
+# /var/yp/nicknames e ypnicknames 0644 root bin 226 22121 1018134990 SUNWnisr
+# /var/yp/updaters f none 0500 root bin 870 2119 1018134991 SUNWypr
+
+			#
+			# First see if the file is exempt or belongs to a package.
+			#
+
+			if [ $NOVRFYFILE -eq 1 ]; then
+				ERRCODE=1
+			else
+				RKHTMPVAR=`grep "^${FNAMEGREP} " /var/sadm/install/contents 2>/dev/null`
+				test -n "${RKHTMPVAR}" && ERRCODE=0 || ERRCODE=1
+			fi
+
+			if [ $ERRCODE -eq 0 ]; then
+				#
+				# Okay we have a package name.
+				#
+
+				PKGNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f10-`
+
+				FPERM=`echo "${RKHTMPVAR}" | cut -d' ' -f4`
+
+				RKHUID=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
+
+				RKHGID=`echo "${RKHTMPVAR}" | cut -d' ' -f6`
+
+				RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
+
+				RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
+
+				#
+				# Now get the inode value.
+				#
+
+				RKHTMPVAR2=""
+
+				test -n "${INODECMD}" && RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+
+				FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
+			fi
+			;;
+		esac
 
 
 		if [ -n "${HASH_CMD}" ]; then
@@ -5045,65 +5147,36 @@ ${DIR}:1"
 					;;
 				DPKG)
 					#
-					# First see if the file is exempt or part of a known package.
+					# If we have a package name, then strip of the leading
+					# '/' from the pathname, and then get the hash value.
 					#
 
-					if [ $NOVRFYFILE -eq 1 ]; then
-						ERRCODE=1
-					else
-						RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
-						ERRCODE=$?
-					fi
-
-					if [ $ERRCODE -eq 0 ]; then
-						#
-						# Now we sort out the base part of the package name.
-						#
-
-						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
-
-						#
-						# Next strip of the leading '/' from the pathname,
-						# and then get the hash value.
-						#
-
-						if [ -n "${PKGNAME}" ]; then
-							if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-								FILNAM=`echo "${FILENAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
-								SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
-								test -n "${SYSHASH}" && FILE_IS_PKGD=1
-							fi
+					if [ -n "${PKGNAME}" ]; then
+						if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+							FILNAM=`echo "${FILENAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
+							SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
+							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
 					fi
 					;;
 				BSD)
 					#
-					# First see if the file is exempt or part of a known package.
+					# If we have a package name, then strip of the leading
+					# '/usr/pkg' from the pathname, and then get the hash value.
 					#
 
-					if [ $NOVRFYFILE -eq 1 ]; then
-						ERRCODE=1
-					else
-						RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
-						ERRCODE=$?
-					fi
-
-					if [ $ERRCODE -eq 0 ]; then
-						#
-						# Now we sort out the base part of the package name.
-						#
-
-						PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
-
-						#
-						# Next strip of the leading '/usr/pkg' from the pathname,
-						# and then get the hash value.
-						#
-
+					if [ -n "${PKGNAME}" ]; then
 						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::; s:\.:\\\.:g'`
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
+					;;
+				SOLARIS)
+#jh
+					#
+					# We do not use the stored Solaris package manager hash value.
+					# Instead we calculate it as if the file was not packaged.
+					#
 					;;
 				esac
 			fi
@@ -8425,11 +8498,12 @@ ${RKHLINE}"
 
 
 			#
-			# Because the RPM package manager can verify most
-			# of the tests we are doing, we obtain the verified
-			# data now. The other package managers, at present,
-			# only provide the MD5 checksum. As such we simply
-			# handle them within the hash test.
+			# Because the RPM package manager can verify most of the tests we are
+			# doing, we obtain the verified data now. The Solaris package manager
+			# provides some data, but does not verify it against the values on disk.
+			# With all the package managers we have to obtain unverified data by
+			# using commands. The other package managers, at present, only provide
+			# the MD5 checksum. As such we simply handle them within the hash test.
 			#
 
 			if [ "${PKGMGR}" = "RPM" ]; then
@@ -8525,9 +8599,45 @@ ${RKHLINE}"
 
 					RKHTMPVAR=""
 
-					test $PRELINKED -eq 0 && RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+					if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
+						RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+					fi
 
 					FDATA="${RKHTMPVAR}:${FDATA}"
+				fi
+			elif [ "${PKGMGR}" = "SOLARIS" ]; then
+#jh
+				#
+				# First we see if the file is exempt or part of a package.
+				#
+
+				if [ $NOVRFYFILE -eq 1 ]; then
+					ERRCODE=1
+				else
+					RKHTMPVAR=`grep "^${FNAMEGREP} " /var/sadm/install/contents 2>/dev/null`
+					test -n "${RKHTMPVAR}" && ERRCODE=0 || ERRCODE=1
+				fi
+
+				if [ $ERRCODE -eq 0 ]; then
+					FPERM=`echo "${RKHTMPVAR}" | cut -d' ' -f4`
+
+					RKHUID=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
+
+					RKHGID=`echo "${RKHTMPVAR}" | cut -d' ' -f6`
+
+					RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
+
+					RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
+
+					#
+					# Now get the inode value.
+					#
+
+					RKHTMPVAR=""
+
+					test -n "${INODECMD}" && RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+
+					FDATA="${RKHTMPVAR}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 				fi
 			fi
 
@@ -8609,6 +8719,9 @@ ${RKHLINE}"
 						fi
 					fi
 					;;
+				SOLARIS)
+					# We don't use the Solaris package manager hash value.
+					;;
 				esac
 
 
@@ -8669,9 +8782,10 @@ ${RKHLINE}"
 
 
 				#
-				# Because the BSD and DPKG package managers only provide the
-				# MD5 checksum, we can assume that any file which is part of
-				# a package after this test must be an RPM file.
+				# Because the BSD and DPKG package managers only provide the MD5
+				# checksum, and the Solaris package manager does not provide verified
+				# data, we can assume that any file which is part of a package after
+				# this test must be an RPM file.
 				#
 
 				test "${PKGMGR}" != "RPM" && FILE_IS_PKGD=0
@@ -12303,7 +12417,6 @@ do_network_port_checks() {
 					fi
 				fi
 
-#jh
 				if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
 					FOUND="${FNAME}"
 					break
@@ -15198,7 +15311,7 @@ help() {
 	echo $ECHOOPT "   --ns, --nosummary                   Do not show the summary of check results"
 	echo $ECHOOPT " --novl, --no-verbose-logging          No verbose logging"
 	echo $ECHOOPT "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain or"
-	echo $ECHOOPT "                   NONE}               verify file hash values. (Default is NONE)"
+	echo $ECHOOPT "                   SOLARIS | NONE}     verify file property values. (Default is NONE)"
 	echo $ECHOOPT "         --propupd [file | directory | Update the entire file properties database,"
 	echo $ECHOOPT "                    package]...        or just for the specified entries"
 	echo $ECHOOPT "     -q, --quiet                       Quiet mode (no output at all)"
@@ -16740,7 +16853,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			else
 				display --to LOG --type INFO HASHUPD_PKGMGR_NOT_SPEC "${HASH_FUNC}"
 			fi
-		elif [ -n "${PKGMGR}" ]; then
+		else
 			display --to LOG --type INFO HASHUPD_PKGMGR "${PKGMGR}"
 
 			case "${PKGMGR}" in
@@ -16772,7 +16885,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			else
 				display --to LOG --type INFO HASH_PKGMGR_NOT_SPEC "${HASH_FUNC}"
 			fi
-		elif [ -n "${PKGMGR}" ]; then
+		else
 			display --to LOG --type INFO HASH_PKGMGR "${PKGMGR}"
 
 			case "${PKGMGR}" in
