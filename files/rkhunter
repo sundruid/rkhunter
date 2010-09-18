@@ -655,10 +655,12 @@ get_option() {
 		#
 		# We must handle the MAIL_CMD option specially because it may
 		# contain quote characters, and we do not want to remove these.
+		# We also change any NL characters to spaces. This causes 'multi'
+		# options to become one line of space-separated items.
 		#
 
 		if [ "${OPTV}" != "MAIL_CMD" ]; then
-			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//" | tr '\n' ' '`
 		fi
 		;;
 	*)
@@ -1423,8 +1425,8 @@ check_commands() {
 	ERRCODE=0
 
 	for CMD in ${CMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
-		RKHTMPVAR="${RKHTMPVAR}_CMD"
+		CMDNAME=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
+		CMDNAME="${CMDNAME}_CMD"
 
 
 		#
@@ -1432,11 +1434,11 @@ check_commands() {
 		# the configuration file.
 		#
 
-		CFG_CMD=`get_option 2 single "${RKHTMPVAR}"` || exit 1
+		CFG_CMD=`get_option 2 single "${CMDNAME}"` || exit 1
 
 		if [ -n "${CFG_CMD}" ]; then
 			if [ "${CFG_CMD}" = "DISABLED" -o "${CFG_CMD}" = "BUILTIN" ]; then
-				eval ${RKHTMPVAR}=\"${CFG_CMD}\"
+				eval ${CMDNAME}=\"${CFG_CMD}\"
 			else
 				MCMD=`echo "${CFG_CMD}" | cut -d' ' -f1`
 
@@ -1446,7 +1448,7 @@ check_commands() {
 				# used multiple dots, and we do not allow that.
 				#
 
-				check_paths MCMD "${RKHTMPVAR}" STRICT
+				check_paths MCMD "${CMDNAME}" STRICT
 
 				test $ERRCODE -eq 1 && continue
 
@@ -1455,7 +1457,7 @@ check_commands() {
 				#
 
 				if [ -n "`find_cmd ${MCMD}`" ]; then
-					eval ${RKHTMPVAR}=\"${CFG_CMD}\"
+					eval ${CMDNAME}=\"${CFG_CMD}\"
 				else
 					CFG_CMD=""
 				fi
@@ -1468,7 +1470,7 @@ check_commands() {
 		# executable, then go find the command to use.
 		#
 
-		test -z "${CFG_CMD}" && eval ${RKHTMPVAR}=`find_cmd ${CMD}`
+		test -z "${CFG_CMD}" && eval ${CMDNAME}=`find_cmd ${CMD}`
 	done
 
 	test $ERRCODE -eq 1 && exit 1
@@ -4220,6 +4222,8 @@ get_user_fileprop_list() {
 	N=0
 	ERRCODE=0
 
+#jhjh - ???? but this expands the wildcards!
+#jh - we need to tr '\n' ' '  instead.
 	RKHTMPVAR=`echo ${FILENAMES}`
 
 	# Single pathnames won't have a space in them.
@@ -4863,7 +4867,12 @@ rkh_dat_set_file_properties() {
 		INODECMD=""
 	else
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
-			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
+			if [ "${PKGMGR}" = "SOLARIS" ]; then
+				SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --mtime"
+			else
+				SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
+			fi
+
 			INODECMD="${STAT_CMD} --modeoct --raw --ino"
 		elif [ $BSDOS -eq 1 -o $MACOSX -eq 1 ]; then
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
@@ -5083,16 +5092,6 @@ ${DIR}:1"
 			fi
 			;;
 		SOLARIS)
-#jh - contents format:
-# /var/uucp/.Sequence d none 0755 uucp uucp SUNWbnur
-# /var/uucp/.Status d none 0755 uucp uucp SUNWbnur
-# /var/yp d none 0755 root bin SUNWnisr SUNWypr
-# /var/yp/Makefile e renameold 0555 root bin 18686 60214 1273527812 SUNWypr
-# /var/yp/aliases e preserve 0555 root bin 153 12266 1018134990 SUNWnisr
-# /var/yp/binding d none 0755 root bin SUNWnisr SUNWypr
-# /var/yp/nicknames e ypnicknames 0644 root bin 226 22121 1018134990 SUNWnisr
-# /var/yp/updaters f none 0500 root bin 870 2119 1018134991 SUNWypr
-
 			#
 			# First see if the file is exempt or belongs to a package.
 			#
@@ -5114,8 +5113,10 @@ ${DIR}:1"
 				FPERM=`echo "${RKHTMPVAR}" | cut -d' ' -f4`
 
 				RKHUID=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
+				RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
 
 				RKHGID=`echo "${RKHTMPVAR}" | cut -d' ' -f6`
+				RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
 				RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
 
@@ -5172,7 +5173,6 @@ ${DIR}:1"
 					fi
 					;;
 				SOLARIS)
-#jh
 					#
 					# We do not use the stored Solaris package manager hash value.
 					# Instead we calculate it as if the file was not packaged.
@@ -8352,7 +8352,12 @@ file_properties_check() {
 		INODECMD=""
 	else
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
-			SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
+			if [ "${PKGMGR}" = "SOLARIS" ]; then
+				SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --mtime"
+			else
+				SCMD="${STAT_CMD} --modeoct --raw --ino --mode --uid --gid --size --Mtime"
+			fi
+
 			INODECMD="${STAT_CMD} --modeoct --raw --ino"
 		elif [ $BSDOS -eq 1 -o $MACOSX -eq 1 ]; then
 			SCMD="${STAT_CMD} -f '%i %Mp%Lp %u %g %z %m:'"
@@ -8606,7 +8611,6 @@ ${RKHLINE}"
 					FDATA="${RKHTMPVAR}:${FDATA}"
 				fi
 			elif [ "${PKGMGR}" = "SOLARIS" ]; then
-#jh
 				#
 				# First we see if the file is exempt or part of a package.
 				#
@@ -8619,11 +8623,19 @@ ${RKHLINE}"
 				fi
 
 				if [ $ERRCODE -eq 0 ]; then
+					#
+					# We will rebuild the RKHLINE value with the values from
+					# the package manager database. We can then verify it just
+					# as if it had been read from the RKH database.
+					#
+
 					FPERM=`echo "${RKHTMPVAR}" | cut -d' ' -f4`
 
 					RKHUID=`echo "${RKHTMPVAR}" | cut -d' ' -f5`
+					RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
 
 					RKHGID=`echo "${RKHTMPVAR}" | cut -d' ' -f6`
+					RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
 					RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
 
@@ -8637,7 +8649,17 @@ ${RKHLINE}"
 
 					test -n "${INODECMD}" && RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
 
-					FDATA="${RKHTMPVAR}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
+					#
+					# Finally, get the file name and hash value.
+					#
+
+					RKHTMPVAR2=`echo ${RKHLINE} | cut -d: - f1-3`
+
+					#
+					# Now put it all together.
+					#
+
+					RKHLINE="${RKHTMPVAR2}:${RKHTMPVAR}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 				fi
 			fi
 
