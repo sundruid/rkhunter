@@ -660,7 +660,14 @@ get_option() {
 		#
 
 		if [ "${OPTV}" != "MAIL_CMD" ]; then
-			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//" | tr '\n' ' '`
+			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+
+			#
+			# For 'multi' options, which are allowed to be on more than one
+			# line, we join the lines together and remove any trailing space.
+			#
+
+			OPTVAR=`echo "${OPTVAR}" | tr '\n' ' ' | sed -e 's/ *$//'`
 		fi
 		;;
 	*)
@@ -4222,9 +4229,7 @@ get_user_fileprop_list() {
 	N=0
 	ERRCODE=0
 
-#jhjh - ???? but this expands the wildcards!
-#jh - we need to tr '\n' ' '  instead.
-	RKHTMPVAR=`echo ${FILENAMES}`
+	RKHTMPVAR="${FILENAMES}"
 
 	# Single pathnames won't have a space in them.
 	test -n "`echo \"${RKHTMPVAR}\" | grep ' '`" && RKHTMPVAR2=1 || RKHTMPVAR2=0
