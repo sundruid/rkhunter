@@ -4229,6 +4229,7 @@ get_user_fileprop_list() {
 	N=0
 	ERRCODE=0
 
+	# Take a copy of the filenames.
 	RKHTMPVAR="${FILENAMES}"
 
 	# Single pathnames won't have a space in them.
@@ -11375,13 +11376,11 @@ ${RKHTMPVAR}:${FNAME}"
 		fi
 
 		if [ -n "${UNHIDE_CMD}" ]; then
-			HIDDEN_PROCS=`${UNHIDE_CMD} sys | grep '^[FC]'`
+			HIDDEN_PROCS=`${UNHIDE_CMD} sys | egrep '^(Found|HIDDEN|Command:|Exe:) '`
 
 			if [ -z "${HIDDEN_PROCS}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 			else
-				HIDDEN_PROCS=`echo ${HIDDEN_PROCS} | sed -e 's/ \(F[^:]*: [0-9]*\)/\n\1/g; s/ $//' | sort | uniq`
-
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND
 
@@ -12610,7 +12609,7 @@ do_network_hidden_port_checks() {
 	# Now perform the test.
 	#
 
-	HIDDEN_PORTS=`${UNHIDETCP_CMD} | grep '^F' | cut -d: -f2`
+	HIDDEN_PORTS=`${UNHIDETCP_CMD} | grep '^Found ' | cut -d: -f2`
 
 	if [ -z "${HIDDEN_PORTS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
