@@ -11376,7 +11376,7 @@ ${RKHTMPVAR}:${FNAME}"
 		fi
 
 		if [ -n "${UNHIDE_CMD}" ]; then
-			HIDDEN_PROCS=`${UNHIDE_CMD} sys | egrep '^(Found|HIDDEN|Command:|Exe:) '`
+			HIDDEN_PROCS=`${UNHIDE_CMD} sys | egrep -v '^(Unhide |http:|\[\*\]|$)'`
 
 			if [ -z "${HIDDEN_PROCS}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
