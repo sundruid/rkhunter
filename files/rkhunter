@@ -664,10 +664,11 @@ get_option() {
 
 			#
 			# For 'multi' options, which are allowed to be on more than one
-			# line, we join the lines together and remove any trailing space.
+			# line, we join the lines together and remove any leading or
+			# trailing spaces.
 			#
 
-			OPTVAR=`echo "${OPTVAR}" | tr '\n' ' ' | sed -e 's/ *$//'`
+			OPTVAR=`echo "${OPTVAR}" | tr '\n' ' ' | sed -e 's/^ *//; s/ *$//'`
 		fi
 		;;
 	*)
