@@ -667,8 +667,11 @@ get_option() {
 			# line, we join the lines together and remove any leading or
 			# trailing spaces.
 			#
+			# Note: Do not combine these two lines. Sun 'sed' won't like it!
+			#
 
-			OPTVAR=`echo "${OPTVAR}" | tr '\n' ' ' | sed -e 's/^ *//; s/ *$//'`
+			OPTVAR=`echo "${OPTVAR}" | tr '\n' ' '`
+			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *//; s/ *$//'`
 		fi
 		;;
 	*)
@@ -8660,7 +8663,7 @@ ${RKHLINE}"
 					# Finally, get the file name and hash value.
 					#
 
-					RKHTMPVAR2=`echo ${RKHLINE} | cut -d: - f1-3`
+					RKHTMPVAR2=`echo ${RKHLINE} | cut -d: -f1-3`
 
 					#
 					# Now put it all together.
