@@ -14590,7 +14590,7 @@ do_system_check() {
 	ENDTIME=0
 
 	if [ -n "$SECONDS" ]; then
-		BEGINTIME=$SECONDS
+		BEGINTIME=`echo $SECONDS | cut -d. -f1`
 	elif [ $BSDOS -eq 1 ]; then
 		BEGINTIME=`date +%s`
 	elif [ -n "${PERL_CMD}" ]; then
@@ -14650,7 +14650,7 @@ do_system_check() {
 
 	if [ $BEGINTIME -ne 0 ]; then
 		if [ -n "$SECONDS" ]; then
-			ENDTIME=$SECONDS
+			ENDTIME=`echo $SECONDS | cut -d. -f1`
 		elif [ $BSDOS -eq 1 ]; then
 			ENDTIME=`date +%s`
 		else
