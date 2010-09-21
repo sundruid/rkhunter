@@ -50,6 +50,9 @@
    properties, such as the file permissions, ownership, size and so
    on, but not the hash value. That will be calculated, as before,
    using the configured hash function.
+ - The command-line option '--list perl' may be used to see the
+   installation status of perl modules that may be used by some of
+   the tests.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.

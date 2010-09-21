@@ -1,4 +1,4 @@
-Version:2010082702
+Version:2010092101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -601,6 +601,7 @@ SUSPSCAN_DAT_NOTAFILE:The data file of suspicious contents is not a file: $1
 LIST_TESTS:Current test names:
 LIST_GROUPED_TESTS:Grouped test names:
 LIST_LANGS:Current languages:
+LIST_PERL:Perl module installation status:
 LIST_RTKTS:Rootkits checked for:
 
 LOCK_USED:Locking is being used: timeout is $1 seconds

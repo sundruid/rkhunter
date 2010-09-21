@@ -6,7 +6,7 @@ rkhunter \- RootKit Hunter
 .SH SYNOPSIS
 \fBrkhunter\fP {--check | --unlock | --update | --versioncheck |
           --propupd [{filename | directory | package name},...] |
-          --list [tests | {lang | languages} | rootkits] |
+          --list [tests | {lang | languages} | rootkits | perl] |
           --version | --help} [options]
 
 .SH DESCRIPTION
@@ -110,13 +110,17 @@ new version is available.
 
 .IP
 
-.IP "\fB\-\-list [tests | {lang | languages} | rootkits]\fP"
+.IP "\fB\-\-list [tests | {lang | languages} | rootkits | perl]\fP"
 This command option will list some of the supported capabilities of the
 program, and then exit. The \fItests\fP option lists the currently available
 test names (see the README file for more details about test names). The
 \fIlanguages\fP option lists the currently available languages, and the
 \fIrootkits\fP option lists the rootkits that \fBrkhunter\fP will search for.
-If no specific option is given, then all the lists are displayed.
+The \fIperl\fP option lists the installation status of perl modules that may
+be used by some of the tests. Note that it is not \fIrequired\fP to install
+these modules. However, if rkhunter is forced to use perl to execute a test
+then the module must be present. If no specific option is given, then all the
+lists are displayed.
 
 .IP
 

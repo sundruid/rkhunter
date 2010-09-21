@@ -15201,6 +15201,38 @@ display_languages() {
 }
 
 
+display_perl_modules() {
+
+	#
+	# This function is used to display the status of
+	# the installed perl modules which may be required.
+	#
+
+	if [ -n "${PERL_CMD}" ]; then
+		display --to SCREEN --type PLAIN --nl LIST_PERL
+
+		for MODNAME in ${LIST_MODULES}; do
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl ${MODNAME} 2>&1 | grep 'NOT installed'`
+
+			MODLEN=`echo "${MODNAME}" | wc -c | tr -d ' '`
+			NUM_SPACES=`expr 28 - ${MODLEN}`
+			test $NUM_SPACES -lt 1 && NUM_SPACES=1
+			SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
+
+			if [ -z "${MOD_INSTALLED}" ]; then
+				echo $ECHOOPT "    ${MODNAME}${SPACES}Installed"
+			else
+				echo $ECHOOPT "    ${MODNAME}${SPACES} MISSING"
+			fi
+		done
+	else
+		echo "Unable to find the 'perl' command."
+	fi
+
+	return
+}
+
+
 display_rootkits() {
 
 	#
@@ -15228,6 +15260,7 @@ display_rootkits() {
 
 	return
 }
+
 
 get_lock() {
 
@@ -15302,7 +15335,7 @@ help() {
 	echo $ECHOOPT ""
 	echo $ECHOOPT "Usage: rkhunter {--check | --unlock | --update | --versioncheck |"
 	echo $ECHOOPT "                 --propupd [{filename | directory | package name},...] |"
-	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits}] |"
+	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits | perl}] |"
 	echo $ECHOOPT "                 --version | --help} [options]"
 	echo $ECHOOPT ""
 
@@ -15328,8 +15361,8 @@ help() {
 	echo $ECHOOPT "     -h, --help                        Display this help menu, then exit"
 	echo $ECHOOPT " --lang, --language <language>         Specify the language to use"
 	echo $ECHOOPT "                                       (Default is English)"
-	echo $ECHOOPT "         --list [tests | languages |   List the available test names, languages,"
-	echo $ECHOOPT "                 rootkits]             or checked for rootkits, then exit"
+	echo $ECHOOPT "         --list [tests | languages |   List the available test names, languages, checked"
+	echo $ECHOOPT "                 rootkits | perl]      for rootkits, or perl module status, then exit"
 	echo $ECHOOPT "     -l, --logfile [file]              Write to a logfile"
 	echo $ECHOOPT "                                       (Default is $DFLT_LOGFILE)"
 	echo $ECHOOPT "         --noappend-log                Do not append to the logfile, overwrite it"
@@ -15680,6 +15713,10 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
   weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 
+# A space-separated list of perl modules that may be required.
+LIST_MODULES="File::stat Getopt::Long Digest::MD5 Digest::SHA Digest::SHA1 Digest::SHA256
+	      Digest::SHA::PurePerl LWP URI HTTP::Status HTTP::Date Socket Carp"
+
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
 DISABLE_TESTS=""
@@ -16019,11 +16056,15 @@ while [ $# -ge 1 ]; do
 			shift
 			LIST_OPT="${LIST_OPT} rootkits "
 			;;
+		perl | modules)
+			shift
+			LIST_OPT="${LIST_OPT} perl "
+			;;
 		"")
-			LIST_OPT="${LIST_OPT} tests languages rootkits "
+			LIST_OPT="${LIST_OPT} tests languages rootkits perl "
 			;;
 		-*)
-			LIST_OPT="${LIST_OPT} tests languages rootkits "
+			LIST_OPT="${LIST_OPT} tests languages rootkits perl "
 			;;
 		*)
 			echo "Invalid '--list' option specified: $2"
@@ -16314,6 +16355,9 @@ if [ -n "${LIST_OPT}" ]; then
 			;;
 		languages)
 			display_languages
+			;;
+		perl)
+			display_perl_modules
 			;;
 		*)
 			display_rootkits

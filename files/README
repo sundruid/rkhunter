@@ -15,7 +15,7 @@ A copy of the RKH FAQ is also available from the web site.
 ROOTKIT HUNTER REQUIREMENTS
 ===========================
 
-Please note RKH has some requirements:
+Please note that RKH has some requirements:
 
 1) Before RKH starts it will check that certain required commands
    are present on the system. These are typical commands such as
@@ -25,10 +25,11 @@ Please note RKH has some requirements:
 2) Some tests require commands such as stat, readlink, md5/md5sum or
    sha1/sha1sum. If these are not present, then RKH has perl
    scripts which will automatically be used instead. However, this
-   requires perl being present. If it is not, then the tests will
-   be skipped. Readlink is provided as a script itself, and does
-   not use perl. Other tests will use other commands. If the relevant
-   command is not found on the system, then the test will be skipped.
+   requires perl, and certain modules, being present. If they are
+   not, then the tests will be skipped. Readlink is provided as a
+   script itself, and does not use perl. Other tests will use other
+   commands. If the relevant command is not found on the system,
+   then the test will be skipped.
 
 3) A tool should be present with which to download file updates. 
    Currently wget, curl, (e)links, lynx and GET are supported. If your
