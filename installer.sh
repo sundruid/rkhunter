@@ -141,7 +141,7 @@ selectTemplate() { # Take input from the "--install parameter"
 				fi
 				;;
 			.*|/.*|*//*)
-				echo "Invalid layout directory chosen. Exiting."
+				echo "Invalid layout directory chosen: ${PREFIX}"
 				exit 1
 				;;
 			*)
@@ -168,7 +168,7 @@ selectTemplate() { # Take input from the "--install parameter"
 					PREFIX="${RPM_BUILD_ROOT}/usr/local"
 				fi
 			else
-				echo "RPM installation chosen but \$RPM_BUILD_ROOT variable not found: exiting."
+				echo "RPM installation chosen but \$RPM_BUILD_ROOT variable not found. Exiting."
 				exit 1
 			fi
 			;;
@@ -181,7 +181,7 @@ selectTemplate() { # Take input from the "--install parameter"
 					PREFIX="${DEB_BUILD_ROOT}/usr"
 				fi
 			else
-				echo "DEB installation chosen but \$DEB_BUILD_ROOT variable not found: exiting."
+				echo "DEB installation chosen but \$DEB_BUILD_ROOT variable not found. Exiting."
 				exit 1
 			fi
 			;;
@@ -194,7 +194,7 @@ selectTemplate() { # Take input from the "--install parameter"
 					PREFIX="${TGZ_BUILD_ROOT}/usr"
 				fi
 			else
-				echo "TGZ installation chosen but \$TGZ_BUILD_ROOT variable not found: exiting."
+				echo "TGZ installation chosen but \$TGZ_BUILD_ROOT variable not found. Exiting."
 				exit 1
 			fi
 			;;
@@ -209,7 +209,7 @@ selectTemplate() { # Take input from the "--install parameter"
 		*)
 			if [ "${RKHINST_ACTION}" = "install" ]; then
 				if [ -n "${PREFIX}" -a ! -d "${PREFIX}" ]; then
-					echo "Invalid installation directory chosen: non-existent directory. Exiting."
+					echo "Non-existent installation directory chosen: ${PREFIX}"
 					echo "Perhaps run \"mkdir -p ${PREFIX}\" first?"
 					exit 1
 				fi
@@ -328,7 +328,7 @@ selectTemplate() { # Take input from the "--install parameter"
 		BINDIR="${PREFIX}/bin"
 		;;
 	*)	# None chosen.
-		echo "No template chosen, exiting."
+		echo "No template chosen. Exiting."
 		exit 1
 		;;
 	esac
@@ -449,7 +449,7 @@ useCVS() {
 				;;
 			esac
 		else
-			echo "Failed to get Rootkit Hunter from CVS: code $ERRCODE: exiting."
+			echo "Failed to get Rootkit Hunter from CVS: code $ERRCODE"
 			exit 1
 		fi
 	fi
@@ -622,7 +622,7 @@ doInstall()  {
 			if [ $ERRCODE -eq 0 ]; then
 				echo "  Directory ${DIR}: creating: OK"
 			else
-				echo "  Directory ${DIR}: creating: FAILED: Code $ERRCODE: exiting."
+				echo "  Directory ${DIR}: creating: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 		fi
@@ -644,7 +644,7 @@ doInstall()  {
 			if [ $ERRCODE -eq 0 ]; then
 				echo "  Directory ${DIR}: creating: OK"
 			else
-				echo "  Directory ${DIR}: creating: FAILED: Code $ERRCODE: exiting."
+				echo "  Directory ${DIR}: creating: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 		fi
@@ -672,7 +672,7 @@ doInstall()  {
 				echo " Installing ${FILE}: OK"
 				chmod "${RKHINST_MODE_EX}" "${RKHINST_SCRIPT_DIR}/${FILE}"
 			else
-				echo " Installing ${FILE}: FAILED: Code $ERRCODE: exiting."
+				echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 			;;
@@ -693,7 +693,7 @@ doInstall()  {
 				echo " Installing ${FILE}: OK"
 				chmod "${RKHINST_MODE_RW}" "${RKHINST_DB_DIR}/${FILE}"
 			else
-				echo " Installing ${FILE}: FAILED: Code $ERRCODE: exiting."
+				echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 			;;
@@ -705,7 +705,7 @@ doInstall()  {
 				echo " Installing ${FILE}: OK"
 				chmod "${RKHINST_MODE_RWR}" "${RKHINST_MAN_DIR}/${FILE}"
 			else
-				echo " Installing ${FILE}: FAILED: Code $ERRCODE: exiting."
+				echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 			;;
@@ -722,7 +722,7 @@ doInstall()  {
 			echo " Installing ${FILE}: OK"
 			chmod "${RKHINST_MODE_RWR}" "${RKHINST_DOC_DIR}/${FILE}"
 		else
-			echo " Installing ${FILE}: FAILED: Code $ERRCODE: exiting."
+			echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 			exit 1
 		fi
 	done
@@ -741,7 +741,7 @@ doInstall()  {
 	if [ $ERRCODE -eq 0 ];then
 		echo " Installing language support files: OK"
 	else
-		echo " Installing language support files: FAILED: Code $ERRCODE: exiting."
+		echo " Installing language support files: FAILED: Code $ERRCODE"
 		exit 1
 	fi
 
@@ -757,7 +757,7 @@ doInstall()  {
 				echo " Installing ${FILE}: OK"
 				chmod "${RKHINST_MODE_EX}" "${RKHINST_BIN_DIR}/${FILE}"
 			else
-				echo " Installing ${FILE}: FAILED: Code $ERRCODE: exiting."
+				echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 			;;
@@ -769,7 +769,7 @@ doInstall()  {
 				echo " Installing ${FILE}: OK"
 				chmod "${RKHINST_MODE_EX}" "${RKHINST_BIN_DIR}/${FILE}"
 			else
-				echo " Installing ${FILE}: FAILED: Code $ERRCODE: exiting."
+				echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 			;;
@@ -804,7 +804,7 @@ doInstall()  {
 				echo " Installing ${FILE} in no-clobber mode: OK"
 				chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${NEWFILE}"
 			else
-				echo " Installing ${FILE} in no-clobber mode: FAILED: Code $ERRCODE: exiting."
+				echo " Installing ${FILE} in no-clobber mode: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 
@@ -841,7 +841,7 @@ doInstall()  {
 				echo " Installing ${FILE}: OK"
 				chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${FILE}"
 			else
-				echo " Installing ${FILE}: FAILED: Code $ERRCODE: exiting."
+				echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 				exit 1
 			fi
 
@@ -887,7 +887,7 @@ doInstall()  {
 				if [ $ERRCODE -eq 0 ]; then
 					echo " Striproot ${FILE}: OK"
 				else
-					echo " Striproot ${FILE}: FAILED: Code $ERRCODE: exiting."
+					echo " Striproot ${FILE}: FAILED: Code $ERRCODE"
 					exit 1
 				fi
 			fi
@@ -1117,7 +1117,7 @@ while [ $# -ge 1 ]; do
 			if [ -n "$1" ]; then
 				RKHINST_LAYOUT="custom_$1"
 			else
-				echo "No custom layout given, exiting."
+				echo "No custom layout given. Exiting."
 				exit 1
 			fi
 			;;
@@ -1125,7 +1125,7 @@ while [ $# -ge 1 ]; do
 			RKHINST_LAYOUT="$1"
 			;;
 		*)
-			echo "Unknown layout given, exiting: $1"
+			echo "Unknown layout given: $1"
 			exit 1
 			;;
 		esac
@@ -1136,7 +1136,7 @@ while [ $# -ge 1 ]; do
 		if [ -n "$1" ]; then
 			STRIPROOT="$1"
 		else
-			echo "Striproot requested but no directory name given, exiting."
+			echo "Striproot requested but no directory name given. Exiting."
 			exit 1
 		fi
 		;;
@@ -1161,7 +1161,7 @@ done
 
 # We only get here when some installation action was to be taken.
 if [ $RKHINST_ACTION_SEEN -eq 0 ]; then
-	echo "No action given, exiting."
+	echo "No action given. Exiting."
 else
 	case "${RKHINST_ACTION}" in
 	show)
