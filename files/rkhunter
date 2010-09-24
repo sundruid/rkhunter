@@ -3652,7 +3652,11 @@ get_hash_function() {
 	elif [ $SHA_SIZE -gt 0 ]; then
 		HF=`find_cmd sha${SHA_SIZE}sum`
 
-		test -z "${HF}" && HF=`find_cmd sha${SHA_SIZE}`
+		if [ -z "${HF}" ]; then
+			HF=`find_cmd sha${SHA_SIZE}`
+
+			test -z "${HF}" -a $MACOSX -eq 1 && HF=`find_cmd shasum`
+		fi
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
 			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA1 Digest::SHA256 Digest::SHA::PurePerl 2>&1`
@@ -14952,26 +14956,33 @@ set_file_prop_dirs_files() {
 	# We add in some extra commands to check depending on the O/S.
 	#
 
-	if [ $SUNOS -eq 1 ]; then
+	case "${OPERATING_SYSTEM}" in
+	SunOS)
 		PROP_FILE_LIST="${PROP_FILE_LIST} gawk gbasename gcat gchmod gchown
 				gcksum gcp gcut gdate gdiff gdiff3 gdirname gdu gecho
 				gegrep genv gfile gfind ggrep ggroups ghead gid glocate
 				gls gmd5sum gmv gpwd gsed gsize gsort gstrings gsum
 				gtail gtest gtouch guname guniq gusers gwc gwho gwhoami
-				inetadm nawk truss"
-	elif [ "${OPERATING_SYSTEM}" = "FreeBSD" -o "${OPERATING_SYSTEM}" = "DragonFly" ]; then
-		PROP_FILE_LIST="${PROP_FILE_LIST} fstat kldload kldstat kldunload procstat"
-	fi
-
-	if [ $LINUXOS -eq 1 ]; then
+				inetadm nawk truss unhide unhide-tcp"
+		;;
+	FreeBSD|DragonFly)
+		PROP_FILE_LIST="${PROP_FILE_LIST} fstat kldload kldstat kldunload procstat
+				unhide unhide-tcp"
+		;;
+	*BSD)
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp"
+		;;
+	Linux)
 		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp"
 
 		if [ -n "`uname -r | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
 		fi
-        elif [ $SUNOS -eq 1 -o $BSDOS -eq 1 ]; then
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp"
-        fi
+		;;
+	Darwin)
+		PROP_FILE_LIST="${PROP_FILE_LIST} shasum"
+		;;
+	esac
 
 
 	#
