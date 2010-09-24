@@ -249,7 +249,9 @@ selectTemplate() { # Take input from the "--install parameter"
 
 		case "$1" in
 		custom_*)
-			if [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
+			if [ -z "${PREFIX}" -a "${OPERATING_SYSTEM}" = "Darwin" ]; then
+				LIBDIR="/Library"
+			elif [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
 				LIBDIR="${PREFIX}/lib64"
 			else
 				LIBDIR="${PREFIX}/lib"
