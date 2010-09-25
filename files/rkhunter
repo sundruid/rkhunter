@@ -3655,7 +3655,11 @@ get_hash_function() {
 		if [ -z "${HF}" ]; then
 			HF=`find_cmd sha${SHA_SIZE}`
 
-			test -z "${HF}" -a $MACOSX -eq 1 && HF=`find_cmd shasum`
+			if [ -z "${HF}" -a $MACOSX -eq 1 ]; then
+				HF=`find_cmd shasum`
+
+				test -n "${HF}" && HF="${HF} -a $SHA_SIZE"
+			fi
 		fi
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then

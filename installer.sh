@@ -259,7 +259,12 @@ selectTemplate() { # Take input from the "--install parameter"
 
 			BINDIR="${PREFIX}/bin"
 			VARDIR="${PREFIX}/var"
-			SHAREDIR="${PREFIX}/share"
+
+			if [ -z "${PREFIX}" ]; then
+				SHAREDIR="/usr/share"
+			else
+				SHAREDIR="${PREFIX}/share"
+			fi
 			;;
 		RPM)
 			if [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
@@ -388,24 +393,50 @@ showTemplate() { # Take input from the "--install parameter"
 		echo "Standalone installation into ${PWD}/files"
 		;;
 	*)
+		NOTPRESENT="   (Directory will be created)"
+
 		selectTemplate "$1"
 
 		test -z "${PREFIX}" && RKHTMPVAR="/" || RKHTMPVAR="${PREFIX}"
 
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
 		echo "Install into:       ${RKHTMPVAR}"
-		echo "Application:        ${RKHINST_BIN_DIR}"
 
+		RKHTMPVAR="${RKHINST_BIN_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		echo "Application:        ${RKHTMPVAR}"
+
+		RKHTMPVAR="${RKHINST_ETC_DIR}"
 		if [ $OVERWRITE -eq 0 ]; then
-			echo "Configuration file: ${RKHINST_ETC_DIR}"
+			test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+			echo "Configuration file: ${RKHTMPVAR}"
 		else
-			echo "Configuration file: ${RKHINST_ETC_DIR}   (Configuration file will be overwritten)"
+			if [ ! -d "${RKHTMPVAR}" ]; then
+				echo "Configuration file: ${RKHINST_ETC_DIR}   (Directory will be created; configuration file will be overwritten)"
+			else
+				echo "Configuration file: ${RKHINST_ETC_DIR}   (Configuration file will be overwritten)"
+			fi
 		fi
 
-		echo "Documents:          ${RKHINST_DOC_DIR}"
-		echo "Man page:           ${RKHINST_MAN_DIR}"
-		echo "Scripts:            ${RKHINST_SCRIPT_DIR}"
-		echo "Databases:          ${RKHINST_DB_DIR}"
-		echo "Temporary files:    ${RKHINST_TMP_DIR}"
+		RKHTMPVAR="${RKHINST_DOC_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		echo "Documents:          ${RKHTMPVAR}"
+
+		RKHTMPVAR="${RKHINST_MAN_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		echo "Man page:           ${RKHTMPVAR}"
+
+		RKHTMPVAR="${RKHINST_SCRIPT_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		echo "Scripts:            ${RKHTMPVAR}"
+
+		RKHTMPVAR="${RKHINST_DB_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		echo "Databases:          ${RKHTMPVAR}"
+
+		RKHTMPVAR="${RKHINST_TMP_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		echo "Temporary files:    ${RKHTMPVAR}"
 
 		if [ -n "${STRIPROOT}" ]; then
 			echo ""; echo "Got STRIPROOT=\"${STRIPROOT}\""
