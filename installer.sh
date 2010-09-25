@@ -249,19 +249,29 @@ selectTemplate() { # Take input from the "--install parameter"
 
 		case "$1" in
 		custom_*)
+			LIBDIR=""
+
 			if [ -z "${PREFIX}" -a "${OPERATING_SYSTEM}" = "Darwin" ]; then
-				LIBDIR="/Library"
-			elif [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
-				LIBDIR="${PREFIX}/lib64"
-			else
-				LIBDIR="${PREFIX}/lib"
+				test -d "/Library" && LIBDIR="/Library"
+			fi
+
+			if [ -z "${LIBDIR}" ]; then
+				if [ "${UNAMEM}" = "x86_64" -o "${UNAMEM}" = "ppc64" ]; then
+					LIBDIR="${PREFIX}/lib64"
+				else
+					LIBDIR="${PREFIX}/lib"
+				fi
 			fi
 
 			BINDIR="${PREFIX}/bin"
 			VARDIR="${PREFIX}/var"
 
 			if [ -z "${PREFIX}" ]; then
-				SHAREDIR="/usr/share"
+				if [ ! -d "/share" -a -d "/usr/share" ]; then
+					SHAREDIR="/usr/share"
+				else
+					SHAREDIR="/share"
+				fi
 			else
 				SHAREDIR="${PREFIX}/share"
 			fi
@@ -399,22 +409,26 @@ showTemplate() { # Take input from the "--install parameter"
 
 		test -z "${PREFIX}" && RKHTMPVAR="/" || RKHTMPVAR="${PREFIX}"
 
-		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}                            (Directory does not exist)"
 		echo "Install into:       ${RKHTMPVAR}"
 
 		RKHTMPVAR="${RKHINST_BIN_DIR}"
-		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}                     ${NOTPRESENT}"
 		echo "Application:        ${RKHTMPVAR}"
 
 		RKHTMPVAR="${RKHINST_ETC_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}                     ${NOTPRESENT}"
 		if [ $OVERWRITE -eq 0 ]; then
-			test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
 			echo "Configuration file: ${RKHTMPVAR}"
 		else
 			if [ ! -d "${RKHTMPVAR}" ]; then
-				echo "Configuration file: ${RKHINST_ETC_DIR}   (Directory will be created; configuration file will be overwritten)"
+				echo "Configuration file: ${RKHTMPVAR}"
 			else
-				echo "Configuration file: ${RKHINST_ETC_DIR}   (Configuration file will be overwritten)"
+				if [ -z "${PREFIX}" ]; then
+					echo "Configuration file: ${RKHINST_ETC_DIR}               (Configuration file will be overwritten)"
+				else
+					echo "Configuration file: ${RKHINST_ETC_DIR}           (Configuration file will be overwritten)"
+				fi
 			fi
 		fi
 
@@ -423,19 +437,25 @@ showTemplate() { # Take input from the "--install parameter"
 		echo "Documents:          ${RKHTMPVAR}"
 
 		RKHTMPVAR="${RKHINST_MAN_DIR}"
-		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}          ${NOTPRESENT}"
 		echo "Man page:           ${RKHTMPVAR}"
 
 		RKHTMPVAR="${RKHINST_SCRIPT_DIR}"
-		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		if [ ! -d "${RKHTMPVAR}" ]; then
+			if [ -z "${PREFIX}" ]; then
+				RKHTMPVAR="${RKHTMPVAR}      ${NOTPRESENT}"
+			else
+				RKHTMPVAR="${RKHTMPVAR}  ${NOTPRESENT}"
+			fi
+		fi
 		echo "Scripts:            ${RKHTMPVAR}"
 
 		RKHTMPVAR="${RKHINST_DB_DIR}"
-		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}     ${NOTPRESENT}"
 		echo "Databases:          ${RKHTMPVAR}"
 
 		RKHTMPVAR="${RKHINST_TMP_DIR}"
-		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}${NOTPRESENT}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}    ${NOTPRESENT}"
 		echo "Temporary files:    ${RKHTMPVAR}"
 
 		if [ -n "${STRIPROOT}" ]; then
