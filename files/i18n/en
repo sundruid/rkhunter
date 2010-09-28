@@ -1,4 +1,4 @@
-Version:2010092101
+Version:2010092801
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -91,15 +91,16 @@ SYS_NO_PRELINK:System is not using prelinking
 SYS_SELINUX:SELinux is enabled
 SYS_NO_SELINUX:SELinux is disabled
 
-HASH_FUNC_PRELINK:Using prelink command (with $1) for file hash checks
+HASH_FUNC_PRELINK:Using the prelink command (with $1) for the file hash checks
 HASH_FUNC_PERL:Using the perl $1 module for the file hash checks
+HASH_FUNC_PERL_SHA:Using the perl $1 module (with $2) for the file hash checks
 HASH_FUNC:Using the '$1' command for the file hash checks
 HASH_FUNC_NONE:File hash checks disabled: NONE specified
 HASH_FUNC_NONE_PKGMGR:File hash function NONE specified: only package manager will be used
 HASH_FUNC_DISABLED:Hash function set to 'NONE': automatically disabling file hash checks
 HASH_FUNC_OLD:Stored hash values used hash function '$1'
 HASH_FUNC_OLD_DISABLED:Previous hash function was disabled: no hash values were stored
-HASH_PKGMGR_OLD:Stored hash values used package manager '$1' (md5 function)
+HASH_PKGMGR_OLD:Stored hash values used package manager '$1'
 HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a package manager
 
 HASH_PKGMGR:Using package manager '$1' for file property checks

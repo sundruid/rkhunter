@@ -375,7 +375,7 @@ selectTemplate() { # Take input from the "--install parameter"
 	RKHINST_ETC_FILE="${APPNAME}.conf"
 	RKHINST_BIN_FILES="${APPNAME}"
 
-	RKHINST_SCRIPT_FILES="check_modules.pl filehashmd5.pl filehashsha1.pl filehashsha.pl stat.pl readlink.sh"
+	RKHINST_SCRIPT_FILES="check_modules.pl filehashsha.pl stat.pl readlink.sh"
 	RKHINST_DB_FILES="backdoorports.dat mirrors.dat programs_bad.dat suspscan.dat"
 
 	if [ "${RKHINST_LAYOUT}" = "DEB" ]; then

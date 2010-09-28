@@ -1496,7 +1496,7 @@ check_commands() {
 	if [ -n "${PERL_CMD}" -a "${PERL_CMD}" != "DISABLED" ]; then
 		if [ -z "${STAT_CMD}" -o "${STAT_CMD}" = "BUILTIN" ]; then
 			if [ -r "${SCRIPT_PATH}/check_modules.pl" ]; then
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl File::stat Getopt::Long 2>&1 | grep 'NOT installed'`
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl File::stat Getopt::Long 2>/dev/null | grep 'NOT installed'`
 			else
 				MOD_INSTALLED="module not found"
 			fi
@@ -3556,9 +3556,9 @@ get_md5_hash_function() {
 		test -z "${HFUNC}" && HFUNC=`find_cmd md5`
 
 		if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>&1 | grep 'Digest::MD5 installed'`
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>/dev/null | grep 'Digest::MD5 installed'`
 
-			test -n "${MOD_INSTALLED}" && echo "${PERL_CMD} ${SCRIPT_PATH}/filehashmd5.pl"
+			test -n "${MOD_INSTALLED}" && echo "${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl Digest::MD5 0"
 		else
 			echo "${HFUNC}"
 		fi
@@ -3612,16 +3612,17 @@ get_hash_function() {
 		test $ERRCODE -eq 1 && exit 1
 	fi
 
-	if [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|SHA224|SHA256|SHA384|SHA512|NONE)$'`" ]; then
+	if [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|SHA224|SHA256|SHA384|SHA512|RIPEMD160|WHIRLPOOL|NONE)$'`" ]; then
 		HASH_FUNC=`echo "${HASH_FUNC}" | tr '[:lower:]' '[:upper:]'`
 	fi
 
 
 	#
-	# At this point we have either been given a hash function command,
-	# one of the reserved words 'MD5', 'NONE', or one of the SHA functions,
-	# or nothing. For the SHA and MD5 reserved words we must find the
-	# SHA or MD5 command or use the supplied perl scripts.
+	# At this point we have either been given a specific hash function
+	# command, the reserved word 'NONE', one of the SHA or other functions,
+	# or nothing. For the SHA and MD5 reserved words we must find the SHA
+	# or MD5 command, or use the supplied perl scripts. For the RIPEMD160
+	# and WHIRLPOOL reserved words, we use the perl scripts.
 	#
 
 	SHA_SIZE=0
@@ -3663,35 +3664,52 @@ get_hash_function() {
 		fi
 
 		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA1 Digest::SHA256 Digest::SHA::PurePerl 2>&1`
+			MOD_INSTALLED=""
 
-			if [ -z "`echo ${MOD_INSTALLED} | grep 'NOT'`" ]; then
-				HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl SHA$SHA_SIZE $SHA_SIZE"
-			elif [ $SHA_SIZE -eq 1 ]; then
-				if [ -n "`echo ${MOD_INSTALLED} | grep 'Digest::SHA1 installed'`" ]; then
-					HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha1.pl"
-				else
-					HASH_FUNC=""
-				fi
+			if [ $SHA_SIZE -eq 1 ]; then
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA1 Digest::SHA::PurePerl 2>/dev/null`
+			elif [ $SHA_SIZE -eq 224 ]; then
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA::PurePerl 2>/dev/null`
 			else
-				HASH_FUNC=""
+				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA256 Digest::SHA::PurePerl 2>/dev/null`
 			fi
-		else
-			HASH_FUNC=$HF
+
+			USE_MOD=`echo "${MOD_INSTALLED}" | grep -v 'NOT installed' | head -n 1 | cut -d' ' -f1`
+
+			if [ -n "${USE_MOD}" ]; then
+				HF="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl ${USE_MOD} $SHA_SIZE"
+			fi
+		fi
+
+		HASH_FUNC="${HF}"
+	elif [ "${HASH_FUNC}" = "RIPEMD160" ]; then
+		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Crypt::RIPEMD160 2>/dev/null`
+
+		if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Crypt::RIPEMD160 installed'`" ]; then
+			HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl Crypt::RIPEMD160 0"
+		fi
+	elif [ "${HASH_FUNC}" = "WHIRLPOOL" ]; then
+		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::Whirlpool 2>/dev/null`
+
+		if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::Whirlpool installed'`" ]; then
+			HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl Digest::Whirlpool 0"
 		fi
 	fi
 
 
 	#
-	# If we still have no hash function, then look for an MD5 command.
+	# If we still have no hash function, then look for an MD5 command,
+	# but only if MD5 or SHA1 were specified.
 	#
 
 	if [ \( -z "${HASH_FUNC}" -a $SHA_SIZE -eq 1 \) -o "${HASH_FUNC}" = "MD5" ]; then
+		SHA_SIZE=0
+
 		HASH_FUNC=`get_md5_hash_function`
 
 		if [ $PRELINKED -eq 1 ]; then
 			PRELINK_HASH="MD5"
-		elif [ -z "`echo \"${HASH_FUNC}\" | grep '/filehashmd5\.pl$'`" ]; then
+		elif [ -z "`echo \"${HASH_FUNC}\" | grep '/filehashsha\.pl Digest::MD5'`" ]; then
 			MD5_CMD="${HASH_FUNC}"
 		fi
 	fi
@@ -3705,6 +3723,14 @@ get_hash_function() {
 
 	if [ "${HASH_FUNC}" = "NONE" ]; then
 		:
+	elif [ "${HASH_FUNC}" = "RIPEMD160" -o "${HASH_FUNC}" = "WHIRLPOOL" ]; then
+		if [ $HASH_OPT -eq 1 ]; then
+			echo "Invalid '--hash' option: no perl module for ${HASH_FUNC} could be found."
+		else
+			echo "Invalid HASH_FUNC configuration option: no perl module for ${HASH_FUNC} could be found."
+		fi
+
+		exit 1
 	elif [ -n "${HASH_FUNC}" ]; then
 		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 		HF=`find_cmd ${HASH_CMD}`
@@ -3732,7 +3758,7 @@ get_hash_function() {
 		echo "Invalid '--hash' option: no usable hash command or perl modules could be found."
 		exit 1
 	elif [ $SHA_SIZE -gt 1 ]; then
-		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl modules for SHA${SHA_SIZE} could be found."
+		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl module for SHA${SHA_SIZE} could be found."
 		exit 1
 	else
 		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl modules for SHA1 or MD5 could be found."
@@ -15227,7 +15253,7 @@ display_perl_modules() {
 		display --to SCREEN --type PLAIN --nl LIST_PERL
 
 		for MODNAME in ${LIST_MODULES}; do
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl ${MODNAME} 2>&1 | grep 'NOT installed'`
+			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl ${MODNAME} 2>/dev/null | grep 'NOT installed'`
 
 			MODLEN=`echo "${MODNAME}" | wc -c | tr -d ' '`
 			NUM_SPACES=`expr 28 - ${MODLEN}`
@@ -15729,8 +15755,8 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 
 # A space-separated list of perl modules that may be required.
-LIST_MODULES="File::stat Getopt::Long Digest::MD5 Digest::SHA Digest::SHA1 Digest::SHA256
-	      Digest::SHA::PurePerl LWP URI HTTP::Status HTTP::Date Socket Carp"
+LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA Digest::SHA1 Digest::SHA256
+	      Digest::SHA::PurePerl Digest::Whirlpool LWP URI HTTP::Status HTTP::Date Socket Carp"
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
@@ -16596,16 +16622,18 @@ if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a -z "${PKGMGR}" -a "${HASH_FUNC}" 
 	#
 
 	if [ -z "${PRELINK_HASH}" ]; then
-		RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
+		if [ -z "`echo \"${HASH_FUNC}\" | egrep '(/filehashsha\.pl Digest::MD5|/filehashsha\.pl .* 1$|shasum -a 1$)'`" ]; then
+			RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 
-		if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
-			if [ $HASH_OPT -eq 1 ]; then
-				echo "This system uses prelinking, but the '--hash' option (${HASH_FUNC}) does not look like SHA1 or MD5."
-			else
-				echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+			if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+				if [ $HASH_OPT -eq 1 ]; then
+					echo "This system uses prelinking, but the '--hash' option (${HASH_FUNC}) does not look like SHA1 or MD5."
+				else
+					echo "This system uses prelinking, but the hash function (${HASH_FUNC}) does not look like SHA1 or MD5."
+				fi
+
+				exit 1
 			fi
-
-			exit 1
 		fi
 	fi
 fi
@@ -16904,10 +16932,14 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			else
 				display --to LOG --type INFO HASH_FUNC_NONE
 			fi
-		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashsha\.pl$'`" ]; then
-			display --to LOG --type INFO HASH_FUNC_PERL "SHA${SHA_SIZE}"
-		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashmd5\.pl$'`" ]; then
-			display --to LOG --type INFO HASH_FUNC_PERL 'MD5'
+		elif [ -n "`echo \"${HASH_FUNC}\" | grep '/filehashsha\.pl '`" ]; then
+			RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f3`
+
+			if [ $SHA_SIZE -eq 0 ]; then
+				display --to LOG --type INFO HASH_FUNC_PERL "${RKHTMPVAR}"
+			else
+				display --to LOG --type INFO HASH_FUNC_PERL_SHA "${RKHTMPVAR}" "SHA${SHA_SIZE}"
+			fi
 		else
 			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
 		fi

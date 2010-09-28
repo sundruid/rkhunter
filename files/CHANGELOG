@@ -53,6 +53,9 @@
  - The command-line option '--list perl' may be used to see the
    installation status of perl modules that may be used by some of
    the tests.
+ - For the file properties test the hash functions 'Whirlpool' and
+   'Ripemd160' may now be specified. However, only the relevant perl
+   module will be looked for when using these functions.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
@@ -181,6 +184,7 @@
    error message because FreeBSD/OpenBSD sockstat did not support the '-n'
    option. This has been fixed, but NetBSD systems will still use it.
  - The installer option '--layout custom /' now works correctly.
+ - The SHA256 perl module was not being called correctly.
 
 -- 
 
