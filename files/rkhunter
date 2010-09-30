@@ -7060,6 +7060,93 @@ do_system_check_initialisation() {
 	SNEAKIN_KSYMS=
 
 
+	# Solaris Wanuk backdoor
+	WANUKDOOR_FILES="${RKHROOTDIR}/var/adm/sa/.adm/.lp-door.i86pc
+			 ${RKHROOTDIR}/var/adm/sa/.adm/.lp-door.sun4
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp-door.i86pc
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp-door.sun4
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpshut
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpsystem
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpadmin
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpmove
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpusers
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpfilter
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpstat
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpd
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpsched
+			 ${RKHROOTDIR}/var/spool/lp/admins/lpc"
+	WANUKDOOR_DIRS="${RKHROOTDIR}/var/adm/sa/.adm"
+	WANUKDOOR_KSYMS=
+
+
+	# Solaris Wanuk Worm (ELF_WANUK.A)
+	WANUKWORM_FILES="${RKHROOTDIR}/var/adm/.adm
+			 ${RKHROOTDIR}/var/adm/.i86pc
+			 ${RKHROOTDIR}/var/adm/.sun4
+			 ${RKHROOTDIR}/var/adm/sa/.adm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/.i86pc
+			 ${RKHROOTDIR}/var/adm/sa/.adm/.sun4
+			 ${RKHROOTDIR}/var/adm/sa/.adm/.crontab
+			 ${RKHROOTDIR}/var/adm/sa/.adm/devfsadmd
+			 ${RKHROOTDIR}/var/adm/sa/.adm/svcadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/cfgadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/kadmind
+			 ${RKHROOTDIR}/var/adm/sa/.adm/zoneadmd
+			 ${RKHROOTDIR}/var/adm/sa/.adm/sadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/sysadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/dladm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/bootadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/routeadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/uadmin
+			 ${RKHROOTDIR}/var/adm/sa/.adm/acctadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/cryptoadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/inetadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/logadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/nlsadmin
+			 ${RKHROOTDIR}/var/adm/sa/.adm/sacadm
+			 ${RKHROOTDIR}/var/adm/sa/.adm/syseventadmd
+			 ${RKHROOTDIR}/var/adm/sa/.adm/ttyadmd
+			 ${RKHROOTDIR}/var/adm/sa/.adm/consadmd
+			 ${RKHROOTDIR}/var/adm/sa/.adm/metadevadm
+			 ${RKHROOTDIR}/var/adm/sa/.i86pc
+			 ${RKHROOTDIR}/var/adm/sa/.sun4
+			 ${RKHROOTDIR}/var/adm/sa/acctadm
+			 ${RKHROOTDIR}/var/adm/sa/bootadm
+			 ${RKHROOTDIR}/var/adm/sa/cfgadm
+			 ${RKHROOTDIR}/var/adm/sa/consadmd
+			 ${RKHROOTDIR}/var/adm/sa/cryptoadm
+			 ${RKHROOTDIR}/var/adm/sa/devfsadmd
+			 ${RKHROOTDIR}/var/adm/sa/dladm
+			 ${RKHROOTDIR}/var/adm/sa/inetadm
+			 ${RKHROOTDIR}/var/adm/sa/kadmind
+			 ${RKHROOTDIR}/var/adm/sa/logadm
+			 ${RKHROOTDIR}/var/adm/sa/metadevadm
+			 ${RKHROOTDIR}/var/adm/sa/nlsadmin
+			 ${RKHROOTDIR}/var/adm/sa/routeadm
+			 ${RKHROOTDIR}/var/adm/sa/sacadm
+			 ${RKHROOTDIR}/var/adm/sa/sadm
+			 ${RKHROOTDIR}/var/adm/sa/svcadm
+			 ${RKHROOTDIR}/var/adm/sa/sysadm
+			 ${RKHROOTDIR}/var/adm/sa/syseventadmd
+			 ${RKHROOTDIR}/var/adm/sa/ttyadmd
+			 ${RKHROOTDIR}/var/adm/sa/uadmin
+			 ${RKHROOTDIR}/var/adm/sa/zoneadmd
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/.crontab
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpshut
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpsystem
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpadmin
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpmove
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpusers
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpfilter
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpstat
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpd
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpsched
+			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpc"
+	WANUKWORM_DIRS="${RKHROOTDIR}/var/adm/sa/.adm
+			${RKHROOTDIR}/var/spool/lp/admins/.lp"
+	WANUKWORM_KSYMS=
+
+
 	# 'Spanish' Rootkit
 	SPANISH_FILES="${RKHROOTDIR}/dev/ptyq
 		       ${RKHROOTDIR}/bin/ad
@@ -10522,6 +10609,26 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${SNEAKIN_DIRS}
 	SCAN_KSYMS=${SNEAKIN_KSYMS}
 	scanrootkit
+
+	# Solaris Wanuk backdoor
+
+	if [ $SUNOS -eq 1 ]; then
+		SCAN_ROOTKIT="Solaris Wanukdoor"
+		SCAN_FILES=${WANUKDOOR_FILES}
+		SCAN_DIRS=${WANUKDOOR_DIRS}
+		SCAN_KSYMS=${WANUKDOOR_KSYMS}
+		scanrootkit
+	fi
+
+	# Solaris Wanuk Worm
+
+	if [ $SUNOS -eq 1 ]; then
+		SCAN_ROOTKIT="Solaris Wanuk Worm"
+		SCAN_FILES=${WANUKWORM_FILES}
+		SCAN_DIRS=${WANUKWORM_DIRS}
+		SCAN_KSYMS=${WANUKWORM_KSYMS}
+		scanrootkit
+	fi
 
 	# 'Spanish' Rootkit
 
@@ -15750,7 +15857,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, 
   Inqtana-A, Inqtana-B, Inqtana-C, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
-  Sneakin, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
+  Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
   TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
   weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 

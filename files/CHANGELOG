@@ -56,6 +56,7 @@
  - For the file properties test the hash functions 'Whirlpool' and
    'Ripemd160' may now be specified. However, only the relevant perl
    module will be looked for when using these functions.
+ - Added Solaris Wanuk backdoor and worm checks.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
