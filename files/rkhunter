@@ -10613,7 +10613,7 @@ rootkit_file_dir_checks() {
 	# Solaris Wanuk backdoor
 
 	if [ $SUNOS -eq 1 ]; then
-		SCAN_ROOTKIT="Solaris Wanukdoor"
+		SCAN_ROOTKIT="Solaris Wanuk backdoor"
 		SCAN_FILES=${WANUKDOOR_FILES}
 		SCAN_DIRS=${WANUKDOOR_DIRS}
 		SCAN_KSYMS=${WANUKDOOR_KSYMS}
