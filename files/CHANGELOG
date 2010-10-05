@@ -57,6 +57,11 @@
    'Ripemd160' may now be specified. However, only the relevant perl
    module will be looked for when using these functions.
  - Added Solaris Wanuk backdoor and worm checks.
+ - The new command-line option '-C' (or '--config-check') can be
+   used to check the rkhunter configuration files. This will check
+   most of the options, but only for the tests which would normally
+   be run (as defined by the enable and disable options). The program
+   exits once the check has run. See the man page for more details.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.

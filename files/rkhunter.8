@@ -7,7 +7,7 @@ rkhunter \- RootKit Hunter
 \fBrkhunter\fP {--check | --unlock | --update | --versioncheck |
           --propupd [{filename | directory | package name},...] |
           --list [tests | {lang | languages} | rootkits | perl] |
-          --version | --help} [options]
+          --config\-check | --version | --help} [options]
 
 .SH DESCRIPTION
 \fBrkhunter\fP is a shell script which carries out various checks on the local
@@ -121,6 +121,23 @@ be used by some of the tests. Note that it is not \fIrequired\fP to install
 these modules. However, if rkhunter is forced to use perl to execute a test
 then the module must be present. If no specific option is given, then all the
 lists are displayed.
+
+.IP
+
+.IP "\fB\-C, \-\-config\-check\fP"
+This command option causes \fBrkhunter\fP to check its configuration
+file(s), and then exit. The program will run through its normal
+configuration checks as specified by the enable and disable options
+on the command\-line and in the configuration files. That is, only the
+configuration options for tests which would normally run are checked. In
+order to check all the configured options, then use the \fB--enable all
+--disable none\fP options on the command line. Additionally, the program will
+check to see if there are any unrecognised configuration options. If any
+configuration problems are found, then they will be displayed and the return
+code will be set to 1.
+
+It is suggested that this option is used whenever the configuration
+file(s) have been changed.
 
 .IP
 
