@@ -12028,7 +12028,7 @@ ${RKHTMPVAR}:${FNAME}"
 
 		SEEN=0
 		RKHTMPVAR="unhide"
-		UNHIDE_CMD=`find_cmd unhide-new`
+		UNHIDE_CMD=`find_cmd unhide`
 
 		if [ $LINUXOS -eq 1 -a -z "${UNHIDE_CMD}" ]; then
 			if [ -n "`uname -r | grep '^2\.6'`" ]; then
