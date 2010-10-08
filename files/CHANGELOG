@@ -62,6 +62,13 @@
    most of the options, but only for the tests which would normally
    be run (as defined by the enable and disable options). The program
    exits once the check has run. See the man page for more details.
+ - The 'hidden_procs' test will now run the 'unhide.rb' command if it
+   is present. This is the Ruby version of the original C 'unhide'
+   program. (The 'unhide' command is also still run if found.)
+ - Added the DISABLE_UNHIDE configuration option. This allows users
+   to disable one or other of the 'unhide' or 'unhide.rb' commands
+   if they are both present on the system. The default is to look
+   for and run both commands.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
@@ -134,6 +141,13 @@
  - Improved support for OS X a little bit more.
  - When using the installer '--show' option, if a directory does not
    exist, then it will now state that the directory will be created.
+ - The 'hidden_procs' test used to run the 'unhide sys' command. Now
+   it is possible to specify which test names to provide to the 'unhide'
+   command by using the UNHIDE_TESTS configuration option. It defaults
+   to 'sys'. This allows for additional tests to be run with 'unhide'
+   if the user wishes, and caters for newer versions of 'unhide' which
+   have several new options. Increased the amount of logging of what
+   rkhunter is doing during the 'hidden_procs' test.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

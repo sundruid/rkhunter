@@ -1,4 +1,4 @@
-Version:2010092801
+Version:2010100801
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -376,6 +376,11 @@ ROOTKIT_MALWARE_SUSP_FILES_FOUND_CMD:Command: $1
 ROOTKIT_MALWARE_SUSP_FILES_FOUND_PATH:Pathname: $1
 ROOTKIT_MALWARE_SUSP_FILES_FOUND_RTKT:Possible Rootkit: $1
 ROOTKIT_MALWARE_HIDDEN_PROCS:Checking for hidden processes
+ROOTKIT_MALWARE_HIDDEN_PROCS_NOUNHIDE:The use of '$1' has been disabled at the users request
+ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_VERS:Found 'unhide' command version: $1
+ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD:Using command '$1'
+ROOTKIT_MALWARE_HIDDEN_PROCS_UNH_ERR:'unhide' not executed: invalid configured test names: $1
+ROOTKIT_MALWARE_HIDDEN_PROCS_RUBY_ERR:The 'unhide.rb' command gave an error:
 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND:Hidden processes found:
 ROOTKIT_MALWARE_DELETED_FILES:Checking running processes for deleted files
 ROOTKIT_MALWARE_DELETED_FILES_FOUND:The following processes are using deleted files:

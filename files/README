@@ -41,16 +41,19 @@ Please note that RKH has some requirements:
    configured in the RKH configuration file.
 
 4) Some tests require single-purpose tools. RKH does not depend on
-   these, but it will use them, after you have run '--propupd', if it 
-   finds them - they can enhance RKH's detection capabilities.
+   these, but it will use them if it finds them. They can enhance
+   RKH's detection capabilities.
    The tools are:
    - Skdet
        Tests for SucKIT, Adore, Adore-NG, UNFshit, UNFkmem and
        frontkey.
        http://www.xs4all.nl/~dvgevers/
-   - Unhide
+   - Unhide and unhide-tcp (C versions)
        Finds hidden processes.
-       http://www.security-projects.com/?Unhide
+       http://unhide.sourceforge.net
+   - Unhide (Ruby version)
+       Finds hidden processes.
+       https://launchpad.net/unhide.rb
    If the relevant tool is not found, then the test is skipped.
 
 

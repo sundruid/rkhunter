@@ -3653,6 +3653,48 @@ get_hidden_options() {
 }
 
 
+get_unhide_options() {
+
+	#
+	# This function processes the configuration options used
+	# by the unhide commands in the 'hidden_procs' test.
+	#
+
+	LEAVE=0
+	ERRCODE=0
+
+	UNHIDE_TESTS=`get_option 2 single UNHIDE_TESTS` || exit 1
+
+	if [ -z "${UNHIDE_TESTS}" ]; then
+		UNHIDE_TESTS="sys"
+	elif [ -z "`echo \" ${UNHIDE_TESTS}\" | grep ' [a-zA-Z]'`" ]; then
+		LEAVE=1
+		echo "Invalid UNHIDE_TESTS configuration option - no tests specified: ${UNHIDE_TESTS}"
+	fi
+
+
+	NOUNHIDE=`get_option 1 single DISABLE_UNHIDE` || exit 1
+
+	if [ -n "${NOUNHIDE}" ]; then
+		check_is_digit NOUNHIDE DISABLE_UNHIDE 2
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	else
+		NOUNHIDE=0
+	fi
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
 get_suspscan_options() {
 
 	#
@@ -4980,6 +5022,8 @@ get_configfile_options() {
 		get_dev_options
 
 		get_hidden_options
+
+		check_test hidden_procs && get_unhide_options
 
 		check_test suspscan && get_suspscan_options
 	fi
@@ -6592,15 +6636,15 @@ do_config_check() {
 	VALIDOPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
 		   APPEND_LOG APP_WHITELIST ATTRWHITELIST AUTO_X_DETECT BINDIR COLOR_SET2
-		   COPY_LOG_ON_ERROR DBDIR DISABLE_TESTS ENABLE_TESTS EPOCH_DATE_CMD EXISTWHITELIST
-		   HASH_FLD_IDX HASH_FUNC IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET IMMUTWHITELIST
-		   INETD_ALLOWED_SVC INETD_CONF_PATH INSTALLDIR LANGUAGE LOCK_TIMEOUT LOGFILE
-		   MAIL-ON-WARNING MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE PASSWORD_FILE 
-		   PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST PWDLESS_ACCOUNTS ROOTDIR ROTATE_MIRRORS
-		   RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST SCAN_MODE_DEV SCRIPTDIR SCRIPTWHITELIST
-		   SHOW_LOCK_MSGS SSH_CONFIG_DIR STARTUP_PATHS SUSPSCAN_DEBUG SUSPSCAN_DIRS
-		   SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH
-		   SYSLOG_CONFIG_FILE TMPDIR UID0_ACCOUNTS UPDATE_LANG UPDATE_MIRRORS
+		   COPY_LOG_ON_ERROR DBDIR DISABLE_TESTS DISABLE_UNHIDE ENABLE_TESTS EPOCH_DATE_CMD
+		   EXISTWHITELIST HASH_FLD_IDX HASH_FUNC IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET
+		   IMMUTWHITELIST INETD_ALLOWED_SVC INETD_CONF_PATH INSTALLDIR LANGUAGE LOCK_TIMEOUT
+		   LOGFILE MAIL-ON-WARNING MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE
+		   PASSWORD_FILE PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST PWDLESS_ACCOUNTS ROOTDIR
+		   ROTATE_MIRRORS RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST SCAN_MODE_DEV SCRIPTDIR
+		   SCRIPTWHITELIST SHOW_LOCK_MSGS SSH_CONFIG_DIR STARTUP_PATHS SUSPSCAN_DEBUG
+		   SUSPSCAN_DIRS SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH
+		   SYSLOG_CONFIG_FILE TMPDIR UID0_ACCOUNTS UNHIDE_TESTS UPDATE_LANG UPDATE_MIRRORS
 		   UPDT_ON_OS_CHANGE USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG
 		   WARN_ON_OS_CHANGE WEBCMD WEB_CMD WHITELISTED_IS_WHITE WRITEWHITELIST
 		   XINETD_ALLOWED_SVC XINETD_CONF_PATH"
@@ -11971,10 +12015,20 @@ ${RKHTMPVAR}:${FNAME}"
 	#
 
 	if `check_test hidden_procs`; then
+		FOUND=0
+		UNHIDE_VERS=0
+		HIDDEN_PROCS=""
+
 		display --to LOG --type INFO --nl STARTING_TEST hidden_procs
 
+
+		#
+		# First we test for the 'unhide' C program.
+		#
+
+		SEEN=0
 		RKHTMPVAR="unhide"
-		UNHIDE_CMD=`find_cmd unhide`
+		UNHIDE_CMD=`find_cmd unhide-new`
 
 		if [ $LINUXOS -eq 1 -a -z "${UNHIDE_CMD}" ]; then
 			if [ -n "`uname -r | grep '^2\.6'`" ]; then
@@ -11984,12 +12038,189 @@ ${RKHTMPVAR}:${FNAME}"
 		fi
 
 		if [ -n "${UNHIDE_CMD}" ]; then
-			HIDDEN_PROCS=`${UNHIDE_CMD} sys | egrep -v '^(Unhide |http:|\[\*\]|$)'`
+			FOUND=1
 
-			if [ -z "${HIDDEN_PROCS}" ]; then
-				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
+			display --to LOG --type INFO FOUND_CMD "${RKHTMPVAR}" "${UNHIDE_CMD}"
+
+			if [ $NOUNHIDE -eq 1 ]; then
+				SEEN=1
+				display --to LOG --type INFO ROOTKIT_MALWARE_HIDDEN_PROCS_NOUNHIDE 'unhide'
 			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
+				#
+				# Dig out the version number for use later on.
+				#
+
+				UNHIDE_VERS=`${UNHIDE_CMD} -V 2>/dev/null | head -n 1`
+
+				if [ -n "`echo ${UNHIDE_VERS} | grep '^Unhide [0-9][0-9]*$'`" ]; then
+					UNHIDE_VERS=`echo ${UNHIDE_VERS} | cut -d' ' -f2`
+				else
+					UNHIDE_VERS=0
+				fi
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_VERS "${UNHIDE_VERS}"
+				fi
+
+
+				#
+				# Now run each of the configured tests.
+				#
+
+				UNHIDE_OPTS=""
+				FOUND_PROCS=""
+
+				for RKHTMPVAR in ${UNHIDE_TESTS}; do
+					if [ -n "`echo ${RKHTMPVAR} | grep '^-'`" ]; then
+						# Only newer versions have command-line options.
+						if [ $UNHIDE_VERS -ge 20100919 ]; then
+							# Ignore obvious invalid options.
+							test "${RKHTMPVAR}" = "-V" -o "${RKHTMPVAR}" = "-h" && continue
+
+							UNHIDE_OPTS="${UNHIDE_OPTS} ${RKHTMPVAR}"
+						fi
+
+						continue
+					elif [ $UNHIDE_VERS -lt 20100919 ]; then
+						# Ignore unknown tests for earlier versions.
+						test "${RKHTMPVAR}" != "sys" -a "${RKHTMPVAR}" != "proc" -a "${RKHTMPVAR}" != "brute" && continue
+					fi
+
+					SEEN=1
+					FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |http:|\[\*\]|$)'`
+
+					if [ -z "${FOUND_PROCS}" ]; then
+						# Nothing found.
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "`echo unhide ${UNHIDE_OPTS} ${RKHTMPVAR}`"
+						fi
+					else
+						# For newer versions we can sort the messages.
+						if [ $UNHIDE_VERS -ge 20100919 ]; then
+#jh - this needs testing - otherwise we could get a mess displayed
+:
+#jh							FOUND_PROCS=`echo "${FOUND_PROCS}" | sort | uniq`
+						fi
+
+						HIDDEN_PROCS="${HIDDEN_PROCS}
+${FOUND_PROCS}"
+
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "`echo unhide ${UNHIDE_OPTS} ${RKHTMPVAR}`"
+					fi
+				done
+
+
+				#
+				# Mark the test as skipped if we have not executed any command because of invalid test names.
+				#
+
+				if [ $SEEN -eq 0 ]; then
+					display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "`echo unhide ${UNHIDE_OPTS} ${RKHTMPVAR}`"
+				fi
+			fi
+		else
+			SEEN=1
+			display --to LOG --type INFO NOT_FOUND_CMD 'unhide'
+
+			if [ "${RKHTMPVAR}" = "unhide-linux26" ]; then
+				display --to LOG --type INFO NOT_FOUND_CMD "${RKHTMPVAR}"
+			fi
+		fi
+
+
+		#
+		# Next we test for the 'unhide.rb' Ruby program.
+		#
+
+		ERRCODE=0
+		RKHTMPVAR=""
+
+		UNHIDE_CMD=`find_cmd unhide.rb`
+
+		if [ -n "${UNHIDE_CMD}" ]; then
+			FOUND=1
+
+			display --to LOG --type INFO FOUND_CMD 'unhide.rb' "${UNHIDE_CMD}"
+
+			if [ $NOUNHIDE -eq 2 ]; then
+				display --to LOG --type INFO ROOTKIT_MALWARE_HIDDEN_PROCS_NOUNHIDE 'unhide.rb'
+			else
+				RKHTMPVAR=`${UNHIDE_CMD} 2>&1`
+				ERRCODE=$?
+
+				if [ $ERRCODE -eq 0 ]; then
+					# Nothing found.
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD 'unhide.rb'
+					fi
+				elif [ $ERRCODE -eq 1 ]; then
+					# An error occurred. This is handled in the results section below.
+					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD 'unhide.rb'
+				elif [ $ERRCODE -eq 2 ]; then
+					# Something found.
+					HIDDEN_PROCS="${HIDDEN_PROCS}
+${RKHTMPVAR}"
+
+					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD 'unhide.rb'
+				fi
+			fi
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD "unhide.rb"
+		fi
+
+
+		#
+		# Now display the results.
+		#
+		# At this point if SEEN is 0, then a problem occurred with the 'unhide' program.
+		# If ERRCODE is 1, then a problem occurred with the 'unhide.rb' program. In both
+		# cases we treat these as warnings so that the user is aware that something went
+		# wrong.
+		#
+
+		HIDDEN_PROCS=`echo "${HIDDEN_PROCS}" | sed -e '/^$/d'`
+
+		if [ $FOUND -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
+		elif [ -z "${HIDDEN_PROCS}" -a $ERRCODE -ne 1 -a $SEEN -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
+		else
+			#
+			# At this point we have either found a hidden PID, or an error occurred with the 'unhide.rb' program,
+			# or both. We need to warn the user in either case. We also need to display all the information.
+			#
+
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
+
+			#
+			# First see if an 'unhide.rb' error occurred.
+			#
+
+			if [ $ERRCODE -eq 1 ]; then
+				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_RUBY_ERR
+
+				IFS=$IFSNL
+
+				for RKHTMPVAR2 in ${RKHTMPVAR}; do
+					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR2}"
+				done
+
+				IFS=$RKHIFS
+			fi
+
+			#
+			# Next see if there was a problem executing the 'unhide' commands.
+			#
+
+			if [ $SEEN -eq 0 ]; then
+				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_UNH_ERR "${UNHIDE_TESTS}"
+			fi
+
+			#
+			# Now display if any actual hidden PIDs were found.
+			#
+
+			if [ -n "${HIDDEN_PROCS}" ]; then
 				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND
 
 				IFS=$IFSNL
@@ -12000,9 +12231,6 @@ ${RKHTMPVAR}:${FNAME}"
 
 				IFS=$RKHIFS
 			fi
-		else
-			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
-			display --to LOG --type INFO NOT_FOUND_CMD "${RKHTMPVAR}"
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_procs
@@ -15563,17 +15791,17 @@ set_file_prop_dirs_files() {
 				gegrep genv gfile gfind ggrep ggroups ghead gid glocate
 				gls gmd5sum gmv gpwd gsed gsize gsort gstrings gsum
 				gtail gtest gtouch guname guniq gusers gwc gwho gwhoami
-				inetadm nawk truss unhide unhide-tcp"
+				inetadm nawk truss unhide unhide-tcp unhide.rb"
 		;;
 	FreeBSD|DragonFly)
 		PROP_FILE_LIST="${PROP_FILE_LIST} fstat kldload kldstat kldunload procstat
-				unhide unhide-tcp"
+				unhide unhide-tcp unhide.rb"
 		;;
 	*BSD)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp unhide.rb"
 		;;
 	Linux)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp unhide.rb"
 
 		if [ -n "`uname -r | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
