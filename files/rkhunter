@@ -650,7 +650,7 @@ get_option() {
 		OPTVAR=`echo "${OPTVAR}" | tr -d '" 	' | tr -d "'"`
 		;;
 	2)
-		OPTVAR=`echo "${OPTVAR}" | tr '	' ' ' | tr -s '	'`
+		OPTVAR=`echo "${OPTVAR}" | tr -s '	 ' '  '`
 
 		#
 		# We must handle the MAIL_CMD option specially because it may
@@ -1998,6 +1998,7 @@ add_extra_dirs() {
 		# contain the Sun 'companion' software.
 		#
 
+		test -d /usr/gnu && EXTRA_DIRS="${EXTRA_DIRS} /usr/gnu/bin /usr/gnu/sbin"
 		test -d /usr/sfw && EXTRA_DIRS="${EXTRA_DIRS} /usr/sfw/bin /usr/sfw/sbin /usr/sfw/libexec"
 		test -d /opt/sfw && EXTRA_DIRS="${EXTRA_DIRS} /opt/sfw/bin /opt/sfw/sbin /opt/sfw/libexec"
 		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
@@ -2067,7 +2068,7 @@ get_bindir_option() {
 	USE_DFLT=0
 
 	if [ -n "${BINPATHS}" ]; then
-		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
+		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -d "'" | tr -s '	 ' '  '`
 
 		if [ "${BINPATHS}" = " " ]; then
 			LEAVE=1
@@ -3118,7 +3119,7 @@ get_enable_option() {
 	#
 
 	if [ $ENABLE_OPT -eq 1 ]; then
-		ENABLE_TESTS=`echo "${CL_ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+		ENABLE_TESTS=`echo "${CL_ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr -s '	 ' '  '`
 		ENABLE_TESTS=`echo ${ENABLE_TESTS}`
 
 		if [ -z "${ENABLE_TESTS}" ]; then
@@ -3175,7 +3176,7 @@ get_disable_option() {
 	#
 
 	if [ -n "${CL_DISABLE_TESTS}" ]; then
-		CL_DISABLE_TESTS=`echo "${CL_DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+		CL_DISABLE_TESTS=`echo "${CL_DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' ' | tr -s '	 ' '  '`
 		CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
 
 		if [ -z "${CL_DISABLE_TESTS}" ]; then
@@ -3947,7 +3948,7 @@ get_hash_function() {
 
 	if [ $HASH_OPT -eq 1 ]; then
 
-		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr '	' ' ' | tr -s ' '`
+		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr -s '	 ' '  '`
 
 		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 
@@ -9739,9 +9740,9 @@ File:${FILENAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE
 					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 					if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i -v '(shell|/bin/sh) script( |$)'`
+						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | tr -s '	' ' ' | cat -v | egrep -i -v '(shell|/bin/sh) script( |$)'`
 					else
-						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i ' script( |$)'`
+						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | tr -s '	' ' ' | cat -v | egrep -i ' script( |$)'`
 					fi
 
 					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
@@ -10171,7 +10172,7 @@ suspscan() {
 				# Finally, test the file type.
 				#
 
-				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | cat -v | cut -d' ' -f2-`
+				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | tr -s '	' ' ' | cat -v | cut -d' ' -f2-`
 
 				#
 				# We need to check errors from the file command, but not
@@ -14701,7 +14702,7 @@ do_dev_whitelist_check() {
 	#
 
 
-	FNAME=`${FILE_CMD} "${RKHTMPVAR}" 2>/dev/null | cat -v | tr '	' ' ' | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`
+	FNAME=`${FILE_CMD} "${RKHTMPVAR}" 2>/dev/null | cat -v | tr -s '	' ' ' | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`
 
 	test -z "${FNAME}" && return
 
@@ -14884,7 +14885,7 @@ do_filesystem_check() {
 			test -n "`echo \"${FNAME}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
 		fi
 
-		FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr '	' ' ' | tr -s ' ' | cut -d' ' -f2-`
+		FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr -s '	 ' '  ' | cut -d' ' -f2-`
 
 		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|empty'`" && continue
 
@@ -17345,7 +17346,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 		LEAVE=0
 		RKHTMPVAR=""
 
-		PROPUPD_OPT=`echo "${PROPUPD_OPT}" | tr ',' ' ' | tr '	' ' ' | tr -s ' '`
+		PROPUPD_OPT=`echo "${PROPUPD_OPT}" | tr ',' ' ' | tr -s '	 ' '  '`
 		test "${PROPUPD_OPT}" = " " -o "${PROPUPD_OPT}" = "/" && PROPUPD_OPT=""
 
 		for FNAME in ${PROPUPD_OPT}; do
