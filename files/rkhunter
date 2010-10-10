@@ -1560,11 +1560,9 @@ check_commands() {
 	# rather than 'strings', if it is available.
 	#
 
-	if [ $SUNOS -eq 1 ]; then
-		if [ "${STRINGS_CMD}" != "DISABLED" -a "${STRINGS_CMD}" != "BUILTIN" ]; then
-			RKHTMPVAR=`find_cmd gstrings`
-			test -n "${RKHTMPVAR}" && STRINGS_CMD="${RKHTMPVAR}"
-		fi
+	if [ $SUNOS -eq 1 -a "${STRINGS_CMD}" != "DISABLED" ]; then
+		RKHTMPVAR=`find_cmd gstrings`
+		test -n "${RKHTMPVAR}" && STRINGS_CMD="${RKHTMPVAR}"
 	fi
 
 
@@ -3464,12 +3462,11 @@ get_epoch_date_cmd_option() {
 	# and then return.
 	#
 
-	if [ -n "`echo \"${EPOCH_DATE_CMD}\" | grep -i '^perl$'`" ]; then
+	if [ "${EPOCH_DATE_CMD}" = "PERL" ]; then
 		EPOCH_DATE_CMD=""
 		test -z "${PERL_CMD}" && EPOCH_DATE_CMD="NONE"
 		return
-	elif [ -n "`echo \"${EPOCH_DATE_CMD}\" | grep -i '^none$'`" ]; then
-		EPOCH_DATE_CMD="NONE"
+	elif [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
 		return
 	elif [ -n "${EPOCH_DATE_CMD}" ]; then
 		RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
@@ -6696,12 +6693,53 @@ do_config_check() {
 	for CONFIGOPT in ${RKHTMPVAR}; do
 		CONFIGCMD=`echo ${CONFIGOPT} | cut -d= -f 1`
 
+		#
+		# We have to handle the *_CMD entries specially.
+		#
+
 		if [ -n "`echo ${CONFIGCMD} | grep '_CMD$'`" ]; then
-			if [ "${CONFIGCMD}" != "EPOCH_DATE_CMD" -a "${CONFIGCMD}" != "MAIL_CMD" -a "${CONFIGCMD}" != "WEB_CMD" ]; then
-				echo "Unable to check command options: ${CONFIGOPT}"
+			CMD_OK=0
+
+			# We know about these ones.
+			test "${CONFIGCMD}" = "EPOCH_DATE_CMD" -o "${CONFIGCMD}" = "MAIL_CMD" -o "${CONFIGCMD}" = "WEB_CMD" && CMD_OK=1
+
+			if [ $CMD_OK -eq 0 ]; then
+				# Dig out the actual command name used.
+				CFG_CMD=`echo ${CONFIGCMD} | sed -e 's/_CMD$//'`
+
+				# Check to see if the command is one we now about.
+				test -n "`echo \" ${CMDLIST} \" | grep -i \" ${CFG_CMD} \"`" && CMD_OK=1
 			fi
 
-			continue
+			#
+			# Now check to see if the supplied command is actually exectuable.
+			#
+
+			if [ $CMD_OK -eq 1 ]; then
+				# Dig out the command name.
+				CFG_CMD=`echo ${CONFIGOPT} | cut -d= -f 2 | awk '{ print $1 }'`
+
+				# We know about these values.
+				if [ "${CFG_CMD}" = "DISABLED" ]; then
+					:
+				elif [ \( "${CONFIGCMD}" = "STAT_CMD" -o "${CONFIGCMD}" = "READLINK_CMD" \) -a "${CFG_CMD}" = "BUILTIN" ]; then
+					:
+				elif [ "${CONFIGCMD}" = "EPOCH_DATE_CMD" -a \( "${CFG_CMD}" = "NONE" -o "${CFG_CMD}" = "PERL" \) ]; then
+					:
+				else
+					# We need to change the IFS back for the 'find_cmd' call.
+					IFS=$RKHIFS
+
+					if [ -z "`find_cmd ${CFG_CMD}`" ]; then
+						RET_CODE=1
+						echo "Command cannot be found: ${CONFIGOPT}"
+					fi
+
+					IFS=$IFSNL
+				fi
+
+				continue
+			fi
 		fi
 
 		if [ -z "`echo \"${VALIDOPTS}\" | grep \" ${CONFIGCMD} \"`" ]; then
