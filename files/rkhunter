@@ -4240,6 +4240,30 @@ get_hash_function() {
 		fi
 		;;
 	SOLARIS)
+		#
+		# For the Solaris package manager, see if we want
+		# to use the stored 16-bit checksum or not.
+		#
+
+		USE_SUNSUM=`get_option 1 single USE_SUNSUM` || exit 1
+
+		if [ -n "${USE_SUNSUM}" ]; then
+			check_is_digit USE_SUNSUM
+
+			if [ $ERRCODE -eq 0 ]; then
+				SUM_CMD=`find_cmd sum`
+
+				if [ -z "${SUM_CMD}" ]; then
+					LEAVE=1
+					echo "Unable to find 'sum' command for package manager 'SOLARIS'."
+				fi
+			else
+				LEAVE=1
+			fi
+		else
+			USE_SUNSUM=0
+		fi
+
 		if [ ! -f "/var/sadm/install/contents" ]; then
 			LEAVE=1
 			echo "Unable to find package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
@@ -5615,6 +5639,12 @@ ${DIR}:1"
 
 				RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
 
+				if [ $USE_SUNSUM -eq 1 ]; then
+					# Treat this as a fully packaged file.
+					FILE_IS_PKGD=1
+					SYSHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f8`
+				fi
+
 				RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
 
 				#
@@ -5669,8 +5699,9 @@ ${DIR}:1"
 					;;
 				SOLARIS)
 					#
-					# We do not use the stored Solaris package manager hash value.
-					# Instead we calculate it as if the file was not packaged.
+					# If we are to use the stored 16-bit checksum, then
+					# SYSHASH will already have been set above. Otherwise,
+					# just calculate the hash as for non-packaged files.
 					#
 					;;
 				esac
@@ -6647,8 +6678,9 @@ do_config_check() {
 		   SSH_CONFIG_DIR STARTUP_PATHS SUSPSCAN_DEBUG SUSPSCAN_DIRS SUSPSCAN_LINETHRESH
 		   SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH SYSLOG_CONFIG_FILE TMPDIR
 		   UID0_ACCOUNTS UNHIDE_TESTS UPDATE_LANG UPDATE_MIRRORS UPDT_ON_OS_CHANGE
-		   USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD WEB_CMD
-		   WHITELISTED_IS_WHITE WRITEWHITELIST XINETD_ALLOWED_SVC XINETD_CONF_PATH"
+		   USE_SUNSUM USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE
+		   WEBCMD WEB_CMD WHITELISTED_IS_WHITE WRITEWHITELIST XINETD_ALLOWED_SVC
+		   XINETD_CONF_PATH"
 
 	VALIDOPTS=" `echo ${VALIDOPTS}` "
 
@@ -9281,6 +9313,14 @@ ${RKHLINE}"
 
 					RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
 
+					if [ $USE_SUNSUM -eq 1 ]; then
+						# Treat this as a fully packaged file.
+						FILE_IS_PKGD=1
+						RKHHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f8`
+					else
+						RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+					fi
+
 					RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
 
 					#
@@ -9292,16 +9332,16 @@ ${RKHLINE}"
 					test -n "${INODECMD}" && RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
 
 					#
-					# Finally, get the file name and hash value.
+					# Finally, get the file name.
 					#
 
-					RKHTMPVAR2=`echo ${RKHLINE} | cut -d: -f1-3`
+					RKHTMPVAR2=`echo ${RKHLINE} | cut -d: -f1-2`
 
 					#
 					# Now put it all together.
 					#
 
-					RKHLINE="${RKHTMPVAR2}:${RKHTMPVAR}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
+					RKHLINE="${RKHTMPVAR2}:${RKHHASH}:${RKHTMPVAR}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 				fi
 			fi
 
@@ -9384,7 +9424,20 @@ ${RKHLINE}"
 					fi
 					;;
 				SOLARIS)
-					# We don't use the Solaris package manager hash value.
+					#
+					# We only use the Solaris package manager
+					# hash value if we have been told to do so.
+					#
+
+					if [ $NOVRFYFILE -eq 0 -a $USE_SUNSUM -eq 1 ]; then
+						SYSHASH="${RKHHASH}"
+
+						RKHTMPVAR=`${SUM_CMD} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+						if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
+							PKGMGR_VERIFY_RESULT="5"
+						fi
+					fi
 					;;
 				esac
 
@@ -17810,6 +17863,12 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			BSD)
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
 				;;
+			SOLARIS)
+				if [ $USE_SUNSUM -eq 1 ]; then
+					display --to LOG --type INFO HASH_PKGMGR_SUM
+					display --to LOG --type INFO FOUND_CMD "sum" "${SUM_CMD}"
+				fi
+				;;
 			esac
 		fi
 	fi
@@ -17844,6 +17903,12 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			BSD)
 				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				;;
+			SOLARIS)
+				if [ $USE_SUNSUM -eq 1 ]; then
+					display --to LOG --type INFO HASH_PKGMGR_SUM
+					display --to LOG --type INFO FOUND_CMD "sum" "${SUM_CMD}"
+				fi
 				;;
 			esac
 		fi

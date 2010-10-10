@@ -1,4 +1,4 @@
-Version:2010100801
+Version:2010101001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -105,6 +105,7 @@ HASH_PKGMGR_OLD_UNSET:Stored hash values did not use a package manager
 
 HASH_PKGMGR:Using package manager '$1' for file property checks
 HASH_PKGMGR_MD5:Using MD5 hash function command '$1' to assist package manager verification
+HASH_PKGMGR_SUM:Using the stored 16-bit checksum for package verification
 HASH_PKGMGR_NOT_SPEC:No package manager specified: using hash function '$1'
 HASH_PKGMGR_NOT_SPEC_PRELINKED:No package manager specified: using prelink command with '$1'
 

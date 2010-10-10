@@ -426,16 +426,19 @@ systems, 'DPKG' for Debian-based systems, 'BSD' for *BSD systems, and
 'SOLARIS' for Solaris systems. It is also possible to specify 'NONE' to
 indicate not to use a package manager. The program default is 'NONE'.
 
-Any file which is not part of a package, and for the 'SOLARIS' package
-manager, is treated as before, that is, the HASH_FUNC configuration file
-option, or the '--hash' command-line option, will be used.
+Any file which is not part of a package is treated as before, that is,
+the HASH_FUNC configuration file option, or the '--hash' command-line
+option, will be used.
 
 It should be noted that all the package managers, except 'SOLARIS', provide
 an MD5 hash value for a file. However, the 'RPM' and 'SOLARIS' package
 managers can provide other file property values as well, such as the file
 permissions, uid, gid, modification time and so on. During the file
 properties check all of these values will be used, rather than the ones
-stored in the rkhunter.dat file.
+stored in the rkhunter.dat file. The Solaris package manager does store a
+16-bit hash value, but this is not used by default. If it is wished to
+use the stored value, then the USE_SUNSUM configuration option must be
+enabled.
 
 It should also be noted that the 'DPKG' and 'BSD' package manager options
 only provide the files MD5 hash value. As such, during the file properties

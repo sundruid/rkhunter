@@ -48,8 +48,10 @@
  - It is now possible to specify 'SOLARIS' as a package manager for
    Solaris systems. It can be used to check several of the file
    properties, such as the file permissions, ownership, size and so
-   on, but not the hash value. That will be calculated, as before,
-   using the configured hash function.
+   on. By default the stored 16-bit hash value is not used, and a hash
+   value will be calculated, as before, using the configured hash
+   function. However, if it is wished that the stored hash value is
+   used, then the USE_SUNSUM configuration option must be enabled.
  - The command-line option '--list perl' may be used to see the
    installation status of perl modules that may be used by some of
    the tests.
