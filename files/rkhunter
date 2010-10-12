@@ -432,7 +432,7 @@ display() {
 			LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
 
 			if [ -z "${LINE1}" ]; then
-				echo "Error: Invalid display - language keyword cannot be found: Display line: ${DISPLAY_LINE}"
+				echo "Error: Invalid display - keyword cannot be found: Display line: ${DISPLAY_LINE}"
 				return
 			fi
 		else
@@ -5756,7 +5756,13 @@ ${DIR}:1"
 		else
 			if [ -z "${FDATA}" ]; then
 				FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
-				test -z "${FDATA}" && FDATA=":::::"
+
+				if [ -z "${FDATA}" ]; then
+					FDATA=":::::"
+				elif [ -n "`echo ${FDATA} | grep '^[^:]*:0[0-9][0-9][0-9][0-9]:'`" ]; then
+					# Ensure the file permissions consist of only 4 digits.
+					FDATA=`echo $FDATA | sed -e 's/^\([^:]*:\)0\(.*\)$/\1\2/'`
+				fi
 			fi
 		fi
 
@@ -9574,7 +9580,14 @@ ${RKHLINE}"
 					fi
 				done
 
-				test -z "${FDATA}" && FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':'`
+				if [ -z "${FDATA}" ]; then
+					FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':'`
+
+					# Ensure the file permissions consist of only 4 digits.
+					if [ -n "`echo ${FDATA} | grep '^[^:]*:0[0-9][0-9][0-9][0-9]:'`" ]; then
+						FDATA=`echo $FDATA | sed -e 's/^\([^:]*:\)0\(.*\)$/\1\2/'`
+					fi
+				fi
 
 				if [ -z "${WL_FILE}" -a -n "${FDATA}" ]; then
 					#
