@@ -12205,9 +12205,7 @@ ${RKHTMPVAR}:${FNAME}"
 					else
 						# For newer versions we can sort the messages.
 						if [ $UNHIDE_VERS -ge 20100919 ]; then
-#jh - this needs testing - otherwise we could get a mess displayed
-:
-#jh							FOUND_PROCS=`echo "${FOUND_PROCS}" | sort | uniq`
+							FOUND_PROCS=`echo "${FOUND_PROCS}" | sort | uniq`
 						fi
 
 						HIDDEN_PROCS="${HIDDEN_PROCS}
