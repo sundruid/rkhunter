@@ -1121,6 +1121,8 @@ suckit_extra_checks() {
 	SKDET_CMD=`find_cmd skdet`
 
 	if [ -n "${SKDET_CMD}" ]; then
+		display --to LOG --type INFO FOUND_CMD 'skdet' "${SKDET_CMD}"
+
 		#
 		# We need to check the skdet version first.
 		#
@@ -1157,7 +1159,7 @@ suckit_extra_checks() {
 		fi
 	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
-		display --to LOG --type INFO NOT_FOUND_CMD "skdet"
+		display --to LOG --type INFO NOT_FOUND_CMD 'skdet'
 	fi
 
 
@@ -6733,15 +6735,10 @@ do_config_check() {
 				elif [ "${CONFIGCMD}" = "EPOCH_DATE_CMD" -a \( "${CFG_CMD}" = "NONE" -o "${CFG_CMD}" = "PERL" \) ]; then
 					:
 				else
-					# We need to change the IFS back for the 'find_cmd' call.
-					IFS=$RKHIFS
-
-					if [ -z "`find_cmd ${CFG_CMD}`" ]; then
+					if [ -z "`IFS=$RKHIFS find_cmd ${CFG_CMD}`" ]; then
 						RET_CODE=1
 						echo "Command cannot be found: ${CONFIGOPT}"
 					fi
-
-					IFS=$IFSNL
 				fi
 
 				continue
