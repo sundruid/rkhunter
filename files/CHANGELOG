@@ -123,8 +123,8 @@
    to '1' if the 'Protocol' option is not set in the SSH configuration
    file. A value of '2' must be used. (The use of '1' in this instance
    was an undocumented, but allowed setting.)
- - The '--enable' and '--disable' command-line options may now be used
-   more than once on the command-line.
+ - The '--enable' and '--disable' command-line options may now be
+   specified more than once.
  - The default behaviour when the command-line option '--disable' is
    used has been changed. Rkhunter will now also include the
    configuration file option used to disable tests, in order to
@@ -150,6 +150,10 @@
    if the user wishes, and caters for newer versions of 'unhide' which
    have several new options. Increased the amount of logging of what
    rkhunter is doing during the 'hidden_procs' test.
+ - Both the '--bindir' command-line option and the BINDIR configuration
+   file option may now be specified more than once. The description of
+   how these options affect the PATH of rkhunter has been reworded in
+   both the supplied rkhunter.conf file and the man page.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

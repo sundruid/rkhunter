@@ -172,10 +172,12 @@ This option tells \fBrkhunter\fP to append to the existing log file. If the
 log file does not exist, then it will be created.
 
 .IP "\fB\-\-bindir <directory>...\fP"
-This option tells \fBrkhunter\fP which directories to look in to find the
-various commands it requires. The default is the current PATH environment
-variable, and the typical command directories of /bin, /usr/bin, /sbin and so
-on.
+This option modifies which directories \fBrkhunter\fP looks in to find the
+various commands it requires (that is, its PATH). The default is the root
+PATH, and an internal list of some common command directories. By default
+a specified directory will be appended to the default list. However, if the
+directory name begins with the '+' character, then it will be prepended to
+the list (that is, it will be put at the start of the list).
 
 .IP "\fB\-\-cs2, \-\-color\-set2\fP"
 By default \fBrkhunter\fP will display its test results in color. The colors

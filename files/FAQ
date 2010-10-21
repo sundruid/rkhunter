@@ -387,7 +387,7 @@ A.   The first run of rkhunter after an installation will usually give
      exist until rkhunter is run with the '--propupd' option. There is
      also a check to see if any commands have been replaced by a script.
      To avoid these warning messages you can whitelist the commands in
-     your rkhunter.conf file. Similarly if there are warnings about
+     your configuration file. Similarly if there are warnings about
      hidden files or directories, then these can be whitelisted. Look in
      the configuration file and you will find examples of these.
 
@@ -505,7 +505,7 @@ A.   You have a choice:
           example, 'yum' or 'apt-get').
 
        2) You may be able to disable the check by adding its test
-          name to your rkhunter.conf file. (See the README file
+          name to your configuration file. (See the README file
           for more information about the test names.)
 
        3) If you are sure that the relevant command is present on
@@ -514,7 +514,7 @@ A.   You have a choice:
           is using. If the directory containing the command isn't
           listed, then you can set the command directories to use
           by using the '--bindir' command-line option, or the BINDIR
-          option in the rkhunter.conf file.
+          option in the configuration file.
 
 
 4.3) I get warnings from PHP like:

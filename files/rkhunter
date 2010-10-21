@@ -740,11 +740,14 @@ check_paths() {
 
 	for FNAME in ${RKHTMPVAR}; do
 		#
-		# For the user file property list we have
-		# to remove any leading '!' character.
+		# For some options we may have to remove the leading character.
 		#
 
-		if [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
+		if [ "${OPT_NAME}" = "BINDIR" ]; then
+			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
+				FNAME=`echo "${FNAME}" | cut -c2-`
+			fi
+		elif [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
 			if [ -n "`echo \"${FNAME}\" | grep '^!'`" ]; then
 				FNAME=`echo "${FNAME}" | cut -c2-`
 				# Re-expand the name in case it has globbing characters.
@@ -1407,17 +1410,28 @@ ${KS}"
 check_required_commands() {
 
 	#
-	# This function checks that some required commands are
-	# present on the system. The function takes one argument
-	# which is a list of directories to look in.
+	# This function checks that the required commands are present
+	# on the system. The function is called twice: initially to check
+	# that we can at least start running rkhunter; and the second
+	# time after we have processed BINDIR to ensure that all the
+	# required commands are present. It takes one parameter used
+	# to indicate which list of commands to check.
 	#
 
 	LEAVE=0
 
-	for CMD in ${REQCMDS}; do
+	if [ $1 -eq 1 ]; then
+		CMDDIR="${RKHROOTPATH}"
+		CMDNAMES="${ABSOLUTELY_REQUIRED_CMDS}"
+	else
+		CMDDIR="${BINPATHS}"
+		CMDNAMES="${REQCMDS}"
+	fi
+
+	for CMD in ${CMDNAMES}; do
 		SEEN=0
 
-		for DIR in $1; do
+		for DIR in ${CMDDIR}; do
 			if [ -f "${DIR}/${CMD}" -a -x "${DIR}/${CMD}" ]; then
 				SEEN=1
 				break
@@ -1426,7 +1440,7 @@ check_required_commands() {
 
 		if [ $SEEN -eq 0 ]; then
 			LEAVE=1
-			echo "The command '$CMD' must be present on the system in order to run rkhunter."
+			echo "The command '${CMD}' must be present on the system in order to run rkhunter."
 		fi
 	done
 
@@ -1998,7 +2012,7 @@ add_extra_dirs() {
 		# contain the Sun 'companion' software.
 		#
 
-		test -d /usr/gnu && EXTRA_DIRS="${EXTRA_DIRS} /usr/gnu/bin /usr/gnu/sbin"
+		test -d /usr/gnu && EXTRA_DIRS="${EXTRA_DIRS} /usr/gnu/bin /usr/gnu/sbin /usr/gnu/libexec"
 		test -d /usr/sfw && EXTRA_DIRS="${EXTRA_DIRS} /usr/sfw/bin /usr/sfw/sbin /usr/sfw/libexec"
 		test -d /opt/sfw && EXTRA_DIRS="${EXTRA_DIRS} /opt/sfw/bin /opt/sfw/sbin /opt/sfw/libexec"
 		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
@@ -2014,20 +2028,16 @@ add_extra_dirs() {
 
 		test -d /usr/foss && EXTRA_DIRS="${EXTRA_DIRS} /usr/foss/bin /usr/foss/sbin /usr/foss/libexec"
 	elif [ $BSDOS -eq 1 ]; then
-		test -d /usr/pkg/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/bin"
-		test -d /usr/pkg/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/sbin"
-		test -d /usr/pkg/libexec && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/libexec"
+		test -d /usr/pkg && EXTRA_DIRS="${EXTRA_DIRS} /usr/pkg/bin /usr/pkg/sbin /usr/pkg/libexec"
 	elif [ $MACOSX -eq 1 ]; then
 		#
 		# Cater for Fink (Mac OS X) additional software.
 		#
 
-		test -d /sw/bin && EXTRA_DIRS="${EXTRA_DIRS} /sw/bin"
-		test -d /sw/sbin && EXTRA_DIRS="${EXTRA_DIRS} /sw/sbin"
+		test -d /sw && EXTRA_DIRS="${EXTRA_DIRS} /sw/bin /sw/sbin"
 	elif [ $IRIXOS -eq 1 ]; then
 		test -d /usr/ucb && EXTRA_DIRS="${EXTRA_DIRS} /usr/ucb"
-		test -d /usr/freeware/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/freeware/bin"
-		test -d /usr/freeware/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/freeware/sbin"
+		test -d /usr/freeware && EXTRA_DIRS="${EXTRA_DIRS} /usr/freeware/bin /usr/freeware/sbin"
 		test -d /usr/xpg4/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/xpg4/bin"
 	elif [ -f "/etc/GoboLinuxVersion" ]; then
 		#
@@ -2046,10 +2056,8 @@ add_extra_dirs() {
 	# bin and sbin directories present.
 	#
 
-	test -d /usr/opt/bin && EXTRA_DIRS="${EXTRA_DIRS} /usr/opt/bin"
-	test -d /usr/opt/sbin && EXTRA_DIRS="${EXTRA_DIRS} /usr/opt/sbin"
-	test -d /opt/bin && EXTRA_DIRS="${EXTRA_DIRS} /opt/bin"
-	test -d /opt/sbin && EXTRA_DIRS="${EXTRA_DIRS} /opt/sbin"
+	test -d /opt && EXTRA_DIRS="${EXTRA_DIRS} /opt/bin /opt/sbin"
+	test -d /usr/opt && EXTRA_DIRS="${EXTRA_DIRS} /usr/opt/bin /usr/opt/sbin"
 
 	return
 }
@@ -2065,9 +2073,8 @@ get_bindir_option() {
 
 	LEAVE=0
 	ERRCODE=0
-	USE_DFLT=0
 
-	if [ -n "${BINPATHS}" ]; then
+	if [ $BINDIR_OPT -eq 1 ]; then
 		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -d "'" | tr -s '	 ' '  '`
 
 		if [ "${BINPATHS}" = " " ]; then
@@ -2081,8 +2088,6 @@ get_bindir_option() {
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ -z "${BINPATHS}" ]; then
-				USE_DFLT=1
-
 				BINPATHS="${DFLT_BINPATHS}"
 
 
@@ -2093,13 +2098,13 @@ get_bindir_option() {
 
 				if [ $SUNOS -eq 1 -o $IRIXOS -eq 1 -o "${OPERATING_SYSTEM}" = "AIX" ]; then
 					if [ -h /bin ]; then
-						RKHB=""
+						RKHTMPVAR=""
 
 						for DIR in ${BINPATHS}; do
-							test "${DIR}" != "/bin" && RKHB="${RKHB} ${DIR}"
+							test "${DIR}" != "/bin" && RKHTMPVAR="${RKHTMPVAR} ${DIR}"
 						done
 
-						BINPATHS=`echo ${RKHB}`
+						BINPATHS=`echo ${RKHTMPVAR}`
 					fi
 				fi
 
@@ -2114,25 +2119,51 @@ get_bindir_option() {
 
 
 	#
-	# This is a simple check that each directory begins with
-	# a '.' or '/'. We allow non-existent directories because
-	# this list may be used with RKHROOTDIR. As such the directory
-	# may not exist on the local host, but may exist on a
-	# remotely diagnosed system.
+	# The BINPATHS list is prepended with the root PATH. However,
+	# any specified BINDIR directories beginning with a '+' will
+	# be prepended before the root PATH.
+	#
+	# Once that has been done, we check that each directory begins
+	# with a '/'. We remove any non-existent directories, but we do
+	# not flag this as an error. We also remove any duplicate directories.
 	#
 
 	if [ $LEAVE -eq 0 ]; then
-		for DIR in ${BINPATHS}; do
-			if [ -z "`echo ${DIR} | grep '^[./]'`" ]; then
-				LEAVE=1
-				echo "Invalid BINDIR configuration option: Invalid directory found: ${DIR}"
-			fi
+		RKHTMPVAR=""
+		PREPEND_PATHS=""
 
-			if [ -e "${DIR}" -a ! -d "${DIR}" ]; then
-				LEAVE=1
-				echo "Invalid BINDIR configuration option: Not a directory: ${DIR}"
+		for DIR in ${BINPATHS}; do
+			if [ -n "`echo ${DIR} | grep '^\+'`" ]; then
+				DIR=`echo ${DIR} | cut -c2-`
+				PREPEND_PATHS="${PREPEND_PATHS} ${DIR}"
 			fi
 		done
+
+		PREPEND_PATHS=`echo ${PREPEND_PATHS}`
+
+
+		for DIR in ${PREPEND_PATHS} ${RKHROOTPATH} ${BINPATHS}; do
+			if [ -n "`echo ${DIR} | grep '^\+'`" ]; then
+				# These will already be in PREPEND_PATHS.
+				continue
+			elif [ -z "`echo ${DIR} | grep '^/'`" ]; then
+				LEAVE=1
+				test $BINDIR_OPT -eq 1 && RKHTMPVAR2="'--bindir'" || RKHTMPVAR2="BINDIR configuration"
+				echo "Invalid ${RKHTMPVAR2} option: Invalid directory found: ${DIR}"
+			elif [ -e "${DIR}" ]; then
+				if [ -d "${DIR}" ]; then
+					if [ -z "`echo \" ${RKHTMPVAR} \" | grep \" ${DIR} \"`" ]; then
+						RKHTMPVAR="${RKHTMPVAR} ${DIR}"
+					fi
+				else
+					LEAVE=1
+					test $BINDIR_OPT -eq 1 && RKHTMPVAR2="'--bindir'" || RKHTMPVAR2="BINDIR configuration"
+					echo "Invalid ${RKHTMPVAR2} option: Not a directory: ${DIR}"
+				fi
+			fi
+		done
+
+		BINPATHS=`echo ${RKHTMPVAR}`
 	fi
 
 	if [ $LEAVE -eq 1 ]; then
@@ -2199,9 +2230,9 @@ get_scriptdir_option() {
 find_cmd() {
 
 	#
-	# This function performs a search of the PATH and BINPATHS
-	# directories looking for the requested command. The full
-	# pathname is returned if the command is found.
+	# This function performs a search of the BINPATHS directories
+	# looking for the requested command. The full pathname is
+	# returned if the command is found.
 	#
 	# If a full pathname is provided then we simply check that
 	# it is executable.
@@ -2214,7 +2245,7 @@ find_cmd() {
 	if [ -n "`echo ${CMD} | grep '/'`" ]; then
 		test -f "${CMD}" -a -x "${CMD}" && echo "${CMD}"
 	else
-		for CMDDIR in ${SPACEDPATH} ${BINPATHS}; do
+		for CMDDIR in ${BINPATHS}; do
 			if [ -f "${CMDDIR}/${CMD}" -a -x "${CMDDIR}/${CMD}" ]; then
 				echo "${CMDDIR}/${CMD}"
 				return
@@ -4963,11 +4994,28 @@ get_configfile_options() {
 	# correctly.
 	#
 
+	get_bindir_option
+
+	get_scriptdir_option
+
+	#
+	# Now that we have processed BINDIR, we will recheck the required
+	# commands.
+	#
+	# Before proceeding too far we also check that we have certain
+	# commands available. Typically these are commands which might
+	# not have been installed as part of the core system, but are
+	# used by RKH. These commands are not 'required' though.
+	#
+
+	check_required_commands 2
+
+	check_commands
+
+
 	get_installdir_option
 
 	get_rootdir_option
-
-	get_bindir_option
 
 	get_logfile_option
 
@@ -4977,26 +5025,9 @@ get_configfile_options() {
 
 	get_language_option
 
-	get_scriptdir_option
-
 	get_auto_x_option
 
 	get_locking_options
-
-
-	#
-	# Now that we have processed BINDIR, we will recheck the
-	# required commands.
-	#
-	# Before proceeding too far we also check that we have certain
-	# commands available. Typically these are commands which might
-	# not have been installed as part of the core system, but are
-	# used by RKH. These commands are not 'required' though.
-	#
-
-	check_required_commands "${BINPATHS}"
-
-	check_commands
 
 
 	#
@@ -11167,8 +11198,6 @@ rootkit_file_dir_checks() {
 
 		if [ -n "${FIND_CMD}" ]; then
 			for DIR in ${BINPATHS}; do
-				test ! -d "${RKHROOTDIR}${DIR}" && continue
-
 				FOUNDINDIR="NOT_FOUND"
 
 				for FNAME in `${FIND_CMD} "${RKHROOTDIR}${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
@@ -16421,8 +16450,6 @@ COPY_LOG_ON_ERROR=0
 USE_SYSLOG=""
 SYSLOG_DFLT_PRIO="authpriv.notice"
 
-DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
-
 # By default do not send a mail-on-warning message.
 NOMOW=0
 MAILONWARNING=""
@@ -16492,10 +16519,13 @@ CONFIGFILE=""
 # be in the same directory as the main config file.
 LOCALCONFIGFILE=""
 
-# Users can reset this to new command directories.
+# This will be set similar to the current root PATH. Users can
+# include new command directories to use as well.
 BINPATHS=""
+DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
+BINDIR_OPT=0
 
-# Default 'id' command. Solaris will reset this.
+# Default 'id' command. Solaris may reset this.
 ID_CMD="id"
 
 # Set if we don't want to wait for a keypress after each test.
@@ -16575,13 +16605,17 @@ KSYMS_FILE=""
 CMD_LINE="$0 $*"
 
 # Create a spaced-separated PATH variable.
-SPACEDPATH=`echo ${PATH} | tr ':' ' '`
+RKHROOTPATH=`echo ${PATH} | tr ':' ' '`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
 CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl pgrep ps pwd readlink stat strings"
 
-# Commands that are required to exist for RKH to run.
+# Commands that are required to exist for RKH to run. The absolutely
+# required commands are tested early on using just the root PATH. Then
+# BINDIR is checked, and finally the rest of the commands are then
+# checked using the new PATH from BINDIR.
+ABSOLUTELY_REQUIRED_CMDS="cut egrep grep sed tail tr"
 REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed sort tail touch tr uname uniq wc"
 
 # List of commands used to download files from the web. This list is 
@@ -16814,20 +16848,22 @@ while [ $# -ge 1 ]; do
 		APPEND_OPT=1
 		;;
 	--bindir)
-		BINPATHS=""
+		RKHTMPVAR="$2"
 
-		case "$2" in
+		case "${RKHTMPVAR}" in
 		"")
 			;;
 		-*)
+			RKHTMPVAR=""
 			;;
 		*)
 			shift
-			BINPATHS="$1"
+			BINPATHS="${BINPATHS} ${RKHTMPVAR}"
+			BINDIR_OPT=1
 			;;
 		esac
 
-		if [ -z "${BINPATHS}" ]; then
+		if [ -z "${RKHTMPVAR}" ]; then
 			echo "No command directories specified with '--bindir' option."
 			exit 1
 		fi
@@ -17234,7 +17270,7 @@ test $UPDATE -eq 1 -a $CHECK -eq 0 -a $PROP_UPDATE -eq 0 -a $VERSIONCHECK -eq 0 
 # look for later on.
 #
 
-check_required_commands "${SPACEDPATH} ${DFLT_BINPATHS}"
+check_required_commands 1
 
 
 ######################################################################
@@ -17761,7 +17797,7 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO CONFIG_SCRIPTDIR "${SCRIPT_PATH}"
 
-	display --to LOG --type INFO CONFIG_BINDIR "${SPACEDPATH} ${BINPATHS}"
+	display --to LOG --type INFO CONFIG_BINDIR "${BINPATHS}"
 
 	if [ -z "${RKHROOTDIR}" ]; then
 		display --to LOG --type INFO CONFIG_ROOTDIR_DFLT
