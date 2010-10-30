@@ -6930,7 +6930,13 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/tmp/.bkp"
 	BOBKIT_KSYMS=
 
-	# Boxer-0.99b3
+
+	# OSX Boonana-A Trojan (aka Koobface.A)
+	BOONANA_FILES="${RKHROOTDIR}/Library/StartupItems/OSXDriverUpdates/OSXDriverUpdates
+		       ${RKHROOTDIR}/Library/StartupItems/OSXDriverUpdates/StartupParameters.plist"
+	BOONANA_DIRS="${RKHROOTDIR}/var/root/.jnana"
+	BOONANA_KSYMS=
+
 
 	# cb Rootkit (w00tkit by ZeeN) 
 	# The '%' character represents a space.
@@ -7341,6 +7347,7 @@ do_system_check_initialisation() {
 		     ${RKHROOTDIR}/var/opt/_so_cache/lc"
 	LINUXV_KSYMS=
 
+
 	# Lion Worm
 	LION_FILES="${RKHROOTDIR}/bin/in.telnetd
 		    ${RKHROOTDIR}/bin/mjy
@@ -7365,9 +7372,8 @@ do_system_check_initialisation() {
 	LION_DIRS=
 	LION_KSYMS=
 
-	# LKH-1.1
 
-	# Lockit (a.k.a. LJK2) Rootkit
+	# Lockit Rootkit (aka LJK2)
 	LOCKIT_FILES="${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_config
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key
 		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
@@ -10627,6 +10633,15 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${BOBKIT_DIRS}
 	SCAN_KSYMS=${BOBKIT_KSYMS}
 	scanrootkit
+
+	# OSX Boonana Trojan
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="Boonana Trojan"
+		SCAN_FILES=${BOONANA_FILES}
+		SCAN_DIRS=${BOONANA_DIRS}
+		SCAN_KSYMS=${BOONANA_KSYMS}
+		scanrootkit
+	fi
 
 	# cb Rootkit
 	SCAN_ROOTKIT="cb Rootkit"
@@ -15899,13 +15914,13 @@ set_file_prop_dirs_files() {
 	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
 	    chkconfig chmod chown chroot cp cron csh curl cut date depmod df
 	    diff dirname dmesg dpkg dpkg-query du echo ed egrep elinks env fgrep
-	    file find fuser GET grep groupadd groupdel groupmod groups grpck head id
+	    file find fsck fuser GET grep groupadd groupdel groupmod groups grpck head id
 	    ifconfig ifdown ifstatus ifup inetd init insmod ip kallsyms kill
 	    killall ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
 	    newsyslog nologin passwd perl pgrep pkgdb pkg_info prelink ps pstree pwck
-	    pwd readlink rkhunter rmmod rpm rsyslogd runcon runlevel sed sestatus sh
+	    pwd readlink rkhunter rmmod route rpm rsyslogd runcon runlevel sed sestatus sh
 	    sha1 sha1sum sha224 sha224sum sha256 sha256sum sha384 sha384sum sha512
 	    sha512sum size skdet slocate sockstat sort stat strace strings su sudo
 	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname
@@ -16680,10 +16695,10 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, cb, CiNIK Worm (Slapper.B variant), CX,
+  Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, IntoXonia-NG, Irix, Kitko, Knark,
-  ld-linuxv.so, Li0n Worm, Lockit / LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, 
+  ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, 
   Inqtana-A, Inqtana-B, Inqtana-C, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),

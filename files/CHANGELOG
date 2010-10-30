@@ -71,6 +71,7 @@
    to disable one or other of the 'unhide' or 'unhide.rb' commands
    if they are both present on the system. The default is to look
    for and run both commands.
+ - Added OS X Boonana (Koobface.A) trojan check.
 
  Changes:
  - Allow the 'unhide' command to be detected on Linux systems.
