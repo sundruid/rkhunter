@@ -2152,6 +2152,8 @@ get_bindir_option() {
 				echo "Invalid ${RKHTMPVAR2} option: Invalid directory found: ${DIR}"
 			elif [ -e "${DIR}" ]; then
 				if [ -d "${DIR}" ]; then
+					DIR=`echo "${DIR}" | tr -s '/' | sed -e 's:/$::'`
+
 					if [ -z "`echo \" ${RKHTMPVAR} \" | grep \" ${DIR} \"`" ]; then
 						RKHTMPVAR="${RKHTMPVAR} ${DIR}"
 					fi
