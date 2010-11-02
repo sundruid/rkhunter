@@ -13661,7 +13661,11 @@ do_network_interface_checks() {
 				fi
 				;;
 			*)
-				PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}'):?$/ && /PROMISC/ { print }'`
+				if [ -z "${IFWLIST}" ]; then
+					PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; /PROMISC/ { print }'`
+				else
+					PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}'):?$/ && /PROMISC/ { print }'`
+				fi
 				;;
 			esac
 
