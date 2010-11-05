@@ -17738,10 +17738,27 @@ fi
 
 if [ $NOLOG -eq 0 ]; then
 	if [ $APPEND_LOG -eq 0 ]; then
-		mv -f ${RKHLOGFILE} ${RKHLOGFILE}.old >/dev/null 2>&1
-		touch ${RKHLOGFILE} >/dev/null 2>&1
-		chmod 600 ${RKHLOGFILE} >/dev/null 2>&1
+		if [ -f "${RKHLOGFILE}" ]; then
+			cp -f -p ${RKHLOGFILE} ${RKHLOGFILE}.old >/dev/null 2>&1
+
+			# Overwrite the log file with a null string.
+			if [ "${ECHON}" = "c" ]; then
+				echo $ECHOOPT "\c" >${RKHLOGFILE}
+			else
+				echo $ECHON $ECHOOPT "" >${RKHLOGFILE}
+			fi
+		else
+			# Create a new log file.
+			touch ${RKHLOGFILE} >/dev/null 2>&1
+			chmod 600 ${RKHLOGFILE} >/dev/null 2>&1
+		fi
 	else
+		if [ ! -f "${RKHLOGFILE}" ]; then
+			# Create a new log file.
+			touch ${RKHLOGFILE} >/dev/null 2>&1
+			chmod 600 ${RKHLOGFILE} >/dev/null 2>&1
+		fi
+
 		echo "" >>${RKHLOGFILE}
 		echo "" >>${RKHLOGFILE}
 	fi

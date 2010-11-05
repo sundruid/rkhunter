@@ -155,6 +155,13 @@
    file option may now be specified more than once. The description of
    how these options affect the PATH of rkhunter has been reworded in
    both the supplied rkhunter.conf file and the man page.
+ - The log file permissions and owner/group settings will now be copied
+   to each new log file, rather than a new log file, with default
+   permissions, being created each time. This will allow users to
+   modify the permissions/owner/group of the log file, without them
+   being lost when a new log file is created. If no log file exists,
+   then, as before, one will be created with permissions of 600 and
+   with the owner/group of the root user.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
