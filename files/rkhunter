@@ -15961,7 +15961,7 @@ set_file_prop_dirs_files() {
 		fi
 		;;
 	Darwin)
-		PROP_FILE_LIST="${PROP_FILE_LIST} shasum"
+		PROP_FILE_LIST="${PROP_FILE_LIST} shasum launchctl dscl"
 		;;
 	esac
 
