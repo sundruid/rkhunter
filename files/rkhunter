@@ -14247,16 +14247,33 @@ do_group_accounts_check() {
 		UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
 		UID_LIST=""
+		RKHTMPVAR2=""
+
+		if [ $MACOSX -eq 1 ]; then
+			DSCL_CMD=`find_cmd dscl`
+
+			if [ -n "${DSCL_CMD}" ]; then
+				display --to LOG --type INFO FOUND_CMD 'dscl' "${DSCL_CMD}"
+
+				RKHTMPVAR2=`${DSCL_CMD} . search /Users uid 0 | egrep '^[^ 	)]' | cut -d'	' -f1`
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD "dscl"
+			fi
+		fi
+
 
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`; do
+		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' ${RKHROOTDIR}/etc/passwd | cut -d: -f1` ${RKHTMPVAR2}; do
+			test -z "${RKHTMPVAR}" && continue
+			test "${RKHTMPVAR}" = "root" && continue
+
 			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
 
 			if [ -z "`echo \"${UID0_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
 				UID_LIST="${UID_LIST}
 ${RKHTMPVAR}"
-			elif [ "${RKHTMPVAR}" != "root" ]; then
+			else
 				display --to LOG --type INFO ACCOUNTS_UID0_WL "${RKHTMPVAR}"
 			fi
 		done

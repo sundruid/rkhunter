@@ -162,6 +162,8 @@
    being lost when a new log file is created. If no log file exists,
    then, as before, one will be created with permissions of 600 and
    with the owner/group of the root user.
+ - For OS X users the test of root-equivalent accounts now works
+   with directory services as well as with the password files.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.
