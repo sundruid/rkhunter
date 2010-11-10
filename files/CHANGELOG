@@ -164,6 +164,8 @@
    with the owner/group of the root user.
  - For OS X users the test of root-equivalent accounts now works
    with directory services as well as with the password files.
+ - The check of the syslog configuration file will now check all
+   the files found, not just the first one.
 
  Bugfixes:
  - Corrected test of ProFTPD version number in apps test.

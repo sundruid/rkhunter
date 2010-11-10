@@ -1,4 +1,4 @@
-Version:2010101001
+Version:2010110901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -509,7 +509,8 @@ SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:The syslog daemon is not running, but a me
 SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING:The syslog daemon is not running, but a socklog daemon has been found.
 SYSTEM_CONFIGS_SYSLOG_NO_FILE:The syslog daemon is running, but no configuration file can be found.
 SYSTEM_CONFIGS_SYSLOG_REMOTE:Checking if syslog remote logging is allowed
-SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog configuration file allows remote logging: $1
+SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG:Configuration file allows remote logging: $1
+SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:$1 configuration file allows remote logging: $2
 SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter configuration option 'ALLOW_SYSLOG_REMOTE_LOGGING' has been enabled.
 
 FILESYSTEM_START:Performing filesystem checks

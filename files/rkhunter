@@ -2681,7 +2681,7 @@ get_syslog_config_options() {
 	# See if the pathname to the syslog configuration file has been set.
 	#
 
-	SYSLOG_CONFIG_FILE=`get_option 1 single SYSLOG_CONFIG_FILE` || exit 1
+	SYSLOG_CONFIG_FILE=`get_option 2 multi SYSLOG_CONFIG_FILE` || exit 1
 
 	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
 		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep -i '^none$'`" ]; then
@@ -14787,68 +14787,105 @@ do_system_config_files_check() {
 
 
 	#
-	# Now find out where the syslog configuration file is located.
+	# Now loop through the syslog configuration files.
 	#
 
-	if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
-		RKHTMPVAR=""
-	else
-		if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
-			RKHTMPVAR="${SYSLOG_CONFIG_FILE}"
-			SYSLOG_CONFIG_FILE=""
-		else
-			RKHTMPVAR="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf"
-		fi
+	if [ -z "${SYSLOG_CONFIG_FILE}" ]; then
+		SYSLOG_CONFIG_FILE="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf"
+	fi
 
-		for FILE in ${RKHTMPVAR}; do
-			if [ -f "${RKHROOTDIR}${FILE}" ]; then
-				SYSLOG_CONFIG_FILE="${RKHROOTDIR}${FILE}"
-				break
+	if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
+		display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+	else
+		FILEFOUND=0
+		REMLOGFOUND=""
+
+		for FNAME in ${SYSLOG_CONFIG_FILE}; do
+			if [ -f "${FNAME}" ]; then
+				if [ $FILEFOUND -eq 0 ]; then
+					test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
+				fi
+
+				FILEFOUND=1
+			else
+				continue
+			fi
+
+			# First, log where the configuration file is located.
+
+			if [ -n "`echo \"${FNAME}\" | grep '/rsyslog\.conf$'`" ]; then
+				FTYPE="rsyslog"
+			elif [ -n "`echo \"${FNAME}\" | grep '/syslog-ng\.conf$'`" ]; then
+				FTYPE="syslog-ng"
+			else
+				FTYPE="syslog"
+			fi
+
+			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${FTYPE}" "${FNAME}"
+
+
+			# Next see if the configuration file allows remote logging.
+
+			if [ -n "`echo \"${FNAME}\" | egrep '/r?syslog\.conf$'`" ]; then
+				RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' ${FNAME} | egrep -i -v '(@|:omrelp:)127\.'`
+			else
+				#
+				# For syslog-ng we must look for a destination
+				# block which uses TCP or UDP.
+				#
+
+				RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${FNAME} | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
+			fi
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				REMLOGFOUND="${REMLOGFOUND}
+${FTYPE}:${RKHTMPVAR}"
+
+				display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG "${RKHTMPVAR}"
 			fi
 		done
-	fi
-
-	if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
-		SYSLOG_CONFIG_FILE=""
-		display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-	elif [ -n "${SYSLOG_CONFIG_FILE}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "syslog" "${SYSLOG_CONFIG_FILE}"
-	elif [ $METALOG_SEEN -eq 1 -o $SOCKLOG_SEEN -eq 1 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-	elif [ $SYSLOG_SEEN -eq 1 ]; then
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-		display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE
-	else
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-	fi
 
 
-	#
-	# Next we find out if syslog allows remote logging.
-	#
+		#
+		# Now display the results.
+		#
 
-	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
-		test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
-
-		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | egrep '/r?syslog\.conf$'`" ]; then
-			RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' ${SYSLOG_CONFIG_FILE} | egrep -i -v '(@|:omrelp:)127\.'`
+		if [ $FILEFOUND -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+		elif [ $METALOG_SEEN -eq 1 -o $SOCKLOG_SEEN -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+		elif [ $SYSLOG_SEEN -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE
 		else
-			#
-			# For syslog-ng we must look for a destination
-			# block which uses TCP or UDP.
-			#
-
-			RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${SYSLOG_CONFIG_FILE} | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
+			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
 		fi
 
-		if [ -z "${RKHTMPVAR}" ]; then
-			display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
-		elif [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 ]; then
-			display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
-		else
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND "${RKHTMPVAR}"
+		#
+		# We only display the remote logging result if a configuration file was found.
+		#
+
+		if [ $FILEFOUND -eq 1 ]; then
+			if [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 ]; then
+				display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+			elif [ -z "${REMLOGFOUND}" ]; then
+				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+
+				IFS=$IFSNL
+
+				REMLOGFOUND=`echo "${REMLOGFOUND}" | sed -e '/^$/d'`
+
+				for FNAME in ${REMLOGFOUND}; do
+					FTYPE=`echo ${FNAME} | cut -d: -f1`
+					RKHTMPVAR=`echo ${FNAME} | cut -d: -f2-`
+
+					display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND "${FTYPE}" "${RKHTMPVAR}"
+				done
+
+				IFS=$RKHIFS
+			fi
 		fi
 	fi
 
