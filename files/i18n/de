@@ -1,4 +1,4 @@
-Version:2009091602
+Version:2010111401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -449,7 +449,7 @@ SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:Der syslog-Daemon wird nicht ausgeführt nicht
 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:Der syslog-Daemon wird nicht ausgeführt, aber ein Metalog-Daemon wurde gefunden.
 SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING:Der syslog-Daemon wird nicht ausgeführt, aer ein socklog-Daemon wurde gefunden.
 SYSTEM_CONFIGS_SYSLOG_NO_FILE:Der syslog-Daemon wird ausgeführt, aber es kann keine Konfigurations-Datei gefunden werden.
-SYSTEM_CONFIGS_SYSLOG_REMOTE:Überrpüfung, ob entferntes Logging via syslog erlaubt ist
+SYSTEM_CONFIGS_SYSLOG_REMOTE:Überprüfung, ob entferntes Logging via syslog erlaubt ist
 SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:Syslog-Konfiguration erlaubt entferntes Logging: $1
 SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter-Konfigurationsvariable 'ALLOW_SYSLOG_REMOTE_LOGGING' ist aktiviert.
 
@@ -460,7 +460,7 @@ FILESYSTEM_DEV_FILE_WL:Datei '$1' gefunden: erlaubt mittels Whitelist.
 FILESYSTEM_DEV_FILE_FOUND:Verdächtige Dateitypen in ${1} gefunden:
 FILESYSTEM_HIDDEN_DIR_WL:Verstecktes Verzeichnis '$1' gefunden: erlaubt mittels Whitelist.
 FILESYSTEM_HIDDEN_FILE_WL:Versteckte Datei '$1' gefunden: erlaubt mittels Whitelist.
-FILESYSTEM_HIDDEN_CHECK:Überrpüfe auf versteckte Dateien und Verzeichnisse
+FILESYSTEM_HIDDEN_CHECK:Überprüfe auf versteckte Dateien und Verzeichnisse
 FILESYSTEM_HIDDEN_DIR_FOUND:Verstecktes Verzeichnis gefunden: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:Versteckte Datei gefunden: $1
 
