@@ -12232,7 +12232,7 @@ ${RKHTMPVAR}:${FNAME}"
 						fi
 
 						continue
-					elif [ $UNHIDE_VERS -lt 20100919 ]; then
+					elif [ $UNHIDE_VERS -lt 20100819 ]; then
 						# Ignore unknown tests for earlier versions.
 						test "${RKHTMPVAR}" != "sys" -a "${RKHTMPVAR}" != "proc" -a "${RKHTMPVAR}" != "brute" && continue
 					fi
