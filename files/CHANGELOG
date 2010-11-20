@@ -23,6 +23,7 @@
  New:
  Changes:
  Bugfixes:
+ - Allow the ALLOWPROCDELFILE option to work again.
 
  -- 
 

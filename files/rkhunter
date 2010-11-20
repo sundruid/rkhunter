@@ -11956,6 +11956,8 @@ malware_checks() {
 					PROCWHITELISTED=0
 					PROCDELFILES_GIVEN=0
 
+					IFS=$RKHIFS
+
 					for RKHTMPVAR in ${ALLOWPROCDELFILES}; do
 						PROCDELFILES_GIVEN=0
 
@@ -11978,6 +11980,8 @@ malware_checks() {
 							break
 						fi
 					done
+
+					IFS=$IFSNL
 
 					test $HAVE_READLINK -eq 0 && PROC="\"${PROC}\""
 
