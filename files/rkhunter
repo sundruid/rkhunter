@@ -15983,7 +15983,7 @@ set_file_prop_dirs_files() {
 	    killall ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
-	    newsyslog nologin passwd perl pgrep pkgdb pkg_info prelink ps pstree pwck
+	    newsyslog nologin passwd perl pgrep ping pkgdb pkg_info prelink ps pstree pwck
 	    pwd readlink rkhunter rmmod route rpm rsyslogd runcon runlevel sed sestatus sh
 	    sha1 sha1sum sha224 sha224sum sha256 sha256sum sha384 sha384sum sha512
 	    sha512sum size skdet slocate sockstat sort stat strace strings su sudo
