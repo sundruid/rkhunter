@@ -15362,7 +15362,7 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				;;
 			proftpd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-				VERSION=`echo "${WHOLE_VERSION}" | grep 'ProFTPD[ 	][ 	]*Version[ 	][ 	]*[0-9]' | awk '{ print $3 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | sed -e 's/^.*\(ProFTPD.*\)$/\1/' | grep '^ProFTPD[ 	][ 	]*Version[ 	][ 	]*[0-9]' | awk '{ print $3 }'`
 				;;
 			sshd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -t -d 2>&1`

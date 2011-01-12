@@ -24,6 +24,7 @@
  Changes:
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.
+ - Correct the check of the ProFTPD version number.
 
  -- 
 
