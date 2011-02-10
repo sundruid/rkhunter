@@ -758,6 +758,8 @@ check_paths() {
 			FNAME=`echo "${FNAME}" | tr '%' ' '`
 		elif [ "${OPT_NAME}" = "RTKT_DIR_WHITELIST" ]; then
 			FNAME=`echo "${FNAME}" | tr '%' ' '`
+		elif [ "${OPT_NAME}" = "ALLOWDEVFILE" ]; then
+			FNAME=`echo "${FNAME}" | tr '%' ' '`
 		fi
 
 		#
@@ -3614,7 +3616,7 @@ get_dev_options() {
 
 		check_paths ALLOWDEVFILES ALLOWDEVFILE
 
-		ALLOWDEVFILES=" ${ALLOWDEVFILES} "
+		ALLOWDEVFILES=`echo " ${ALLOWDEVFILES} " | tr '%' ' '`
 	fi
 
 	if [ $ERRCODE -eq 1 ]; then
@@ -12929,14 +12931,19 @@ bsd_specific_checks() {
 	if [ -n "${SOCKSTAT_CMD}" -a -n "${NETSTAT_CMD}" ]; then
 		test "${OPERATING_SYSTEM}" = "NetBSD" && RKHTMPVAR="-n" || RKHTMPVAR=""
 
-		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '{ print $6 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
-		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an |  awk '{ print $4 }' |grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
+		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '$5 ~ /^(tcp|udp)/ && $6 != "6" { print $6 }'`
+		SOCKSTAT_OUTPUT="${SOCKSTAT_OUTPUT}
+`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '$5 ~ /^(tcp|udp)/ && $6 == "6" { print $7 }'`"
+
+		SOCKSTAT_OUTPUT=`echo "${SOCKSTAT_OUTPUT}" | grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
+
+		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an | awk '$1 ~ /^(tcp|udp)/ { print $4 }' | grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
 
 		if [ "${SOCKSTAT_OUTPUT}" = "${NETSTAT_OUTPUT}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 		else
-			SOCKSTAT_OUTPUT=`echo $SOCKSTAT_OUTPUT`
-			NETSTAT_OUTPUT=`echo $NETSTAT_OUTPUT`
+			SOCKSTAT_OUTPUT=`echo ${SOCKSTAT_OUTPUT}`
+			NETSTAT_OUTPUT=`echo ${NETSTAT_OUTPUT}`
 
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 
@@ -13026,7 +13033,7 @@ freebsd_specific_checks() {
 		PKGDB_CMD=`find_cmd pkgdb`
 
 		if [ -n "${PKGDB_CMD}" ]; then
-			RKHTMPVAR=`${PKGDB_CMD} -Fa -v | grep 'Skipped\.'`
+			RKHTMPVAR=`${PKGDB_CMD} -Fa -v 2>&1 | grep 'Skipped\.'`
 
 			if [ -z "${RKHTMPVAR}" ]; then
 				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB

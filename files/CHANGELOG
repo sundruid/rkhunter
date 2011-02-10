@@ -22,9 +22,14 @@
 
  New:
  Changes:
+ - Allow the ALLOWDEVFILE option to use '%' as the space character.
+   (Note: This is a temporary fix).
+
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.
  - Correct the check of the ProFTPD version number.
+ - Fix the FreeBSD 'sockstat' command check to ensure that the correct
+   fields are used.
 
  -- 
 
