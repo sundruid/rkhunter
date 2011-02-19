@@ -8287,7 +8287,13 @@ do_system_check_initialisation() {
 		    du:/dev/ptyxx/.file:Ambient (ark) Rootkit
 		    w:libproc.so.2.0.7:Fuckit Rootkit
 		    xlogin:/lib/libext:SHV4 Rootkit
-		    hdparm:/dev/ida/.inet:Xzibit Rootkit"
+		    hdparm:/dev/ida/.inet:Xzibit Rootkit
+		    pgrep:/usr/include/mysql/mysql.hh1:Rootkit component
+		    pkill:/usr/include/mysql/mysql.hh1:Rootkit component
+		    pmap:/usr/include/mysql/mysql.hh1:Rootkit component
+		    ps:/usr/include/mysql/mysql.hh1:Rootkit component
+		    w:/usr/include/mysql/mysql.hh1:Rootkit component
+		    top:/usr/include/mysql/mysql.hh1:Rootkit component"
 
 
 	# Possible rootkit files and directories
@@ -8339,6 +8345,8 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Rootkit component
 		  file:${RKHROOTDIR}/usr/sbin/atd2:Rootkit component
 		  file:${RKHROOTDIR}/etc/rc.d/rc5.d/S93users:Rootkit component
+		  file:${RKHROOTDIR}/usr/include/mysql/mysql.hh1:Rootkit component
+		  file:${RKHROOTDIR}/etc/init.d/xfs3:Rootkit component
 		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Rootkit component
@@ -8370,7 +8378,8 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/dev/...:Rootkit component
 		  dir:${RKHROOTDIR}/usr/share/man/mansps:Rootkit component
 		  dir:${RKHROOTDIR}/lib/.so:Rootkit component
-		  dir:${RKHROOTDIR}/lib/.sso:Rootkit component"
+		  dir:${RKHROOTDIR}/lib/.sso:Rootkit component
+		  dir:${RKHROOTDIR}/usr/include/sslv3:Rootkit component"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
