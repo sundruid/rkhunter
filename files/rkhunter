@@ -8347,6 +8347,13 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/etc/rc.d/rc5.d/S93users:Rootkit component
 		  file:${RKHROOTDIR}/usr/include/mysql/mysql.hh1:Rootkit component
 		  file:${RKHROOTDIR}/etc/init.d/xfs3:Rootkit component
+		  file:${RKHROOTDIR}/usr/sbin/t.txt:Opyum kit component
+		  file:${RKHROOTDIR}/usr/sbin/change:Opyum kit component
+		  file:${RKHROOTDIR}/usr/sbin/s:Opyum kit component
+		  file:${RKHROOTDIR}/bin/f:Opyum kit component
+		  file:${RKHROOTDIR}/bin/i:Opyum kit component
+		  file:${RKHROOTDIR}/lib/libncom.so.4.0.1:ncom rootkit library
+		  file:${RKHROOTDIR}/sbin/zinit:Rootkit component
 		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Rootkit component
