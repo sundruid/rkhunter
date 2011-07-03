@@ -8235,6 +8235,9 @@ do_system_check_initialisation() {
 		    sshd:/dev/ptyxx:OpenBSD Rootkit
 		    sshd:/.config:SHV4 Rootkit
 		    sshd:+\\$.*\\$\!.*\!\!\\$:Backdoored SSH daemon installed
+		    sshd:backdoor_active:Trojaned SSH daemon
+		    sshd:magic_pass_active:Trojaned SSH daemon
+		    sshd:/usr/include/openssl:Trojaned SSH daemon
 		    xntps:/.config:SHV4 Rootkit
 		    syslogd:promiscuous:Sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
@@ -8354,6 +8357,10 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/bin/i:Opyum kit component
 		  file:${RKHROOTDIR}/lib/libncom.so.4.0.1:ncom rootkit library
 		  file:${RKHROOTDIR}/sbin/zinit:Rootkit component
+		  file:${RKHROOTDIR}/tmp/pass_ssh.log:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/usr/include/gpm2.h:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/etc/ssh/.sshd_auth:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/usr/lib/.sshd.h:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Rootkit component
@@ -8386,7 +8393,8 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/usr/share/man/mansps:Rootkit component
 		  dir:${RKHROOTDIR}/lib/.so:Rootkit component
 		  dir:${RKHROOTDIR}/lib/.sso:Rootkit component
-		  dir:${RKHROOTDIR}/usr/include/sslv3:Rootkit component"
+		  dir:${RKHROOTDIR}/usr/include/sslv3:Rootkit component
+		  dir:${RKHROOTDIR}/dev/shm/sshd:Trojaned SSH daemon"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
