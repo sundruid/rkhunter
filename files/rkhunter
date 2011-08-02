@@ -13632,7 +13632,9 @@ do_network_hidden_port_checks() {
 
 	UNHIDETCP_CMD=`find_cmd unhide-tcp`
 
-	if [ -z "${UNHIDETCP_CMD}" ]; then
+	if [ -n "${UNHIDETCP_CMD}" ]; then
+		display --to LOG --type INFO FOUND_CMD 'unhide-tcp' "${UNHIDETCP_CMD}"
+	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
 		display --to LOG --type INFO NOT_FOUND_CMD "unhide-tcp"
 		return
