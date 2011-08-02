@@ -24,6 +24,7 @@
  Changes:
  - Allow the ALLOWDEVFILE option to use '%' as the space character.
    (Note: This is a temporary fix).
+ - The ALLOWPROCDELFILE option can now use wildcards in the file names.
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.

@@ -12002,14 +12002,22 @@ malware_checks() {
 
 						if [ "${PROC}" = "${RKHTMPVAR2}" ]; then
 							if [ $PROCDELFILES_GIVEN -eq 1 ]; then
-								if [ -n "`echo \"${RKHTMPVAR}:\" | grep \":${FNAME}:\"`" ]; then
+								RKHTMPVAR3=`echo "${RKHTMPVAR}" | cut -d: -f2-`
+
+								if [ -n "`echo \"${RKHTMPVAR3}\" | grep '[?*]'`" ]; then
+									FNAMEGREP=`echo "${RKHTMPVAR3}" | sed -e 's/\./\\\./g; s/\?/./g; s/\*/.*/g'`
+								else
+									FNAMEGREP=`echo "${RKHTMPVAR3}" | sed -e 's/\./\\\./g'`
+								fi
+
+								if [ -n "`echo \"${FNAME}\" | grep \"^${FNAMEGREP}\$\"`" ]; then
 									PROCWHITELISTED=1
 								fi
 							else
 								PROCWHITELISTED=1
 							fi
 
-							break
+							test $PROCWHITELISTED -eq 1 && break
 						fi
 					done
 
