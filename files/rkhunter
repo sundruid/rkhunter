@@ -8367,6 +8367,8 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/usr/include/gpm2.h:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/etc/ssh/.sshd_auth:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/usr/lib/.sshd.h:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/var/run.defunct:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/etc/httpd/run/.defunct:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Rootkit component
