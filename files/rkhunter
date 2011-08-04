@@ -8244,6 +8244,7 @@ do_system_check_initialisation() {
 		    syslogd:promiscuous:Sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
 		    syslogd:/dev/ptyxx/.log:Ambient (ark) Rootkit
+		    syslogd:/usr/share/pci.r:Trojaned Syslog daemon
 		    tcpd:/dev/xdta:Dica-Kit Rootkit
 		    top:/usr/lib/.tbd:TBD Rootkit
 		    top:/dev/ptyxx/.proc:Ambient (ark) Rootkit
@@ -8369,7 +8370,15 @@ do_system_check_initialisation() {
 		  file:${RKHROOTDIR}/usr/lib/.sshd.h:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/var/run.defunct:Trojaned SSH daemon
 		  file:${RKHROOTDIR}/etc/httpd/run/.defunct:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/usr/share/passwd.h:Trojaned SSH daemon
+		  file:${RKHROOTDIR}/usr/share/pci.r:Trojaned Syslog daemon
+		  file:${RKHROOTDIR}/etc/cron.daily/dnsquery:Sniffer
+		  file:${RKHROOTDIR}/usr/lib/libutil1.2.1.2.so:Trojaned SSH daemon component (hwclock binary)
+		  file:${RKHROOTDIR}/bin/ceva:Trojaned SSH daemon (client binary)
+		  file:${RKHROOTDIR}/sbin/syslogd%:Trojaned SSH daemon (sebd)
+		  file:${RKHROOTDIR}/usr/include/shup.h:Trojaned SSH daemon (client binary)
+		  file:${RKHROOTDIR}/etc/rpm/sshdOLD:Trojaned SSH daemon (original sshd binary)
+		  file:${RKHROOTDIR}/etc/rpm/sshOLD:Trojaned SSH daemon (original ssh binary)
+		  file:${RKHROOTDIR}/usr/share/passwd.h:Trojaned SSH daemon (default configuration)
 		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
 		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
 		  dir:${RKHROOTDIR}/usr/src/.lib:Rootkit component
@@ -8403,7 +8412,9 @@ do_system_check_initialisation() {
 		  dir:${RKHROOTDIR}/lib/.so:Rootkit component
 		  dir:${RKHROOTDIR}/lib/.sso:Rootkit component
 		  dir:${RKHROOTDIR}/usr/include/sslv3:Rootkit component
-		  dir:${RKHROOTDIR}/dev/shm/sshd:Trojaned SSH daemon"
+		  dir:${RKHROOTDIR}/dev/shm/sshd:Trojaned SSH daemon
+		  dir:${RKHROOTDIR}/usr/share/locale/mk/.dev/sk:Sniffer
+		  dir:${RKHROOTDIR}/usr/share/locale/mk/.dev:Sniffer"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
