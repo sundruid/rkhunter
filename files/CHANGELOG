@@ -32,6 +32,7 @@
  - Fix the FreeBSD 'sockstat' command check to ensure that the correct
    fields are used.
  - Fix for newer version of the 'file' command when reporting scripts.
+ - Fix the ALLOWHIDDENFILE option to allow hidden symbolic links.
 
  -- 
 

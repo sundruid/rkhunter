@@ -846,6 +846,14 @@ check_paths() {
 					;;
 				esac
 			elif [ -d "${FNAME}" ]; then
+				#
+				# For the ALLOWHIDDENFILE option we need to allow
+				# a hidden symbolic link to a directory.
+				#
+
+				test "${OPT_NAME}" = "ALLOWHIDDENFILE" -a -h "${FNAME}" && continue
+
+
 				case "${OPT_NAME}" in
 				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILE|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|RTKT_FILE_WHITELIST|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|WEBCMD|*_CMD)
 					ERRCODE=1
@@ -15155,6 +15163,8 @@ do_filesystem_check() {
 
 		FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr -s '	 ' '  ' | cut -d' ' -f2-`
 
+#jh - should include block special too.
+#jh - also should cater for 'sticky directory' (like /tmp) when using file.
 		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|empty'`" && continue
 
 
