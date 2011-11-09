@@ -16328,26 +16328,30 @@ display_perl_modules() {
 	# the installed perl modules which may be required.
 	#
 
-	if [ -n "${PERL_CMD}" ]; then
-		display --to SCREEN --type PLAIN --nl LIST_PERL
+	display --to SCREEN --type PLAIN --nl LIST_PERL
 
-		for MODNAME in ${LIST_MODULES}; do
+	for MODNAME in perl ${LIST_MODULES}; do
+		if [ "${MODNAME}" = "perl" ]; then
+			MODNAME="perl command"
+
+			test -n "${PERL_CMD}" && MOD_INSTALLED="" || MOD_INSTALLED="NOT installed"
+		else
 			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl ${MODNAME} 2>/dev/null | grep 'NOT installed'`
+		fi
 
-			MODLEN=`echo "${MODNAME}" | wc -c | tr -d ' '`
-			NUM_SPACES=`expr 28 - ${MODLEN}`
-			test $NUM_SPACES -lt 1 && NUM_SPACES=1
-			SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
+		MODLEN=`echo "${MODNAME}" | wc -c | tr -d ' '`
+		NUM_SPACES=`expr 28 - ${MODLEN}`
+		test $NUM_SPACES -lt 1 && NUM_SPACES=1
+		SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
 
-			if [ -z "${MOD_INSTALLED}" ]; then
-				echo $ECHOOPT "    ${MODNAME}${SPACES}Installed"
-			else
-				echo $ECHOOPT "    ${MODNAME}${SPACES} MISSING"
-			fi
-		done
-	else
-		echo "Unable to find the 'perl' command."
-	fi
+		if [ -z "${MOD_INSTALLED}" ]; then
+			echo $ECHOOPT "    ${MODNAME}${SPACES}Installed"
+		else
+			echo $ECHOOPT "    ${MODNAME}${SPACES} MISSING"
+		fi
+
+		test "${MODNAME}" = "perl command" -a -z "${PERL_CMD}" && break
+	done
 
 	return
 }

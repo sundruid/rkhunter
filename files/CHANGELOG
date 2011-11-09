@@ -25,6 +25,8 @@
  - Allow the ALLOWDEVFILE option to use '%' as the space character.
    (Note: This is a temporary fix).
  - The ALLOWPROCDELFILE option can now use wildcards in the file names.
+ - The '--list perl' command-line option now shows whether the perl
+   command itself is installed or not.
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.
