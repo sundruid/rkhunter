@@ -8230,7 +8230,6 @@ do_system_check_initialisation() {
 		    ps:uconf.inv:Universal Rootkit (URK)
 		    ps:lib/ldlibps.so:Flea Linux Rootkit or Universal Rootkit (URK)
 		    pstree:/usr/lib/ldlibpst.so:Flea Linux Rootkit
-		    ps:/var/lock/subsys/...datafile...:Ohhara Rootkit or Ni0 Rootkit
 		    ps:libproc.so.2.0.7:Fuckit Rootkit
 		    ps:/dev/ptyxx/.proc:Ambient (ark) Rootkit
 		    pstree:/dev/ptyxx/.proc:Ambient (ark) Rootkit
