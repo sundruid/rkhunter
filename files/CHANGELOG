@@ -22,8 +22,8 @@
 
  New:
  Changes:
- - Allow the ALLOWDEVFILE option to use '%' as the space character.
-   (Note: This is a temporary fix).
+ - Allow the ALLOWDEVFILE, ALLOWHIDDENFILE and ALLOWHIDDENDIR options to
+   use '%' as the space character. (Note: This is a temporary fix).
  - The ALLOWPROCDELFILE option can now use wildcards in the file names.
  - The '--list perl' command-line option now shows whether the perl
    command itself is installed or not.
@@ -35,6 +35,11 @@
    fields are used.
  - Fix for newer version of the 'file' command when reporting scripts.
  - Fix the ALLOWHIDDENFILE option to allow hidden symbolic links.
+ - The 'filesystem' check now handles files and directories with spaces
+   in their names correctly.
+ - The 'startup_files' test was displaying file names with spaces in
+   them incorrectly. Also the test was not checking files which were
+   in hidden directories.
 
  -- 
 

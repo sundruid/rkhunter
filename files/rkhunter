@@ -756,10 +756,12 @@ check_paths() {
 		elif [ "${OPT_NAME}" = "RTKT_FILE_WHITELIST" ]; then
 			FNAME=`echo "${FNAME}" | cut -d: -f1`
 			FNAME=`echo "${FNAME}" | tr '%' ' '`
-		elif [ "${OPT_NAME}" = "RTKT_DIR_WHITELIST" ]; then
-			FNAME=`echo "${FNAME}" | tr '%' ' '`
-		elif [ "${OPT_NAME}" = "ALLOWDEVFILE" ]; then
-			FNAME=`echo "${FNAME}" | tr '%' ' '`
+		else
+			case "${OPT_NAME}" in
+			RTKT_DIR_WHITELIST|ALLOWDEVFILE|ALLOWHIDDENFILE|ALLOWHIDDENDIR)
+				FNAME=`echo "${FNAME}" | tr '%' ' '`
+				;;
+			esac
 		fi
 
 		#
@@ -3662,6 +3664,8 @@ get_hidden_options() {
 
 		test $ERRCODE -eq 1 && LEAVE=1
 
+		ALLOWHIDDENFILES=`echo " ${ALLOWHIDDENFILES} " | tr '%' ' '`
+
 		ALLOWHIDDENFILES=" ${ALLOWHIDDENFILES} "
 	fi
 
@@ -3680,6 +3684,8 @@ get_hidden_options() {
 		check_paths ALLOWHIDDENDIRS ALLOWHIDDENDIR
 
 		test $ERRCODE -eq 1 && LEAVE=1
+
+		ALLOWHIDDENDIRS=`echo " ${ALLOWHIDDENDIRS} " | tr '%' ' '`
 
 		ALLOWHIDDENDIRS=" ${ALLOWHIDDENDIRS} "
 	fi
@@ -9933,9 +9939,9 @@ File:${FILENAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE
 					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 					if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | tr -s '	' ' ' | cat -v | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
+						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
 					else
-						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | tr -s '	' ' ' | cat -v | egrep -i ' script( |,|$)'`
+						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i ' script( |,|$)'`
 					fi
 
 					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
@@ -10365,7 +10371,7 @@ suspscan() {
 				# Finally, test the file type.
 				#
 
-				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | tr -s '	' ' ' | cat -v | cut -d' ' -f2-`
+				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | awk -F':' '{ print $NF }' | cut -c2-`
 
 				#
 				# We need to check errors from the file command, but not
@@ -14977,9 +14983,11 @@ do_dev_whitelist_check() {
 	#
 
 
-	FNAME=`${FILE_CMD} "${RKHTMPVAR}" 2>/dev/null | cat -v | tr -s '	' ' ' | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`
+	FTYPE=`${FILE_CMD} "${RKHTMPVAR}" 2>/dev/null | awk -F':' '{ print $NF }' | cut -c2-`
 
-	test -z "${FNAME}" && return
+	if [ -z "`echo \"${FTYPE}\" | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`" ]; then
+		return
+	fi
 
 	FILE=`echo "${RKHTMPVAR}" | sed -e "s:^${RKHROOTDIR}::"`
 	FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
@@ -14988,7 +14996,7 @@ do_dev_whitelist_check() {
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"
 	else
 		FOUNDFILES="${FOUNDFILES}
-${FNAME}"
+${FILE}: ${FTYPE}"
 	fi
 
 	return
@@ -15073,7 +15081,7 @@ do_filesystem_check() {
 					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
 				fi
 
-				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.'`" && do_dev_whitelist_check
+				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.[^/]*$'`" && do_dev_whitelist_check
 			done
 
 			IFS=$RKHIFS
@@ -15138,14 +15146,16 @@ do_filesystem_check() {
 	for DIR in ${SHORTSEARCHDIRS}; do
 		if [ -d ${DIR} ]; then
 			RKHTMPVAR=`ls -1d ${DIR}/.* 2>/dev/null | egrep -v '/\.\.?$'`
-			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
+			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS}
+${RKHTMPVAR}"
 		fi
 	done
 
 	for DIR in ${LONGSEARCHDIRS}; do
 		if [ -d ${DIR} ]; then
 			RKHTMPVAR=`${FIND_CMD} ${DIR} -name ".*" 2>/dev/null`
-			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS} ${RKHTMPVAR}"
+			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS}
+${RKHTMPVAR}"
 		fi
 	done
 
@@ -15155,17 +15165,16 @@ do_filesystem_check() {
 	# exclude certain types of files.
 	#
 
+	IFS=$IFSNL
+
 	for FNAME in ${LOOKINDIRS}; do
 		if [ $FDESCFS -eq 1 ]; then
 			test -n "`echo \"${FNAME}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
 		fi
 
-		FTYPE=`${FILE_CMD} ${FNAME} 2>/dev/null | cat -v | tr -s '	 ' '  ' | cut -d' ' -f2-`
+		FTYPE=`${FILE_CMD} "${FNAME}" 2>/dev/null | awk -F':' '{ print $NF }' | cut -c2-`
 
-#jh - should include block special too.
-#jh - also should cater for 'sticky directory' (like /tmp) when using file.
-		test -z "${FTYPE}" -o -n "`echo \"${FTYPE}\" | egrep 'character special|empty'`" && continue
-
+		test -n "`echo \"${FTYPE}\" | egrep 'character special|block special|empty'`" && continue
 
 		FILE=`echo "${FNAME}" | sed -e "s:^${RKHROOTDIR}::"`
 		FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
@@ -15191,6 +15200,8 @@ ${FNAME}: ${FTYPE}"
 			fi
 		fi
 	done
+
+	IFS=$RKHIFS
 
 	FOUNDDIRS=`echo "${FOUNDDIRS}" | sed -e '/^$/d'`
 	FOUNDFILES=`echo "${FOUNDFILES}" | sed -e '/^$/d'`

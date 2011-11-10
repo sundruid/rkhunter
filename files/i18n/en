@@ -1,4 +1,4 @@
-Version:2010110901
+Version:2011111001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -521,7 +521,7 @@ FILESYSTEM_DEV_FILE_FOUND:Suspicious file types found in ${1}:
 FILESYSTEM_HIDDEN_DIR_WL:Found hidden directory '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_FILE_WL:Found hidden file '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories
-FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
+FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: '$1'
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 
 CHECK_APPS:Checking application versions...
