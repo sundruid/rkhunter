@@ -27,6 +27,12 @@
  - The ALLOWPROCDELFILE option can now use wildcards in the file names.
  - The '--list perl' command-line option now shows whether the perl
    command itself is installed or not.
+ - Ensure that the ALLOWDEVFILE, ALLOWHIDDENFILE and ALLOWHIDDENDIR
+   options re-evaluate their whitelisting lists to ensure that any
+   wildcarded entries are the most recent. (A time window previously
+   existed which meant that the list was processed, but new files
+   could be created before the test was run. As such they were reported
+   as false-positive warnings, when they should have been whitelisted.)
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.

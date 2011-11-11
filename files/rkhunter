@@ -3614,15 +3614,16 @@ get_dev_options() {
 	#
 
 	ERRCODE=0
+	ALLOWDEVFILES=""
 
-	ALLOWDEVFILES=`get_option 2 multi ALLOWDEVFILE` || exit 1
+	ALLOWDEVFILE_OPT=`get_option 2 multi ALLOWDEVFILE` || exit 1
 
-	if [ -n "${ALLOWDEVFILES}" ]; then
+	if [ -n "${ALLOWDEVFILE_OPT}" ]; then
 		#
 		# We 'echo' the variable so that any wildcards get expanded.
 		#
 
-		ALLOWDEVFILES=`echo ${ALLOWDEVFILES}`
+		ALLOWDEVFILES=`echo ${ALLOWDEVFILE_OPT}`
 
 		check_paths ALLOWDEVFILES ALLOWDEVFILE
 
@@ -3650,44 +3651,42 @@ get_hidden_options() {
 
 	LEAVE=0
 	ERRCODE=0
+	ALLOWHIDDENFILES=""
 
-	ALLOWHIDDENFILES=`get_option 2 multi ALLOWHIDDENFILE` || exit 1
+	ALLOWHIDDENFILE_OPT=`get_option 2 multi ALLOWHIDDENFILE` || exit 1
 
-	if [ -n "${ALLOWHIDDENFILES}" ]; then
+	if [ -n "${ALLOWHIDDENFILE_OPT}" ]; then
 		#
 		# We 'echo' the variable so that any wildcards get expanded.
 		#
 
-		ALLOWHIDDENFILES=`echo ${ALLOWHIDDENFILES}`
+		ALLOWHIDDENFILES=`echo ${ALLOWHIDDENFILE_OPT}`
 
 		check_paths ALLOWHIDDENFILES ALLOWHIDDENFILE
 
 		test $ERRCODE -eq 1 && LEAVE=1
 
 		ALLOWHIDDENFILES=`echo " ${ALLOWHIDDENFILES} " | tr '%' ' '`
-
-		ALLOWHIDDENFILES=" ${ALLOWHIDDENFILES} "
 	fi
 
 
 	ERRCODE=0
+	ALLOWHIDDENDIRS=""
 
-	ALLOWHIDDENDIRS=`get_option 2 multi ALLOWHIDDENDIR` || exit 1
+	ALLOWHIDDENDIR_OPT=`get_option 2 multi ALLOWHIDDENDIR` || exit 1
 
-	if [ -n "${ALLOWHIDDENDIRS}" ]; then
+	if [ -n "${ALLOWHIDDENDIR_OPT}" ]; then
 		#
 		# We 'echo' the variable so that any wildcards get expanded.
 		#
 
-		ALLOWHIDDENDIRS=`echo ${ALLOWHIDDENDIRS}`
+		ALLOWHIDDENDIRS=`echo ${ALLOWHIDDENDIR_OPT}`
 
 		check_paths ALLOWHIDDENDIRS ALLOWHIDDENDIR
 
 		test $ERRCODE -eq 1 && LEAVE=1
 
 		ALLOWHIDDENDIRS=`echo " ${ALLOWHIDDENDIRS} " | tr '%' ' '`
-
-		ALLOWHIDDENDIRS=" ${ALLOWHIDDENDIRS} "
 	fi
 
 	if [ $LEAVE -eq 1 ]; then
@@ -15035,6 +15034,16 @@ do_filesystem_check() {
 
 
 		#
+		# First we re-evaluate the whitelist option to ensure
+		# that any wildcard entries are the most recent.
+		#
+
+		if [ -n "${ALLOWDEVFILE_OPT}" ]; then
+			ALLOWDEVFILES=`echo ${ALLOWDEVFILE_OPT}`
+			ALLOWDEVFILES=`echo " ${ALLOWDEVFILES} " | tr '%' ' '`
+		fi
+
+		#
 		# Note: We do not look for hidden files here - that is,
 		# those beginning with a dot. Any hidden files will be
 		# picked up in the next check.
@@ -15157,6 +15166,21 @@ ${RKHTMPVAR}"
 		fi
 	done
 
+
+	#
+	# We re-evaluate the whitelisting options to ensure that any
+	# wildcard entries are the most recent.
+	#
+
+	if [ -n "${ALLOWHIDDENFILE_OPT}" ]; then
+		ALLOWHIDDENFILES=`echo ${ALLOWHIDDENFILE_OPT}`
+		ALLOWHIDDENFILES=`echo " ${ALLOWHIDDENFILES} " | tr '%' ' '`
+	fi
+
+	if [ -n "${ALLOWHIDDENDIR_OPT}" ]; then
+		ALLOWHIDDENDIRS=`echo ${ALLOWHIDDENDIR_OPT}`
+		ALLOWHIDDENDIRS=`echo " ${ALLOWHIDDENDIRS} " | tr '%' ' '`
+	fi
 
 	#
 	# Next we look for any whitelisted files and directories. We also
@@ -16844,9 +16868,9 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
-  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, IntoXonia-NG, Irix, Kitko, Knark,
-  ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, 
-  Inqtana-A, Inqtana-B, Inqtana-C, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
+  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
+  IntoXonia-NG, Irix, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
+  Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
   TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
