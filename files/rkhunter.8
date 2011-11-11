@@ -1,12 +1,12 @@
 .\" rkhunter - RootKit Hunter
-.TH rkhunter 8 "August, 2010"
+.TH rkhunter 8 "November 2011"
 
 .SH NAME
 rkhunter \- RootKit Hunter
 .SH SYNOPSIS
 \fBrkhunter\fP {--check | --unlock | --update | --versioncheck |
           --propupd [{filename | directory | package name},...] |
-          --list [tests | {lang | languages} | rootkits | perl] |
+          --list [tests | {lang | languages} | rootkits | perl | propfiles] |
           --config\-check | --version | --help} [options]
 
 .SH DESCRIPTION
@@ -110,17 +110,19 @@ new version is available.
 
 .IP
 
-.IP "\fB\-\-list [tests | {lang | languages} | rootkits | perl]\fP"
+.IP "\fB\-\-list [tests | {lang | languages} | rootkits | perl | propfiles]\fP"
 This command option will list some of the supported capabilities of the
 program, and then exit. The \fItests\fP option lists the currently available
 test names (see the README file for more details about test names). The
 \fIlanguages\fP option lists the currently available languages, and the
-\fIrootkits\fP option lists the rootkits that \fBrkhunter\fP will search for.
-The \fIperl\fP option lists the installation status of perl modules that may
-be used by some of the tests. Note that it is not \fIrequired\fP to install
-these modules. However, if rkhunter is forced to use perl to execute a test
-then the module must be present. If no specific option is given, then all the
-lists are displayed.
+\fIrootkits\fP option lists the rootkits that are searched for by
+\fBrkhunter\fP. The \fIperl\fP option lists the installation status of the perl
+command and perl modules that may be used by some of the tests. Note that it is
+not \fIrequired\fP to install these modules. However, if \fBrkhunter\fP is
+forced to use perl to execute a test then the module must be present. The
+\fIpropfiles\fP option will list the file names that are used to generate the
+file properties database. If no specific option is given, then all the lists,
+except for the file properties database, are displayed.
 
 .IP
 
@@ -395,7 +397,8 @@ THREE=three,three. Simple globbing (/dev/shm/file-*) works.
 .IP \fBhashes\fP
 .IP \fBhidden_ports\fP
 .IP \fBhidden_procs\fP
-.IP \fBimmutable known_rkts\fP
+.IP \fBimmutable\fP
+.IP \fBknown_rkts\fP
 .IP \fBloaded_modules\fP
 .IP \fBlocal_host\fP
 .IP \fBmalware\fP
@@ -421,12 +424,16 @@ THREE=three,three. Simple globbing (/dev/shm/file-*) works.
 .IP \fBstrings\fP
 .IP \fBsuspscan\fP
 .IP \fBsystem_commands\fP
-.IP \fBsystem_configs trojans\fP
+.IP \fBsystem_configs\fP
+.IP \fBtrojans\fP
 
 
 .SH FILES
 (For a default installation)
+.br
 /etc/rkhunter.conf
+.br
+/var/log/rkhunter.log
 
 .SH SEE ALSO
 See the CHANGELOG file for recent changes.

@@ -21,18 +21,17 @@
  * 1.3.9 (xx/xx/2011)
 
  New:
+ - Added the '--list propfiles' command-line option. This will dump out
+   the list of filenames that will be searched for when building the file
+   properties database. By default the list is not shown if just '--list'
+   is used.
+
  Changes:
  - Allow the ALLOWDEVFILE, ALLOWHIDDENFILE and ALLOWHIDDENDIR options to
    use '%' as the space character. (Note: This is a temporary fix).
  - The ALLOWPROCDELFILE option can now use wildcards in the file names.
  - The '--list perl' command-line option now shows whether the perl
    command itself is installed or not.
- - Ensure that the ALLOWDEVFILE, ALLOWHIDDENFILE and ALLOWHIDDENDIR
-   options re-evaluate their whitelisting lists to ensure that any
-   wildcarded entries are the most recent. (A time window previously
-   existed which meant that the list was processed, but new files
-   could be created before the test was run. As such they were reported
-   as false-positive warnings, when they should have been whitelisted.)
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.
@@ -46,6 +45,12 @@
  - The 'startup_files' test was displaying file names with spaces in
    them incorrectly. Also the test was not checking files which were
    in hidden directories.
+ - Ensure that the ALLOWDEVFILE, ALLOWHIDDENFILE and ALLOWHIDDENDIR
+   options re-evaluate their whitelisting lists to ensure that any
+   wildcard entries are the most recent. (A time window previously
+   existed which meant that the list was processed, but new files
+   could be created before the test was run. As such they were reported
+   as false-positive warnings, when they should have been whitelisted.)
 
  -- 
 

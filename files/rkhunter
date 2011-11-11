@@ -5900,8 +5900,6 @@ create_rkh_file_prop_list() {
 		done
 	done
 
-	chmod 640 ${RKH_FILEPROP_LIST} >/dev/null 2>&1
-
 
 	#
 	# Now we add any user specified absolute
@@ -5923,6 +5921,8 @@ create_rkh_file_prop_list() {
 			test -z "`grep \"^${FNAMEGREP}$\" ${RKH_FILEPROP_LIST} 2>/dev/null`" && echo "${FNAME}" >>${RKH_FILEPROP_LIST}
 		done
 	fi
+
+	chmod 640 ${RKH_FILEPROP_LIST} >/dev/null 2>&1
 
 	return
 }
@@ -16390,6 +16390,29 @@ display_perl_modules() {
 }
 
 
+display_propfiles() {
+
+	#
+	# This function is used to display the list of files which
+	# would be searched for when using the '--propupd' function.
+	#
+
+	# Get any user-supplied files and directories.
+	get_user_fileprop_list
+
+	# Get the builtin list of files and directories.
+	set_file_prop_dirs_files
+
+	# Create the file of entries used by the '--propupd' function.
+	create_rkh_file_prop_list
+
+	# Finally just dump out the list of file names.
+	awk -F'/' '{ print $NF }' ${RKH_FILEPROP_LIST} | sort | uniq
+
+	return
+}
+
+
 display_rootkits() {
 
 	#
@@ -16492,7 +16515,7 @@ help() {
 	echo $ECHOOPT ""
 	echo $ECHOOPT "Usage: rkhunter {--check | --unlock | --update | --versioncheck |"
 	echo $ECHOOPT "                 --propupd [{filename | directory | package name},...] |"
-	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits | perl}] |"
+	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits | perl | propfiles}] |"
 	echo $ECHOOPT "                 --config-check | --version | --help} [options]"
 	echo $ECHOOPT ""
 
@@ -16519,8 +16542,9 @@ help() {
 	echo $ECHOOPT "     -h, --help                        Display this help menu, then exit"
 	echo $ECHOOPT " --lang, --language <language>         Specify the language to use"
 	echo $ECHOOPT "                                       (Default is English)"
-	echo $ECHOOPT "         --list [tests | languages |   List the available test names, languages, checked"
-	echo $ECHOOPT "                 rootkits | perl]      for rootkits, or perl module status, then exit"
+	echo $ECHOOPT "         --list [tests | languages |   List the available test names, languages,"
+	echo $ECHOOPT "                 rootkits | perl |     rootkit names, perl module status"
+	echo $ECHOOPT "                 propfiles]            or file properties database, then exit"
 	echo $ECHOOPT "     -l, --logfile [file]              Write to a logfile"
 	echo $ECHOOPT "                                       (Default is $DFLT_LOGFILE)"
 	echo $ECHOOPT "         --noappend-log                Do not append to the logfile, overwrite it"
@@ -17231,10 +17255,11 @@ while [ $# -ge 1 ]; do
 			shift
 			LIST_OPT="${LIST_OPT} perl "
 			;;
-		"")
-			LIST_OPT="${LIST_OPT} tests languages rootkits perl "
+		propfiles)
+			shift
+			LIST_OPT="${LIST_OPT} propfiles "
 			;;
-		-*)
+		"")
 			LIST_OPT="${LIST_OPT} tests languages rootkits perl "
 			;;
 		*)
@@ -17539,6 +17564,9 @@ if [ -n "${LIST_OPT}" ]; then
 			;;
 		perl)
 			display_perl_modules
+			;;
+		propfiles)
+			display_propfiles
 			;;
 		*)
 			display_rootkits
