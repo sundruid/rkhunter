@@ -5060,11 +5060,11 @@ get_configfile_options() {
 		get_disable_option
 
 		check_test_options
+
+		get_existwl_option
 	fi
 
 	if [ $CHECK -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
-		get_existwl_option
-
 		test $NOMOW -eq 0 && get_mailonwarn_option
 
 		get_ssh_options
@@ -5576,7 +5576,7 @@ ${DIR}:1"
 
 				if [ $ERRCODE -eq 0 ]; then
 					#
-					# If multiple packages claim the same file, we 
+					# If multiple packages claim the same file, we
 					# use the last one in the list. However, if we
 					# have 64-bit as well as 32-bit packages, then
 					# we use the 64-bit package in preference (as
@@ -5772,19 +5772,34 @@ ${DIR}:1"
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
 							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "${FNAME}"
 						fi
-					elif [ -h "${FNAME}" -a -n "`echo \"${RKHTMPVAR}\" | grep 'No such file or directory'`" ]; then
-						# Treat a broken link simply as a file with no hash.
-						BROKEN_LINK_COUNT=`expr ${BROKEN_LINK_COUNT} + 1`
-
+					elif [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
+#jh
 						if [ $HAVE_READLINK -eq 1 ]; then
-							RKHTMPVAR=" -> `${READLINK_CMD} -f ${FNAME}`"
+							BL_TARGET=`${READLINK_CMD} -f ${FNAME}`
+							RKHTMPVAR=" -> ${BL_TARGET}"
+							RKHTMPVAR2=`echo "${BL_TARGET}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 						else
 							RKHTMPVAR=""
 						fi
 
-						display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${FNAME}"
+						# See if we should whitelist the target of the link.
+						if [ $HAVE_READLINK -eq 1 -a -n "`echo \"${EXISTWHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+							if [ $VERBOSE_LOGGING -eq 1 ]; then
+								display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "${FNAME}${RKHTMPVAR}"
+							fi
+						elif [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+							# See if the link itself is to be whitelisted.
+							if [ $VERBOSE_LOGGING -eq 1 ]; then
+								display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL "${FNAME}${RKHTMPVAR}"
+							fi
+						else
+							# Treat a broken link simply as a file with no hash.
+							BROKEN_LINK_COUNT=`expr ${BROKEN_LINK_COUNT} + 1`
 
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_BL "${FNAME}${RKHTMPVAR}"
+							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "${FNAME}"
+
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_BL "${FNAME}${RKHTMPVAR}"
+						fi
 					else
 						NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
 
@@ -9610,10 +9625,50 @@ ${RKHLINE}"
 					#
 					# First see if we have a stored hash value.
 					#
+#jh
+					RKHTMPVAR=0
 
-					test -z "${RKHHASH}" && TEST_RESULT="${TEST_RESULT} norkhhash"
+					if [ -z "${RKHHASH}" ]; then
+						#
+						# Broken links may not give a hash value, so we must check to see if the link is whitelisted.
+						#
 
-					if [ -z "${TEST_RESULT}" ]; then
+						if [ -h "${FNAME}" ]; then
+							if [ $HAVE_READLINK -eq 1 ]; then
+								BL_TARGET=`${READLINK_CMD} -f ${FNAME}`
+								RKHTMPVAR2=" -> ${BL_TARGET}"
+							else
+								RKHTMPVAR2=""
+							fi
+
+							FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+							if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+								RKHTMPVAR=1
+
+								if [ ! -e "${FNAME}" ]; then
+									# Only log this if it is truely a broken link.
+									display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL "${FNAME}${RKHTMPVAR2}"
+								fi
+							elif [ $HAVE_READLINK -eq 1 ]; then
+								# Also check the link target to see if that is whitelisted.
+								FNAMEGREP=`echo "${BL_TARGET}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+								if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+									RKHTMPVAR=1
+
+									if [ ! -e "${FNAME}" ]; then
+										# Only log this if it is truely a broken link.
+										display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "${FNAME}${RKHTMPVAR2}"
+									fi
+								fi
+							fi
+						fi
+
+						test $RKHTMPVAR -eq 0 && TEST_RESULT="${TEST_RESULT} norkhhash"
+					fi
+
+					if [ $RKHTMPVAR -eq 0 -a -z "${TEST_RESULT}" ]; then
 						if [ "${HASH_CMD}" = "NONE" ]; then
 							SYSHASH=""
 						else
@@ -9631,7 +9686,44 @@ ${RKHLINE}"
 							fi
 						fi
 
-						test "${RKHHASH}" != "${SYSHASH}" && TEST_RESULT="${TEST_RESULT} hashchanged"
+						if [ "${RKHHASH}" != "${SYSHASH}" ]; then
+#jh
+							#
+							# We must test for cases where a whitelisted link becomes broken.
+							# In those cases the link would have had a hash value, but will now
+							# have none.
+							#
+
+							if [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
+								RKHTMPVAR=0
+
+								if [ $HAVE_READLINK -eq 1 ]; then
+									BL_TARGET=`${READLINK_CMD} -f ${FNAME}`
+									RKHTMPVAR2=" -> ${BL_TARGET}"
+								else
+									RKHTMPVAR2=""
+								fi
+
+								FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+								if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+									RKHTMPVAR=1
+									display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL "${FNAME}${RKHTMPVAR2}"
+								elif [ $HAVE_READLINK -eq 1 ]; then
+									# Also check the link target to see if that is whitelisted.
+									FNAMEGREP=`echo "${BL_TARGET}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+										RKHTMPVAR=1
+										display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "${FNAME}${RKHTMPVAR2}"
+									fi
+								fi
+
+								test $RKHTMPVAR -eq 0 && TEST_RESULT="${TEST_RESULT} hashchanged"
+							else
+								TEST_RESULT="${TEST_RESULT} hashchanged"
+							fi
+						fi
 					fi
 				fi
 
