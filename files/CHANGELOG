@@ -51,6 +51,7 @@
    existed which meant that the list was processed, but new files
    could be created before the test was run. As such they were reported
    as false-positive warnings, when they should have been whitelisted.)
+ - Allow the EXISTWHITELIST option to work with symbolic links.
 
  -- 
 
