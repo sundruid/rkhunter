@@ -1,4 +1,4 @@
-Version:2011111201
+Version:2011111401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -279,7 +279,6 @@ FILE_PROP_CHANGED2:File: $1
 FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
 FILE_PROP_NO_SYSHASH_BL:The file is a broken link: $1
-FILE_PROP_BROKEN_LINK_WL:Found a broken link, but its existence is whitelisted: '$1'
 FILE_PROP_BROKEN_LINK_WL_TGT:Found a broken link, but the targets existence is whitelisted: '$1'
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
 FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.
