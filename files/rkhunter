@@ -8638,14 +8638,39 @@ shared_libs_check() {
 	for RKHTMPVAR in LD_PRELOAD LD_AOUT_PRELOAD LD_ELF_PRELOAD; do
 		RKHTMPVAR_RES=`eval echo "\\$${RKHTMPVAR}"`
 
-		test -n "${RKHTMPVAR_RES}" && VARFOUND="${VARFOUND} ${RKHTMPVAR}"
+		FOUND=0
+
+		for FNAME in ${RKHTMPVAR_RES}; do
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+
+			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				FOUND=1
+			else
+				display --to LOG --type INFO SHARED_LIBS_PRELOAD_LIB_WLIST "${FNAME}"
+			fi
+		done
+
+		if [ $FOUND -eq 1 ]; then
+			VARFOUND="${VARFOUND}
+${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
+		fi
 	done
+
+
+	VARFOUND=`echo "${VARFOUND}" | sed -e '/^$/d'`
 
 	if [ -z "${VARFOUND}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_VAR
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_VAR
-		display --to LOG --type WARNING SHARED_LIBS_PRELOAD_VAR_FOUND "${VARFOUND}"
+
+		IFS=$IFSNL
+
+		for FNAME in ${VARFOUND}; do
+			display --to LOG --type WARNING SHARED_LIBS_PRELOAD_VAR_FOUND "${FNAME}"
+		done
+
+		IFS=$RKHIFS
 	fi
 
 

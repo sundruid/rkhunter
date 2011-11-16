@@ -32,6 +32,8 @@
  - The ALLOWPROCDELFILE option can now use wildcards in the file names.
  - The '--list perl' command-line option now shows whether the perl
    command itself is installed or not.
+ - The 'shared_libs' test now allows whitelisting of the preloading
+   environment variables.
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.
