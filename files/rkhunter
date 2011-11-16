@@ -3893,28 +3893,36 @@ get_suspscan_options() {
 get_if_prelinked() {
 
 	#
-	# If the system appears to be using prelinking, but no
-	# prelink command can be found, then we simply skip the
-	# file properties hash check.
+	# A prelinked system is defined here as one which has a 'prelink'
+	# command, and the '/etc/prelink.cache' file exists.
 	#
 
-	LIBSAFE_TEST1=""
-	LIBSAFE_TEST2=""
-
 	if [ -f "${RKHROOTDIR}/etc/prelink.cache" ]; then
+		#
+		# Check that we have a 'prelink' command. If it
+		# doesn't exist, then we cannot use prelinking.
+		#
+
 		PRELINK_CMD=`find_cmd prelink`
 
+		test -z "${PRELINK_CMD}" && return
+
+
 		#
-		# Test (twice) for existance of Libsafe since this seems to
+		# We test (twice) for the existence of Libsafe since this seems to
 		# riddle prelink test results with "dependency cycle" errors.
-		# Don't test for existance of /lib/libsafe since it may be
-		# installed elsewhere.
-		# If Libsafe is found *and* this is a prelink system, we'll
-		# skip the prelink test.
+		# Don't test for existence of /lib/libsafe since it may be
+		# installed elsewhere. If Libsafe is found, then we'll skip the
+		# file properties hash test.
 		#
+
+		LIBSAFE_TEST1=""
+		LIBSAFE_TEST2=""
 
 		if [ -f "${RKHROOTDIR}/etc/ld.so.preload" ]; then
 			LIBSAFE_TEST1=`grep 'libsafe' ${RKHROOTDIR}/etc/ld.so.preload 2>&1`
+		else
+			LIBSAFE_TEST1=`echo "$LD_PRELOAD" | grep 'libsafe' 2>&1`
 		fi
 
 		if [ -n "${LDD_CMD}" ]; then
@@ -3925,9 +3933,7 @@ get_if_prelinked() {
 			fi
 		fi
 
-		if [ -z "${PRELINK_CMD}" ]; then
-			SKIP_HASH_MSG=1
-		elif [ -z "${LIBSAFE_TEST1}" -a -z "${LIBSAFE_TEST2}" ]; then
+		if [ -z "${LIBSAFE_TEST1}" -a -z "${LIBSAFE_TEST2}" ]; then
 			PRELINKED=1
 
 			#
@@ -3944,7 +3950,7 @@ get_if_prelinked() {
 				fi
 			fi
 		elif [ -n "${LIBSAFE_TEST1}" -a -n "${LIBSAFE_TEST2}" ]; then
-			SKIP_HASH_MSG=3
+			SKIP_HASH_MSG=2
 		fi
 	fi
 
@@ -5119,7 +5125,7 @@ get_configfile_options() {
 
 		get_if_prelinked
 
-		test $SKIP_HASH_MSG -eq 0 && get_hash_function
+		get_hash_function
 
 		get_os_info_options
 
@@ -8981,20 +8987,13 @@ file_properties_check() {
 		fi
 
 
-		case $SKIP_HASH_MSG in
-		1)
-			SKIP_HASH=1
-			RKHTMPVAR="${RKHTMPVAR} prelink"
-			;;
-		2)
+		if [ $SKIP_HASH_MSG -eq 1 ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} sha1"
-			;;
-		3)
+		elif [ $SKIP_HASH_MSG -eq 2 ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} libsafe"
-			;;
-		esac
+		fi
 	fi
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
@@ -18164,7 +18163,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		elif [ -n "${PRELINK_HASH}" ]; then
 			display --to LOG --type INFO HASH_FUNC_PRELINK "${PRELINK_HASH}"
 		elif [ -z "`echo \"${HASH_FUNC}\" | egrep -i 'sha1|md5'`" ]; then
-			SKIP_HASH_MSG=2
+			SKIP_HASH_MSG=1
 		else
 			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
 		fi
