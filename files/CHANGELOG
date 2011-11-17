@@ -34,6 +34,11 @@
    command itself is installed or not.
  - The 'shared_libs' test now allows whitelisting of the preloading
    environment variables.
+ - The '-r/--rootdir' command-line options, and the ROOTDIR
+   configuration option are now deprecated. If they are used then an
+   error message will be displayed. The options will have no effect,
+   but rkhunter will continue. The options will be completely removed
+   at the next release.
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.

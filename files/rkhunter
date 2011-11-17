@@ -841,7 +841,7 @@ check_paths() {
 
 			if [ -f "${FNAME}" ]; then
 				case "${OPT_NAME}" in
-				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|ROOTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
 					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
@@ -893,7 +893,7 @@ check_paths() {
 				test $CONFIG_CHECK -eq 1 && RET_CODE=1
 
 				case "${OPT_NAME}" in
-				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|ROOTDIR|SSH_CONFIG_DIR|RTKT_DIR_WHITELIST|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|RTKT_DIR_WHITELIST|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
 					RKHTMPVAR2="directory"
 					;;
 				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|WEBCMD|*_CMD)
@@ -1243,7 +1243,7 @@ scanrootkit() {
 		#
 		# If the option SCANROOTKITMODE is set to "THOROUGH" the scanrootkit() function
 		# will search (on a per rootkit basis) for filenames in all of the directories (as defined
-		# by the result of running 'find "${RKHROOTDIR}/" -xdev'). While still not optimal, as it 
+		# by the result of running 'find / -xdev'). While still not optimal, as it 
 		# still searches for only file names as opposed to file contents, this is one step away
 		# from the rigidity of searching in known (evidence) or default (installation) locations.
 		#
@@ -1262,7 +1262,7 @@ scanrootkit() {
 		THOROUGH) # Search the whole filesystem
 				test -n "${BASENAME_CMD}" && FNAME=`${BASENAME_CMD} "${RKHTMPVAR}"` || FNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
 
-				FILENAMES=`find "${RKHROOTDIR}/" -xdev -name "${FNAME}"`
+				FILENAMES=`find / -xdev -name "${FNAME}"`
 
 				if [ -z "${FILENAMES}" ]; then
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "${RKHTMPVAR}"
@@ -1917,11 +1917,11 @@ get_tmpdir_option() {
 	elif [ ! -r "${RKHTMPDIR}" ]; then
 		LEAVE=1
 		echo "Temporary directory is not readable: ${RKHTMPDIR}"
-	elif [ "${RKHTMPDIR}" = "${RKHROOTDIR}/tmp" -o "${RKHTMPDIR}" = "${RKHROOTDIR}/var/tmp" ]; then
+	elif [ "${RKHTMPDIR}" = "/tmp" -o "${RKHTMPDIR}" = "/var/tmp" ]; then
 		LEAVE=1
 		echo "Do not use ${RKHTMPDIR} as the temporary directory."
 		echo "This directory will be used by rkhunter to contain system files, so it must be secure."
-	elif [ "${RKHTMPDIR}" = "${RKHROOTDIR}/etc" ]; then
+	elif [ "${RKHTMPDIR}" = "/etc" ]; then
 		LEAVE=1
 		echo "Do not use ${RKHTMPDIR} as the temporary directory."
 		echo "This directory will be used by rkhunter to copy and delete certain system files."
@@ -2109,7 +2109,7 @@ get_bindir_option() {
 				#
 
 				if [ $SUNOS -eq 1 -o $IRIXOS -eq 1 -o "${OPERATING_SYSTEM}" = "AIX" ]; then
-					if [ -h /bin ]; then
+					if [ -h "/bin" ]; then
 						RKHTMPVAR=""
 
 						for DIR in ${BINPATHS}; do
@@ -2273,54 +2273,10 @@ find_cmd() {
 
 get_rootdir_option() {
 
-	#
-	# First get the option from the command-line or the
-	# configuration file, and do a simple check on whether
-	# it is empty or a space.
-	#
+	RKHTMPVAR=`get_option 1 single ROOTDIR` || exit 1
 
-	LEAVE=0
-	ERRCODE=0
-
-	if [ -n "${RKHROOTDIR}" ]; then
-		RKHROOTDIR=`echo "${RKHROOTDIR}" | tr -d '" 	' | tr -d "'"`
-
-		if [ -z "${RKHROOTDIR}" ]; then
-			LEAVE=1
-			echo "Invalid '--rootdir' option - no directory name given."
-		elif [ "${RKHROOTDIR}" = "/" ]; then
-			RKHROOTDIR=""
-		fi
-	else
-		RKHROOTDIR=`get_option 1 single ROOTDIR` || exit 1
-
-		test "${RKHROOTDIR}" = "/" && RKHROOTDIR=""
-
-		check_paths RKHROOTDIR ROOTDIR STRICT
-
-		test $ERRCODE -eq 1 && LEAVE=1
-	fi
-
-	#
-	# Now check that the given option is usable.
-	#
-
-	if [ $LEAVE -eq 0 -a -n "${RKHROOTDIR}" ]; then
-		if [ ! -d "${RKHROOTDIR}" ]; then
-			LEAVE=1
-			echo "The root directory does not exist: ${RKHROOTDIR}"
-		elif [ ! -r "${RKHROOTDIR}" ]; then
-			LEAVE=1
-			echo "The root directory is not readable: ${RKHROOTDIR}"
-		fi
-	fi
-
-	if [ $LEAVE -eq 1 ]; then
-		if [ $CONFIG_CHECK -eq 0 ]; then
-			exit 1
-		else
-			RET_CODE=1
-		fi
+	if [ -n "${RKHTMPVAR}" ]; then
+		echo "The ROOTDIR configuration option is now deprecated."
 	fi
 
 	return
@@ -3433,19 +3389,19 @@ get_shadow_file_option() {
 		check_paths SHADOW_FILE PASSWORD_FILE STRICT
 
 		if [ $ERRCODE -eq 0 ]; then
-			if [ -s "${RKHROOTDIR}${SHADOW_FILE}" ]; then
-				SHADOW_FILE="${RKHROOTDIR}${SHADOW_FILE}"
+			if [ -s "${SHADOW_FILE}" ]; then
+				SHADOW_FILE="${SHADOW_FILE}"
 			else
 				SHADOW_FILE=""
 			fi
 		fi
-	elif [ -s "${RKHROOTDIR}/etc/shadow" ]; then
-		SHADOW_FILE="${RKHROOTDIR}/etc/shadow"
-	elif [ \( $BSDOS -eq 1 -o $MACOSX -eq 1 \) -a -s "${RKHROOTDIR}/etc/master.passwd" ]; then
-		SHADOW_FILE="${RKHROOTDIR}/etc/master.passwd"
-	elif [ -f "${RKHROOTDIR}/etc/tcb/root/shadow" ]; then
+	elif [ -s "/etc/shadow" ]; then
+		SHADOW_FILE="/etc/shadow"
+	elif [ \( $BSDOS -eq 1 -o $MACOSX -eq 1 \) -a -s "/etc/master.passwd" ]; then
+		SHADOW_FILE="/etc/master.passwd"
+	elif [ -f "/etc/tcb/root/shadow" ]; then
 		HAVE_TCB_SHADOW=1
-	elif [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+	elif [ -s "/etc/passwd" ]; then
 		#
 		# If the passwords are stored in the passwd file, then
 		# it should contain at least 3 non-colon characters in the
@@ -3454,8 +3410,8 @@ get_shadow_file_option() {
 		# that at least one account will have a password.
 		#
 
-		if [ -n "`grep '^[^:]*:[^:][^:][^:]' ${RKHROOTDIR}/etc/passwd`" ]; then
-			SHADOW_FILE="${RKHROOTDIR}/etc/passwd"
+		if [ -n "`grep '^[^:]*:[^:][^:][^:]' /etc/passwd`" ]; then
+			SHADOW_FILE="/etc/passwd"
 		fi
 	fi
 
@@ -3897,7 +3853,7 @@ get_if_prelinked() {
 	# command, and the '/etc/prelink.cache' file exists.
 	#
 
-	if [ -f "${RKHROOTDIR}/etc/prelink.cache" ]; then
+	if [ -f "/etc/prelink.cache" ]; then
 		#
 		# Check that we have a 'prelink' command. If it
 		# doesn't exist, then we cannot use prelinking.
@@ -3919,17 +3875,17 @@ get_if_prelinked() {
 		LIBSAFE_TEST1=""
 		LIBSAFE_TEST2=""
 
-		if [ -f "${RKHROOTDIR}/etc/ld.so.preload" ]; then
-			LIBSAFE_TEST1=`grep 'libsafe' ${RKHROOTDIR}/etc/ld.so.preload 2>&1`
+		if [ -f "/etc/ld.so.preload" ]; then
+			LIBSAFE_TEST1=`grep 'libsafe' /etc/ld.so.preload 2>&1`
 		else
 			LIBSAFE_TEST1=`echo "$LD_PRELOAD" | grep 'libsafe' 2>&1`
 		fi
 
 		if [ -n "${LDD_CMD}" ]; then
-			if [ -f "${RKHROOTDIR}/lib/libdl.so.?" ]; then
-				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib/libdl.so.? | grep 'libsafe' 2>&1`
-			elif [ -f "${RKHROOTDIR}/lib64/libdl.so.?" ]; then
-				LIBSAFE_TEST2=`${LDD_CMD} ${RKHROOTDIR}/lib64/libdl.so.? | grep 'libsafe' 2>&1`
+			if [ -f "/lib/libdl.so.?" ]; then
+				LIBSAFE_TEST2=`${LDD_CMD} /lib/libdl.so.? | grep 'libsafe' 2>&1`
+			elif [ -f "/lib64/libdl.so.?" ]; then
+				LIBSAFE_TEST2=`${LDD_CMD} /lib64/libdl.so.? | grep 'libsafe' 2>&1`
 			fi
 		fi
 
@@ -5241,9 +5197,9 @@ rkh_dat_get_os_info() {
 	RELEASE=""
 
 	if [ -n "${OS_VERSION_FILE}" ]; then
-		REL_FILES="${RKHROOTDIR}${OS_VERSION_FILE}"
+		REL_FILES="${OS_VERSION_FILE}"
 	else
-		REL_FILES="${RKHROOTDIR}/etc/system-release ${RKHROOTDIR}/etc/lsb-release ${RKHROOTDIR}/etc/debian_version ${RKHROOTDIR}/etc/slackware-version ${RKHROOTDIR}/var/ipcop/general-functions.pl ${RKHROOTDIR}/etc/lunar.release ${RKHROOTDIR}/etc/ROCK-VERSION ${RKHROOTDIR}/etc/GoboLinuxVersion ${RKHROOTDIR}/etc/kanotix-version ${RKHROOTDIR}/etc/sidux-version ${RKHROOTDIR}/etc/knoppix-version ${RKHROOTDIR}/etc/zenwalk-version ${RKHROOTDIR}/etc/release ${RKHROOTDIR}/etc/*-release"
+		REL_FILES="/etc/system-release /etc/lsb-release /etc/debian_version /etc/slackware-version /var/ipcop/general-functions.pl /etc/lunar.release /etc/ROCK-VERSION /etc/GoboLinuxVersion /etc/kanotix-version /etc/sidux-version /etc/knoppix-version /etc/zenwalk-version /etc/release /etc/*-release"
 	fi
 
 	RKH_LSB_SEEN=0
@@ -5251,7 +5207,7 @@ rkh_dat_get_os_info() {
 	for FNAME in ${REL_FILES}; do
 		test ! -f "${FNAME}" && continue
 
-		if [ "${FNAME}" = "${RKHROOTDIR}/etc/system-release" ]; then
+		if [ "${FNAME}" = "/etc/system-release" ]; then
 			RKH_IN_LSB=0
 			RELEASE=$FNAME
 			OSNAME=`cat ${FNAME}`
@@ -5262,31 +5218,31 @@ rkh_dat_get_os_info() {
 			RKH_IN_LSB=0
 
 			case "${RELEASE}" in
-			${RKHROOTDIR}/etc/lsb-release)
+			/etc/lsb-release)
 				RKH_IN_LSB=1
 				RKH_LSB_SEEN=1
 				OSNAME=`grep '^DISTRIB_DESCRIPTION=' ${RELEASE} | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
 				;;
-			${RKHROOTDIR}/etc/gentoo-release)
-				if [ -h ${RKHROOTDIR}/etc/make.profile ]; then
-					OSNAME="Gentoo `ls -l ${RKHROOTDIR}/etc/make.profile 2>/dev/null | sed -e 's;^.*/\([^/]*/[^/]*\)$;\1;' | tr '/' ' '`"
+			/etc/gentoo-release)
+				if [ -h "/etc/make.profile" ]; then
+					OSNAME="Gentoo `ls -l /etc/make.profile 2>/dev/null | sed -e 's;^.*/\([^/]*/[^/]*\)$;\1;' | tr '/' ' '`"
 				else
 					OSNAME="Gentoo"
 				fi
 				;;
-			${RKHROOTDIR}/var/ipcop/general-functions.pl)
+			/var/ipcop/general-functions.pl)
 				OSNAME=`grep 'version *=' ${RELEASE} | head -n 1`
 				;;
-			${RKHROOTDIR}/etc/debian_version)
+			/etc/debian_version)
 				OSNAME="Debian `cat ${RELEASE}`"
 				;;
-			${RKHROOTDIR}/etc/GoboLinuxVersion)
+			/etc/GoboLinuxVersion)
 				OSNAME="GoboLinux `cat ${RELEASE}`"
 				;;
-			${RKHROOTDIR}/etc/knoppix-version)
+			/etc/knoppix-version)
 				OSNAME="Knoppix `cat ${RELEASE}`"
 				;;
-			${RKHROOTDIR}/etc/zenwalk-version)
+			/etc/zenwalk-version)
 				OSNAME="Zenwalk `cat ${RELEASE}`"
 				;;
 			*)
@@ -5322,9 +5278,9 @@ rkh_dat_get_os_info() {
 	if [ -z "${OSNAME}" ]; then
 		RELEASE=""
 
-		if [ -d "${RKHROOTDIR}/var/smoothwall" ]; then
+		if [ -d "/var/smoothwall" ]; then
 			OSNAME="Smoothwall Linux"
-			RELEASE="${RKHROOTDIR}/var/smoothwall"
+			RELEASE="/var/smoothwall"
 		elif [ -n "`which sorcery 2>/dev/null | grep -v ' '`" -a -n "`which gaze 2>/dev/null | grep -v ' '`" ]; then
 			OSNAME="Source Mage Linux"
 		fi
@@ -5372,20 +5328,20 @@ rkh_dat_get_os_info() {
 	#
 
 	if [ -z "${OSNAME}" ]; then
-		if [ -f "${RKHROOTDIR}/etc/issue" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/issue | head -n 1`
+		if [ -f "/etc/issue" ]; then
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue | head -n 1`
 			OSNAME=`echo ${OSNAME}`
-			test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/issue"
+			test -n "${OSNAME}" && RELEASE="/etc/issue"
 		fi
 
 		if [ $RKH_LSB_SEEN -eq 1 -a -z "${OSNAME}" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RKHROOTDIR}/etc/lsb-release | head -n 1`
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release | head -n 1`
 			OSNAME=`echo ${OSNAME}`
-			test -n "${OSNAME}" && RELEASE="${RKHROOTDIR}/etc/lsb-release"
+			test -n "${OSNAME}" && RELEASE="/etc/lsb-release"
 		fi
 	elif [ -n "`echo \"${OSNAME}\" | grep '^[0-9.][0-9.]*$'`" ]; then
-		if [ -f "${RKHROOTDIR}/etc/issue" ]; then
-			RKHTMPVAR=`awk '/^[ 	]*[^ 	]/ { print $1 }' ${RKHROOTDIR}/etc/issue | head -n 1`
+		if [ -f "/etc/issue" ]; then
+			RKHTMPVAR=`awk '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue | head -n 1`
 
 			test -n "${RKHTMPVAR}" && OSNAME="${RKHTMPVAR} ${OSNAME}"
 		fi
@@ -5464,8 +5420,6 @@ rkh_dat_set_file_properties() {
 		HASH_CMD="${HASH_FUNC}"
 	fi
 
-	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
-
 
 	#
 	# Now loop through the pathnames looking for the files.
@@ -5490,19 +5444,15 @@ rkh_dat_set_file_properties() {
 		# Test to see if we are looking for specific files or not.
 		#
 
-		if [ -z "${PROPUPD_OPT}" ]; then
-			FILENAME=`echo "${FNAME}" | sed -e "s:^${RDIR}::"`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
-			FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
-		else
+		if [ -n "${PROPUPD_OPT}" ]; then
 			#
 			# If we are looking for specific files, then just copy the
 			# entries from the current rkhunter.dat file for the files
 			# we aren't looking for. For the ones we do want, we fall
 			# through and process them as before.
 			#
-
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
 			if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				RKHTMPVAR=`grep "^File:${FNAMEGREP}:" ${RKHDAT_FILE}`
@@ -5513,8 +5463,6 @@ rkh_dat_set_file_properties() {
 				fi
 			fi
 
-			FILENAME="${FNAME}"
-
 			PROP_FILE_PROPOPT_COUNT=`expr ${PROP_FILE_PROPOPT_COUNT} + 1`
 		fi
 
@@ -5523,7 +5471,7 @@ rkh_dat_set_file_properties() {
 		# Sort out the directory counters.
 		#
 
-		test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FILENAME}` || DIR=`echo "${FILENAME}" | sed -e 's:/[^/]*$::'`
+		test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FNAME}` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
 
 		RKHTMPVAR2=`echo "${DIR}" | sed -e 's/\./\\\./g'`
 
@@ -5565,7 +5513,7 @@ ${DIR}:1"
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
 			else
-				RKHTMPVAR=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{NAME}\n' 2>/dev/null`
+				RKHTMPVAR=`${RPM_CMD} -qf ${FNAME} --queryformat '%{NAME}\n' 2>/dev/null`
 				ERRCODE=$?
 			fi
 
@@ -5577,7 +5525,7 @@ ${DIR}:1"
 				FILE_IS_PKGD=1
 				PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
 
-				RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FILENAME} 2>/dev/null | grep ":${FNAMEGREP}\$"`
+				RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FNAME} 2>/dev/null | grep ":${FNAMEGREP}\$"`
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -5619,7 +5567,7 @@ ${DIR}:1"
 
 					FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 				else
-					display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
+					display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FNAME}" $ERRCODE
 				fi
 			fi
 			;;
@@ -5631,7 +5579,7 @@ ${DIR}:1"
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
 			else
-				RKHTMPVAR=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null`
+				RKHTMPVAR=`${DPKG_CMD} --search ${FNAME} 2>/dev/null`
 				ERRCODE=$?
 			fi
 
@@ -5651,7 +5599,7 @@ ${DIR}:1"
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
 			else
-				RKHTMPVAR=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+				RKHTMPVAR=`${PKG_CMD} -F -e ${FNAME} 2>/dev/null`
 				ERRCODE=$?
 			fi
 
@@ -5718,7 +5666,7 @@ ${DIR}:1"
 			if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				FILE_IS_PKGD=1
 				SYSHASH="ignore-prelink-dep-err"
-				display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FILENAME}"
+				display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FNAME}"
 			else
 				case "${PKGMGR}" in
 				RPM)
@@ -5732,7 +5680,7 @@ ${DIR}:1"
 
 					if [ -n "${PKGNAME}" ]; then
 						if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-							FILNAM=`echo "${FILENAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
+							FILNAM=`echo "${FNAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
 							SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
@@ -5745,7 +5693,7 @@ ${DIR}:1"
 					#
 
 					if [ -n "${PKGNAME}" ]; then
-						FILNAM=`echo "${FILENAME}" | sed -e 's:^/usr/pkg/::; s:\.:\\\.:g'`
+						FILNAM=`echo "${FNAME}" | sed -e 's:^/usr/pkg/::; s:\.:\\\.:g'`
 						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
@@ -5831,7 +5779,7 @@ ${DIR}:1"
 			fi
 		fi
 
-		echo "File:${FILENAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_TMPFILE}
+		echo "File:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_TMPFILE}
 	done
 
 
@@ -5985,7 +5933,7 @@ do_prop_update() {
 		display --to LOG --type INFO PROPUPD_REL_FILE "${RELEASE}"
 	else
 		display --to LOG --type INFO PROPUPD_NO_REL_FILE
-		display --to LOG --type PLAIN NAME "      `ls -ld ${RKHROOTDIR}/etc/*release* ${RKHROOTDIR}/etc/*version* 2>/dev/null | tr '\n' ' '`"
+		display --to LOG --type PLAIN NAME "      `ls -ld /etc/*release* /etc/*version* 2>/dev/null | tr '\n' ' '`"
 	fi
 
 	if [ -n "${OSNAME}" ]; then
@@ -6829,403 +6777,403 @@ do_system_check_initialisation() {
 
 
 	# 55808 Variant A
-	W55808A_FILES="${RKHROOTDIR}/tmp/.../r
-		       ${RKHROOTDIR}/tmp/.../a"
+	W55808A_FILES="/tmp/.../r
+		       /tmp/.../a"
 	W55808A_DIRS=
 	W55808A_KSYMS=
 
 
 	# Adore Rootkit. OK, nobody calls it that but basically it uses Adore.
 	# In one commercial AV vendors naming scheme it's called Dextenea.
-	AKIT_FILES="${RKHROOTDIR}/usr/secure
-		    ${RKHROOTDIR}/usr/doc/sys/qrt
-		    ${RKHROOTDIR}/usr/doc/sys/run
-		    ${RKHROOTDIR}/usr/doc/sys/crond
-		    ${RKHROOTDIR}/usr/sbin/kfd
-		    ${RKHROOTDIR}/usr/doc/kern/var
-		    ${RKHROOTDIR}/usr/doc/kern/string.o
-		    ${RKHROOTDIR}/usr/doc/kern/ava
-		    ${RKHROOTDIR}/usr/doc/kern/adore.o
-		    ${RKHROOTDIR}/var/log/ssh/old"
-	AKIT_DIRS="${RKHROOTDIR}/lib/security/.config/ssh
-		   ${RKHROOTDIR}/usr/doc/kern
-		   ${RKHROOTDIR}/usr/doc/backup
-		   ${RKHROOTDIR}/usr/doc/backup/txt
-		   ${RKHROOTDIR}/lib/backup
-		   ${RKHROOTDIR}/lib/backup/txt
-		   ${RKHROOTDIR}/usr/doc/work
-		   ${RKHROOTDIR}/usr/doc/sys
-		   ${RKHROOTDIR}/var/log/ssh
-		   ${RKHROOTDIR}/usr/doc/.spool
-		   ${RKHROOTDIR}/usr/lib/kterm"
+	AKIT_FILES="/usr/secure
+		    /usr/doc/sys/qrt
+		    /usr/doc/sys/run
+		    /usr/doc/sys/crond
+		    /usr/sbin/kfd
+		    /usr/doc/kern/var
+		    /usr/doc/kern/string.o
+		    /usr/doc/kern/ava
+		    /usr/doc/kern/adore.o
+		    /var/log/ssh/old"
+	AKIT_DIRS="/lib/security/.config/ssh
+		   /usr/doc/kern
+		   /usr/doc/backup
+		   /usr/doc/backup/txt
+		   /lib/backup
+		   /lib/backup/txt
+		   /usr/doc/work
+		   /usr/doc/sys
+		   /var/log/ssh
+		   /usr/doc/.spool
+		   /usr/lib/kterm"
 	AKIT_KSYMS=
 
 
 	# AjaKit Rootkit
-	AJAKIT_FILES="${RKHROOTDIR}/dev/tux/.addr
-		      ${RKHROOTDIR}/dev/tux/.proc
-		      ${RKHROOTDIR}/dev/tux/.file
-		      ${RKHROOTDIR}/lib/.libgh-gh/cleaner
-		      ${RKHROOTDIR}/lib/.libgh-gh/Patch/patch
-		      ${RKHROOTDIR}/lib/.libgh-gh/sb0k"
-	AJAKIT_DIRS="${RKHROOTDIR}/dev/tux
-		     ${RKHROOTDIR}/lib/.libgh-gh"
+	AJAKIT_FILES="/dev/tux/.addr
+		      /dev/tux/.proc
+		      /dev/tux/.file
+		      /lib/.libgh-gh/cleaner
+		      /lib/.libgh-gh/Patch/patch
+		      /lib/.libgh-gh/sb0k"
+	AJAKIT_DIRS="/dev/tux
+		     /lib/.libgh-gh"
 	AJAKIT_KSYMS=
 
 
 	# aPa Kit Rootkit
-	APAKIT_FILES="${RKHROOTDIR}/usr/share/.aPa"
+	APAKIT_FILES="/usr/share/.aPa"
 	APAKIT_DIRS=
 	APAKIT_KSYMS=
 
 
 	# Apache Worm
-	APACHEWORM_FILES="${RKHROOTDIR}/bin/.log"
+	APACHEWORM_FILES="/bin/.log"
 	APACHEWORM_DIRS=
 	APACHEWORM_KSYMS=
 
 
 	# Ambient (ark) Rootkit
-	ARK_FILES="${RKHROOTDIR}/usr/lib/.ark?
-		   ${RKHROOTDIR}/dev/ptyxx/.log
-		   ${RKHROOTDIR}/dev/ptyxx/.file
-		   ${RKHROOTDIR}/dev/ptyxx/.proc
-		   ${RKHROOTDIR}/dev/ptyxx/.addr"
-	ARK_DIRS="${RKHROOTDIR}/dev/ptyxx"
+	ARK_FILES="/usr/lib/.ark?
+		   /dev/ptyxx/.log
+		   /dev/ptyxx/.file
+		   /dev/ptyxx/.proc
+		   /dev/ptyxx/.addr"
+	ARK_DIRS="/dev/ptyxx"
 	ARK_KSYMS=
 
 
 	# Balaur Rootkit 2.0 (LRK5 based)
-	BALAUR_FILES="${RKHROOTDIR}/usr/lib/liblog.o"
-	BALAUR_DIRS="${RKHROOTDIR}/usr/lib/.kinetic
-		     ${RKHROOTDIR}/usr/lib/.egcs
-		     ${RKHROOTDIR}/usr/lib/.wormie"
+	BALAUR_FILES="/usr/lib/liblog.o"
+	BALAUR_DIRS="/usr/lib/.kinetic
+		     /usr/lib/.egcs
+		     /usr/lib/.wormie"
 	BALAUR_KSYMS=
 
 
 	# Beastkit Rootkit
-	BEASTKIT_FILES="${RKHROOTDIR}/usr/sbin/arobia
-			${RKHROOTDIR}/usr/sbin/idrun
-			${RKHROOTDIR}/usr/lib/elm/arobia/elm
-			${RKHROOTDIR}/usr/lib/elm/arobia/elm/hk
-			${RKHROOTDIR}/usr/lib/elm/arobia/elm/hk.pub
-			${RKHROOTDIR}/usr/lib/elm/arobia/elm/sc
-			${RKHROOTDIR}/usr/lib/elm/arobia/elm/sd.pp
-			${RKHROOTDIR}/usr/lib/elm/arobia/elm/sdco
-			${RKHROOTDIR}/usr/lib/elm/arobia/elm/srsd"
-	BEASTKIT_DIRS="${RKHROOTDIR}/lib/ldd.so/bktools"
+	BEASTKIT_FILES="/usr/sbin/arobia
+			/usr/sbin/idrun
+			/usr/lib/elm/arobia/elm
+			/usr/lib/elm/arobia/elm/hk
+			/usr/lib/elm/arobia/elm/hk.pub
+			/usr/lib/elm/arobia/elm/sc
+			/usr/lib/elm/arobia/elm/sd.pp
+			/usr/lib/elm/arobia/elm/sdco
+			/usr/lib/elm/arobia/elm/srsd"
+	BEASTKIT_DIRS="/lib/ldd.so/bktools"
 	BEASTKIT_KSYMS=
 
 
 	# beX2 Rootkit
-	BEX_FILES="${RKHROOTDIR}/usr/info/termcap.info-5.gz
-		   ${RKHROOTDIR}/usr/bin/sshd2"
-	BEX_DIRS="${RKHROOTDIR}/usr/include/bex"
+	BEX_FILES="/usr/info/termcap.info-5.gz
+		   /usr/bin/sshd2"
+	BEX_DIRS="/usr/include/bex"
 	BEX_KSYMS=
 
 
 	# BOBkit Rootkit
-	BOBKIT_FILES="${RKHROOTDIR}/usr/sbin/ntpsx
-		      ${RKHROOTDIR}/usr/sbin/.../bkit-ava
-		      ${RKHROOTDIR}/usr/sbin/.../bkit-d
-		      ${RKHROOTDIR}/usr/sbin/.../bkit-shd
-		      ${RKHROOTDIR}/usr/sbin/.../bkit-f
-		      ${RKHROOTDIR}/usr/include/.../proc.h
-		      ${RKHROOTDIR}/usr/include/.../.bash_history
-		      ${RKHROOTDIR}/usr/include/.../bkit-get
-		      ${RKHROOTDIR}/usr/include/.../bkit-dl
-		      ${RKHROOTDIR}/usr/include/.../bkit-screen
-		      ${RKHROOTDIR}/usr/include/.../bkit-sleep
-		      ${RKHROOTDIR}/usr/lib/.../bkit-adore.o
-		      ${RKHROOTDIR}/usr/lib/.../ls
-		      ${RKHROOTDIR}/usr/lib/.../netstat
-		      ${RKHROOTDIR}/usr/lib/.../lsof
-		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shdcfg
-		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shhk
-		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-pw
-		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-shrs
-		      ${RKHROOTDIR}/usr/lib/.../bkit-ssh/bkit-mots
-		      ${RKHROOTDIR}/usr/lib/.../uconf.inv
-		      ${RKHROOTDIR}/usr/lib/.../psr
-		      ${RKHROOTDIR}/usr/lib/.../find
-		      ${RKHROOTDIR}/usr/lib/.../pstree
-		      ${RKHROOTDIR}/usr/lib/.../slocate
-		      ${RKHROOTDIR}/usr/lib/.../du
-		      ${RKHROOTDIR}/usr/lib/.../top"
-	BOBKIT_DIRS="${RKHROOTDIR}/usr/sbin/...
-		     ${RKHROOTDIR}/usr/include/...
-		     ${RKHROOTDIR}/usr/include/.../.tmp
-		     ${RKHROOTDIR}/usr/lib/...
-		     ${RKHROOTDIR}/usr/lib/.../.ssh
-		     ${RKHROOTDIR}/usr/lib/.../bkit-ssh
-		     ${RKHROOTDIR}/usr/lib/.bkit-
-		     ${RKHROOTDIR}/tmp/.bkp"
+	BOBKIT_FILES="/usr/sbin/ntpsx
+		      /usr/sbin/.../bkit-ava
+		      /usr/sbin/.../bkit-d
+		      /usr/sbin/.../bkit-shd
+		      /usr/sbin/.../bkit-f
+		      /usr/include/.../proc.h
+		      /usr/include/.../.bash_history
+		      /usr/include/.../bkit-get
+		      /usr/include/.../bkit-dl
+		      /usr/include/.../bkit-screen
+		      /usr/include/.../bkit-sleep
+		      /usr/lib/.../bkit-adore.o
+		      /usr/lib/.../ls
+		      /usr/lib/.../netstat
+		      /usr/lib/.../lsof
+		      /usr/lib/.../bkit-ssh/bkit-shdcfg
+		      /usr/lib/.../bkit-ssh/bkit-shhk
+		      /usr/lib/.../bkit-ssh/bkit-pw
+		      /usr/lib/.../bkit-ssh/bkit-shrs
+		      /usr/lib/.../bkit-ssh/bkit-mots
+		      /usr/lib/.../uconf.inv
+		      /usr/lib/.../psr
+		      /usr/lib/.../find
+		      /usr/lib/.../pstree
+		      /usr/lib/.../slocate
+		      /usr/lib/.../du
+		      /usr/lib/.../top"
+	BOBKIT_DIRS="/usr/sbin/...
+		     /usr/include/...
+		     /usr/include/.../.tmp
+		     /usr/lib/...
+		     /usr/lib/.../.ssh
+		     /usr/lib/.../bkit-ssh
+		     /usr/lib/.bkit-
+		     /tmp/.bkp"
 	BOBKIT_KSYMS=
 
 
 	# OSX Boonana-A Trojan (aka Koobface.A)
-	BOONANA_FILES="${RKHROOTDIR}/Library/StartupItems/OSXDriverUpdates/OSXDriverUpdates
-		       ${RKHROOTDIR}/Library/StartupItems/OSXDriverUpdates/StartupParameters.plist"
-	BOONANA_DIRS="${RKHROOTDIR}/var/root/.jnana"
+	BOONANA_FILES="/Library/StartupItems/OSXDriverUpdates/OSXDriverUpdates
+		       /Library/StartupItems/OSXDriverUpdates/StartupParameters.plist"
+	BOONANA_DIRS="/var/root/.jnana"
 	BOONANA_KSYMS=
 
 
 	# cb Rootkit (w00tkit by ZeeN) 
 	# The '%' character represents a space.
 	# xC.o = Adore LKM
-	CB_FILES="${RKHROOTDIR}/dev/srd0
-		  ${RKHROOTDIR}/lib/libproc.so.2.0.6
-		  ${RKHROOTDIR}/dev/mounnt
-		  ${RKHROOTDIR}/etc/rc.d/init.d/init
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/cl
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/.x.tgz
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/statdx
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wted
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/write
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/scan
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/sc
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/sl2
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wroot
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wscan
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/wu
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/v
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/read
-		  ${RKHROOTDIR}/usr/lib/sshrc
-		  ${RKHROOTDIR}/usr/lib/ssh_host_key
-		  ${RKHROOTDIR}/usr/lib/ssh_host_key.pub
-		  ${RKHROOTDIR}/usr/lib/ssh_random_seed
-		  ${RKHROOTDIR}/usr/lib/sshd_config
-		  ${RKHROOTDIR}/usr/lib/shosts.equiv
-		  ${RKHROOTDIR}/usr/lib/ssh_known_hosts
-		  ${RKHROOTDIR}/u/zappa/.ssh/pid
-		  ${RKHROOTDIR}/usr/bin/.system/..%/tcp.log
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/attrib
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/chattr
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/ps
-		  ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare/pstree
-		  ${RKHROOTDIR}/usr/bin/.system/..%/.x/xC.o"
-	CB_DIRS="${RKHROOTDIR}/usr/bin/.zeen
-		 ${RKHROOTDIR}/usr/bin/.zeen/..%/curatare
-		 ${RKHROOTDIR}/usr/bin/.zeen/..%/scan
-		 ${RKHROOTDIR}/usr/bin/.system/..%"
+	CB_FILES="/dev/srd0
+		  /lib/libproc.so.2.0.6
+		  /dev/mounnt
+		  /etc/rc.d/init.d/init
+		  /usr/bin/.zeen/..%/cl
+		  /usr/bin/.zeen/..%/.x.tgz
+		  /usr/bin/.zeen/..%/statdx
+		  /usr/bin/.zeen/..%/wted
+		  /usr/bin/.zeen/..%/write
+		  /usr/bin/.zeen/..%/scan
+		  /usr/bin/.zeen/..%/sc
+		  /usr/bin/.zeen/..%/sl2
+		  /usr/bin/.zeen/..%/wroot
+		  /usr/bin/.zeen/..%/wscan
+		  /usr/bin/.zeen/..%/wu
+		  /usr/bin/.zeen/..%/v
+		  /usr/bin/.zeen/..%/read
+		  /usr/lib/sshrc
+		  /usr/lib/ssh_host_key
+		  /usr/lib/ssh_host_key.pub
+		  /usr/lib/ssh_random_seed
+		  /usr/lib/sshd_config
+		  /usr/lib/shosts.equiv
+		  /usr/lib/ssh_known_hosts
+		  /u/zappa/.ssh/pid
+		  /usr/bin/.system/..%/tcp.log
+		  /usr/bin/.zeen/..%/curatare/attrib
+		  /usr/bin/.zeen/..%/curatare/chattr
+		  /usr/bin/.zeen/..%/curatare/ps
+		  /usr/bin/.zeen/..%/curatare/pstree
+		  /usr/bin/.system/..%/.x/xC.o"
+	CB_DIRS="/usr/bin/.zeen
+		 /usr/bin/.zeen/..%/curatare
+		 /usr/bin/.zeen/..%/scan
+		 /usr/bin/.system/..%"
 	CB_KSYMS=
 
 
 	# CiNIK Worm (Slapper.B variant)
-	CINIK_FILES="${RKHROOTDIR}/tmp/.cinik"
-	CINIK_DIRS="${RKHROOTDIR}/tmp/.font-unix/.cinik"
+	CINIK_FILES="/tmp/.cinik"
+	CINIK_DIRS="/tmp/.font-unix/.cinik"
 	CINIK_KSYMS=
 
 
 	# CX Rootkit
-	CXKIT_FILES="${RKHROOTDIR}/usr/lib/ldlibso
-		     ${RKHROOTDIR}/usr/lib/configlibso
-		     ${RKHROOTDIR}/usr/lib/shklibso
-		     ${RKHROOTDIR}/usr/lib/randomlibso
-		     ${RKHROOTDIR}/usr/lib/ldlibstrings.so
-		     ${RKHROOTDIR}/usr/lib/ldlibdu.so
-		     ${RKHROOTDIR}/usr/lib/ldlibns.so
-		     ${RKHROOTDIR}/usr/include/db"
-	CXKIT_DIRS="${RKHROOTDIR}/usr/include/cxk"
+	CXKIT_FILES="/usr/lib/ldlibso
+		     /usr/lib/configlibso
+		     /usr/lib/shklibso
+		     /usr/lib/randomlibso
+		     /usr/lib/ldlibstrings.so
+		     /usr/lib/ldlibdu.so
+		     /usr/lib/ldlibns.so
+		     /usr/include/db"
+	CXKIT_DIRS="/usr/include/cxk"
 	CXKIT_KSYMS=
 
 
 	# Danny-Boy's Abuse Kit
-	DANNYBOYS_FILES="${RKHROOTDIR}/dev/mdev
-			 ${RKHROOTDIR}/usr/lib/libX.a"
+	DANNYBOYS_FILES="/dev/mdev
+			 /usr/lib/libX.a"
 	DANNYBOYS_DIRS=
 	DANNYBOYS_KSYMS=
 
 
 	# Devil Rootkit
-	DEVIL_FILES="${RKHROOTDIR}/var/lib/games/.src
-		     ${RKHROOTDIR}/dev/dsx
-		     ${RKHROOTDIR}/dev/caca
-		     ${RKHROOTDIR}/dev/pro
-		     ${RKHROOTDIR}/bin/bye
-		     ${RKHROOTDIR}/bin/homedir
-		     ${RKHROOTDIR}/usr/bin/xfss
-		     ${RKHROOTDIR}/usr/sbin/tzava
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/holber
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/sense
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/clear
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/tzava
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/citeste
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/killrk
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/searchlog
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/gaoaza
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/cleaner
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/shk
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/srs
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/utile.tgz
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/webpage
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/getpsy
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/getbnc
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/getemech
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/localroot.sh
-		     ${RKHROOTDIR}/usr/doc/tar/.../.dracusor/stuff/old/sense"
-	DEVIL_DIRS="${RKHROOTDIR}/usr/doc/tar/.../.dracusor"
+	DEVIL_FILES="/var/lib/games/.src
+		     /dev/dsx
+		     /dev/caca
+		     /dev/pro
+		     /bin/bye
+		     /bin/homedir
+		     /usr/bin/xfss
+		     /usr/sbin/tzava
+		     /usr/doc/tar/.../.dracusor/stuff/holber
+		     /usr/doc/tar/.../.dracusor/stuff/sense
+		     /usr/doc/tar/.../.dracusor/stuff/clear
+		     /usr/doc/tar/.../.dracusor/stuff/tzava
+		     /usr/doc/tar/.../.dracusor/stuff/citeste
+		     /usr/doc/tar/.../.dracusor/stuff/killrk
+		     /usr/doc/tar/.../.dracusor/stuff/searchlog
+		     /usr/doc/tar/.../.dracusor/stuff/gaoaza
+		     /usr/doc/tar/.../.dracusor/stuff/cleaner
+		     /usr/doc/tar/.../.dracusor/stuff/shk
+		     /usr/doc/tar/.../.dracusor/stuff/srs
+		     /usr/doc/tar/.../.dracusor/utile.tgz
+		     /usr/doc/tar/.../.dracusor/webpage
+		     /usr/doc/tar/.../.dracusor/getpsy
+		     /usr/doc/tar/.../.dracusor/getbnc
+		     /usr/doc/tar/.../.dracusor/getemech
+		     /usr/doc/tar/.../.dracusor/localroot.sh
+		     /usr/doc/tar/.../.dracusor/stuff/old/sense"
+	DEVIL_DIRS="/usr/doc/tar/.../.dracusor"
 	DEVIL_KSYMS=
 
 
 	# Dica-Kit (T0rn variant) Rootkit
-	DICA_FILES="${RKHROOTDIR}/lib/.sso
-		    ${RKHROOTDIR}/lib/.so
-		    ${RKHROOTDIR}/var/run/...dica/clean
-		    ${RKHROOTDIR}/var/run/...dica/dxr
-		    ${RKHROOTDIR}/var/run/...dica/read
-		    ${RKHROOTDIR}/var/run/...dica/write
-		    ${RKHROOTDIR}/var/run/...dica/lf
-		    ${RKHROOTDIR}/var/run/...dica/xl
-		    ${RKHROOTDIR}/var/run/...dica/xdr
-		    ${RKHROOTDIR}/var/run/...dica/psg
-		    ${RKHROOTDIR}/var/run/...dica/secure
-		    ${RKHROOTDIR}/var/run/...dica/rdx
-		    ${RKHROOTDIR}/var/run/...dica/va
-		    ${RKHROOTDIR}/var/run/...dica/cl.sh
-		    ${RKHROOTDIR}/var/run/...dica/last.log
-		    ${RKHROOTDIR}/usr/bin/.etc
-		    ${RKHROOTDIR}/etc/sshd_config
-		    ${RKHROOTDIR}/etc/ssh_host_key
-		    ${RKHROOTDIR}/etc/ssh_random_seed"
-	DICA_DIRS="${RKHROOTDIR}/var/run/...dica
-		   ${RKHROOTDIR}/var/run/...dica/mh
-		   ${RKHROOTDIR}/var/run/...dica/scan"
+	DICA_FILES="/lib/.sso
+		    /lib/.so
+		    /var/run/...dica/clean
+		    /var/run/...dica/dxr
+		    /var/run/...dica/read
+		    /var/run/...dica/write
+		    /var/run/...dica/lf
+		    /var/run/...dica/xl
+		    /var/run/...dica/xdr
+		    /var/run/...dica/psg
+		    /var/run/...dica/secure
+		    /var/run/...dica/rdx
+		    /var/run/...dica/va
+		    /var/run/...dica/cl.sh
+		    /var/run/...dica/last.log
+		    /usr/bin/.etc
+		    /etc/sshd_config
+		    /etc/ssh_host_key
+		    /etc/ssh_random_seed"
+	DICA_DIRS="/var/run/...dica
+		   /var/run/...dica/mh
+		   /var/run/...dica/scan"
 	DICA_KSYMS=
 
 
 	# Dreams Rootkit
-	DREAMS_FILES="${RKHROOTDIR}/dev/ttyoa
-		      ${RKHROOTDIR}/dev/ttyof
-		      ${RKHROOTDIR}/dev/ttyop
-		      ${RKHROOTDIR}/usr/bin/sense
-		      ${RKHROOTDIR}/usr/bin/sl2
-		      ${RKHROOTDIR}/usr/bin/logclear
-		      ${RKHROOTDIR}/usr/bin/(swapd)
-		      ${RKHROOTDIR}/usr/bin/initrd
-		      ${RKHROOTDIR}/usr/bin/crontabs
-		      ${RKHROOTDIR}/usr/bin/snfs
-		      ${RKHROOTDIR}/usr/lib/libsss
-		      ${RKHROOTDIR}/usr/lib/libsnf.log
-		      ${RKHROOTDIR}/usr/lib/libshtift/top
-		      ${RKHROOTDIR}/usr/lib/libshtift/ps
-		      ${RKHROOTDIR}/usr/lib/libshtift/netstat
-		      ${RKHROOTDIR}/usr/lib/libshtift/ls
-		      ${RKHROOTDIR}/usr/lib/libshtift/ifconfig
-		      ${RKHROOTDIR}/usr/include/linseed.h
-		      ${RKHROOTDIR}/usr/include/linpid.h
-		      ${RKHROOTDIR}/usr/include/linkey.h
-		      ${RKHROOTDIR}/usr/include/linconf.h
-		      ${RKHROOTDIR}/usr/include/iceseed.h
-		      ${RKHROOTDIR}/usr/include/icepid.h
-		      ${RKHROOTDIR}/usr/include/icekey.h
-		      ${RKHROOTDIR}/usr/include/iceconf.h" 
-	DREAMS_DIRS="${RKHROOTDIR}/dev/ida/.hpd
-		     ${RKHROOTDIR}/usr/lib/libshtift"
+	DREAMS_FILES="/dev/ttyoa
+		      /dev/ttyof
+		      /dev/ttyop
+		      /usr/bin/sense
+		      /usr/bin/sl2
+		      /usr/bin/logclear
+		      /usr/bin/(swapd)
+		      /usr/bin/initrd
+		      /usr/bin/crontabs
+		      /usr/bin/snfs
+		      /usr/lib/libsss
+		      /usr/lib/libsnf.log
+		      /usr/lib/libshtift/top
+		      /usr/lib/libshtift/ps
+		      /usr/lib/libshtift/netstat
+		      /usr/lib/libshtift/ls
+		      /usr/lib/libshtift/ifconfig
+		      /usr/include/linseed.h
+		      /usr/include/linpid.h
+		      /usr/include/linkey.h
+		      /usr/include/linconf.h
+		      /usr/include/iceseed.h
+		      /usr/include/icepid.h
+		      /usr/include/icekey.h
+		      /usr/include/iceconf.h" 
+	DREAMS_DIRS="/dev/ida/.hpd
+		     /usr/lib/libshtift"
 	DREAMS_KSYMS=
 
 
 	# Duarawkz Rootkit
-	DUARAWKZ_FILES="${RKHROOTDIR}/usr/bin/duarawkz/loginpass"
-	DUARAWKZ_DIRS="${RKHROOTDIR}/usr/bin/duarawkz"
+	DUARAWKZ_FILES="/usr/bin/duarawkz/loginpass"
+	DUARAWKZ_DIRS="/usr/bin/duarawkz"
 	DUARAWKZ_KSYMS=
 
 
 	# ENYE LKM v1.1, v1.2
 	# Installer default.
-	ENYELKM_FILES="${RKHROOTDIR}/etc/.enyelkmHIDE^IT.ko
-		       ${RKHROOTDIR}/etc/.enyelkmOCULTAR.ko"
+	ENYELKM_FILES="/etc/.enyelkmHIDE^IT.ko
+		       /etc/.enyelkmOCULTAR.ko"
 	ENYELKM_DIRS=
 	ENYELKM_KSYMS=
 
 
 	# Flea Linux Rootkit
-	FLEA_FILES="${RKHROOTDIR}/etc/ld.so.hash
-		    ${RKHROOTDIR}/lib/security/.config/ssh/sshd_config
-		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key
-		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key.pub
-		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_random_seed
-		    ${RKHROOTDIR}/usr/bin/ssh2d
-		    ${RKHROOTDIR}/usr/lib/ldlibns.so
-		    ${RKHROOTDIR}/usr/lib/ldlibps.so
-		    ${RKHROOTDIR}/usr/lib/ldlibpst.so
-		    ${RKHROOTDIR}/usr/lib/ldlibdu.so
-		    ${RKHROOTDIR}/usr/lib/ldlibct.so"
-	FLEA_DIRS="${RKHROOTDIR}/lib/security/.config/ssh
-		   ${RKHROOTDIR}/dev/..0
-		   ${RKHROOTDIR}/dev/..0/backup"
+	FLEA_FILES="/etc/ld.so.hash
+		    /lib/security/.config/ssh/sshd_config
+		    /lib/security/.config/ssh/ssh_host_key
+		    /lib/security/.config/ssh/ssh_host_key.pub
+		    /lib/security/.config/ssh/ssh_random_seed
+		    /usr/bin/ssh2d
+		    /usr/lib/ldlibns.so
+		    /usr/lib/ldlibps.so
+		    /usr/lib/ldlibpst.so
+		    /usr/lib/ldlibdu.so
+		    /usr/lib/ldlibct.so"
+	FLEA_DIRS="/lib/security/.config/ssh
+		   /dev/..0
+		   /dev/..0/backup"
 	FLEA_KSYMS=
 
 
 	# FreeBSD Rootkit (FBRK) catering to versions and compile-time defaults used by: 
 	# 1.0 (1997, Method), 1.2 (1997, Method), "ImperialS-FBRK 1.0" (2001, Nyo)
-	FREEBSD_RK_FILES="${RKHROOTDIR}/dev/ptyp
-			  ${RKHROOTDIR}/dev/ptyq
-			  ${RKHROOTDIR}/dev/ptyr
-			  ${RKHROOTDIR}/dev/ptys
-			  ${RKHROOTDIR}/dev/ptyt
-			  ${RKHROOTDIR}/dev/fd/.88/freshb-bsd
-			  ${RKHROOTDIR}/dev/fd/.88/fresht
-			  ${RKHROOTDIR}/dev/fd/.88/zxsniff
-			  ${RKHROOTDIR}/dev/fd/.88/zxsniff.log
-			  ${RKHROOTDIR}/dev/fd/.99/.ttyf00
-			  ${RKHROOTDIR}/dev/fd/.99/.ttyp00
-			  ${RKHROOTDIR}/dev/fd/.99/.ttyq00
-			  ${RKHROOTDIR}/dev/fd/.99/.ttys00
-			  ${RKHROOTDIR}/dev/fd/.99/.pwsx00
-			  ${RKHROOTDIR}/etc/.acid
-			  ${RKHROOTDIR}/usr/lib/.fx/sched_host.2
-			  ${RKHROOTDIR}/usr/lib/.fx/random_d.2
-			  ${RKHROOTDIR}/usr/lib/.fx/set_pid.2
-			  ${RKHROOTDIR}/usr/lib/.fx/setrgrp.2
-			  ${RKHROOTDIR}/usr/lib/.fx/TOHIDE
-			  ${RKHROOTDIR}/usr/lib/.fx/cons.saver
-			  ${RKHROOTDIR}/usr/lib/.fx/adore/ava/ava
-			  ${RKHROOTDIR}/usr/lib/.fx/adore/adore/adore.ko
-			  ${RKHROOTDIR}/bin/sysback
-			  ${RKHROOTDIR}/usr/local/bin/sysback"
-	FREEBSD_RK_DIRS="${RKHROOTDIR}/dev/fd/.88
-			 ${RKHROOTDIR}/dev/fd/.99
-			 ${RKHROOTDIR}/usr/lib/.fx
-			 ${RKHROOTDIR}/usr/lib/.fx/adore"
+	FREEBSD_RK_FILES="/dev/ptyp
+			  /dev/ptyq
+			  /dev/ptyr
+			  /dev/ptys
+			  /dev/ptyt
+			  /dev/fd/.88/freshb-bsd
+			  /dev/fd/.88/fresht
+			  /dev/fd/.88/zxsniff
+			  /dev/fd/.88/zxsniff.log
+			  /dev/fd/.99/.ttyf00
+			  /dev/fd/.99/.ttyp00
+			  /dev/fd/.99/.ttyq00
+			  /dev/fd/.99/.ttys00
+			  /dev/fd/.99/.pwsx00
+			  /etc/.acid
+			  /usr/lib/.fx/sched_host.2
+			  /usr/lib/.fx/random_d.2
+			  /usr/lib/.fx/set_pid.2
+			  /usr/lib/.fx/setrgrp.2
+			  /usr/lib/.fx/TOHIDE
+			  /usr/lib/.fx/cons.saver
+			  /usr/lib/.fx/adore/ava/ava
+			  /usr/lib/.fx/adore/adore/adore.ko
+			  /bin/sysback
+			  /usr/local/bin/sysback"
+	FREEBSD_RK_DIRS="/dev/fd/.88
+			 /dev/fd/.99
+			 /usr/lib/.fx
+			 /usr/lib/.fx/adore"
 	FREEBSD_RK_KSYMS=
 
 
 	# Fu Rootkit
-	FU_FILES="${RKHROOTDIR}/sbin/xc
-		  ${RKHROOTDIR}/usr/include/ivtype.h
-		  ${RKHROOTDIR}/bin/.lib"
+	FU_FILES="/sbin/xc
+		  /usr/include/ivtype.h
+		  /bin/.lib"
 	FU_DIRS=
 	FU_KSYMS=
 
 
 	# Fuckit Rootkit
-	FUCKIT_FILES="${RKHROOTDIR}/lib/libproc.so.2.0.7
-		      ${RKHROOTDIR}/dev/proc/.bash_profile
-		      ${RKHROOTDIR}/dev/proc/.bashrc
-		      ${RKHROOTDIR}/dev/proc/.cshrc
-		      ${RKHROOTDIR}/dev/proc/fuckit/hax0r
-		      ${RKHROOTDIR}/dev/proc/fuckit/hax0rshell
-		      ${RKHROOTDIR}/dev/proc/fuckit/config/lports
-		      ${RKHROOTDIR}/dev/proc/fuckit/config/rports
-		      ${RKHROOTDIR}/dev/proc/fuckit/config/rkconf
-		      ${RKHROOTDIR}/dev/proc/fuckit/config/password
-		      ${RKHROOTDIR}/dev/proc/fuckit/config/progs
-		      ${RKHROOTDIR}/dev/proc/fuckit/system-bins/init
-		      ${RKHROOTDIR}/usr/lib/libcps.a
-		      ${RKHROOTDIR}/usr/lib/libtty.a"
-	FUCKIT_DIRS="${RKHROOTDIR}/dev/proc
-		     ${RKHROOTDIR}/dev/proc/fuckit
-		     ${RKHROOTDIR}/dev/proc/fuckit/system-bins
-		     ${RKHROOTDIR}/dev/proc/toolz"
+	FUCKIT_FILES="/lib/libproc.so.2.0.7
+		      /dev/proc/.bash_profile
+		      /dev/proc/.bashrc
+		      /dev/proc/.cshrc
+		      /dev/proc/fuckit/hax0r
+		      /dev/proc/fuckit/hax0rshell
+		      /dev/proc/fuckit/config/lports
+		      /dev/proc/fuckit/config/rports
+		      /dev/proc/fuckit/config/rkconf
+		      /dev/proc/fuckit/config/password
+		      /dev/proc/fuckit/config/progs
+		      /dev/proc/fuckit/system-bins/init
+		      /usr/lib/libcps.a
+		      /usr/lib/libtty.a"
+	FUCKIT_DIRS="/dev/proc
+		     /dev/proc/fuckit
+		     /dev/proc/fuckit/system-bins
+		     /dev/proc/toolz"
 	FUCKIT_KSYMS=
 
 
 	# GasKit Rootkit
-	GASKIT_FILES="${RKHROOTDIR}/dev/dev/gaskit/sshd/sshdd"
-	GASKIT_DIRS="${RKHROOTDIR}/dev/dev
-		     ${RKHROOTDIR}/dev/dev/gaskit
-		     ${RKHROOTDIR}/dev/dev/gaskit/sshd"
+	GASKIT_FILES="/dev/dev/gaskit/sshd/sshdd"
+	GASKIT_DIRS="/dev/dev
+		     /dev/dev/gaskit
+		     /dev/dev/gaskit/sshd"
 	GASKIT_KSYMS=
 
 
@@ -7237,105 +7185,105 @@ do_system_check_initialisation() {
 
 	# HjC Kit Rootkit
 	HJCKIT_FILES=
-	HJCKIT_DIRS="${RKHROOTDIR}/dev/.hijackerz"
+	HJCKIT_DIRS="/dev/.hijackerz"
 	HJCKIT_KSYMS=
 
 
 	# ignoKit Rootkit
-	IGNOKIT_FILES="${RKHROOTDIR}/lib/defs/p
-		       ${RKHROOTDIR}/lib/defs/q
-		       ${RKHROOTDIR}/lib/defs/r
-		       ${RKHROOTDIR}/lib/defs/s
-		       ${RKHROOTDIR}/lib/defs/t
-		       ${RKHROOTDIR}/usr/lib/defs/p
-		       ${RKHROOTDIR}/usr/lib/defs/q
-		       ${RKHROOTDIR}/usr/lib/defs/r
-		       ${RKHROOTDIR}/usr/lib/defs/s
-		       ${RKHROOTDIR}/usr/lib/defs/t
-		       ${RKHROOTDIR}/usr/lib/.libigno/pkunsec
-		       ${RKHROOTDIR}/usr/lib/.libigno/.igno/psybnc/psybnc"
-	IGNOKIT_DIRS="${RKHROOTDIR}/usr/lib/.libigno
-		      ${RKHROOTDIR}/usr/lib/.libigno/.igno"
+	IGNOKIT_FILES="/lib/defs/p
+		       /lib/defs/q
+		       /lib/defs/r
+		       /lib/defs/s
+		       /lib/defs/t
+		       /usr/lib/defs/p
+		       /usr/lib/defs/q
+		       /usr/lib/defs/r
+		       /usr/lib/defs/s
+		       /usr/lib/defs/t
+		       /usr/lib/.libigno/pkunsec
+		       /usr/lib/.libigno/.igno/psybnc/psybnc"
+	IGNOKIT_DIRS="/usr/lib/.libigno
+		      /usr/lib/.libigno/.igno"
 	IGNOKIT_KSYMS=
 
 
 	# iLLogiC Rootkit (SunOS Rootkit variant)
-	ILLOGIC_FILES="${RKHROOTDIR}/dev/kmod
-		       ${RKHROOTDIR}/dev/dos
-		       ${RKHROOTDIR}/usr/lib/crth.o
-		       ${RKHROOTDIR}/usr/lib/crtz.o
-		       ${RKHROOTDIR}/etc/ld.so.hash
-		       ${RKHROOTDIR}/usr/bin/sia
-		       ${RKHROOTDIR}/usr/bin/ssh2d
-		       ${RKHROOTDIR}/lib/security/.config/sn
-		       ${RKHROOTDIR}/lib/security/.config/iver
-		       ${RKHROOTDIR}/lib/security/.config/uconf.inv
-		       ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key
-		       ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key.pub
-		       ${RKHROOTDIR}/lib/security/.config/ssh/sshport
-		       ${RKHROOTDIR}/lib/security/.config/ssh/ssh_random_seed
-		       ${RKHROOTDIR}/lib/security/.config/ava
-		       ${RKHROOTDIR}/lib/security/.config/cleaner
-		       ${RKHROOTDIR}/lib/security/.config/lpsched
-		       ${RKHROOTDIR}/lib/security/.config/sz
-		       ${RKHROOTDIR}/lib/security/.config/rcp
-		       ${RKHROOTDIR}/lib/security/.config/patcher
-		       ${RKHROOTDIR}/lib/security/.config/pg
-		       ${RKHROOTDIR}/lib/security/.config/crypt
-		       ${RKHROOTDIR}/lib/security/.config/utime
-		       ${RKHROOTDIR}/lib/security/.config/wget
-		       ${RKHROOTDIR}/lib/security/.config/instmod
-		       ${RKHROOTDIR}/lib/security/.config/bin/find
-		       ${RKHROOTDIR}/lib/security/.config/bin/du
-		       ${RKHROOTDIR}/lib/security/.config/bin/ls
-		       ${RKHROOTDIR}/lib/security/.config/bin/psr
-		       ${RKHROOTDIR}/lib/security/.config/bin/netstat
-		       ${RKHROOTDIR}/lib/security/.config/bin/su
-		       ${RKHROOTDIR}/lib/security/.config/bin/ping
-		       ${RKHROOTDIR}/lib/security/.config/bin/passwd"
-	ILLOGIC_DIRS="${RKHROOTDIR}/lib/security/.config
-		      ${RKHROOTDIR}/lib/security/.config/ssh
-		      ${RKHROOTDIR}/lib/security/.config/bin
-		      ${RKHROOTDIR}/lib/security/.config/backup
-		      ${RKHROOTDIR}/root/%%%/.dir
-		      ${RKHROOTDIR}/root/%%%/.dir/mass-scan
-		      ${RKHROOTDIR}/root/%%%/.dir/flood"
+	ILLOGIC_FILES="/dev/kmod
+		       /dev/dos
+		       /usr/lib/crth.o
+		       /usr/lib/crtz.o
+		       /etc/ld.so.hash
+		       /usr/bin/sia
+		       /usr/bin/ssh2d
+		       /lib/security/.config/sn
+		       /lib/security/.config/iver
+		       /lib/security/.config/uconf.inv
+		       /lib/security/.config/ssh/ssh_host_key
+		       /lib/security/.config/ssh/ssh_host_key.pub
+		       /lib/security/.config/ssh/sshport
+		       /lib/security/.config/ssh/ssh_random_seed
+		       /lib/security/.config/ava
+		       /lib/security/.config/cleaner
+		       /lib/security/.config/lpsched
+		       /lib/security/.config/sz
+		       /lib/security/.config/rcp
+		       /lib/security/.config/patcher
+		       /lib/security/.config/pg
+		       /lib/security/.config/crypt
+		       /lib/security/.config/utime
+		       /lib/security/.config/wget
+		       /lib/security/.config/instmod
+		       /lib/security/.config/bin/find
+		       /lib/security/.config/bin/du
+		       /lib/security/.config/bin/ls
+		       /lib/security/.config/bin/psr
+		       /lib/security/.config/bin/netstat
+		       /lib/security/.config/bin/su
+		       /lib/security/.config/bin/ping
+		       /lib/security/.config/bin/passwd"
+	ILLOGIC_DIRS="/lib/security/.config
+		      /lib/security/.config/ssh
+		      /lib/security/.config/bin
+		      /lib/security/.config/backup
+		      /root/%%%/.dir
+		      /root/%%%/.dir/mass-scan
+		      /root/%%%/.dir/flood"
 	ILLOGIC_KSYMS=
 
 
 	# OSX Inqtana (Variant A)
-	INQTANAA_FILES="${RKHROOTDIR}/Users/w0rm-support.tgz
-			${RKHROOTDIR}/Users/InqTest.class
-			${RKHROOTDIR}/Users/com.openbundle.plist
-			${RKHROOTDIR}/Users/com.pwned.plist
-			${RKHROOTDIR}/Users/libavetanaBT.jnilib"
-	INQTANAA_DIRS="${RKHROOTDIR}/Users/de
-		       ${RKHROOTDIR}/Users/javax"
+	INQTANAA_FILES="/Users/w0rm-support.tgz
+			/Users/InqTest.class
+			/Users/com.openbundle.plist
+			/Users/com.pwned.plist
+			/Users/libavetanaBT.jnilib"
+	INQTANAA_DIRS="/Users/de
+		       /Users/javax"
 	INQTANAA_KSYMS=
 
 
 	# OSX Inqtana (Variant B)
-	INQTANAB_FILES="${RKHROOTDIR}/Users/w0rms.love.apples.tgz
-			${RKHROOTDIR}/Users/InqTest.class
-			${RKHROOTDIR}/Users/InqTest.java
-			${RKHROOTDIR}/Users/libavetanaBT.jnilib
-			${RKHROOTDIR}/Users/InqTanaHandler
-			${RKHROOTDIR}/Users/InqTanaHandler.bundle"
-	INQTANAB_DIRS="${RKHROOTDIR}/Users/de
-		       ${RKHROOTDIR}/Users/javax"
+	INQTANAB_FILES="/Users/w0rms.love.apples.tgz
+			/Users/InqTest.class
+			/Users/InqTest.java
+			/Users/libavetanaBT.jnilib
+			/Users/InqTanaHandler
+			/Users/InqTanaHandler.bundle"
+	INQTANAB_DIRS="/Users/de
+		       /Users/javax"
 	INQTANAB_KSYMS=
 
 
 	# OSX Inqtana (Variant C)
-	INQTANAC_FILES="${RKHROOTDIR}/Users/applec0re.tgz
-			${RKHROOTDIR}/Users/InqTest.class
-			${RKHROOTDIR}/Users/InqTest.java
-			${RKHROOTDIR}/Users/libavetanaBT.jnilib
-			${RKHROOTDIR}/Users/environment.plist
-			${RKHROOTDIR}/Users/pwned.c
-			${RKHROOTDIR}/Users/pwned.dylib"
-	INQTANAC_DIRS="${RKHROOTDIR}/Users/de
-		       ${RKHROOTDIR}/Users/javax"
+	INQTANAC_FILES="/Users/applec0re.tgz
+			/Users/InqTest.class
+			/Users/InqTest.java
+			/Users/libavetanaBT.jnilib
+			/Users/environment.plist
+			/Users/pwned.c
+			/Users/pwned.dylib"
+	INQTANAC_DIRS="/Users/de
+		       /Users/javax"
 	INQTANAC_KSYMS=
 
 
@@ -7353,102 +7301,102 @@ do_system_check_initialisation() {
 
 	# Irix Rootkit (for Irix 6.x)
 	IRIXRK_FILES=
-	IRIXRK_DIRS="${RKHROOTDIR}/dev/pts/01
-		     ${RKHROOTDIR}/dev/pts/01/backup
-		     ${RKHROOTDIR}/dev/pts/01/etc
-		     ${RKHROOTDIR}/dev/pts/01/tmp"
+	IRIXRK_DIRS="/dev/pts/01
+		     /dev/pts/01/backup
+		     /dev/pts/01/etc
+		     /dev/pts/01/tmp"
 	IRIXRK_KSYMS=
 
 
 	# Kitko Rootkit
 	KITKO_FILES=
-	KITKO_DIRS="${RKHROOTDIR}/usr/src/redhat/SRPMS/..."
+	KITKO_DIRS="/usr/src/redhat/SRPMS/..."
 	KITKO_KSYMS=
 
 
 	# Knark Rootkit
-	KNARK_FILES="${RKHROOTDIR}/proc/knark/pids"
-	KNARK_DIRS="${RKHROOTDIR}/proc/knark"
+	KNARK_FILES="/proc/knark/pids"
+	KNARK_DIRS="/proc/knark"
 	KNARK_KSYMS=
 
 
 	# ld-linuxv.so (LD_PRELOAD shared library rootkit)
-	LINUXV_FILES="${RKHROOTDIR}/lib/ld-linuxv.so.1"
-	LINUXV_DIRS="${RKHROOTDIR}/var/opt/_so_cache
-		     ${RKHROOTDIR}/var/opt/_so_cache/ld
-		     ${RKHROOTDIR}/var/opt/_so_cache/lc"
+	LINUXV_FILES="/lib/ld-linuxv.so.1"
+	LINUXV_DIRS="/var/opt/_so_cache
+		     /var/opt/_so_cache/ld
+		     /var/opt/_so_cache/lc"
 	LINUXV_KSYMS=
 
 
 	# Lion Worm
-	LION_FILES="${RKHROOTDIR}/bin/in.telnetd
-		    ${RKHROOTDIR}/bin/mjy
-		    ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/mjy
-		    ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/in.telnetd
-		    ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.x
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/1i0n.sh
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/hack.sh
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/bind
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/randb
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/scan.sh
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/pscan
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/star.sh
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/bindx.sh
-		    ${RKHROOTDIR}/dev/.lib/lib/scan/bindname.log
-		    ${RKHROOTDIR}/dev/.lib/lib/1i0n.sh
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/netstat
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1addr
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1logz
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1proc
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/dev/.1file"
+	LION_FILES="/bin/in.telnetd
+		    /bin/mjy
+		    /usr/man/man1/man1/lib/.lib/mjy
+		    /usr/man/man1/man1/lib/.lib/in.telnetd
+		    /usr/man/man1/man1/lib/.lib/.x
+		    /dev/.lib/lib/scan/1i0n.sh
+		    /dev/.lib/lib/scan/hack.sh
+		    /dev/.lib/lib/scan/bind
+		    /dev/.lib/lib/scan/randb
+		    /dev/.lib/lib/scan/scan.sh
+		    /dev/.lib/lib/scan/pscan
+		    /dev/.lib/lib/scan/star.sh
+		    /dev/.lib/lib/scan/bindx.sh
+		    /dev/.lib/lib/scan/bindname.log
+		    /dev/.lib/lib/1i0n.sh
+		    /dev/.lib/lib/lib/netstat
+		    /dev/.lib/lib/lib/dev/.1addr
+		    /dev/.lib/lib/lib/dev/.1logz
+		    /dev/.lib/lib/lib/dev/.1proc
+		    /dev/.lib/lib/lib/dev/.1file"
 	LION_DIRS=
 	LION_KSYMS=
 
 
 	# Lockit Rootkit (aka LJK2)
-	LOCKIT_FILES="${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_config
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/ssh_random_seed*
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/sshd_config
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/du
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ifconfig
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/inetd.conf
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/locate
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/login
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ls
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/netstat
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/ps
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/pstree
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/rc.sysinit
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/syslogd
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/tcpd
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/backup/top
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1sauber
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/clean/RK1wted
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1parse
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hack/RK1sniff
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1addr
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1dir
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1log
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/.RK1proc
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/hide/RK1phidemod.c
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/README.modules
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/RK1hidem.c
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/modules/RK1phide
-		      ${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh"
-	LOCKIT_DIRS="${RKHROOTDIR}/usr/lib/libmen.oo/.LJK2"
+	LOCKIT_FILES="/usr/lib/libmen.oo/.LJK2/ssh_config
+		      /usr/lib/libmen.oo/.LJK2/ssh_host_key
+		      /usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
+		      /usr/lib/libmen.oo/.LJK2/ssh_random_seed*
+		      /usr/lib/libmen.oo/.LJK2/sshd_config
+		      /usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
+		      /usr/lib/libmen.oo/.LJK2/backup/du
+		      /usr/lib/libmen.oo/.LJK2/backup/ifconfig
+		      /usr/lib/libmen.oo/.LJK2/backup/inetd.conf
+		      /usr/lib/libmen.oo/.LJK2/backup/locate
+		      /usr/lib/libmen.oo/.LJK2/backup/login
+		      /usr/lib/libmen.oo/.LJK2/backup/ls
+		      /usr/lib/libmen.oo/.LJK2/backup/netstat
+		      /usr/lib/libmen.oo/.LJK2/backup/ps
+		      /usr/lib/libmen.oo/.LJK2/backup/pstree
+		      /usr/lib/libmen.oo/.LJK2/backup/rc.sysinit
+		      /usr/lib/libmen.oo/.LJK2/backup/syslogd
+		      /usr/lib/libmen.oo/.LJK2/backup/tcpd
+		      /usr/lib/libmen.oo/.LJK2/backup/top
+		      /usr/lib/libmen.oo/.LJK2/clean/RK1sauber
+		      /usr/lib/libmen.oo/.LJK2/clean/RK1wted
+		      /usr/lib/libmen.oo/.LJK2/hack/RK1parse
+		      /usr/lib/libmen.oo/.LJK2/hack/RK1sniff
+		      /usr/lib/libmen.oo/.LJK2/hide/.RK1addr
+		      /usr/lib/libmen.oo/.LJK2/hide/.RK1dir
+		      /usr/lib/libmen.oo/.LJK2/hide/.RK1log
+		      /usr/lib/libmen.oo/.LJK2/hide/.RK1proc
+		      /usr/lib/libmen.oo/.LJK2/hide/RK1phidemod.c
+		      /usr/lib/libmen.oo/.LJK2/modules/README.modules
+		      /usr/lib/libmen.oo/.LJK2/modules/RK1hidem.c
+		      /usr/lib/libmen.oo/.LJK2/modules/RK1phide
+		      /usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh"
+	LOCKIT_DIRS="/usr/lib/libmen.oo/.LJK2"
 	LOCKIT_KSYMS=
 
 
 	# MRK (MiCrobul?) RootKit (based on Devil RootKit, also see Xzibit)
-	MRK_FILES="${RKHROOTDIR}/dev/ida/.inet/pid
-		   ${RKHROOTDIR}/dev/ida/.inet/ssh_host_key
-		   ${RKHROOTDIR}/dev/ida/.inet/ssh_random_seed
-		   ${RKHROOTDIR}/dev/ida/.inet/tcp.log"
-	MRK_DIRS="${RKHROOTDIR}/dev/ida/.inet
-		  ${RKHROOTDIR}/var/spool/cron/.sh"
+	MRK_FILES="/dev/ida/.inet/pid
+		   /dev/ida/.inet/ssh_host_key
+		   /dev/ida/.inet/ssh_random_seed
+		   /dev/ida/.inet/tcp.log"
+	MRK_DIRS="/dev/ida/.inet
+		  /var/spool/cron/.sh"
 	MRK_KSYMS=
 
 
@@ -7456,634 +7404,634 @@ do_system_check_initialisation() {
 	# Binary is by default called "mood-nt" but can be anywhere.
 	# Here we look for collaterals, from include/prefs.h defaults
 	# until sig-based dirscan() is added.
-	MOODNT_FILES="${RKHROOTDIR}/sbin/init__mood-nt-_-_cthulhu
-		      ${RKHROOTDIR}/_cthulhu/mood-nt.init
-		      ${RKHROOTDIR}/_cthulhu/mood-nt.conf
-		      ${RKHROOTDIR}/_cthulhu/mood-nt.sniff"
-	MOODNT_DIRS="${RKHROOTDIR}/_cthulhu"
+	MOODNT_FILES="/sbin/init__mood-nt-_-_cthulhu
+		      /_cthulhu/mood-nt.init
+		      /_cthulhu/mood-nt.conf
+		      /_cthulhu/mood-nt.sniff"
+	MOODNT_DIRS="/_cthulhu"
 	MOODNT_KSYMS=
 
 
 	# Ni0 Rootkit
-	NIO_FILES="${RKHROOTDIR}/var/lock/subsys/...datafile.../...net...
-		   ${RKHROOTDIR}/var/lock/subsys/...datafile.../...port...
-		   ${RKHROOTDIR}/var/lock/subsys/...datafile.../...ps...
-		   ${RKHROOTDIR}/var/lock/subsys/...datafile.../...file..."
-	NIO_DIRS="${RKHROOTDIR}/tmp/waza
-		  ${RKHROOTDIR}/var/lock/subsys/...datafile...
-		  ${RKHROOTDIR}/usr/sbin/es"
+	NIO_FILES="/var/lock/subsys/...datafile.../...net...
+		   /var/lock/subsys/...datafile.../...port...
+		   /var/lock/subsys/...datafile.../...ps...
+		   /var/lock/subsys/...datafile.../...file..."
+	NIO_DIRS="/tmp/waza
+		  /var/lock/subsys/...datafile...
+		  /usr/sbin/es"
 	NIO_KSYMS=
 
 
 	# Ohhara Rootkit
-	OHHARA_FILES="${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../in.smbd.log"
-	OHHARA_DIRS="${RKHROOTDIR}/var/lock/subsys/...datafile...
-		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile...
-		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../bin
-		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/bin
-		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../usr/sbin
-		     ${RKHROOTDIR}/var/lock/subsys/...datafile.../...datafile.../lib/security"
+	OHHARA_FILES="/var/lock/subsys/...datafile.../...datafile.../in.smbd.log"
+	OHHARA_DIRS="/var/lock/subsys/...datafile...
+		     /var/lock/subsys/...datafile.../...datafile...
+		     /var/lock/subsys/...datafile.../...datafile.../bin
+		     /var/lock/subsys/...datafile.../...datafile.../usr/bin
+		     /var/lock/subsys/...datafile.../...datafile.../usr/sbin
+		     /var/lock/subsys/...datafile.../...datafile.../lib/security"
 	OHHARA_KSYMS=
 
 
 	# Optic Kit (Tux variant) Rootkit
 	OPTICKIT_FILES=
-	OPTICKIT_DIRS="${RKHROOTDIR}/dev/tux
-		       ${RKHROOTDIR}/usr/bin/xchk
-		       ${RKHROOTDIR}/usr/bin/xsf
-		       ${RKHROOTDIR}/usr/bin/ssh2d"
+	OPTICKIT_DIRS="/dev/tux
+		       /usr/bin/xchk
+		       /usr/bin/xsf
+		       /usr/bin/ssh2d"
 	OPTICKIT_KSYMS=
 
 
 	# OSX Rootkit 0.2.1 (OSXRK)
-	OSXRK_FILES="${RKHROOTDIR}/dev/.rk/nc
-		     ${RKHROOTDIR}/dev/.rk/diepu
-		     ${RKHROOTDIR}/dev/.rk/backd
-		     ${RKHROOTDIR}/Library/StartupItems/opener
-		     ${RKHROOTDIR}/Library/StartupItems/opener.sh
-		     ${RKHROOTDIR}/System/Library/StartupItems/opener
-		     ${RKHROOTDIR}/System/Library/StartupItems/opener.sh"
-	OSXRK_DIRS="${RKHROOTDIR}/dev/.rk
-		    ${RKHROOTDIR}/Users/LDAP-daemon
-		    ${RKHROOTDIR}/tmp/.work"
+	OSXRK_FILES="/dev/.rk/nc
+		     /dev/.rk/diepu
+		     /dev/.rk/backd
+		     /Library/StartupItems/opener
+		     /Library/StartupItems/opener.sh
+		     /System/Library/StartupItems/opener
+		     /System/Library/StartupItems/opener.sh"
+	OSXRK_DIRS="/dev/.rk
+		    /Users/LDAP-daemon
+		    /tmp/.work"
 	OSXRK_KSYMS=
 
 
 	# Oz Rootkit
-	OZ_FILES="${RKHROOTDIR}/dev/.oz/.nap/rkit/terror"
-	OZ_DIRS="${RKHROOTDIR}/dev/.oz"
+	OZ_FILES="/dev/.oz/.nap/rkit/terror"
+	OZ_DIRS="/dev/.oz"
 	OZ_KSYMS=
 
 
 	# Phalanx Rootkit
-	PHALANX_FILES="${RKHROOTDIR}/uNFuNF
-		       ${RKHROOTDIR}/etc/host.ph1
-		       ${RKHROOTDIR}/bin/host.ph1
-		       ${RKHROOTDIR}/usr/share/.home.ph1/phalanx
-		       ${RKHROOTDIR}/usr/share/.home.ph1/cb
-		       ${RKHROOTDIR}/usr/share/.home.ph1/kebab"
-	PHALANX_DIRS="${RKHROOTDIR}/usr/share/.home.ph1
-		      ${RKHROOTDIR}/usr/share/.home.ph1/tty"
+	PHALANX_FILES="/uNFuNF
+		       /etc/host.ph1
+		       /bin/host.ph1
+		       /usr/share/.home.ph1/phalanx
+		       /usr/share/.home.ph1/cb
+		       /usr/share/.home.ph1/kebab"
+	PHALANX_DIRS="/usr/share/.home.ph1
+		      /usr/share/.home.ph1/tty"
 	PHALANX_KSYMS=
 
 
 	# Phalanx2 Rootkit
-	PHALANX2_FILES="${RKHROOTDIR}/etc/khubd.p2/.p2rc
-		        ${RKHROOTDIR}/etc/khubd.p2/.phalanx2
-		        ${RKHROOTDIR}/etc/khubd.p2/.sniff
-		        ${RKHROOTDIR}/etc/khubd.p2/sshgrab.py
-		        ${RKHROOTDIR}/etc/lolzz.p2/.p2rc
-		        ${RKHROOTDIR}/etc/lolzz.p2/.phalanx2
-		        ${RKHROOTDIR}/etc/lolzz.p2/.sniff
-		        ${RKHROOTDIR}/etc/lolzz.p2/sshgrab.py
-			${RKHROOTDIR}/etc/cron.d/zupzzplaceholder
-			${RKHROOTDIR}/usr/lib/zupzz.p2/.p-2.3d
-			${RKHROOTDIR}/usr/lib/zupzz.p2/.p2rc"
-	PHALANX2_DIRS="${RKHROOTDIR}/etc/khubd.p2
-		       ${RKHROOTDIR}/etc/lolzz.p2
-		       ${RKHROOTDIR}/usr/lib/zupzz.p2"
+	PHALANX2_FILES="/etc/khubd.p2/.p2rc
+		        /etc/khubd.p2/.phalanx2
+		        /etc/khubd.p2/.sniff
+		        /etc/khubd.p2/sshgrab.py
+		        /etc/lolzz.p2/.p2rc
+		        /etc/lolzz.p2/.phalanx2
+		        /etc/lolzz.p2/.sniff
+		        /etc/lolzz.p2/sshgrab.py
+			/etc/cron.d/zupzzplaceholder
+			/usr/lib/zupzz.p2/.p-2.3d
+			/usr/lib/zupzz.p2/.p2rc"
+	PHALANX2_DIRS="/etc/khubd.p2
+		       /etc/lolzz.p2
+		       /usr/lib/zupzz.p2"
 	PHALANX2_KSYMS=
 
 	# Portacelo Rootkit
-	PORTACELO_FILES="${RKHROOTDIR}/var/lib/.../.ak
-			 ${RKHROOTDIR}/var/lib/.../.hk
-			 ${RKHROOTDIR}/var/lib/.../.rs
-			 ${RKHROOTDIR}/var/lib/.../.p
-			 ${RKHROOTDIR}/var/lib/.../getty
-			 ${RKHROOTDIR}/var/lib/.../lkt.o
-			 ${RKHROOTDIR}/var/lib/.../show
-			 ${RKHROOTDIR}/var/lib/.../nlkt.o
-			 ${RKHROOTDIR}/var/lib/.../ssshrc
-			 ${RKHROOTDIR}/var/lib/.../sssh_equiv
-			 ${RKHROOTDIR}/var/lib/.../sssh_known_hosts
-			 ${RKHROOTDIR}/var/lib/.../sssh_pid ~/.sssh/known_hosts"
+	PORTACELO_FILES="/var/lib/.../.ak
+			 /var/lib/.../.hk
+			 /var/lib/.../.rs
+			 /var/lib/.../.p
+			 /var/lib/.../getty
+			 /var/lib/.../lkt.o
+			 /var/lib/.../show
+			 /var/lib/.../nlkt.o
+			 /var/lib/.../ssshrc
+			 /var/lib/.../sssh_equiv
+			 /var/lib/.../sssh_known_hosts
+			 /var/lib/.../sssh_pid ~/.sssh/known_hosts"
 	PORTACELO_DIRS=
 	PORTACELO_KSYMS=
 
 
 	# R3dstorm Toolkit
-	REDSTORM_FILES="${RKHROOTDIR}/var/log/tk02/see_all
-			${RKHROOTDIR}/var/log/tk02/.scris
-			${RKHROOTDIR}/bin/.../sshd/sbin/sshd1
-			${RKHROOTDIR}/bin/.../hate/sk
-			${RKHROOTDIR}/bin/.../see_all"
-	REDSTORM_DIRS="${RKHROOTDIR}/var/log/tk02
-		       ${RKHROOTDIR}/var/log/tk02/old
-		       ${RKHROOTDIR}/bin/..."
+	REDSTORM_FILES="/var/log/tk02/see_all
+			/var/log/tk02/.scris
+			/bin/.../sshd/sbin/sshd1
+			/bin/.../hate/sk
+			/bin/.../see_all"
+	REDSTORM_DIRS="/var/log/tk02
+		       /var/log/tk02/old
+		       /bin/..."
 	REDSTORM_KSYMS=
 
 
 	# RH-Sharpe's Rootkit
-	RHSHARPES_FILES="${RKHROOTDIR}/bin/lps
-			 ${RKHROOTDIR}/usr/bin/lpstree
-			 ${RKHROOTDIR}/usr/bin/ltop
-			 ${RKHROOTDIR}/usr/bin/lkillall
-			 ${RKHROOTDIR}/usr/bin/ldu
-			 ${RKHROOTDIR}/usr/bin/lnetstat
-			 ${RKHROOTDIR}/usr/bin/wp
-			 ${RKHROOTDIR}/usr/bin/shad
-			 ${RKHROOTDIR}/usr/bin/vadim
-			 ${RKHROOTDIR}/usr/bin/slice
-			 ${RKHROOTDIR}/usr/bin/cleaner
-			 ${RKHROOTDIR}/usr/include/rpcsvc/du"
+	RHSHARPES_FILES="/bin/lps
+			 /usr/bin/lpstree
+			 /usr/bin/ltop
+			 /usr/bin/lkillall
+			 /usr/bin/ldu
+			 /usr/bin/lnetstat
+			 /usr/bin/wp
+			 /usr/bin/shad
+			 /usr/bin/vadim
+			 /usr/bin/slice
+			 /usr/bin/cleaner
+			 /usr/include/rpcsvc/du"
 	RHSHARPES_DIRS=
 	RHSHARPES_KSYMS=
 
 
 	# RSHA's Rootkit
-	RSHA_FILES="${RKHROOTDIR}/bin/kr4p
-		    ${RKHROOTDIR}/usr/bin/n3tstat
-		    ${RKHROOTDIR}/usr/bin/chsh2
-		    ${RKHROOTDIR}/usr/bin/slice2
-		    ${RKHROOTDIR}/usr/src/linux/arch/alpha/lib/.lib/.1proc
-		    ${RKHROOTDIR}/etc/rc.d/arch/alpha/lib/.lib/.1addr"
-	RSHA_DIRS="${RKHROOTDIR}/etc/rc.d/rsha
-		   ${RKHROOTDIR}/etc/rc.d/arch/alpha/lib/.lib"
+	RSHA_FILES="/bin/kr4p
+		    /usr/bin/n3tstat
+		    /usr/bin/chsh2
+		    /usr/bin/slice2
+		    /usr/src/linux/arch/alpha/lib/.lib/.1proc
+		    /etc/rc.d/arch/alpha/lib/.lib/.1addr"
+	RSHA_DIRS="/etc/rc.d/rsha
+		   /etc/rc.d/arch/alpha/lib/.lib"
 	RSHA_KSYMS=
 
 
 	# Shutdown Rootkit
 	# The '%' character represents a space.
-	SHUTDOWN_FILES="${RKHROOTDIR}/usr/man/man5/..%/.dir/scannah/asus
-			${RKHROOTDIR}/usr/man/man5/..%/.dir/see
-			${RKHROOTDIR}/usr/man/man5/..%/.dir/nscd
-			${RKHROOTDIR}/usr/man/man5/..%/.dir/alpd
-			${RKHROOTDIR}/etc/rc.d/rc.local%"
-	SHUTDOWN_DIRS="${RKHROOTDIR}/usr/man/man5/..%/.dir
-		       ${RKHROOTDIR}/usr/man/man5/..%/.dir/scannah
-		       ${RKHROOTDIR}/etc/rc.d/rc0.d/..%/.dir"
+	SHUTDOWN_FILES="/usr/man/man5/..%/.dir/scannah/asus
+			/usr/man/man5/..%/.dir/see
+			/usr/man/man5/..%/.dir/nscd
+			/usr/man/man5/..%/.dir/alpd
+			/etc/rc.d/rc.local%"
+	SHUTDOWN_DIRS="/usr/man/man5/..%/.dir
+		       /usr/man/man5/..%/.dir/scannah
+		       /etc/rc.d/rc0.d/..%/.dir"
 	SHUTDOWN_KSYMS=
 
 
 	# Scalper (FreeBSD.Scalper.Worm) Worm
-	SCALPER_FILES="${RKHROOTDIR}/tmp/.a
-		       ${RKHROOTDIR}/tmp/.uua"
+	SCALPER_FILES="/tmp/.a
+		       /tmp/.uua"
 	SCALPER_DIRS=
 	SCALPER_KSYMS=
 
 
 	# SHV4 Rootkit
-	SHV4_FILES="${RKHROOTDIR}/etc/ld.so.hash
-		    ${RKHROOTDIR}/lib/libext-2.so.7
-		    ${RKHROOTDIR}/lib/lidps1.so
-		    ${RKHROOTDIR}/lib/libproc.a
-		    ${RKHROOTDIR}/lib/libproc.so.2.0.6
-		    ${RKHROOTDIR}/lib/ldd.so/tks
-		    ${RKHROOTDIR}/lib/ldd.so/tkp
-		    ${RKHROOTDIR}/lib/ldd.so/tksb
-		    ${RKHROOTDIR}/lib/security/.config/sshd
-		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key
-		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_host_key.pub
-		    ${RKHROOTDIR}/lib/security/.config/ssh/ssh_random_seed
-		    ${RKHROOTDIR}/usr/include/file.h
-		    ${RKHROOTDIR}/usr/include/hosts.h
-		    ${RKHROOTDIR}/usr/include/lidps1.so
-		    ${RKHROOTDIR}/usr/include/log.h
-		    ${RKHROOTDIR}/usr/include/proc.h
-		    ${RKHROOTDIR}/usr/sbin/xntps
-		    ${RKHROOTDIR}/dev/srd0"
-	SHV4_DIRS="${RKHROOTDIR}/lib/ldd.so
-		   ${RKHROOTDIR}/lib/security/.config
-		   ${RKHROOTDIR}/lib/security/.config/ssh"
+	SHV4_FILES="/etc/ld.so.hash
+		    /lib/libext-2.so.7
+		    /lib/lidps1.so
+		    /lib/libproc.a
+		    /lib/libproc.so.2.0.6
+		    /lib/ldd.so/tks
+		    /lib/ldd.so/tkp
+		    /lib/ldd.so/tksb
+		    /lib/security/.config/sshd
+		    /lib/security/.config/ssh/ssh_host_key
+		    /lib/security/.config/ssh/ssh_host_key.pub
+		    /lib/security/.config/ssh/ssh_random_seed
+		    /usr/include/file.h
+		    /usr/include/hosts.h
+		    /usr/include/lidps1.so
+		    /usr/include/log.h
+		    /usr/include/proc.h
+		    /usr/sbin/xntps
+		    /dev/srd0"
+	SHV4_DIRS="/lib/ldd.so
+		   /lib/security/.config
+		   /lib/security/.config/ssh"
 	SHV4_KSYMS=
 
 
 	# SHV5 Rootkit
-	SHV5_FILES="${RKHROOTDIR}/etc/sh.conf
-		    ${RKHROOTDIR}/lib/libproc.a
-		    ${RKHROOTDIR}/lib/libproc.so.2.0.6
-		    ${RKHROOTDIR}/lib/lidps1.so
-		    ${RKHROOTDIR}/lib/libsh.so/bash
-		    ${RKHROOTDIR}/usr/include/file.h
-		    ${RKHROOTDIR}/usr/include/hosts.h
-		    ${RKHROOTDIR}/usr/include/log.h
-		    ${RKHROOTDIR}/usr/include/proc.h
-		    ${RKHROOTDIR}/lib/libsh.so/shdcf2
-		    ${RKHROOTDIR}/lib/libsh.so/shhk
-		    ${RKHROOTDIR}/lib/libsh.so/shhk.pub
-		    ${RKHROOTDIR}/lib/libsh.so/shrs
-		    ${RKHROOTDIR}/usr/lib/libsh/.bashrc
-		    ${RKHROOTDIR}/usr/lib/libsh/shsb
-		    ${RKHROOTDIR}/usr/lib/libsh/hide
-		    ${RKHROOTDIR}/usr/lib/libsh/.sniff/shsniff
-		    ${RKHROOTDIR}/usr/lib/libsh/.sniff/shp
-		    ${RKHROOTDIR}/dev/srd0"
-	SHV5_DIRS="${RKHROOTDIR}/lib/libsh.so
-		   ${RKHROOTDIR}/usr/lib/libsh
-		   ${RKHROOTDIR}/usr/lib/libsh/utilz
-		   ${RKHROOTDIR}/usr/lib/libsh/.backup"
+	SHV5_FILES="/etc/sh.conf
+		    /lib/libproc.a
+		    /lib/libproc.so.2.0.6
+		    /lib/lidps1.so
+		    /lib/libsh.so/bash
+		    /usr/include/file.h
+		    /usr/include/hosts.h
+		    /usr/include/log.h
+		    /usr/include/proc.h
+		    /lib/libsh.so/shdcf2
+		    /lib/libsh.so/shhk
+		    /lib/libsh.so/shhk.pub
+		    /lib/libsh.so/shrs
+		    /usr/lib/libsh/.bashrc
+		    /usr/lib/libsh/shsb
+		    /usr/lib/libsh/hide
+		    /usr/lib/libsh/.sniff/shsniff
+		    /usr/lib/libsh/.sniff/shp
+		    /dev/srd0"
+	SHV5_DIRS="/lib/libsh.so
+		   /usr/lib/libsh
+		   /usr/lib/libsh/utilz
+		   /usr/lib/libsh/.backup"
 	SHV5_KSYMS=
 
 
 	# Sin Rootkit
-	SINROOTKIT_FILES="${RKHROOTDIR}/dev/.haos/haos1/.f/Denyed
-			  ${RKHROOTDIR}/dev/ttyoa
-			  ${RKHROOTDIR}/dev/ttyof
-			  ${RKHROOTDIR}/dev/ttyop
-			  ${RKHROOTDIR}/dev/ttyos
-			  ${RKHROOTDIR}/usr/lib/.lib
-			  ${RKHROOTDIR}/usr/lib/sn/.X
-			  ${RKHROOTDIR}/usr/lib/sn/.sys
-			  ${RKHROOTDIR}/usr/lib/ld/.X
-			  ${RKHROOTDIR}/usr/man/man1/...
-			  ${RKHROOTDIR}/usr/man/man1/.../.m
-			  ${RKHROOTDIR}/usr/man/man1/.../.w"
-	SINROOTKIT_DIRS="${RKHROOTDIR}/usr/lib/sn
-			 ${RKHROOTDIR}/usr/lib/man1/...
-			 ${RKHROOTDIR}/dev/.haos"
+	SINROOTKIT_FILES="/dev/.haos/haos1/.f/Denyed
+			  /dev/ttyoa
+			  /dev/ttyof
+			  /dev/ttyop
+			  /dev/ttyos
+			  /usr/lib/.lib
+			  /usr/lib/sn/.X
+			  /usr/lib/sn/.sys
+			  /usr/lib/ld/.X
+			  /usr/man/man1/...
+			  /usr/man/man1/.../.m
+			  /usr/man/man1/.../.w"
+	SINROOTKIT_DIRS="/usr/lib/sn
+			 /usr/lib/man1/...
+			 /dev/.haos"
 	SINROOTKIT_KSYMS=
 
 
 	# Slapper Worm
-	SLAPPER_FILES="${RKHROOTDIR}/tmp/.bugtraq
-		       ${RKHROOTDIR}/tmp/.uubugtraq
-		       ${RKHROOTDIR}/tmp/.bugtraq.c
-		       ${RKHROOTDIR}/tmp/httpd
-		       ${RKHROOTDIR}/tmp/.unlock
-		       ${RKHROOTDIR}/tmp/update
-		       ${RKHROOTDIR}/tmp/.cinik
-		       ${RKHROOTDIR}/tmp/.b"
+	SLAPPER_FILES="/tmp/.bugtraq
+		       /tmp/.uubugtraq
+		       /tmp/.bugtraq.c
+		       /tmp/httpd
+		       /tmp/.unlock
+		       /tmp/update
+		       /tmp/.cinik
+		       /tmp/.b"
 	SLAPPER_DIRS=
 	SLAPPER_KSYMS=
 
 
 	# Sneakin Rootkit
 	SNEAKIN_FILES=
-	SNEAKIN_DIRS="${RKHROOTDIR}/tmp/.X11-unix/.../rk"
+	SNEAKIN_DIRS="/tmp/.X11-unix/.../rk"
 	SNEAKIN_KSYMS=
 
 
 	# Solaris Wanuk backdoor
-	WANUKDOOR_FILES="${RKHROOTDIR}/var/adm/sa/.adm/.lp-door.i86pc
-			 ${RKHROOTDIR}/var/adm/sa/.adm/.lp-door.sun4
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp-door.i86pc
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp-door.sun4
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpshut
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpsystem
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpadmin
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpmove
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpusers
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpfilter
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpstat
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpd
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpsched
-			 ${RKHROOTDIR}/var/spool/lp/admins/lpc"
-	WANUKDOOR_DIRS="${RKHROOTDIR}/var/adm/sa/.adm"
+	WANUKDOOR_FILES="/var/adm/sa/.adm/.lp-door.i86pc
+			 /var/adm/sa/.adm/.lp-door.sun4
+			 /var/spool/lp/admins/.lp-door.i86pc
+			 /var/spool/lp/admins/.lp-door.sun4
+			 /var/spool/lp/admins/lpshut
+			 /var/spool/lp/admins/lpsystem
+			 /var/spool/lp/admins/lpadmin
+			 /var/spool/lp/admins/lpmove
+			 /var/spool/lp/admins/lpusers
+			 /var/spool/lp/admins/lpfilter
+			 /var/spool/lp/admins/lpstat
+			 /var/spool/lp/admins/lpd
+			 /var/spool/lp/admins/lpsched
+			 /var/spool/lp/admins/lpc"
+	WANUKDOOR_DIRS="/var/adm/sa/.adm"
 	WANUKDOOR_KSYMS=
 
 
 	# Solaris Wanuk Worm (ELF_WANUK.A)
-	WANUKWORM_FILES="${RKHROOTDIR}/var/adm/.adm
-			 ${RKHROOTDIR}/var/adm/.i86pc
-			 ${RKHROOTDIR}/var/adm/.sun4
-			 ${RKHROOTDIR}/var/adm/sa/.adm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/.i86pc
-			 ${RKHROOTDIR}/var/adm/sa/.adm/.sun4
-			 ${RKHROOTDIR}/var/adm/sa/.adm/.crontab
-			 ${RKHROOTDIR}/var/adm/sa/.adm/devfsadmd
-			 ${RKHROOTDIR}/var/adm/sa/.adm/svcadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/cfgadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/kadmind
-			 ${RKHROOTDIR}/var/adm/sa/.adm/zoneadmd
-			 ${RKHROOTDIR}/var/adm/sa/.adm/sadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/sysadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/dladm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/bootadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/routeadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/uadmin
-			 ${RKHROOTDIR}/var/adm/sa/.adm/acctadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/cryptoadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/inetadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/logadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/nlsadmin
-			 ${RKHROOTDIR}/var/adm/sa/.adm/sacadm
-			 ${RKHROOTDIR}/var/adm/sa/.adm/syseventadmd
-			 ${RKHROOTDIR}/var/adm/sa/.adm/ttyadmd
-			 ${RKHROOTDIR}/var/adm/sa/.adm/consadmd
-			 ${RKHROOTDIR}/var/adm/sa/.adm/metadevadm
-			 ${RKHROOTDIR}/var/adm/sa/.i86pc
-			 ${RKHROOTDIR}/var/adm/sa/.sun4
-			 ${RKHROOTDIR}/var/adm/sa/acctadm
-			 ${RKHROOTDIR}/var/adm/sa/bootadm
-			 ${RKHROOTDIR}/var/adm/sa/cfgadm
-			 ${RKHROOTDIR}/var/adm/sa/consadmd
-			 ${RKHROOTDIR}/var/adm/sa/cryptoadm
-			 ${RKHROOTDIR}/var/adm/sa/devfsadmd
-			 ${RKHROOTDIR}/var/adm/sa/dladm
-			 ${RKHROOTDIR}/var/adm/sa/inetadm
-			 ${RKHROOTDIR}/var/adm/sa/kadmind
-			 ${RKHROOTDIR}/var/adm/sa/logadm
-			 ${RKHROOTDIR}/var/adm/sa/metadevadm
-			 ${RKHROOTDIR}/var/adm/sa/nlsadmin
-			 ${RKHROOTDIR}/var/adm/sa/routeadm
-			 ${RKHROOTDIR}/var/adm/sa/sacadm
-			 ${RKHROOTDIR}/var/adm/sa/sadm
-			 ${RKHROOTDIR}/var/adm/sa/svcadm
-			 ${RKHROOTDIR}/var/adm/sa/sysadm
-			 ${RKHROOTDIR}/var/adm/sa/syseventadmd
-			 ${RKHROOTDIR}/var/adm/sa/ttyadmd
-			 ${RKHROOTDIR}/var/adm/sa/uadmin
-			 ${RKHROOTDIR}/var/adm/sa/zoneadmd
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/.crontab
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpshut
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpsystem
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpadmin
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpmove
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpusers
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpfilter
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpstat
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpd
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpsched
-			 ${RKHROOTDIR}/var/spool/lp/admins/.lp/lpc"
-	WANUKWORM_DIRS="${RKHROOTDIR}/var/adm/sa/.adm
-			${RKHROOTDIR}/var/spool/lp/admins/.lp"
+	WANUKWORM_FILES="/var/adm/.adm
+			 /var/adm/.i86pc
+			 /var/adm/.sun4
+			 /var/adm/sa/.adm
+			 /var/adm/sa/.adm/.i86pc
+			 /var/adm/sa/.adm/.sun4
+			 /var/adm/sa/.adm/.crontab
+			 /var/adm/sa/.adm/devfsadmd
+			 /var/adm/sa/.adm/svcadm
+			 /var/adm/sa/.adm/cfgadm
+			 /var/adm/sa/.adm/kadmind
+			 /var/adm/sa/.adm/zoneadmd
+			 /var/adm/sa/.adm/sadm
+			 /var/adm/sa/.adm/sysadm
+			 /var/adm/sa/.adm/dladm
+			 /var/adm/sa/.adm/bootadm
+			 /var/adm/sa/.adm/routeadm
+			 /var/adm/sa/.adm/uadmin
+			 /var/adm/sa/.adm/acctadm
+			 /var/adm/sa/.adm/cryptoadm
+			 /var/adm/sa/.adm/inetadm
+			 /var/adm/sa/.adm/logadm
+			 /var/adm/sa/.adm/nlsadmin
+			 /var/adm/sa/.adm/sacadm
+			 /var/adm/sa/.adm/syseventadmd
+			 /var/adm/sa/.adm/ttyadmd
+			 /var/adm/sa/.adm/consadmd
+			 /var/adm/sa/.adm/metadevadm
+			 /var/adm/sa/.i86pc
+			 /var/adm/sa/.sun4
+			 /var/adm/sa/acctadm
+			 /var/adm/sa/bootadm
+			 /var/adm/sa/cfgadm
+			 /var/adm/sa/consadmd
+			 /var/adm/sa/cryptoadm
+			 /var/adm/sa/devfsadmd
+			 /var/adm/sa/dladm
+			 /var/adm/sa/inetadm
+			 /var/adm/sa/kadmind
+			 /var/adm/sa/logadm
+			 /var/adm/sa/metadevadm
+			 /var/adm/sa/nlsadmin
+			 /var/adm/sa/routeadm
+			 /var/adm/sa/sacadm
+			 /var/adm/sa/sadm
+			 /var/adm/sa/svcadm
+			 /var/adm/sa/sysadm
+			 /var/adm/sa/syseventadmd
+			 /var/adm/sa/ttyadmd
+			 /var/adm/sa/uadmin
+			 /var/adm/sa/zoneadmd
+			 /var/spool/lp/admins/.lp/.crontab
+			 /var/spool/lp/admins/.lp/lpshut
+			 /var/spool/lp/admins/.lp/lpsystem
+			 /var/spool/lp/admins/.lp/lpadmin
+			 /var/spool/lp/admins/.lp/lpmove
+			 /var/spool/lp/admins/.lp/lpusers
+			 /var/spool/lp/admins/.lp/lpfilter
+			 /var/spool/lp/admins/.lp/lpstat
+			 /var/spool/lp/admins/.lp/lpd
+			 /var/spool/lp/admins/.lp/lpsched
+			 /var/spool/lp/admins/.lp/lpc"
+	WANUKWORM_DIRS="/var/adm/sa/.adm
+			/var/spool/lp/admins/.lp"
 	WANUKWORM_KSYMS=
 
 
 	# 'Spanish' Rootkit
-	SPANISH_FILES="${RKHROOTDIR}/dev/ptyq
-		       ${RKHROOTDIR}/bin/ad
-		       ${RKHROOTDIR}/bin/ava
-		       ${RKHROOTDIR}/bin/server
-		       ${RKHROOTDIR}/usr/sbin/rescue
-		       ${RKHROOTDIR}/usr/share/.../chrps
-		       ${RKHROOTDIR}/usr/share/.../chrifconfig
-		       ${RKHROOTDIR}/usr/share/.../netstat
-		       ${RKHROOTDIR}/usr/share/.../linsniffer
-		       ${RKHROOTDIR}/usr/share/.../charbd
-		       ${RKHROOTDIR}/usr/share/.../charbd2
-		       ${RKHROOTDIR}/usr/share/.../charbd3
-		       ${RKHROOTDIR}/usr/share/.../charbd4
-		       ${RKHROOTDIR}/usr/man/tmp/update.tgz
-		       ${RKHROOTDIR}/var/lib/rpm/db.rpm
-		       ${RKHROOTDIR}/var/cache/man/.cat
-		       ${RKHROOTDIR}/var/spool/lpd/remote/.lpq"
-	SPANISH_DIRS="${RKHROOTDIR}/usr/share/..."
+	SPANISH_FILES="/dev/ptyq
+		       /bin/ad
+		       /bin/ava
+		       /bin/server
+		       /usr/sbin/rescue
+		       /usr/share/.../chrps
+		       /usr/share/.../chrifconfig
+		       /usr/share/.../netstat
+		       /usr/share/.../linsniffer
+		       /usr/share/.../charbd
+		       /usr/share/.../charbd2
+		       /usr/share/.../charbd3
+		       /usr/share/.../charbd4
+		       /usr/man/tmp/update.tgz
+		       /var/lib/rpm/db.rpm
+		       /var/cache/man/.cat
+		       /var/spool/lpd/remote/.lpq"
+	SPANISH_DIRS="/usr/share/..."
 	SPANISH_KSYMS= 
 
 
 	# Suckit Rootkit
-	SUCKIT_FILES="${RKHROOTDIR}/sbin/initsk12
-		      ${RKHROOTDIR}/sbin/initxrk
-		      ${RKHROOTDIR}/usr/bin/null
-		      ${RKHROOTDIR}/usr/share/locale/sk/.sk12/sk
-		      ${RKHROOTDIR}/etc/rc.d/rc0.d/S23kmdac
-		      ${RKHROOTDIR}/etc/rc.d/rc1.d/S23kmdac
-		      ${RKHROOTDIR}/etc/rc.d/rc2.d/S23kmdac
-		      ${RKHROOTDIR}/etc/rc.d/rc3.d/S23kmdac
-		      ${RKHROOTDIR}/etc/rc.d/rc4.d/S23kmdac
-		      ${RKHROOTDIR}/etc/rc.d/rc5.d/S23kmdac
-		      ${RKHROOTDIR}/etc/rc.d/rc6.d/S23kmdac"
-	SUCKIT_DIRS="${RKHROOTDIR}/dev/sdhu0/tehdrakg
-		     ${RKHROOTDIR}/etc/.MG
-		     ${RKHROOTDIR}/usr/share/locale/sk/.sk12
-		     ${RKHROOTDIR}/usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist"
+	SUCKIT_FILES="/sbin/initsk12
+		      /sbin/initxrk
+		      /usr/bin/null
+		      /usr/share/locale/sk/.sk12/sk
+		      /etc/rc.d/rc0.d/S23kmdac
+		      /etc/rc.d/rc1.d/S23kmdac
+		      /etc/rc.d/rc2.d/S23kmdac
+		      /etc/rc.d/rc3.d/S23kmdac
+		      /etc/rc.d/rc4.d/S23kmdac
+		      /etc/rc.d/rc5.d/S23kmdac
+		      /etc/rc.d/rc6.d/S23kmdac"
+	SUCKIT_DIRS="/dev/sdhu0/tehdrakg
+		     /etc/.MG
+		     /usr/share/locale/sk/.sk12
+		     /usr/lib/perl5/site_perl/i386-linux/auto/TimeDate/.packlist"
 	SUCKIT_KSYMS=
 
 
 	# SunOS / NSDAP Rootkit
-	NSDAP_FILES="${RKHROOTDIR}/dev/pts/01/55su
-		     ${RKHROOTDIR}/dev/pts/01/55ps
-		     ${RKHROOTDIR}/dev/pts/01/55ping
-		     ${RKHROOTDIR}/dev/pts/01/55login
-		     ${RKHROOTDIR}/dev/pts/01/PATCHER_COMPLETED
-		     ${RKHROOTDIR}/dev/prom/sn.l
-		     ${RKHROOTDIR}/dev/prom/dos
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/.kit
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/defines
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/patcher
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/pg
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/cleaner
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/utime
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/crypt
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/findkit
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/sn2
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/sniffload
-		     ${RKHROOTDIR}/usr/lib/vold/nsdap/runsniff
-		     ${RKHROOTDIR}/usr/lib/lpset
-		     ${RKHROOTDIR}/usr/lib/lpstart
-		     ${RKHROOTDIR}/usr/bin/mc68000
-		     ${RKHROOTDIR}/usr/bin/mc68010
-		     ${RKHROOTDIR}/usr/bin/mc68020
-		     ${RKHROOTDIR}/usr/ucb/bin/ps
-		     ${RKHROOTDIR}/usr/bin/m68k
-		     ${RKHROOTDIR}/usr/bin/sun2
-		     ${RKHROOTDIR}/usr/bin/mc68030
-		     ${RKHROOTDIR}/usr/bin/mc68040
-		     ${RKHROOTDIR}/usr/bin/sun3
-		     ${RKHROOTDIR}/usr/bin/sun3x
-		     ${RKHROOTDIR}/usr/bin/lso
-		     ${RKHROOTDIR}/usr/bin/u370"
-	NSDAP_DIRS="${RKHROOTDIR}/dev/pts/01
-		    ${RKHROOTDIR}/dev/prom
-		    ${RKHROOTDIR}/usr/lib/vold/nsdap
-		    ${RKHROOTDIR}/.pat"
+	NSDAP_FILES="/dev/pts/01/55su
+		     /dev/pts/01/55ps
+		     /dev/pts/01/55ping
+		     /dev/pts/01/55login
+		     /dev/pts/01/PATCHER_COMPLETED
+		     /dev/prom/sn.l
+		     /dev/prom/dos
+		     /usr/lib/vold/nsdap/.kit
+		     /usr/lib/vold/nsdap/defines
+		     /usr/lib/vold/nsdap/patcher
+		     /usr/lib/vold/nsdap/pg
+		     /usr/lib/vold/nsdap/cleaner
+		     /usr/lib/vold/nsdap/utime
+		     /usr/lib/vold/nsdap/crypt
+		     /usr/lib/vold/nsdap/findkit
+		     /usr/lib/vold/nsdap/sn2
+		     /usr/lib/vold/nsdap/sniffload
+		     /usr/lib/vold/nsdap/runsniff
+		     /usr/lib/lpset
+		     /usr/lib/lpstart
+		     /usr/bin/mc68000
+		     /usr/bin/mc68010
+		     /usr/bin/mc68020
+		     /usr/ucb/bin/ps
+		     /usr/bin/m68k
+		     /usr/bin/sun2
+		     /usr/bin/mc68030
+		     /usr/bin/mc68040
+		     /usr/bin/sun3
+		     /usr/bin/sun3x
+		     /usr/bin/lso
+		     /usr/bin/u370"
+	NSDAP_DIRS="/dev/pts/01
+		    /dev/prom
+		    /usr/lib/vold/nsdap
+		    /.pat"
 	NSDAP_KSYMS=
 
 
 	# SunOS Rootkit
-	SUNOSROOTKIT_FILES="${RKHROOTDIR}/etc/ld.so.hash
-			    ${RKHROOTDIR}/lib/libext-2.so.7
-			    ${RKHROOTDIR}/usr/bin/ssh2d
-			    ${RKHROOTDIR}/bin/xlogin
-			    ${RKHROOTDIR}/usr/lib/crth.o
-			    ${RKHROOTDIR}/usr/lib/crtz.o
-			    ${RKHROOTDIR}/sbin/login
-			    ${RKHROOTDIR}/lib/security/.config/sn
-			    ${RKHROOTDIR}/lib/security/.config/lpsched
-			    ${RKHROOTDIR}/dev/kmod
-			    ${RKHROOTDIR}/dev/dos"
+	SUNOSROOTKIT_FILES="/etc/ld.so.hash
+			    /lib/libext-2.so.7
+			    /usr/bin/ssh2d
+			    /bin/xlogin
+			    /usr/lib/crth.o
+			    /usr/lib/crtz.o
+			    /sbin/login
+			    /lib/security/.config/sn
+			    /lib/security/.config/lpsched
+			    /dev/kmod
+			    /dev/dos"
 	SUNOSROOTKIT_DIRS=
 	SUNOSROOTKIT_KSYMS=
 
 
 	# Superkit Rootkit (Suckit 1.3b-based)
-	SUPERKIT_FILES="${RKHROOTDIR}/usr/man/.sman/sk/backsh
-			${RKHROOTDIR}/usr/man/.sman/sk/izbtrag
-			${RKHROOTDIR}/usr/man/.sman/sk/sksniff
-			${RKHROOTDIR}/var/www/cgi-bin/cgiback.cgi"
-	SUPERKIT_DIRS="${RKHROOTDIR}/usr/man/.sman/sk"
+	SUPERKIT_FILES="/usr/man/.sman/sk/backsh
+			/usr/man/.sman/sk/izbtrag
+			/usr/man/.sman/sk/sksniff
+			/var/www/cgi-bin/cgiback.cgi"
+	SUPERKIT_DIRS="/usr/man/.sman/sk"
 	SUPERKIT_KSYMS=
 
 
 	# Telnet Backdoor
-	TBD_FILES="${RKHROOTDIR}/usr/lib/.tbd"
+	TBD_FILES="/usr/lib/.tbd"
 	TBD_DIRS=
 	TBD_KSYMS=
 
 
 	# TeLeKiT Rootkit
-	TELEKIT_FILES="${RKHROOTDIR}/usr/man/man3/.../TeLeKiT/bin/sniff
-		       ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT/bin/telnetd
-		       ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT/bin/teleulo
-		       ${RKHROOTDIR}/usr/man/man3/.../cl
-		       ${RKHROOTDIR}/dev/ptyr
-		       ${RKHROOTDIR}/dev/ptyp
-		       ${RKHROOTDIR}/dev/ptyq
-		       ${RKHROOTDIR}/dev/hda06
-		       ${RKHROOTDIR}/usr/info/libc1.so"
-	TELEKIT_DIRS="${RKHROOTDIR}/usr/man/man3/...
-		      ${RKHROOTDIR}/usr/man/man3/.../lsniff
-		      ${RKHROOTDIR}/usr/man/man3/.../TeLeKiT"
+	TELEKIT_FILES="/usr/man/man3/.../TeLeKiT/bin/sniff
+		       /usr/man/man3/.../TeLeKiT/bin/telnetd
+		       /usr/man/man3/.../TeLeKiT/bin/teleulo
+		       /usr/man/man3/.../cl
+		       /dev/ptyr
+		       /dev/ptyp
+		       /dev/ptyq
+		       /dev/hda06
+		       /usr/info/libc1.so"
+	TELEKIT_DIRS="/usr/man/man3/...
+		      /usr/man/man3/.../lsniff
+		      /usr/man/man3/.../TeLeKiT"
 	TELEKIT_KSYMS=
 
 
 	# OSX Togroot Rootkit
-	TOGROOT_FILES="${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/Info.plist
-		       ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/pbdevelopment.plist
-		       ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/MacOS/togrootkext"
-	TOGROOT_DIRS="${RKHROOTDIR}/System/Library/Extensions/Togroot.kext
-		      ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents
-		      ${RKHROOTDIR}/System/Library/Extensions/Togroot.kext/Contents/MacOS"
+	TOGROOT_FILES="/System/Library/Extensions/Togroot.kext/Contents/Info.plist
+		       /System/Library/Extensions/Togroot.kext/Contents/pbdevelopment.plist
+		       /System/Library/Extensions/Togroot.kext/Contents/MacOS/togrootkext"
+	TOGROOT_DIRS="/System/Library/Extensions/Togroot.kext
+		      /System/Library/Extensions/Togroot.kext/Contents
+		      /System/Library/Extensions/Togroot.kext/Contents/MacOS"
 	TOGROOT_KSYMS=
 
 
 	# T0rn (and misc) Rootkit
-	TORN_FILES="${RKHROOTDIR}/dev/.lib/lib/lib/t0rns
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/du
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/ls
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/t0rnsb
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/ps
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/t0rnp
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/find
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/ifconfig
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/pg
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/ssh.tgz
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/top
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/sz
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/login
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/in.fingerd
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/1i0n.sh
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/pstree
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/in.telnetd
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/mjy
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/sush
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/tfn
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/name
-		    ${RKHROOTDIR}/dev/.lib/lib/lib/getip.sh
-		    ${RKHROOTDIR}/usr/info/.torn/sh*
-		    ${RKHROOTDIR}/usr/src/.puta/.1addr
-		    ${RKHROOTDIR}/usr/src/.puta/.1file
-		    ${RKHROOTDIR}/usr/src/.puta/.1proc
-		    ${RKHROOTDIR}/usr/src/.puta/.1logz
-		    ${RKHROOTDIR}/usr/info/.t0rn"
-	TORN_DIRS="${RKHROOTDIR}/dev/.lib
-		   ${RKHROOTDIR}/dev/.lib/lib
-		   ${RKHROOTDIR}/dev/.lib/lib/lib
-		   ${RKHROOTDIR}/dev/.lib/lib/lib/dev
-		   ${RKHROOTDIR}/dev/.lib/lib/scan
-		   ${RKHROOTDIR}/usr/src/.puta
-		   ${RKHROOTDIR}/usr/man/man1/man1
-		   ${RKHROOTDIR}/usr/man/man1/man1/lib
-		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib
-		   ${RKHROOTDIR}/usr/man/man1/man1/lib/.lib/.backup"
+	TORN_FILES="/dev/.lib/lib/lib/t0rns
+		    /dev/.lib/lib/lib/du
+		    /dev/.lib/lib/lib/ls
+		    /dev/.lib/lib/lib/t0rnsb
+		    /dev/.lib/lib/lib/ps
+		    /dev/.lib/lib/lib/t0rnp
+		    /dev/.lib/lib/lib/find
+		    /dev/.lib/lib/lib/ifconfig
+		    /dev/.lib/lib/lib/pg
+		    /dev/.lib/lib/lib/ssh.tgz
+		    /dev/.lib/lib/lib/top
+		    /dev/.lib/lib/lib/sz
+		    /dev/.lib/lib/lib/login
+		    /dev/.lib/lib/lib/in.fingerd
+		    /dev/.lib/lib/lib/1i0n.sh
+		    /dev/.lib/lib/lib/pstree
+		    /dev/.lib/lib/lib/in.telnetd
+		    /dev/.lib/lib/lib/mjy
+		    /dev/.lib/lib/lib/sush
+		    /dev/.lib/lib/lib/tfn
+		    /dev/.lib/lib/lib/name
+		    /dev/.lib/lib/lib/getip.sh
+		    /usr/info/.torn/sh*
+		    /usr/src/.puta/.1addr
+		    /usr/src/.puta/.1file
+		    /usr/src/.puta/.1proc
+		    /usr/src/.puta/.1logz
+		    /usr/info/.t0rn"
+	TORN_DIRS="/dev/.lib
+		   /dev/.lib/lib
+		   /dev/.lib/lib/lib
+		   /dev/.lib/lib/lib/dev
+		   /dev/.lib/lib/scan
+		   /usr/src/.puta
+		   /usr/man/man1/man1
+		   /usr/man/man1/man1/lib
+		   /usr/man/man1/man1/lib/.lib
+		   /usr/man/man1/man1/lib/.lib/.backup"
 	TORN_KSYMS=
 
 
 	# trNkit Rootkit
-	TRNKIT_FILES="${RKHROOTDIR}/usr/lib/libbins.la
-		      ${RKHROOTDIR}/usr/lib/libtcs.so
-		      ${RKHROOTDIR}/dev/.ttpy/ulogin.sh
-		      ${RKHROOTDIR}/dev/.ttpy/tcpshell.sh
-		      ${RKHROOTDIR}/dev/.ttpy/bupdu
-		      ${RKHROOTDIR}/dev/.ttpy/buloc
-		      ${RKHROOTDIR}/dev/.ttpy/buloc1
-		      ${RKHROOTDIR}/dev/.ttpy/buloc2
-		      ${RKHROOTDIR}/dev/.ttpy/stat
-		      ${RKHROOTDIR}/dev/.ttpy/backps
-		      ${RKHROOTDIR}/dev/.ttpy/tree
-		      ${RKHROOTDIR}/dev/.ttpy/topk
-		      ${RKHROOTDIR}/dev/.ttpy/wold
-		      ${RKHROOTDIR}/dev/.ttpy/whoold
-		      ${RKHROOTDIR}/dev/.ttpy/backdoors"
+	TRNKIT_FILES="/usr/lib/libbins.la
+		      /usr/lib/libtcs.so
+		      /dev/.ttpy/ulogin.sh
+		      /dev/.ttpy/tcpshell.sh
+		      /dev/.ttpy/bupdu
+		      /dev/.ttpy/buloc
+		      /dev/.ttpy/buloc1
+		      /dev/.ttpy/buloc2
+		      /dev/.ttpy/stat
+		      /dev/.ttpy/backps
+		      /dev/.ttpy/tree
+		      /dev/.ttpy/topk
+		      /dev/.ttpy/wold
+		      /dev/.ttpy/whoold
+		      /dev/.ttpy/backdoors"
 	TRNKIT_DIRS=
 	TRNKIT_KSYMS=
 
 
 	# Trojanit Kit Rootkit
-	TROJANIT_FILES="${RKHROOTDIR}/bin/.ls
-			${RKHROOTDIR}/bin/.ps
-			${RKHROOTDIR}/bin/.netstat
-			${RKHROOTDIR}/usr/bin/.nop
-			${RKHROOTDIR}/usr/bin/.who"
+	TROJANIT_FILES="/bin/.ls
+			/bin/.ps
+			/bin/.netstat
+			/usr/bin/.nop
+			/usr/bin/.who"
 	TROJANIT_DIRS=
 	TROJANIT_KSYMS=
 
 
 	# Tuxtendo (Tuxkit) Rootkit
-	TUXTENDO_FILES="${RKHROOTDIR}/lib/libproc.so.2.0.7
-			${RKHROOTDIR}/usr/bin/xchk
-			${RKHROOTDIR}/usr/bin/xsf
-			${RKHROOTDIR}/dev/tux/suidsh
-			${RKHROOTDIR}/dev/tux/.addr
-			${RKHROOTDIR}/dev/tux/.cron
-			${RKHROOTDIR}/dev/tux/.file
-			${RKHROOTDIR}/dev/tux/.log
-			${RKHROOTDIR}/dev/tux/.proc
-			${RKHROOTDIR}/dev/tux/.iface
-			${RKHROOTDIR}/dev/tux/.pw
-			${RKHROOTDIR}/dev/tux/.df
-			${RKHROOTDIR}/dev/tux/.ssh
-			${RKHROOTDIR}/dev/tux/.tux
-			${RKHROOTDIR}/dev/tux/ssh2/sshd2_config
-			${RKHROOTDIR}/dev/tux/ssh2/hostkey
-			${RKHROOTDIR}/dev/tux/ssh2/hostkey.pub
-			${RKHROOTDIR}/dev/tux/ssh2/logo
-			${RKHROOTDIR}/dev/tux/ssh2/random_seed
-			${RKHROOTDIR}/dev/tux/backup/crontab
-			${RKHROOTDIR}/dev/tux/backup/df
-			${RKHROOTDIR}/dev/tux/backup/dir
-			${RKHROOTDIR}/dev/tux/backup/find
-			${RKHROOTDIR}/dev/tux/backup/ifconfig
-			${RKHROOTDIR}/dev/tux/backup/locate
-			${RKHROOTDIR}/dev/tux/backup/netstat
-			${RKHROOTDIR}/dev/tux/backup/ps
-			${RKHROOTDIR}/dev/tux/backup/pstree
-			${RKHROOTDIR}/dev/tux/backup/syslogd
-			${RKHROOTDIR}/dev/tux/backup/tcpd
-			${RKHROOTDIR}/dev/tux/backup/top
-			${RKHROOTDIR}/dev/tux/backup/updatedb
-			${RKHROOTDIR}/dev/tux/backup/vdir"
-	TUXTENDO_DIRS="${RKHROOTDIR}/dev/tux
-		       ${RKHROOTDIR}/dev/tux/ssh2
-		       ${RKHROOTDIR}/dev/tux/backup"
+	TUXTENDO_FILES="/lib/libproc.so.2.0.7
+			/usr/bin/xchk
+			/usr/bin/xsf
+			/dev/tux/suidsh
+			/dev/tux/.addr
+			/dev/tux/.cron
+			/dev/tux/.file
+			/dev/tux/.log
+			/dev/tux/.proc
+			/dev/tux/.iface
+			/dev/tux/.pw
+			/dev/tux/.df
+			/dev/tux/.ssh
+			/dev/tux/.tux
+			/dev/tux/ssh2/sshd2_config
+			/dev/tux/ssh2/hostkey
+			/dev/tux/ssh2/hostkey.pub
+			/dev/tux/ssh2/logo
+			/dev/tux/ssh2/random_seed
+			/dev/tux/backup/crontab
+			/dev/tux/backup/df
+			/dev/tux/backup/dir
+			/dev/tux/backup/find
+			/dev/tux/backup/ifconfig
+			/dev/tux/backup/locate
+			/dev/tux/backup/netstat
+			/dev/tux/backup/ps
+			/dev/tux/backup/pstree
+			/dev/tux/backup/syslogd
+			/dev/tux/backup/tcpd
+			/dev/tux/backup/top
+			/dev/tux/backup/updatedb
+			/dev/tux/backup/vdir"
+	TUXTENDO_DIRS="/dev/tux
+		       /dev/tux/ssh2
+		       /dev/tux/backup"
 	TUXTENDO_KSYMS=
 
 
 	# Universal Rootkit by K2 (URK) Release 0.9.8
-	URK_FILES="${RKHROOTDIR}/dev/prom/sn.l
-		   ${RKHROOTDIR}/usr/lib/ldlibps.so
-		   ${RKHROOTDIR}/usr/lib/ldlibnet.so
-		   ${RKHROOTDIR}/dev/pts/01/uconf.inv
-		   ${RKHROOTDIR}/dev/pts/01/cleaner
-		   ${RKHROOTDIR}/dev/pts/01/bin/psniff
-		   ${RKHROOTDIR}/dev/pts/01/bin/du
-		   ${RKHROOTDIR}/dev/pts/01/bin/ls
-		   ${RKHROOTDIR}/dev/pts/01/bin/passwd
-		   ${RKHROOTDIR}/dev/pts/01/bin/ps
-		   ${RKHROOTDIR}/dev/pts/01/bin/psr
-		   ${RKHROOTDIR}/dev/pts/01/bin/su
-		   ${RKHROOTDIR}/dev/pts/01/bin/find
-		   ${RKHROOTDIR}/dev/pts/01/bin/netstat
-		   ${RKHROOTDIR}/dev/pts/01/bin/ping
-		   ${RKHROOTDIR}/dev/pts/01/bin/strings
-		   ${RKHROOTDIR}/dev/pts/01/bin/bash
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/du
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ls
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/passwd
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ps
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/psr
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/su
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/find
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/netstat
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/ping
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/strings
-		   ${RKHROOTDIR}/usr/man/man1/xxxxxxbin/bash
-		   ${RKHROOTDIR}/tmp/conf.inv"
-	URK_DIRS="${RKHROOTDIR}/dev/prom
-		  ${RKHROOTDIR}/dev/pts/01
-		  ${RKHROOTDIR}/dev/pts/01/bin
-		  ${RKHROOTDIR}/usr/man/man1/xxxxxxbin"
+	URK_FILES="/dev/prom/sn.l
+		   /usr/lib/ldlibps.so
+		   /usr/lib/ldlibnet.so
+		   /dev/pts/01/uconf.inv
+		   /dev/pts/01/cleaner
+		   /dev/pts/01/bin/psniff
+		   /dev/pts/01/bin/du
+		   /dev/pts/01/bin/ls
+		   /dev/pts/01/bin/passwd
+		   /dev/pts/01/bin/ps
+		   /dev/pts/01/bin/psr
+		   /dev/pts/01/bin/su
+		   /dev/pts/01/bin/find
+		   /dev/pts/01/bin/netstat
+		   /dev/pts/01/bin/ping
+		   /dev/pts/01/bin/strings
+		   /dev/pts/01/bin/bash
+		   /usr/man/man1/xxxxxxbin/du
+		   /usr/man/man1/xxxxxxbin/ls
+		   /usr/man/man1/xxxxxxbin/passwd
+		   /usr/man/man1/xxxxxxbin/ps
+		   /usr/man/man1/xxxxxxbin/psr
+		   /usr/man/man1/xxxxxxbin/su
+		   /usr/man/man1/xxxxxxbin/find
+		   /usr/man/man1/xxxxxxbin/netstat
+		   /usr/man/man1/xxxxxxbin/ping
+		   /usr/man/man1/xxxxxxbin/strings
+		   /usr/man/man1/xxxxxxbin/bash
+		   /tmp/conf.inv"
+	URK_DIRS="/dev/prom
+		  /dev/pts/01
+		  /dev/pts/01/bin
+		  /usr/man/man1/xxxxxxbin"
 	URK_KSYMS=
 	# Also-see: /usr/lib/lpset (esniff), /var/lp/lpacct/ (files), /usr/lib/bnclp, /usr/lib/lpsys (identd),
 	# Also-see: /usr/lib/lptd (backdoor?), /sbin/rc2 and /sbin/rc3 containing string "/usr/lib/lpstart",
@@ -8093,8 +8041,8 @@ do_system_check_initialisation() {
 
 	# VcKit Rootkit
 	VCKIT_FILES=
-	VCKIT_DIRS="${RKHROOTDIR}/usr/include/linux/modules/lib.so
-		    ${RKHROOTDIR}/usr/include/linux/modules/lib.so/bin"
+	VCKIT_DIRS="/usr/include/linux/modules/lib.so
+		    /usr/include/linux/modules/lib.so/bin"
 	VCKIT_KSYMS=
 
 
@@ -8109,24 +8057,24 @@ do_system_check_initialisation() {
 
 	# Volc Rootkit
 	# Omit listing system binaries that should be picked up by changed hashes.
-	VOLC_FILES="${RKHROOTDIR}/usr/bin/volc
-		    ${RKHROOTDIR}/usr/lib/volc/backdoor/divine
-		    ${RKHROOTDIR}/usr/lib/volc/linsniff
-		    ${RKHROOTDIR}/etc/rc.d/rc1.d/S25sysconf
-		    ${RKHROOTDIR}/etc/rc.d/rc2.d/S25sysconf
-		    ${RKHROOTDIR}/etc/rc.d/rc3.d/S25sysconf
-		    ${RKHROOTDIR}/etc/rc.d/rc4.d/S25sysconf
-		    ${RKHROOTDIR}/etc/rc.d/rc5.d/S25sysconf"
-	VOLC_DIRS="${RKHROOTDIR}/var/spool/.recent
-		   ${RKHROOTDIR}/var/spool/.recent/.files
-		   ${RKHROOTDIR}/usr/lib/volc
-		   ${RKHROOTDIR}/usr/lib/volc/backup"
+	VOLC_FILES="/usr/bin/volc
+		    /usr/lib/volc/backdoor/divine
+		    /usr/lib/volc/linsniff
+		    /etc/rc.d/rc1.d/S25sysconf
+		    /etc/rc.d/rc2.d/S25sysconf
+		    /etc/rc.d/rc3.d/S25sysconf
+		    /etc/rc.d/rc4.d/S25sysconf
+		    /etc/rc.d/rc5.d/S25sysconf"
+	VOLC_DIRS="/var/spool/.recent
+		   /var/spool/.recent/.files
+		   /usr/lib/volc
+		   /usr/lib/volc/backup"
 	VOLC_KSYMS=
 
 
 	# weaponX 0.1
-	WEAPONX_FILES="${RKHROOTDIR}/System/Library/Extensions/WeaponX.kext"
-	WEAPONX_DIRS="${RKHROOTDIR}/tmp/..."
+	WEAPONX_FILES="/System/Library/Extensions/WeaponX.kext"
+	WEAPONX_DIRS="/tmp/..."
 	WEAPONX_KSYMS=
 
 
@@ -8144,70 +8092,70 @@ do_system_check_initialisation() {
 
 
 	# Xzibit Rootkit (also see MRK (MiCrobul?) RootKit)
-	XZIBIT_FILES="${RKHROOTDIR}/dev/dsx
-		      ${RKHROOTDIR}/dev/caca
-		      ${RKHROOTDIR}/dev/ida/.inet/linsniffer
-		      ${RKHROOTDIR}/dev/ida/.inet/logclear
-		      ${RKHROOTDIR}/dev/ida/.inet/sense
-		      ${RKHROOTDIR}/dev/ida/.inet/sl2
-		      ${RKHROOTDIR}/dev/ida/.inet/sshdu
-		      ${RKHROOTDIR}/dev/ida/.inet/s
-		      ${RKHROOTDIR}/dev/ida/.inet/ssh_host_key
-		      ${RKHROOTDIR}/dev/ida/.inet/ssh_random_seed
-		      ${RKHROOTDIR}/dev/ida/.inet/sl2new.c
-		      ${RKHROOTDIR}/dev/ida/.inet/tcp.log
-		      ${RKHROOTDIR}/home/httpd/cgi-bin/becys.cgi
-		      ${RKHROOTDIR}/usr/local/httpd/cgi-bin/becys.cgi
-		      ${RKHROOTDIR}/usr/local/apache/cgi-bin/becys.cgi
-		      ${RKHROOTDIR}/www/httpd/cgi-bin/becys.cgi
-		      ${RKHROOTDIR}/www/cgi-bin/becys.cgi"
-	XZIBIT_DIRS="${RKHROOTDIR}/dev/ida/.inet"
+	XZIBIT_FILES="/dev/dsx
+		      /dev/caca
+		      /dev/ida/.inet/linsniffer
+		      /dev/ida/.inet/logclear
+		      /dev/ida/.inet/sense
+		      /dev/ida/.inet/sl2
+		      /dev/ida/.inet/sshdu
+		      /dev/ida/.inet/s
+		      /dev/ida/.inet/ssh_host_key
+		      /dev/ida/.inet/ssh_random_seed
+		      /dev/ida/.inet/sl2new.c
+		      /dev/ida/.inet/tcp.log
+		      /home/httpd/cgi-bin/becys.cgi
+		      /usr/local/httpd/cgi-bin/becys.cgi
+		      /usr/local/apache/cgi-bin/becys.cgi
+		      /www/httpd/cgi-bin/becys.cgi
+		      /www/cgi-bin/becys.cgi"
+	XZIBIT_DIRS="/dev/ida/.inet"
 	XZIBIT_KSYMS=
 
 
 	# X-Org SunOS Rootkit
-	XORGSUNOS_FILES="${RKHROOTDIR}/usr/lib/libX.a/bin/tmpfl
-			 ${RKHROOTDIR}/usr/lib/libX.a/bin/rps
-			 ${RKHROOTDIR}/usr/bin/srload
-			 ${RKHROOTDIR}/usr/lib/libX.a/bin/sparcv7/rps
-			 ${RKHROOTDIR}/usr/sbin/modcheck"
-	XORGSUNOS_DIRS="${RKHROOTDIR}/usr/lib/libX.a
-			${RKHROOTDIR}/usr/lib/libX.a/bin
-			${RKHROOTDIR}/usr/lib/libX.a/bin/sparcv7
-			${RKHROOTDIR}/usr/share/man..."
+	XORGSUNOS_FILES="/usr/lib/libX.a/bin/tmpfl
+			 /usr/lib/libX.a/bin/rps
+			 /usr/bin/srload
+			 /usr/lib/libX.a/bin/sparcv7/rps
+			 /usr/sbin/modcheck"
+	XORGSUNOS_DIRS="/usr/lib/libX.a
+			/usr/lib/libX.a/bin
+			/usr/lib/libX.a/bin/sparcv7
+			/usr/share/man..."
 	XORGSUNOS_KSYMS=
 
 
 	# zaRwT.KiT Rootkit
-	ZARWT_FILES="${RKHROOTDIR}/dev/rd/s/sendmeil
-		     ${RKHROOTDIR}/dev/ttyf
-		     ${RKHROOTDIR}/dev/ttyp
-		     ${RKHROOTDIR}/dev/ttyn
-		     ${RKHROOTDIR}/rk/tulz"
-	ZARWT_DIRS="${RKHROOTDIR}/rk
-		    ${RKHROOTDIR}/dev/rd/s"
+	ZARWT_FILES="/dev/rd/s/sendmeil
+		     /dev/ttyf
+		     /dev/ttyp
+		     /dev/ttyn
+		     /rk/tulz"
+	ZARWT_DIRS="/rk
+		    /dev/rd/s"
 	ZARWT_KSYMS=
 
 
 	# ZK Rootkit
-	ZK_FILES="${RKHROOTDIR}/usr/share/.zk/zk
-		  ${RKHROOTDIR}/usr/X11R6/.zk/xfs
-		  ${RKHROOTDIR}/usr/X11R6/.zk/echo
-		  ${RKHROOTDIR}/etc/1ssue.net
-		  ${RKHROOTDIR}/etc/sysconfig/console/load.zk"
-	ZK_DIRS="${RKHROOTDIR}/usr/share/.zk
-		 ${RKHROOTDIR}/usr/X11R6/.zk"
+	ZK_FILES="/usr/share/.zk/zk
+		  /usr/X11R6/.zk/xfs
+		  /usr/X11R6/.zk/echo
+		  /etc/1ssue.net
+		  /etc/sysconfig/console/load.zk"
+	ZK_DIRS="/usr/share/.zk
+		 /usr/X11R6/.zk"
 	ZK_KSYMS=
 
 
 	# Miscellaneous login backdoors
-	LOGIN_BACKDOOR_FILES="${RKHROOTDIR}/bin/.login
-			      ${RKHROOTDIR}/sbin/.login"
+	LOGIN_BACKDOOR_FILES="/bin/.login
+			      /sbin/.login"
 
 
 	# Suspicious directories
-	SUSPICIOUS_DIRS="${RKHROOTDIR}/usr/X11R6/bin/.,/copy
-			 ${RKHROOTDIR}/dev/rd/cdb"
+	SUSPICIOUS_DIRS="/usr/X11R6/bin/.,/copy
+			 /dev/rd/cdb"
 
 
 	# Evil strings
@@ -8335,113 +8283,113 @@ do_system_check_initialisation() {
 
 	# Possible rootkit files and directories
 	# The '%' character represents a space.
-	FILESCAN="file:${RKHROOTDIR}/dev/sdr0:T0rn Rootkit MD5 hash database
-		  file:${RKHROOTDIR}/dev/pisu:Rootkit component
-		  file:${RKHROOTDIR}/dev/xdta:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/dev/saux:Trojaned SSH daemon sniffer log
-		  file:${RKHROOTDIR}/dev/hdx:Linux.RST.B infection
-		  file:${RKHROOTDIR}/dev/hdx1:Linux.RST.B infection
-		  file:${RKHROOTDIR}/dev/hdx2:Linux.RST.B infection
-		  file:${RKHROOTDIR}/dev/ptyy:Rootkit component
-		  file:${RKHROOTDIR}/dev/ptyu:Rootkit component
-		  file:${RKHROOTDIR}/dev/ptyv:Rootkit component
-		  file:${RKHROOTDIR}/dev/hdbb:Rootkit component
-		  file:${RKHROOTDIR}/tmp/.syshackfile:Trojaned syslog daemon
-		  file:${RKHROOTDIR}/tmp/.bash_history:Lite5-r Rootkit
-		  file:${RKHROOTDIR}/usr/info/.clib:Backdoor component
-		  file:${RKHROOTDIR}/usr/sbin/tcp.log:Sniffer log
-		  file:${RKHROOTDIR}/usr/bin/take/pid:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/sbin/create:MzOzD Local backdoor
-		  file:${RKHROOTDIR}/dev/ttypz:spwn login backdoor
-		  file:${RKHROOTDIR}/var/log/tcp.log:beX2 Rootkit
-		  file:${RKHROOTDIR}/usr/include/audit.h:beX2 Rootkit
-		  file:${RKHROOTDIR}/usr/bin/sourcemask:Rootkit component
-		  file:${RKHROOTDIR}/usr/bin/ras2xm:Rootkit component
-		  file:${RKHROOTDIR}/dev/xmx:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/usr/sbin/gpm.root:Rootkit component
-		  file:${RKHROOTDIR}/bin/vobiscum:Rootkit component
-		  file:${RKHROOTDIR}/bin/psr:Rootkit component
-		  file:${RKHROOTDIR}/dev/kdx:Rootkit component
-		  file:${RKHROOTDIR}/dev/dkx:Rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/sshd3:Rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/jcd:Rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/atd2:Rootkit component
-		  file:${RKHROOTDIR}/home/httpd/cgi-bin/linux.cgi:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/home/httpd/cgi-bin/psid:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/home/httpd/cgi-bin/void.cgi:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/system:Rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/rc3.d/S93users:Rootkit component
-		  file:${RKHROOTDIR}/tmp/.ush:Dica-Kit Rootkit
-		  file:${RKHROOTDIR}/usr/lib/libhidefile.so:HIDEFILE envvar file-hiding library
-		  file:${RKHROOTDIR}/etc/cron.d/kmod:Illogic Rootkit
-		  file:${RKHROOTDIR}/usr/lib/dmis/dmisd:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/lib/secure/libhij.so:Solaris Trojaned SSH daemon
-		  file:${RKHROOTDIR}/usr/sbin/sshd3:Rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/crontab:Rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/init.d/jcd:Rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/atd2:Rootkit component
-		  file:${RKHROOTDIR}/etc/rc.d/rc5.d/S93users:Rootkit component
-		  file:${RKHROOTDIR}/usr/include/mysql/mysql.hh1:Rootkit component
-		  file:${RKHROOTDIR}/etc/init.d/xfs3:Rootkit component
-		  file:${RKHROOTDIR}/usr/sbin/t.txt:Opyum kit component
-		  file:${RKHROOTDIR}/usr/sbin/change:Opyum kit component
-		  file:${RKHROOTDIR}/usr/sbin/s:Opyum kit component
-		  file:${RKHROOTDIR}/bin/f:Opyum kit component
-		  file:${RKHROOTDIR}/bin/i:Opyum kit component
-		  file:${RKHROOTDIR}/lib/libncom.so.4.0.1:ncom rootkit library
-		  file:${RKHROOTDIR}/sbin/zinit:Rootkit component
-		  file:${RKHROOTDIR}/tmp/pass_ssh.log:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/usr/include/gpm2.h:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/etc/ssh/.sshd_auth:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/usr/lib/.sshd.h:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/var/run/.defunct:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/etc/httpd/run/.defunct:Trojaned SSH daemon
-		  file:${RKHROOTDIR}/usr/share/pci.r:Trojaned Syslog daemon
-		  file:${RKHROOTDIR}/etc/cron.daily/dnsquery:Sniffer
-		  file:${RKHROOTDIR}/usr/lib/libutil1.2.1.2.so:Trojaned SSH daemon component (hwclock binary)
-		  file:${RKHROOTDIR}/bin/ceva:Trojaned SSH daemon (client binary)
-		  file:${RKHROOTDIR}/sbin/syslogd%:Trojaned SSH daemon (sebd)
-		  file:${RKHROOTDIR}/usr/include/shup.h:Trojaned SSH daemon (client binary)
-		  file:${RKHROOTDIR}/etc/rpm/sshdOLD:Trojaned SSH daemon (original sshd binary)
-		  file:${RKHROOTDIR}/etc/rpm/sshOLD:Trojaned SSH daemon (original ssh binary)
-		  file:${RKHROOTDIR}/usr/share/passwd.h:Trojaned SSH daemon (default configuration)
-		  dir:${RKHROOTDIR}/dev/ptyas:Langsuir installation directory
-		  dir:${RKHROOTDIR}/usr/bin/take:Trojaned SSH daemon
-		  dir:${RKHROOTDIR}/usr/src/.lib:Rootkit component
-		  dir:${RKHROOTDIR}/usr/share/man/man1/.1c:Eggdrop (IRC bot)
-		  dir:${RKHROOTDIR}/lib/lblip.tk:T0rn Rootkit directory with backdoored SSH-configuration
-		  dir:${RKHROOTDIR}/usr/sbin/...:Rootkit component
-		  dir:${RKHROOTDIR}/usr/share/.gun:Rootkit component
-		  dir:${RKHROOTDIR}/unde/vrei/tu/sa/te/ascunzi/in/server:Unknown rootkit
-		  dir:${RKHROOTDIR}/usr/man/man1/..%%/.dir:Unknown rootkit
-		  dir:${RKHROOTDIR}/usr/X11R6/include/X11/...:Unknown rootkit
-		  dir:${RKHROOTDIR}/usr/X11R6/lib/X11/.fonts/misc/...:Unknown rootkit
-		  dir:${RKHROOTDIR}/tmp/.sys:Rootkit component
-		  dir:${RKHROOTDIR}/tmp/':Rootkit component
-		  dir:${RKHROOTDIR}/tmp/.,:Rootkit component
-		  dir:${RKHROOTDIR}/tmp/,.,:Rootkit component
-		  dir:${RKHROOTDIR}/dev/shm/emilien:Rootkit component
-		  dir:${RKHROOTDIR}/var/tmp/.log:Rootkit component
-		  dir:${RKHROOTDIR}/tmp/zmeu/...%:Rootkit component
-		  dir:${RKHROOTDIR}/var/log/ssh:Rootkit component
-		  dir:${RKHROOTDIR}/dev/ida:Rootkit component
-		  dir:${RKHROOTDIR}/lib/java:Rootkit component
-		  dir:${RKHROOTDIR}/var/lib/games/.src/ssk/shit:Rootkit component
-		  dir:${RKHROOTDIR}/usr/lib/libshtift:Rootkit component
-		  dir:${RKHROOTDIR}/usr/src/.poop:Ramen worm
-		  dir:${RKHROOTDIR}/dev/wd4:IRC bot
-		  dir:${RKHROOTDIR}/var/run/.tmp:Rootkit component
-		  dir:${RKHROOTDIR}/usr/man/man1/lib/.lib:Rootkit component
-		  dir:${RKHROOTDIR}/dev/portd:Rootkit component
-		  dir:${RKHROOTDIR}/dev/...:Rootkit component
-		  dir:${RKHROOTDIR}/usr/share/man/mansps:Rootkit component
-		  dir:${RKHROOTDIR}/lib/.so:Rootkit component
-		  dir:${RKHROOTDIR}/lib/.sso:Rootkit component
-		  dir:${RKHROOTDIR}/usr/include/sslv3:Rootkit component
-		  dir:${RKHROOTDIR}/dev/shm/sshd:Trojaned SSH daemon
-		  dir:${RKHROOTDIR}/usr/share/locale/mk/.dev/sk:Sniffer
-		  dir:${RKHROOTDIR}/usr/share/locale/mk/.dev:Sniffer"
+	FILESCAN="file:/dev/sdr0:T0rn Rootkit MD5 hash database
+		  file:/dev/pisu:Rootkit component
+		  file:/dev/xdta:Dica-Kit Rootkit
+		  file:/dev/saux:Trojaned SSH daemon sniffer log
+		  file:/dev/hdx:Linux.RST.B infection
+		  file:/dev/hdx1:Linux.RST.B infection
+		  file:/dev/hdx2:Linux.RST.B infection
+		  file:/dev/ptyy:Rootkit component
+		  file:/dev/ptyu:Rootkit component
+		  file:/dev/ptyv:Rootkit component
+		  file:/dev/hdbb:Rootkit component
+		  file:/tmp/.syshackfile:Trojaned syslog daemon
+		  file:/tmp/.bash_history:Lite5-r Rootkit
+		  file:/usr/info/.clib:Backdoor component
+		  file:/usr/sbin/tcp.log:Sniffer log
+		  file:/usr/bin/take/pid:Trojaned SSH daemon
+		  file:/sbin/create:MzOzD Local backdoor
+		  file:/dev/ttypz:spwn login backdoor
+		  file:/var/log/tcp.log:beX2 Rootkit
+		  file:/usr/include/audit.h:beX2 Rootkit
+		  file:/usr/bin/sourcemask:Rootkit component
+		  file:/usr/bin/ras2xm:Rootkit component
+		  file:/dev/xmx:Dica-Kit Rootkit
+		  file:/usr/sbin/gpm.root:Rootkit component
+		  file:/bin/vobiscum:Rootkit component
+		  file:/bin/psr:Rootkit component
+		  file:/dev/kdx:Rootkit component
+		  file:/dev/dkx:Rootkit component
+		  file:/usr/sbin/sshd3:Rootkit component
+		  file:/usr/sbin/jcd:Rootkit component
+		  file:/etc/rc.d/init.d/jcd:Rootkit component
+		  file:/usr/sbin/atd2:Rootkit component
+		  file:/home/httpd/cgi-bin/linux.cgi:Dica-Kit Rootkit
+		  file:/home/httpd/cgi-bin/psid:Dica-Kit Rootkit
+		  file:/home/httpd/cgi-bin/void.cgi:Dica-Kit Rootkit
+		  file:/etc/rc.d/init.d/system:Rootkit component
+		  file:/etc/rc.d/rc3.d/S93users:Rootkit component
+		  file:/tmp/.ush:Dica-Kit Rootkit
+		  file:/usr/lib/libhidefile.so:HIDEFILE envvar file-hiding library
+		  file:/etc/cron.d/kmod:Illogic Rootkit
+		  file:/usr/lib/dmis/dmisd:Trojaned SSH daemon
+		  file:/lib/secure/libhij.so:Solaris Trojaned SSH daemon
+		  file:/usr/sbin/sshd3:Rootkit component
+		  file:/etc/rc.d/init.d/crontab:Rootkit component
+		  file:/etc/rc.d/init.d/jcd:Rootkit component
+		  file:/usr/sbin/atd2:Rootkit component
+		  file:/etc/rc.d/rc5.d/S93users:Rootkit component
+		  file:/usr/include/mysql/mysql.hh1:Rootkit component
+		  file:/etc/init.d/xfs3:Rootkit component
+		  file:/usr/sbin/t.txt:Opyum kit component
+		  file:/usr/sbin/change:Opyum kit component
+		  file:/usr/sbin/s:Opyum kit component
+		  file:/bin/f:Opyum kit component
+		  file:/bin/i:Opyum kit component
+		  file:/lib/libncom.so.4.0.1:ncom rootkit library
+		  file:/sbin/zinit:Rootkit component
+		  file:/tmp/pass_ssh.log:Trojaned SSH daemon
+		  file:/usr/include/gpm2.h:Trojaned SSH daemon
+		  file:/etc/ssh/.sshd_auth:Trojaned SSH daemon
+		  file:/usr/lib/.sshd.h:Trojaned SSH daemon
+		  file:/var/run/.defunct:Trojaned SSH daemon
+		  file:/etc/httpd/run/.defunct:Trojaned SSH daemon
+		  file:/usr/share/pci.r:Trojaned Syslog daemon
+		  file:/etc/cron.daily/dnsquery:Sniffer
+		  file:/usr/lib/libutil1.2.1.2.so:Trojaned SSH daemon component (hwclock binary)
+		  file:/bin/ceva:Trojaned SSH daemon (client binary)
+		  file:/sbin/syslogd%:Trojaned SSH daemon (sebd)
+		  file:/usr/include/shup.h:Trojaned SSH daemon (client binary)
+		  file:/etc/rpm/sshdOLD:Trojaned SSH daemon (original sshd binary)
+		  file:/etc/rpm/sshOLD:Trojaned SSH daemon (original ssh binary)
+		  file:/usr/share/passwd.h:Trojaned SSH daemon (default configuration)
+		  dir:/dev/ptyas:Langsuir installation directory
+		  dir:/usr/bin/take:Trojaned SSH daemon
+		  dir:/usr/src/.lib:Rootkit component
+		  dir:/usr/share/man/man1/.1c:Eggdrop (IRC bot)
+		  dir:/lib/lblip.tk:T0rn Rootkit directory with backdoored SSH-configuration
+		  dir:/usr/sbin/...:Rootkit component
+		  dir:/usr/share/.gun:Rootkit component
+		  dir:/unde/vrei/tu/sa/te/ascunzi/in/server:Unknown rootkit
+		  dir:/usr/man/man1/..%%/.dir:Unknown rootkit
+		  dir:/usr/X11R6/include/X11/...:Unknown rootkit
+		  dir:/usr/X11R6/lib/X11/.fonts/misc/...:Unknown rootkit
+		  dir:/tmp/.sys:Rootkit component
+		  dir:/tmp/':Rootkit component
+		  dir:/tmp/.,:Rootkit component
+		  dir:/tmp/,.,:Rootkit component
+		  dir:/dev/shm/emilien:Rootkit component
+		  dir:/var/tmp/.log:Rootkit component
+		  dir:/tmp/zmeu/...%:Rootkit component
+		  dir:/var/log/ssh:Rootkit component
+		  dir:/dev/ida:Rootkit component
+		  dir:/lib/java:Rootkit component
+		  dir:/var/lib/games/.src/ssk/shit:Rootkit component
+		  dir:/usr/lib/libshtift:Rootkit component
+		  dir:/usr/src/.poop:Ramen worm
+		  dir:/dev/wd4:IRC bot
+		  dir:/var/run/.tmp:Rootkit component
+		  dir:/usr/man/man1/lib/.lib:Rootkit component
+		  dir:/dev/portd:Rootkit component
+		  dir:/dev/...:Rootkit component
+		  dir:/usr/share/man/mansps:Rootkit component
+		  dir:/lib/.so:Rootkit component
+		  dir:/lib/.sso:Rootkit component
+		  dir:/usr/include/sslv3:Rootkit component
+		  dir:/dev/shm/sshd:Trojaned SSH daemon
+		  dir:/usr/share/locale/mk/.dev/sk:Sniffer
+		  dir:/usr/share/locale/mk/.dev:Sniffer"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -8512,9 +8460,9 @@ do_system_check_initialisation() {
 			   ${TBD_FILES} ${TORN_FILES} ${TORN_DIRS}"
 
 
-	SNIFFER_FILES="${RKHROOTDIR}/usr/lib/libice.log
-		       ${RKHROOTDIR}/dev/prom/sn.l
-		       ${RKHROOTDIR}/dev/fd/.88/zxsniff.log"
+	SNIFFER_FILES="/usr/lib/libice.log
+		       /dev/prom/sn.l
+		       /dev/fd/.88/zxsniff.log"
 
 
 	# Known bad Linux kernel modules
@@ -8566,20 +8514,9 @@ strings_check() {
 	fi
 
 
-	#
-	# The pathnames to check will have the RKHROOTDIR at
-	# the front. We need to strip this off before passing
-	# it through the 'strings' command. If we didn't then
-	# we would be looking for the wrong pathname.
-	#
-
 	STRINGSFAILED=0
 
-	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
-
 	for STRING in ${STRINGS_INTEGRITY}; do
-		STRING=`echo "${STRING}" | sed -e "s:^${RDIR}::"`
-
 		STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
 		STRING_SEEN=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
 
@@ -8678,7 +8615,7 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 	# Next check for a preload file.
 	#
 
-	RKHTMPVAR=${RKHROOTDIR}/etc/ld.so.preload
+	RKHTMPVAR="/etc/ld.so.preload"
 
 	if [ -s ${RKHTMPVAR} ]; then
 		RKHLIBLIST=""
@@ -9220,8 +9157,6 @@ file_properties_check() {
 		HASH_CMD="${HASH_FUNC}"
 	fi
 
-	RDIR=`echo "${RKHROOTDIR}" | sed -e 's/\//\\\\\//g'`
-
 
 	#
 	# Next we have to recreate the list of pathnames for the
@@ -9270,15 +9205,7 @@ file_properties_check() {
 		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
-			#
-			# When checking the filename against the rkhunter.dat
-			# file, we must use the real filename and not one with
-			# the root directory.
-			#
-
-			FILENAME=`echo "${FNAME}" | sed -e "s:^${RDIR}::"`
-
-			FNAMEGREP=`echo "${FILENAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
 
 			RKHLINE=`grep "^File:${FNAMEGREP}:" ${RKHDAT_FILE}`
 
@@ -9290,7 +9217,7 @@ file_properties_check() {
 					#
 
 					ADDNEWENTRY=1
-					RKHLINE="File:${FILENAME}:1:1:1:1:1:1:1::"
+					RKHLINE="File:${FNAME}:1:1:1:1:1:1:1::"
 				else
 					TEST_RESULT="${TEST_RESULT} norkhline"
 				fi
@@ -9364,7 +9291,7 @@ ${RKHLINE}"
 				if [ $NOVRFYFILE -eq 1 ]; then
 					ERRCODE=1
 				else
-					PKGNAME_ARCH=`${RPM_CMD} -qf ${FILENAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
+					PKGNAME_ARCH=`${RPM_CMD} -qf ${FNAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
 					ERRCODE=$?
 				fi
 
@@ -9397,7 +9324,7 @@ ${RKHLINE}"
 						if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
 							VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
 						else
-							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FILENAME}.* dependenc\"`" ]; then
+							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FNAME}.* dependenc\"`" ]; then
 								DEPENDENCY_ERR=1
 							fi
 
@@ -9439,7 +9366,7 @@ ${RKHLINE}"
 						#
 
 						FDATA=":::::"
-						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FILENAME}" $ERRCODE
+						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FNAME}" $ERRCODE
 					fi
 
 					#
@@ -9537,7 +9464,7 @@ ${RKHLINE}"
 					if [ $NOVRFYFILE -eq 1 ]; then
 						PKGNAME=""
 					else
-						PKGNAME=`${DPKG_CMD} --search ${FILENAME} 2>/dev/null | cut -d: -f1`
+						PKGNAME=`${DPKG_CMD} --search ${FNAME} 2>/dev/null | cut -d: -f1`
 					fi
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
@@ -9567,7 +9494,7 @@ ${RKHLINE}"
 					if [ $NOVRFYFILE -eq 1 ]; then
 						PKGNAME=""
 					else
-						PKGNAME=`${PKG_CMD} -F -e ${FILENAME} 2>/dev/null`
+						PKGNAME=`${PKG_CMD} -F -e ${FNAME} 2>/dev/null`
 					fi
 
 					if [ -n "${PKGNAME}" ]; then
@@ -9751,7 +9678,7 @@ ${RKHLINE}"
 				WL_FILE=""
 
 				for WHITELISTFILE in ${ATTRWHITELIST}; do
-					if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
+					if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
 						WL_FILE="whitelisted"
 						WHITELIST_RESULT="${WHITELIST_RESULT} attr"
 						break
@@ -9895,7 +9822,7 @@ ${RKHLINE}"
 					WL_FILE=""
 
 					for WHITELISTFILE in ${WRITEWHITELIST}; do
-						if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
+						if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
 							WL_FILE="whitelisted"
 							WHITELIST_RESULT="${WHITELIST_RESULT} write"
 							break
@@ -9935,7 +9862,7 @@ ${RKHLINE}"
 				fi
 
 				NEWRKHENTRIES="${NEWRKHENTRIES}
-File:${FILENAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::"
+File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::"
 			fi
 		fi
 
@@ -9958,7 +9885,7 @@ File:${FILENAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE
 			RKHTMPVAR=""
 
 			for WHITELISTFILE in ${IMMUTWHITELIST}; do
-				if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
+				if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
 					WL_FILE="whitelisted"
 					WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
 					break
@@ -10011,7 +9938,7 @@ File:${FILENAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE
 				SYSSCRIPT=""
 
 				for WHITELISTFILE in ${SCRIPTWHITELIST}; do
-					if [ "${RKHROOTDIR}${WHITELISTFILE}" = "${FNAME}" ]; then
+					if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
 						WL_FILE="whitelisted"
 						WHITELIST_RESULT="${WHITELIST_RESULT} script"
 						break
@@ -10392,7 +10319,7 @@ suspscan() {
 
 
 	for DIR in ${SUSPSCAN_DIRS}; do
-		SUSPSCAN_DIR="${RKHROOTDIR}${DIR}"
+		SUSPSCAN_DIR="${DIR}"
 
 		if [ -d "${SUSPSCAN_DIR}" ]; then
 			FOUND=0
@@ -10681,8 +10608,8 @@ rootkit_file_dir_checks() {
 		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 	fi
 
-	if [ -f "${RKHROOTDIR}/etc/passwd" ]; then
-		RKHTMPVAR=`grep 'w0rm' ${RKHROOTDIR}/etc/passwd`
+	if [ -f "/etc/passwd" ]; then
+		RKHTMPVAR=`grep 'w0rm' /etc/passwd`
 
 		if [ -z "${RKHTMPVAR}" ]; then
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -10699,11 +10626,11 @@ rootkit_file_dir_checks() {
 			fi
 
 			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "w0rm" "${RKHROOTDIR}/etc/passwd"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "w0rm" "/etc/passwd"
 		fi
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "${RKHROOTDIR}/etc/passwd"
+		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "/etc/passwd"
 	fi
 
 	# AjaKit Rootkit
@@ -11106,9 +11033,9 @@ rootkit_file_dir_checks() {
 		fi
 
 		if [ $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
-			ROOTKIT_PHALANX2_DIRNAMES=`find ${RKHROOTDIR}/etc ${RKHROOTDIR}/usr -type d -iname "*.p2"`
+			ROOTKIT_PHALANX2_DIRNAMES=`find /etc /usr -type d -iname "*.p2"`
 		else
-			ROOTKIT_PHALANX2_DIRNAMES="${RKHROOTDIR}/etc/khubd.p2 ${RKHROOTDIR}/etc/lolzz.p2 ${RKHROOTDIR}/usr/lib/zupzz.p2"
+			ROOTKIT_PHALANX2_DIRNAMES="/etc/khubd.p2 /etc/lolzz.p2 /usr/lib/zupzz.p2"
 		fi
 
 		if [ -n "${ROOTKIT_PHALANX2_DIRNAMES}" ]; then
@@ -11359,7 +11286,7 @@ rootkit_file_dir_checks() {
 			for DIR in ${BINPATHS}; do
 				FOUNDINDIR="NOT_FOUND"
 
-				for FNAME in `${FIND_CMD} "${RKHROOTDIR}${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
+				for FNAME in `${FIND_CMD} "${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAME} \"`" ]; then
 						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" known_rkts
 					elif `grep -i 'sinar' ${FNAME} >/dev/null 2>&1`; then
@@ -11370,7 +11297,7 @@ rootkit_file_dir_checks() {
 				done
 
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result "${FOUNDINDIR}" --log-indent 2 ROOTKIT_FILES_DIRS_SINAR_DIR "${RKHROOTDIR}${DIR}"
+					display --to LOG --type PLAIN --result "${FOUNDINDIR}" --log-indent 2 ROOTKIT_FILES_DIRS_SINAR_DIR "${DIR}"
 				fi
 			done
 
@@ -11750,8 +11677,6 @@ get_rc_paths() {
 
 
 	for DIR in ${RKHTMPVAR}; do
-		DIR="${RKHROOTDIR}${DIR}"
-
 		test -h "${DIR}" && continue
 
 		if [ -f "${DIR}" ]; then
@@ -11893,7 +11818,7 @@ ${FNAME}:${FILESTRING}:${INFO}"
 			IFS=$RKHIFS
 
 			for DIR in ${BINPATHS}; do
-				FNAME="${RKHROOTDIR}${DIR}/${FILE}"
+				FNAME="${DIR}/${FILE}"
 
 				if [ -f "${FNAME}" ]; then
 					FOUNDFILE=1
@@ -12654,7 +12579,7 @@ ${RKHTMPVAR}"
 	# Next we check for any software intrusions.
 	#
 
-	TRIPWIREFILE="${RKHROOTDIR}/var/lib/tripwire/`uname -n 2>/dev/null`.twd"
+	TRIPWIREFILE="/var/lib/tripwire/`uname -n 2>/dev/null`.twd"
 
 	if [ -f "${TRIPWIREFILE}" ]; then
 		if [ -z "`grep 'Tripwire segment-faulted !' ${TRIPWIREFILE}`" ]; then
@@ -12728,7 +12653,7 @@ xinetd_include() {
 	# is ignored. Also absolute pathnames must be used.
 	#
 
-	test -z "$1" -o ! -f "${RKHROOTDIR}$1" && return
+	test -z "$1" -o ! -f "$1" && return
 	test -z "`echo \"$1\" | grep '^/'`" && return
 
 	test -n "`echo \"$1\" | grep '/[^/]*\.[^/]*$'`" -a "$1" != "${XINETD_CONF_PATH}" && return
@@ -12739,7 +12664,7 @@ xinetd_include() {
 	# First see if any services have been enabled.
 	#
 
-	if [ -n "`grep '^[ 	]*disable[ 	]*=[ 	]*no' ${RKHROOTDIR}$1`" ]; then
+	if [ -n "`grep '^[ 	]*disable[ 	]*=[ 	]*no' $1`" ]; then
 		#
 		# See if the file is whitelisted.
 		#
@@ -12755,17 +12680,17 @@ xinetd_include() {
 
 		if [ $RKHTMPVAR -eq 0 ]; then
 			FOUND=1
-			FOUNDFILES="${FOUNDFILES} ${RKHROOTDIR}$1"
+			FOUNDFILES="${FOUNDFILES} $1"
 
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
+				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "$1"
 			fi
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
+			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "$1"
 			display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "$1" "xinetd"
 		fi
 	elif [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${RKHROOTDIR}$1"
+		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "$1"
 	fi
 
 
@@ -12773,7 +12698,7 @@ xinetd_include() {
 	# Next we look for any 'include' directives.
 	#
 
-	for FNAME in `grep '^[ 	]*include[ 	]' ${RKHROOTDIR}$1 | awk '{ print $2 }'`; do
+	for FNAME in `grep '^[ 	]*include[ 	]' $1 | awk '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDE "${FNAME}"
 		fi
@@ -12786,7 +12711,7 @@ xinetd_include() {
 	# Finally we look for any 'includedir' directives.
 	#
 
-	for DIR in `grep '^[ 	]*includedir[ 	]' ${RKHROOTDIR}$1 | awk '{ print $2 }'`; do
+	for DIR in `grep '^[ 	]*includedir[ 	]' $1 | awk '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDEDIR "${DIR}"
 		fi
@@ -12806,11 +12731,11 @@ xinetd_includedir() {
 	# Absolute pathnames must be used.
 	#
 
-	test -z "$1" -o ! -d "${RKHROOTDIR}$1" && return
+	test -z "$1" -o ! -d "$1" && return
 	test -z "`echo \"$1\" | grep '^/'`" && return
 
 
-	for FNAME in `ls ${RKHROOTDIR}$1`; do
+	for FNAME in `ls $1`; do
 		xinetd_include "$1/${FNAME}"
 	done
 
@@ -12831,8 +12756,8 @@ sol10_inetd() {
 
 	FOUNDSTRING=`${INETADM_CMD} | grep '^enabled' | cut -d: -f2`
 
-	if [ -f "${RKHROOTDIR}${INETD_CONF_PATH}" ]; then
-		STR=`grep -v '^#' ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
+	if [ -f "${INETD_CONF_PATH}" ]; then
+		STR=`grep -v '^#' ${INETD_CONF_PATH} | awk '{ print $1 }'`
 
 		#
 		# Remove any inetd services which we already know
@@ -12884,7 +12809,7 @@ trojan_checks() {
 	fi
 
 
-	if [ -f "${RKHROOTDIR}${INETD_CONF_PATH}" -o -f "${RKHROOTDIR}${XINETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
+	if [ -f "${INETD_CONF_PATH}" -o -f "${XINETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
 		RKHTMPVAR="SCREEN+LOG"
 	else
 		RKHTMPVAR="LOG"
@@ -12898,11 +12823,11 @@ trojan_checks() {
 	# Solaris 10 inetd services as well.
 	#
 
-	if [ -f "${RKHROOTDIR}${INETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
+	if [ -f "${INETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
 		if [ -z "${INETADM_CMD}" ]; then
 			display --to LOG --type INFO CONFIG_XINETD_PATH "inetd" "${INETD_CONF_PATH}"
 
-			FOUNDSTRING=`grep -v '^#' ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $1 }'`
+			FOUNDSTRING=`grep -v '^#' ${INETD_CONF_PATH} | awk '{ print $1 }'`
 		else
 			display --to LOG --type INFO CONFIG_SOL10_INETD
 		fi
@@ -12934,7 +12859,7 @@ trojan_checks() {
 				#
 
 				if [ -n "`echo \"${STR}\" | grep '^[0-9/_-]*$'`" ]; then
-					EXECNAME=`grep "^${STR}" ${RKHROOTDIR}${INETD_CONF_PATH} | awk '{ print $6 }'`
+					EXECNAME=`grep "^${STR}" ${INETD_CONF_PATH} | awk '{ print $6 }'`
 
 					test -z "${EXECNAME}" -o "${EXECNAME}" = "internal" && EXECNAME="${STR}"
 
@@ -12976,7 +12901,7 @@ trojan_checks() {
 		fi
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_INETD
-		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${RKHROOTDIR}${INETD_CONF_PATH}"
+		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${INETD_CONF_PATH}"
 	fi
 
 
@@ -12991,7 +12916,7 @@ trojan_checks() {
 		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_TROJAN_XINETD_LOG
 	fi
 
-	if [ -f "${RKHROOTDIR}${XINETD_CONF_PATH}" ]; then
+	if [ -f "${XINETD_CONF_PATH}" ]; then
 		display --to LOG --type INFO CONFIG_XINETD_PATH "xinetd" "${XINETD_CONF_PATH}"
 
 		xinetd_include "${XINETD_CONF_PATH}"
@@ -13012,7 +12937,7 @@ trojan_checks() {
 		fi
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_XINETD
-		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${RKHROOTDIR}${XINETD_CONF_PATH}"
+		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${XINETD_CONF_PATH}"
 	fi
 
 
@@ -13023,9 +12948,9 @@ trojan_checks() {
 	FOUND=0
 	FOUNDFILES=""
 
-	MOD_DIRS="${RKHROOTDIR}/etc/apache2/mods-enabled ${RKHROOTDIR}/etc/httpd/modules ${RKHROOTDIR}/usr/apache/libexec ${RKHROOTDIR}/usr/lib/modules ${RKHROOTDIR}/usr/local/apache/modules"
+	MOD_DIRS="/etc/apache2/mods-enabled /etc/httpd/modules /usr/apache/libexec /usr/lib/modules /usr/local/apache/modules"
 
-	HTTPDDIRS="${RKHROOTDIR}/usr/local/apache/conf ${RKHROOTDIR}/usr/local/etc/apache ${RKHROOTDIR}/etc/apache ${RKHROOTDIR}/etc/httpd/conf"
+	HTTPDDIRS="/usr/local/apache/conf /usr/local/etc/apache /etc/apache /etc/httpd/conf"
 
 	for DIR in ${MOD_DIRS} ${HTTPDDIRS}; do
 		if [ -d "${DIR}" ]; then
@@ -13213,16 +13138,16 @@ linux_loaded_modules() {
 	fi
 
 
-	if [ ! -f "${RKHROOTDIR}/proc/modules" ]; then
+	if [ ! -f "/proc/modules" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
-		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "${RKHROOTDIR}/proc/modules"
+		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "/proc/modules"
 	elif [ -z "${LSMOD_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "lsmod"
 	else
-		PROC_OUTPUT=`cat ${RKHROOTDIR}/proc/modules | cut -d' ' -f1 | sort`
+		PROC_OUTPUT=`cat /proc/modules | cut -d' ' -f1 | sort`
 		LSMOD_OUTPUT=`${LSMOD_CMD} | grep -v 'Size *Used *by' | cut -d' ' -f1 | sort`
 
 
@@ -13280,11 +13205,9 @@ linux_avail_modules() {
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		LKM_PATH="${RKHTMPVAR}"
-	elif [ -z "${RKHROOTDIR}" ]; then
+	else
 		LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
 		test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
-	else
-		LKM_PATH="${RKHROOTDIR}/lib/modules"
 	fi
 
 	display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKM_PATH}"
@@ -14383,12 +14306,12 @@ do_group_accounts_check() {
 	# First check that /etc/passwd exists.
 	#
 
-	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+	if [ -s "/etc/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
-		display --to LOG --type INFO ACCOUNTS_FOUND_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_FOUND_PWD_FILE "/etc/passwd"
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
-		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "/etc/passwd"
 	fi
 
 
@@ -14397,7 +14320,7 @@ do_group_accounts_check() {
 	# a UID of zero.
 	#
 
-	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+	if [ -s "/etc/passwd" ]; then
 		#
 		# We need to ignore any whitelisted UID 0 accounts.
 		#
@@ -14423,7 +14346,7 @@ do_group_accounts_check() {
 
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' ${RKHROOTDIR}/etc/passwd | cut -d: -f1` ${RKHTMPVAR2}; do
+		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' /etc/passwd | cut -d: -f1` ${RKHTMPVAR2}; do
 			test -z "${RKHTMPVAR}" && continue
 			test "${RKHTMPVAR}" = "root" && continue
 
@@ -14460,7 +14383,7 @@ ${RKHTMPVAR}"
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
-		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "/etc/passwd"
 	fi
 
 
@@ -14493,7 +14416,7 @@ ${RKHTMPVAR}"
 		if [ -n "${SHADOW_FILE}" ]; then
 			display --to LOG --type INFO ACCOUNTS_SHADOW_FILE "${SHADOW_FILE}"
 		else
-			display --to LOG --type INFO ACCOUNTS_SHADOW_TCB "${RKHROOTDIR}/etc/tcb"
+			display --to LOG --type INFO ACCOUNTS_SHADOW_TCB "/etc/tcb"
 		fi
 
 		#
@@ -14508,9 +14431,9 @@ ${RKHTMPVAR}"
 		#
 
 		if [ $HAVE_TCB_SHADOW -eq 1 ]; then
-			RKHTMPVAR2="${RKHROOTDIR}/etc/tcb"
+			RKHTMPVAR2="/etc/tcb"
 		else
-			RKHTMPVAR2="${RKHROOTDIR}/etc"
+			RKHTMPVAR2="/etc"
 		fi
 
 		IFS=$IFSNL
@@ -14558,10 +14481,10 @@ ${RKHTMPVAR}"
 	# Check for passwordless accounts in /etc/passwd.
 	#
 
-	if [ -s "${RKHROOTDIR}/etc/passwd" ]; then
+	if [ -s "/etc/passwd" ]; then
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*::' ${RKHROOTDIR}/etc/passwd | cut -d: -f1`; do
+		for RKHTMPVAR in `grep '^[^:]*::' /etc/passwd | cut -d: -f1`; do
 			# Ignore any NIS/YP entries
 			test "${RKHTMPVAR}" = "+" && continue
 
@@ -14635,21 +14558,21 @@ ${RKHTMPVAR}"
 
 	if [ $RKHTMPVAR -eq 1 ]; then
 		:
-	elif [ ! -f "${RKHROOTDIR}/etc/passwd" ]; then
+	elif [ ! -f "/etc/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
-		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "${RKHROOTDIR}/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "/etc/passwd"
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD "diff"
 
-		cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
+		cp -f -p /etc/passwd ${RKHTMPDIR}/passwd
 	elif [ ! -f "${RKHTMPDIR}/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type WARNING PASSWD_CHANGES_NO_TMP
 
-		cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
+		cp -f -p /etc/passwd ${RKHTMPDIR}/passwd
 	else
-		DIFFS=`${DIFF_CMD} ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep '^[<>]'`
+		DIFFS=`${DIFF_CMD} /etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep '^[<>]'`
 
 		if [ -z "${DIFFS}" ]; then
 			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 PASSWD_CHANGES
@@ -14666,7 +14589,7 @@ ${RKHTMPVAR}"
 			#
 
 			mv -f ${RKHTMPDIR}/passwd ${RKHTMPDIR}/passwd.old >/dev/null 2>&1
-			cp -f -p ${RKHROOTDIR}/etc/passwd ${RKHTMPDIR}/passwd
+			cp -f -p /etc/passwd ${RKHTMPDIR}/passwd
 		fi
 	fi
 
@@ -14686,21 +14609,21 @@ ${RKHTMPVAR}"
 
 	if [ $RKHTMPVAR -eq 1 ]; then
 		:
-	elif [ ! -f "${RKHROOTDIR}/etc/group" ]; then
+	elif [ ! -f "/etc/group" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
-		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE "${RKHROOTDIR}/etc/group"
+		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE "/etc/group"
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD "diff"
 
-		cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
+		cp -f -p /etc/group ${RKHTMPDIR}/group
 	elif [ ! -f "${RKHTMPDIR}/group" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type WARNING GROUP_CHANGES_NO_TMP
 
-		cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
+		cp -f -p /etc/group ${RKHTMPDIR}/group
 	else
-		DIFFS=`${DIFF_CMD} ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group 2>/dev/null | grep '^[<>]'`
+		DIFFS=`${DIFF_CMD} /etc/group ${RKHTMPDIR}/group 2>/dev/null | grep '^[<>]'`
 
 		if [ -z "${DIFFS}" ]; then
 			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 GROUP_CHANGES
@@ -14717,7 +14640,7 @@ ${RKHTMPVAR}"
 			#
 
 			mv -f ${RKHTMPDIR}/group ${RKHTMPDIR}/group.old >/dev/null 2>&1
-			cp -f -p ${RKHROOTDIR}/etc/group ${RKHTMPDIR}/group
+			cp -f -p /etc/group ${RKHTMPDIR}/group
 		fi
 	fi
 
@@ -14730,35 +14653,35 @@ ${RKHTMPVAR}"
 	FOUND=0
 	FOUNDFILES=""
 
-	if [ -f "${RKHROOTDIR}/root/.bash_history" ]; then
+	if [ -f "/root/.bash_history" ]; then
 		FOUND=1
 
-		if [ -h "${RKHROOTDIR}/root/.bash_history" ]; then
-			FOUNDFILES="${FOUNDFILES} bash:${RKHROOTDIR}/root/.bash_history"
+		if [ -h "/root/.bash_history" ]; then
+			FOUNDFILES="${FOUNDFILES} bash:/root/.bash_history"
 		fi
 	fi
 
-	if [ -f "${RKHROOTDIR}/root/.sh_history" ]; then
+	if [ -f "/root/.sh_history" ]; then
 		FOUND=1
 
-		if [ -h "${RKHROOTDIR}/root/.sh_history" ]; then
-			FOUNDFILES="${FOUNDFILES} Korn:${RKHROOTDIR}/root/.sh_history"
+		if [ -h "/root/.sh_history" ]; then
+			FOUNDFILES="${FOUNDFILES} Korn:/root/.sh_history"
 		fi
 	fi
 
-	if [ -f "${RKHROOTDIR}/root/.history" ]; then
+	if [ -f "/root/.history" ]; then
 		FOUND=1
 
-		if [ -h "${RKHROOTDIR}/root/.history" ]; then
-			FOUNDFILES="${FOUNDFILES} C-shell:${RKHROOTDIR}/root/.history"
+		if [ -h "/root/.history" ]; then
+			FOUNDFILES="${FOUNDFILES} C-shell:/root/.history"
 		fi
 	fi
 
-	if [ -f "${RKHROOTDIR}/root/.zhistory" ]; then
+	if [ -f "/root/.zhistory" ]; then
 		FOUND=1
 
-		if [ -h "${RKHROOTDIR}/root/.zhistory" ]; then
-			FOUNDFILES="${FOUNDFILES} zsh:${RKHROOTDIR}/root/.zhistory"
+		if [ -h "/root/.zhistory" ]; then
+			FOUNDFILES="${FOUNDFILES} zsh:/root/.zhistory"
 		fi
 	fi
 
@@ -14815,8 +14738,8 @@ do_system_config_files_check() {
 	fi
 
 	for DIR in ${RKHTMPVAR}; do
-		if [ -f "${RKHROOTDIR}${DIR}/sshd_config" ]; then
-			SSH_CONFIG_FILE="${RKHROOTDIR}${DIR}/sshd_config"
+		if [ -f "${DIR}/sshd_config" ]; then
+			SSH_CONFIG_FILE="${DIR}/sshd_config"
 			break
 		fi
 	done
@@ -15070,14 +14993,13 @@ do_dev_whitelist_check() {
 		return
 	fi
 
-	FILE=`echo "${RKHTMPVAR}" | sed -e "s:^${RKHROOTDIR}::"`
-	FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
+	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FNAMEGREP} \"`" ]; then
-		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${FILE}"
+		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${RKHTMPVAR}"
 	else
 		FOUNDFILES="${FOUNDFILES}
-${FILE}: ${FTYPE}"
+${RKHTMPVAR}: ${FTYPE}"
 	fi
 
 	return
@@ -15100,7 +15022,7 @@ do_filesystem_check() {
 	fi
 
 
-	if [ ! -d "${RKHROOTDIR}/dev" ]; then
+	if [ ! -d "/dev" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
 		display --to LOG --type WARNING FILESYSTEM_DEV_CHECK_NO_DEV
 	elif [ -z "${FILE_CMD}" ]; then
@@ -15153,11 +15075,11 @@ do_filesystem_check() {
 
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
-			for RKHTMPVAR in ${RKHROOTDIR}/dev/*; do
+			for RKHTMPVAR in /dev/*; do
 				test -s "${RKHTMPVAR}" -a ! -d "${RKHTMPVAR}" -a ! -h "${RKHTMPVAR}" || continue
 
 				if [ $FDESCFS -eq 1 ]; then
-					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
+					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
 				fi
 
 				do_dev_whitelist_check
@@ -15165,11 +15087,11 @@ do_filesystem_check() {
 		else
 			IFS=$IFSNL
 
-			for RKHTMPVAR in `${FIND_CMD} ${RKHROOTDIR}/dev ! -type d -a ! -type l 2>/dev/null`; do
+			for RKHTMPVAR in `${FIND_CMD} /dev ! -type d -a ! -type l 2>/dev/null`; do
 				test -s "${RKHTMPVAR}" || continue
 
 				if [ $FDESCFS -eq 1 ]; then
-					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
+					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
 				fi
 
 				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.[^/]*$'`" && do_dev_whitelist_check
@@ -15190,7 +15112,7 @@ do_filesystem_check() {
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
 
-			display --to LOG --type WARNING FILESYSTEM_DEV_FILE_FOUND "${RKHROOTDIR}/dev"
+			display --to LOG --type WARNING FILESYSTEM_DEV_FILE_FOUND "/dev"
 
 			IFS=$IFSNL
 
@@ -15225,9 +15147,9 @@ do_filesystem_check() {
 	FOUNDFILES=""
 	LOOKINDIRS=""
 
-	SHORTSEARCHDIRS="${RKHROOTDIR}/usr ${RKHROOTDIR}/etc"
+	SHORTSEARCHDIRS="/usr /etc"
 
-	LONGSEARCHDIRS="${RKHROOTDIR}/dev ${RKHROOTDIR}/bin ${RKHROOTDIR}/usr/man ${RKHROOTDIR}/usr/share/man ${RKHROOTDIR}/usr/bin ${RKHROOTDIR}/usr/sbin ${RKHROOTDIR}/sbin"
+	LONGSEARCHDIRS="/dev /bin /usr/man /usr/share/man /usr/bin /usr/sbin /sbin"
 
 	if [ -z "${FIND_CMD}" ]; then
 		SHORTSEARCHDIRS="${SHORTSEARCHDIRS} ${LONGSEARCHDIRS}"
@@ -15275,15 +15197,14 @@ ${RKHTMPVAR}"
 
 	for FNAME in ${LOOKINDIRS}; do
 		if [ $FDESCFS -eq 1 ]; then
-			test -n "`echo \"${FNAME}/\" | grep \"^${RKHROOTDIR}/dev/fd/[0-9][0-9]*/\"`" && continue
+			test -n "`echo \"${FNAME}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
 		fi
 
 		FTYPE=`${FILE_CMD} "${FNAME}" 2>/dev/null | awk -F':' '{ print $NF }' | cut -c2-`
 
 		test -n "`echo \"${FTYPE}\" | egrep 'character special|block special|empty'`" && continue
 
-		FILE=`echo "${FNAME}" | sed -e "s:^${RKHROOTDIR}::"`
-		FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
 
 		if [ -n "`echo \"${FTYPE}\" | grep 'directory'`" ]; then
 			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \" ${FNAMEGREP} \"`" ]; then
@@ -16139,21 +16060,12 @@ set_file_prop_dirs_files() {
 	PROP_DIR_LIST=""
 
 	for DIR in ${BINPATHS} ${USER_DIR_LIST}; do
-		LINKDIR="${RKHROOTDIR}${DIR}"
+		LINKDIR="${DIR}"
 
 		test ! -d "${LINKDIR}" && continue
 
 		if [ -h "${LINKDIR}" -a $HAVE_READLINK -eq 1 ]; then
 			LINKDIR=`${READLINK_CMD} -f ${LINKDIR}`
-
-			#
-			# If the link target directory does not start
-			# with the RKHROOTDIR, then prepend it.
-			#
-
-			if [ -z "`echo \"${LINKDIR}\" | grep \"^${RKHROOTDIR}/\"`" ]; then
-				LINKDIR="${RKHROOTDIR}${LINKDIR}"
-			fi
 		fi
 
 		if [ -z "`echo \" ${PROP_DIR_LIST} \" | grep \" ${LINKDIR} \"`" ]; then
@@ -16255,15 +16167,6 @@ set_file_prop_dirs_files() {
 					#
 
 					test -n "${DIRNAME_CMD}" && LINKDIR=`${DIRNAME_CMD} ${RKHTMPVAR}` || LINKDIR=`echo "${RKHTMPVAR}" | sed -e 's:/[^/]*$::'`
-
-					#
-					# We need to see if the target directory starts with
-					# the RKHROOTDIR. If it does not, then we prepend it.
-					#
-
-					if [ -z "`echo \"${LINKDIR}\" | grep \"^${RKHROOTDIR}/\"`" ]; then
-						LINKDIR="${RKHROOTDIR}${LINKDIR}"
-					fi
 
 					#
 					# Now see if we already have the directory listed.
@@ -16645,7 +16548,6 @@ help() {
 	echo $ECHOOPT "                    package]...        or just for the specified entries"
 	echo $ECHOOPT "     -q, --quiet                       Quiet mode (no output at all)"
 	echo $ECHOOPT "  --rwo, --report-warnings-only        Show only warning messages"
-	echo $ECHOOPT "     -r, --rootdir <directory>         Use the specified root directory"
 	echo $ECHOOPT "   --sk, --skip-keypress               Don't wait for a keypress after each test"
 	echo $ECHOOPT "         --summary                     Show the summary of system check results"
 	echo $ECHOOPT "                                       (This is the default)"
@@ -16796,9 +16698,6 @@ SHOWWARNINGSONLY=0
 # or the file attributes check is to be performed.
 HASH_CHECK_ENABLED=0
 SKIP_HASH_MSG=0
-
-# Users can reset this to a new root directory.
-RKHROOTDIR=""
 
 # Users can reset this to a new temporary directory.
 RKHTMPDIR=""
@@ -17417,23 +17316,8 @@ while [ $# -ge 1 ]; do
 		SHOWWARNINGSONLY=1
 		;;
 	-r | --rootdir)
-		RKHROOTDIR=""
-
-		case "$2" in
-		"")
-			;;
-		-*)
-			;;
-		*)
-			shift
-			RKHROOTDIR="$1"
-			;;
-		esac
-
-		if [ -z "${RKHROOTDIR}" ]; then
-			echo "No root directory specified with '$1' option."
-			exit 1
-		fi
+		echo "The '$1' option is now deprecated."
+		shift
 		;;
 	-sk | --sk | --skip-keypress | --skipkeypress)
 		SKIP_KEY_PRESS=1
@@ -17722,10 +17606,10 @@ if [ $CHECK -eq 1 ]; then
 	# Check if we have a ksyms or kallsyms file.
 	#
 
-	if [ -f "${RKHROOTDIR}/proc/ksyms" ]; then
-		KSYMS_FILE="${RKHROOTDIR}/proc/ksyms"
-	elif [ -f "${RKHROOTDIR}/proc/kallsyms" ]; then
-		KSYMS_FILE="${RKHROOTDIR}/proc/kallsyms"
+	if [ -f "/proc/ksyms" ]; then
+		KSYMS_FILE="/proc/ksyms"
+	elif [ -f "/proc/kallsyms" ]; then
+		KSYMS_FILE="/proc/kallsyms"
 	fi
 
 	#
@@ -18114,12 +17998,6 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO CONFIG_BINDIR "${BINPATHS}"
 
-	if [ -z "${RKHROOTDIR}" ]; then
-		display --to LOG --type INFO CONFIG_ROOTDIR_DFLT
-	else
-		display --to LOG --type INFO CONFIG_ROOTDIR "${RKHROOTDIR}"
-	fi
-
 	display --to LOG --type INFO CONFIG_TMPDIR "${RKHTMPDIR}"
 
 	if [ $CHECK -eq 1 ]; then
@@ -18403,11 +18281,11 @@ if [ $CHECK -eq 1 ]; then
 
 	if [ -n "${KSYMS_FILE}" ]; then
 		display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"
-	elif [ -f "${RKHROOTDIR}/proc/ksyms" ]; then
-		display --to LOG --type INFO KSYMS_FOUND "${RKHROOTDIR}/proc/ksyms"
+	elif [ -f "/proc/ksyms" ]; then
+		display --to LOG --type INFO KSYMS_FOUND "/proc/ksyms"
 		display --to LOG --type INFO KSYMS_UNAVAIL
-	elif [ -f "${RKHROOTDIR}/proc/kallsyms" ]; then
-		display --to LOG --type INFO KSYMS_FOUND "${RKHROOTDIR}/proc/kallsyms"
+	elif [ -f "/proc/kallsyms" ]; then
+		display --to LOG --type INFO KSYMS_FOUND "/proc/kallsyms"
 		display --to LOG --type INFO KSYMS_UNAVAIL
 	else
 		display --to LOG --type INFO KSYMS_MISSING
