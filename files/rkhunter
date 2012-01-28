@@ -13671,28 +13671,60 @@ do_network_hidden_port_checks() {
 		return
 	fi
 
+	if [ $SUNOS -eq 1 ]; then
+		RKHTMPVAR="gawk"
+		AWK_CMD=`find_cmd gawk`
+
+		if [ -z "${AWK_CMD}" ]; then
+			RKHTMPVAR="nawk"
+			AWK_CMD=`find_cmd nawk`
+		fi
+	else
+		RKHTMPVAR="awk"
+		AWK_CMD=`find_cmd awk`
+	fi
+
+	if [ -n "${AWK_CMD}" ]; then
+		display --to LOG --type INFO FOUND_CMD "${RKHTMPVAR}" "${AWK_CMD}"
+	else
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
+		test $SUNOS -eq 1 && RKHTMPVAR="gawk or nawk" || RKHTMPVAR="awk"
+		display --to LOG --type INFO NOT_FOUND_CMD "${RKHTMPVAR}"
+		return
+	fi
+
 
 	#
-	# Now perform the test.
+	# Now perform the test. We must do this in two parts
+	# to pick out the TCP ports, and then the UDP ports.
 	#
 
-	HIDDEN_PORTS=`${UNHIDETCP_CMD} | grep '^Found ' | cut -d: -f2`
+	RKHTMPVAR=`${UNHIDETCP_CMD} 2>&1`
 
-	if [ -z "${HIDDEN_PORTS}" ]; then
+	TCP_PORTS=`echo "${RKHTMPVAR}" | ${AWK_CMD} '/^Starting TCP check/, /^Starting UDP check/ { print $0 }' | grep '^Found ' | cut -d: -f2`
+	UDP_PORTS=`echo "${RKHTMPVAR}" | ${AWK_CMD} '/^Starting UDP check/, 0 { print $0 }' | grep '^Found ' | cut -d: -f2`
+
+	if [ -z "${TCP_PORTS}" -a -z "${UDP_PORTS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
 	else
-		HIDDEN_PORTS=`echo ${HIDDEN_PORTS} | tr ' ' '\n' | sort | uniq`
-
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
 		display --to LOG --type WARNING --log-indent 2 NETWORK_HIDDEN_PORTS_FOUND
 
-		IFS=$IFSNL
+		for PROTO in TCP UDP; do
+			HIDDEN_PORTS=`eval echo "\\$${PROTO}_PORTS"`
 
-		for RKHTMPVAR in ${HIDDEN_PORTS}; do
-			display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_PID "${RKHTMPVAR}"
+			test -z "${HIDDEN_PORTS}" && continue
+
+			HIDDEN_PORTS=`echo ${HIDDEN_PORTS} | tr ' ' '\n' | sort | uniq`
+
+			IFS=$IFSNL
+
+			for RKHTMPVAR in ${HIDDEN_PORTS}; do
+				display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_PID "${PROTO}" "${RKHTMPVAR}"
+			done
+
+			IFS=$RKHIFS
 		done
-
-		IFS=$RKHIFS
 	fi
 
 	return

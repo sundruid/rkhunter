@@ -39,6 +39,7 @@
    error message will be displayed. The options will have no effect,
    but rkhunter will continue. The options will be completely removed
    at the next release.
+ - The 'hidden_ports' test will now show if a found port is TCP or UDP.
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.
