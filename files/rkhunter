@@ -587,10 +587,10 @@ get_option() {
 	# Syntax: get_option <option type> [single | multi] <option name>
 	#
 	# Since different options require different needs, the first
-	# argument is the 'type' of option we are processing. The second
-	# argument is the word 'single' or 'multi'. This indicates if
+	# parameter is the 'type' of option we are processing. The second
+	# parameter is the word 'single' or 'multi'. This indicates if
 	# the option can occur on one or more lines in the configuration
-	# file. The third argument is the option name.
+	# file. The third parameter is the option name.
 	#
 	# There are currently two types defined:
 	#
@@ -996,7 +996,7 @@ get_temp_file() {
 	#
 	# This function will create an empty, unique temporary file.
 	#
-	# It takes one argument which is the pathname for the file,
+	# It takes one parameter which is the pathname for the file,
 	# excluding the suffix. The function will return the pathname
 	# in TEMPFILE.
 	#
@@ -5043,7 +5043,7 @@ get_configfile_options() {
 
 		check_test trojans && get_xinetd_option
 
-		check_test ports && get_ports_option
+		check_test ports || check_test hidden_ports && get_ports_option
 
 		check_test group_accounts && get_shadow_file_option
 
@@ -13343,7 +13343,7 @@ do_rootkit_checks() {
 
 	rootkit_file_dir_checks
 
-	test `check_test known_rkts || check_test all` && keypresspause
+	check_test known_rkts || check_test all && keypresspause
 
 	additional_rootkit_checks
 
@@ -13354,6 +13354,158 @@ do_rootkit_checks() {
 	os_specific_checks
 
 	keypresspause
+
+	return
+}
+
+
+check_port_wl() {
+
+	#
+	# This function tries to find the PID and command pathname using
+	# a given port. It then checks to see if the port is whitelisted.
+	#
+	# A single parameter indicates if we are in the 'hidden_ports'
+	# test or not.
+	#
+
+	PID=0
+	PID_SEEN=0
+	FNAME=""
+	FOUND=""
+
+	IN_HIDDEN_PORTS=$1
+
+	if [ -n "${LSOF_CMD}" ]; then
+		IFS=$IFSNL
+
+		for LSOFLINE in `${LSOF_CMD} -wnlP -i ${PROTO}:${PORT}`; do
+			#
+			# We must only look at connections using the port on the local host.
+			#
+
+			if [ -n "`echo \"${LSOFLINE}\" | grep \" ${PROTO} \*:${PORT} \"`" ]; then
+				# Process listening for connections from anywhere.
+				PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+			elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:${PORT}[ -]\"`" ]; then
+				# Established or listening process using IPv4 address.
+				PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+			elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} \[[:0-9a-fA-F]+\]:${PORT}[ -]\"`" ]; then
+				# Established or listening process using IPv6 address.
+				PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+			else
+				# Ignore anything else.
+				continue
+			fi
+
+			PID_SEEN=1
+
+			#
+			# Try and get the running process name.
+			#
+
+			if [ $HAVE_READLINK -eq 1 ]; then
+				RKHTMPVAR=""
+
+				if [ $SOL_PROC -eq 1 ]; then
+					test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
+				elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
+					test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
+				fi
+
+				test -n "${RKHTMPVAR}" && FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+			fi
+
+			if [ -z "${FNAME}" ]; then
+				if [ $SUNOS -eq 1 ]; then
+					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+				else
+					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+				fi
+			fi
+
+			if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
+				FOUND="${FNAME}"
+				break
+			fi
+		done
+
+		IFS=$RKHIFS
+
+		if [ -z "${FOUND}" -a $PID_SEEN -eq 1 ]; then
+			FNAME=""
+			FOUND="${PROTO}:${PORT}"
+		fi
+	elif [ $IN_HIDDEN_PORTS -eq 1 ]; then
+		# The 'netstat' command offers us no further information
+		# on hidden ports, so we can skip it.
+		:
+	else
+		case "${OPERATING_SYSTEM}" in
+		Linux)
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
+			;;
+		*BSD|Darwin|IRIX*|DragonFly)
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
+			;;
+		AIX)
+			if [ "${PROTO}" = "UDP" ]; then
+				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
+			elif [ "${PROTO}" = "TCP" ]; then
+				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}\$"`
+			fi
+			;;
+		SunOS)
+			if [ "${PROTO}" = "UDP" ]; then
+				FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+
+				if [ -z "${FOUND}" ]; then
+					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+				fi
+			elif [ "${PROTO}" = "TCP" ]; then
+				FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+
+				if [ -z "${FOUND}" ]; then
+					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+				fi
+			fi
+			;;
+		esac
+	fi
+
+
+	#
+	# If we have found something, then see if it is whitelisted.
+	#
+
+	if [ -n "${FOUND}" -o $IN_HIDDEN_PORTS -eq 1 ]; then
+		RKHTMPVAR2=0
+
+		if [ -n "${LSOF_CMD}" ]; then
+			if [ -n "${FNAME}" ]; then
+				if [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \" ${FNAME}:${PROTO}:${PORT} \"`" ]; then
+					RKHTMPVAR2=1
+					FOUND="path_whitelisted"
+				elif [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \" ${FNAME} \"`" ]; then
+					RKHTMPVAR2=1
+					FOUND="path_whitelisted"
+				elif [ $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
+					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
+
+					RKHTMPVAR=`IFS=$RKHIFS find_cmd ${RKHTMPVAR}`
+
+					if [ "${RKHTMPVAR}" = "${FNAME}" ]; then
+						RKHTMPVAR2=1
+						FOUND="trusted_whitelisted"
+					fi
+				fi
+			fi
+		fi
+
+		if [ $RKHTMPVAR2 -eq 0 -a -n "`echo \"${PORT_WHITELIST}\" | grep \" ${PROTO}:${PORT} \"`" ]; then
+			FOUND="port_whitelisted"
+		fi
+	fi
 
 	return
 }
@@ -13407,6 +13559,9 @@ do_network_port_checks() {
 	# Next we do some further testing and the initial logging.
 	#
 
+	TEST_PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH}"
+	TEST_PORT_WHITELIST_ALL_TRUSTED=$PORT_WHITELIST_ALL_TRUSTED
+
 	if [ -z "${LSOF_CMD}" ]; then
 		case "${OPERATING_SYSTEM}" in
 		*BSD|Linux|AIX|SunOS|Darwin|IRIX*|DragonFly)
@@ -13414,8 +13569,8 @@ do_network_port_checks() {
 			# We can only use pathnames if we have the 'lsof' command.
 			#
 
-			PORT_WHITELIST_PATH=""
-			PORT_WHITELIST_ALL_TRUSTED=0
+			TEST_PORT_WHITELIST_PATH=""
+			TEST_PORT_WHITELIST_ALL_TRUSTED=0
 			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
 			;;
 		*)
@@ -13426,7 +13581,7 @@ do_network_port_checks() {
 		esac
 	fi
 
-	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+	test $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 
 
 	#
@@ -13456,135 +13611,10 @@ do_network_port_checks() {
 			continue
 		fi
 
-		FNAME=""
-		FOUND=""
+		check_port_wl 0
 
-		if [ -n "${LSOF_CMD}" ]; then
-			PID_SEEN=0
-
-			for LSOFLINE in `${LSOF_CMD} -wnlP -i ${PROTO}:${PORT}`; do
-				#
-				# We must only look at connections using the port on the local host.
-				#
-
-				if [ -n "`echo \"${LSOFLINE}\" | grep \" ${PROTO} \*:${PORT} \"`" ]; then
-					# Process listening for connections from anywhere.
-					PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
-				elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:${PORT}[ -]\"`" ]; then
-					# Established or listening process using IPv4 address.
-					PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
-				elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} \[[:0-9a-fA-F]+\]:${PORT}[ -]\"`" ]; then
-					# Established or listening process using IPv6 address.
-					PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
-				else
-					# Ignore anything else.
-					continue
-				fi
-
-				FNAME=""
-				PID_SEEN=1
-
-				#
-				# Try and get the running process name.
-				#
-
-				if [ $HAVE_READLINK -eq 1 ]; then
-					RKHTMPVAR=""
-
-					if [ $SOL_PROC -eq 1 ]; then
-						test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
-					elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
-						test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
-					fi
-
-					test -n "${RKHTMPVAR}" && FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
-				fi
-
-				if [ -z "${FNAME}" ]; then
-					if [ $SUNOS -eq 1 ]; then
-						FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
-					else
-						FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
-					fi
-				fi
-
-				if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
-					FOUND="${FNAME}"
-					break
-				fi
-			done
-
-			if [ -z "${FOUND}" -a $PID_SEEN -eq 1 ]; then
-				FNAME=""
-				FOUND="${PROTO}:${PORT}"
-			fi
-		else
-			case "${OPERATING_SYSTEM}" in
-			Linux)
-				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
-				;;
-			*BSD|Darwin|IRIX*|DragonFly)
-				FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
-				;;
-			AIX)
-				if [ "${PROTO}" = "UDP" ]; then
-					FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
-				elif [ "${PROTO}" = "TCP" ]; then
-					FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}\$"`
-				fi
-				;;
-			SunOS)
-				if [ "${PROTO}" = "UDP" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
-
-					if [ -z "${FOUND}" ]; then
-						FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
-					fi
-				elif [ "${PROTO}" = "TCP" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
-
-					if [ -z "${FOUND}" ]; then
-						FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
-					fi
-				fi
-				;;
-			esac
-		fi
-
-
-		#
-		# If we have found something, then see if it is whitelisted.
-		#
-
-		if [ -n "${FOUND}" ]; then
-			RKHTMPVAR2=0
-
-			if [ -n "${LSOF_CMD}" ]; then
-				if [ -n "${FNAME}" ]; then
-					if [ -n "`echo \"${PORT_WHITELIST_PATH}\" | grep \" ${FNAME}:${PROTO}:${PORT} \"`" ]; then
-						RKHTMPVAR2=1
-						FOUND="path_whitelisted"
-					elif [ -n "`echo \"${PORT_WHITELIST_PATH}\" | grep \" ${FNAME} \"`" ]; then
-						RKHTMPVAR2=1
-						FOUND="path_whitelisted"
-					elif [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
-						test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} ${FNAME}` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
-
-						RKHTMPVAR=`IFS=$RKHIFS find_cmd ${RKHTMPVAR}`
-
-						if [ "${RKHTMPVAR}" = "${FNAME}" ]; then
-							RKHTMPVAR2=1
-							FOUND="trusted_whitelisted"
-						fi
-					fi
-				fi
-			fi
-
-			if [ $RKHTMPVAR2 -eq 0 -a -n "`echo \"${PORT_WHITELIST}\" | grep \" ${PROTO}:${PORT} \"`" ]; then
-				FOUND="port_whitelisted"
-			fi
-		fi
-
+		# We need to reset IFS because it is set in 'check_port_wl'.
+		IFS=$IFSNL
 
 		#
 		# Now log the result.
@@ -13592,27 +13622,19 @@ do_network_port_checks() {
 
 		case "${FOUND}" in
 		path_whitelisted)
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
-				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
-			fi
+			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		trusted_whitelisted)
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
-				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
-			fi
+			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		port_whitelisted)
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
-				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
-			fi
+			display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		"")
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --log-indent 4 --result NOT_FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
-			fi
+			display --to LOG --type PLAIN --log-indent 4 --result NOT_FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		*)
 			FOUNDPORT=1
@@ -13693,6 +13715,30 @@ do_network_hidden_port_checks() {
 		return
 	fi
 
+	#
+	# We don't *need* the 'lsof' command to perform this test, but
+	# if it is available then it will be used to find out pathnames.
+	#
+
+	TEST_PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH}"
+	TEST_PORT_WHITELIST_ALL_TRUSTED=$PORT_WHITELIST_ALL_TRUSTED
+
+	if [ -z "${LSOF_CMD}" ]; then
+		case "${OPERATING_SYSTEM}" in
+		*BSD|Linux|AIX|SunOS|Darwin|IRIX*|DragonFly)
+			#
+			# We can only use pathnames if we have the 'lsof' command.
+			#
+
+			TEST_PORT_WHITELIST_PATH=""
+			TEST_PORT_WHITELIST_ALL_TRUSTED=0
+			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
+			;;
+		esac
+	fi
+
+	test $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+
 
 	#
 	# Now perform the test. We must do this in two parts
@@ -13707,8 +13753,7 @@ do_network_hidden_port_checks() {
 	if [ -z "${TCP_PORTS}" -a -z "${UDP_PORTS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
 	else
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
-		display --to LOG --type WARNING --log-indent 2 NETWORK_HIDDEN_PORTS_FOUND
+		FOUND_PORTS=""
 
 		for PROTO in TCP UDP; do
 			HIDDEN_PORTS=`eval echo "\\$${PROTO}_PORTS"`
@@ -13716,15 +13761,57 @@ do_network_hidden_port_checks() {
 			test -z "${HIDDEN_PORTS}" && continue
 
 			HIDDEN_PORTS=`echo ${HIDDEN_PORTS} | tr ' ' '\n' | sort | uniq`
+			HIDDEN_PORTS=`echo ${HIDDEN_PORTS}`
+
+			for PORT in ${HIDDEN_PORTS}; do
+				check_port_wl 1
+
+				#
+				# Now log the result.
+				#
+
+				case "${FOUND}" in
+				path_whitelisted)
+					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+					;;
+				trusted_whitelisted)
+					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "${FNAME}"
+					;;
+				port_whitelisted)
+					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+					;;
+				*)
+					FOUND_PORTS="${FOUND_PORTS}
+${PROTO}:${PORT}:${FNAME}"
+					;;
+				esac
+			done
+		done
+
+		if [ -z "${FOUND_PORTS}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
+			display --to LOG --type WARNING --log-indent 2 NETWORK_HIDDEN_PORTS_FOUND
 
 			IFS=$IFSNL
 
-			for RKHTMPVAR in ${HIDDEN_PORTS}; do
-				display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_PID "${PROTO}" "${RKHTMPVAR}"
+			FOUND_PORTS=`echo "${FOUND_PORTS}" | sed -e '/^$/d'`
+
+			for RKHTMPVAR in ${FOUND_PORTS}; do
+				PROTO=`echo ${RKHTMPVAR} | cut -d: -f1`
+				PORT=`echo ${RKHTMPVAR} | cut -d: -f2`
+				FNAME=`echo ${RKHTMPVAR} | cut -d: -f3-`
+
+				if [ -z "${FNAME}" ]; then
+					display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_CHK "${PROTO}" "${PORT}"
+				else
+					display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_CHK_NAME "${PROTO}" "${PORT}" "${FNAME}"
+				fi
 			done
 
 			IFS=$RKHIFS
-		done
+		fi
 	fi
 
 	return

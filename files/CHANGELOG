@@ -40,6 +40,8 @@
    but rkhunter will continue. The options will be completely removed
    at the next release.
  - The 'hidden_ports' test will now show if a found port is TCP or UDP.
+ - It is now possible to whitelist ports in the 'hidden_ports' test
+   using the PORT_WHITELIST configuration option.
 
  Bugfixes:
  - Allow the ALLOWPROCDELFILE option to work again.
