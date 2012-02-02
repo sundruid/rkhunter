@@ -7307,6 +7307,11 @@ do_system_check_initialisation() {
 		     /dev/pts/01/tmp"
 	IRIXRK_KSYMS=
 
+	# Jynx Rootkit 
+	JYNX_FILES=
+	JYNX_DIRS="/xochikit
+		   /omgxochi"
+	JYNX_KSYMS=
 
 	# Kitko Rootkit
 	KITKO_FILES=
