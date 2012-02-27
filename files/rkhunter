@@ -7307,11 +7307,33 @@ do_system_check_initialisation() {
 		     /dev/pts/01/tmp"
 	IRIXRK_KSYMS=
 
+
 	# Jynx Rootkit 
-	JYNX_FILES=
+	JYNX_FILES="/xochikit/bc
+		    /xochikit/ld_poison.so
+		    /omgxochi/bc
+		    /omgxochi/ld_poison.so"
 	JYNX_DIRS="/xochikit
 		   /omgxochi"
 	JYNX_KSYMS=
+
+
+	# KBeast Rootkit
+	KBEAST_FILES="/usr/_h4x_/ipsecs-kbeast-v1.ko
+		      /usr/_h4x_/_h4x_bd
+		      /usr/_h4x_/acctlog"
+	KBEAST_DIRS="/usr/_h4x_"
+	KBEAST_KSYMS="h4x_delete_module
+		     h4x_getdents64
+		     h4x_kill
+		     h4x_open
+		     h4x_read
+		     h4x_rename
+		     h4x_rmdir
+		     h4x_tcp4_seq_show
+		     h4x_write
+		     sys_call_table"
+
 
 	# Kitko Rootkit
 	KITKO_FILES=
@@ -8283,7 +8305,9 @@ do_system_check_initialisation() {
 		    pmap:/usr/include/mysql/mysql.hh1:Rootkit component
 		    ps:/usr/include/mysql/mysql.hh1:Rootkit component
 		    w:/usr/include/mysql/mysql.hh1:Rootkit component
-		    top:/usr/include/mysql/mysql.hh1:Rootkit component"
+		    top:/usr/include/mysql/mysql.hh1:Rootkit component
+		    bc:backconnect:Jynx Rootkit
+		    bc:magic.packet.received:Jynx Rootkit"
 
 
 	# Possible rootkit files and directories
@@ -8446,7 +8470,8 @@ do_system_check_initialisation() {
 			 write:Dica-Kit Rootkit
 			 Phantasmagoria.o:Process hiding Linux kernel module
 			 lkt.o:Portacelo Rootkit
-			 nlkt.o:Portacelo Rootkit"
+			 nlkt.o:Portacelo Rootkit
+			 ld_poison.so:Jynx Rootkit"
 
 
 	# System startup file pathnames
@@ -10908,6 +10933,22 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${IRIXRK_FILES}
 	SCAN_DIRS=${IRIXRK_DIRS}
 	SCAN_KSYMS=${IRIXRK_KSYMS}
+	scanrootkit
+
+	# Jynx Rootkit
+
+	SCAN_ROOTKIT="Jynx Rootkit"
+	SCAN_FILES=${JYNX_FILES}
+	SCAN_DIRS=${JYNX_DIRS}
+	SCAN_KSYMS=${JYNX_KSYMS}
+	scanrootkit
+
+	# KBeast Rootkit
+
+	SCAN_ROOTKIT="KBeast Rootkit"
+	SCAN_FILES=${KBEAST_FILES}
+	SCAN_DIRS=${KBEAST_DIRS}
+	SCAN_KSYMS=${KBEAST_KSYMS}
 	scanrootkit
 
 	# Kitko Rootkit
@@ -17000,7 +17041,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
-  IntoXonia-NG, Irix, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
+  IntoXonia-NG, Irix, Kitko, Jynx, KBeast, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
