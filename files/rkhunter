@@ -7318,7 +7318,7 @@ do_system_check_initialisation() {
 	JYNX_KSYMS=
 
 
-	# KBeast Rootkit
+	# KBeast (Kernel Beast) Rootkit
 	KBEAST_FILES="/usr/_h4x_/ipsecs-kbeast-v1.ko
 		      /usr/_h4x_/_h4x_bd
 		      /usr/_h4x_/acctlog"
@@ -16273,7 +16273,7 @@ set_file_prop_dirs_files() {
 	    killall ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
-	    newsyslog nologin passwd perl pgrep ping pkgdb pkg_info prelink ps pstree pwck
+	    newsyslog nologin passwd perl pgrep ping pkgdb pkg_info pkill prelink ps pstree pwck
 	    pwd readlink rkhunter rmmod route rpm rsyslogd runcon runlevel sed sestatus sh
 	    sha1 sha1sum sha224 sha224sum sha256 sha256sum sha384 sha384sum sha512
 	    sha512sum size skdet slocate sockstat sort stat strace strings su sudo
@@ -17067,7 +17067,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
-  IntoXonia-NG, Irix, Kitko, Jynx, KBeast, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
+  IntoXonia-NG, Irix, Jynx, KBeast, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),

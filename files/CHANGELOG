@@ -25,6 +25,9 @@
    the list of filenames that will be searched for when building the file
    properties database. By default the list is not shown if just '--list'
    is used.
+ - Added Jynx rootkit check.
+ - Added Turtle/Turtle2 rootkit check.
+ - Added KBeast rootkit check.
 
  Changes:
  - Allow the ALLOWDEVFILE, ALLOWHIDDENFILE and ALLOWHIDDENDIR options to
