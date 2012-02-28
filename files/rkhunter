@@ -7985,6 +7985,12 @@ do_system_check_initialisation() {
 	TROJANIT_KSYMS=
 
 
+	# Turtle / Turtle2 Rootkit
+	TURTLE_FILES="/dev/turtle2dev"
+	TURTLE_DIRS=
+	TURTLE_KSYMS=
+
+
 	# Tuxtendo (Tuxkit) Rootkit
 	TUXTENDO_FILES="/lib/libproc.so.2.0.7
 			/usr/bin/xchk
@@ -8422,7 +8428,7 @@ do_system_check_initialisation() {
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
-	KLDSTATKEYWORDS="backd00r backdoor darkside nekit rpldev rpldev_mod spapem_core spapem_genr00t"
+	KLDSTATKEYWORDS="backd00r backdoor darkside nekit rpldev rpldev_mod spapem_core spapem_genr00t hide_process turtle"
 
 
 	# Suspicious startup file strings
@@ -10827,11 +10833,13 @@ rootkit_file_dir_checks() {
 
 	# FreeBSD Rootkit
 
-	SCAN_ROOTKIT="FreeBSD Rootkit"
-	SCAN_FILES=${FREEBSD_RK_FILES}
-	SCAN_DIRS=${FREEBSD_RK_DIRS}
-	SCAN_KSYMS=${FREEBSD_RK_KSYMS}
-	scanrootkit
+	if [ $BSDOS -eq 1 ]; then
+		SCAN_ROOTKIT="FreeBSD Rootkit"
+		SCAN_FILES=${FREEBSD_RK_FILES}
+		SCAN_DIRS=${FREEBSD_RK_DIRS}
+		SCAN_KSYMS=${FREEBSD_RK_KSYMS}
+		scanrootkit
+	fi
 
 	# Fu Rootkit
 
@@ -10883,11 +10891,13 @@ rootkit_file_dir_checks() {
 
 	# iLLogiC Rootkit (SunOS Rootkit variant)
 
-	SCAN_ROOTKIT="iLLogiC Rootkit"
-	SCAN_FILES=${ILLOGIC_FILES}
-	SCAN_DIRS=${ILLOGIC_DIRS}
-	SCAN_KSYMS=${ILLOGIC_KSYMS}
-	scanrootkit
+	if [ $SUNOS -eq 1 ]; then
+		SCAN_ROOTKIT="iLLogiC Rootkit"
+		SCAN_FILES=${ILLOGIC_FILES}
+		SCAN_DIRS=${ILLOGIC_DIRS}
+		SCAN_KSYMS=${ILLOGIC_KSYMS}
+		scanrootkit
+	fi
 
 	# OSX Inqtana (Variant A)
 
@@ -11421,19 +11431,23 @@ rootkit_file_dir_checks() {
 
 	# SunOS Rootkit
 
-	SCAN_ROOTKIT="SunOS Rootkit"
-	SCAN_FILES=${SUNOSROOTKIT_FILES}
-	SCAN_DIRS=${SUNOSROOTKIT_DIRS}
-	SCAN_KSYMS=${SUNOSROOTKIT_KSYMS}
-	scanrootkit
+	if [ $SUNOS -eq 1 ]; then
+		SCAN_ROOTKIT="SunOS Rootkit"
+		SCAN_FILES=${SUNOSROOTKIT_FILES}
+		SCAN_DIRS=${SUNOSROOTKIT_DIRS}
+		SCAN_KSYMS=${SUNOSROOTKIT_KSYMS}
+		scanrootkit
+	fi
 
 	# SunOS / NSDAP Rootkit
 
-	SCAN_ROOTKIT="SunOS / NSDAP Rootkit"
-	SCAN_FILES=${NSDAP_FILES}
-	SCAN_DIRS=${NSDAP_DIRS}
-	SCAN_KSYMS=${NSDAP_KSYMS}
-	scanrootkit
+	if [ $SUNOS -eq 1 ]; then
+		SCAN_ROOTKIT="SunOS / NSDAP Rootkit"
+		SCAN_FILES=${NSDAP_FILES}
+		SCAN_DIRS=${NSDAP_DIRS}
+		SCAN_KSYMS=${NSDAP_KSYMS}
+		scanrootkit
+	fi
 
 	# Superkit Rootkit
 
@@ -11492,6 +11506,16 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${TROJANIT_DIRS}
 	SCAN_KSYMS=${TROJANIT_KSYMS}
 	scanrootkit
+
+	# Turtle / Turtle2 Rootkit
+
+	if [ $BSDOS -eq 1 ]; then
+		SCAN_ROOTKIT="Turtle Rootkit"
+		SCAN_FILES=${TURTLE_FILES}
+		SCAN_DIRS=${TURTLE_DIRS}
+		SCAN_KSYMS=${TURTLE_KSYMS}
+		scanrootkit
+	fi
 
 	# Tuxtendo Rootkit
 
@@ -11553,11 +11577,13 @@ rootkit_file_dir_checks() {
 
 	# X-Org SunOS Rootkit
 
-	SCAN_ROOTKIT="X-Org SunOS Rootkit"
-	SCAN_FILES=${XORGSUNOS_FILES}
-	SCAN_DIRS=${XORGSUNOS_DIRS}
-	SCAN_KSYMS=${XORGSUNOS_KSYMS}
-	scanrootkit
+	if [ $SUNOS -eq 1 ]; then
+		SCAN_ROOTKIT="X-Org SunOS Rootkit"
+		SCAN_FILES=${XORGSUNOS_FILES}
+		SCAN_DIRS=${XORGSUNOS_DIRS}
+		SCAN_KSYMS=${XORGSUNOS_KSYMS}
+		scanrootkit
+	fi
 
 	# zaRwT.KiT Rootkit
 
@@ -17045,7 +17071,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
-  TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
+  TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Turtle2, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
   weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 
 # A space-separated list of perl modules that may be required.
