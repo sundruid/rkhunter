@@ -168,6 +168,24 @@ else
 fi
 
 
+#
+# Finally, we need to test the 'head' and 'tail' commands
+# to see if they understand the '-n' option or not.
+#
+
+if head -n 1 </dev/null >/dev/null 2>&1; then
+	HEAD_OPT="-n "
+else
+	HEAD_OPT="-"
+fi
+
+if tail -n 1 </dev/null >/dev/null 2>&1; then
+	TAIL_OPT="-n "
+else
+	TAIL_OPT="-"
+fi
+
+
 ######################################################################
 #
 # Global function definitions
@@ -420,7 +438,7 @@ display() {
 	LANG_FILE="${DB_PATH}/i18n/${LANGUAGE}"
 
 	if [ -n "${MSG}" ]; then
-		LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
+		LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head ${HEAD_OPT}1 | cut -d: -f2-`
 
 		if [ $RKHCHKLOCALE -eq 1 ]; then
 			LINE1=`echo "${LINE1}" | ${ICONV_CMD} -f UTF-8 -t ${RKHCHRMAP} 2>/dev/null`
@@ -429,7 +447,7 @@ display() {
 
 		if [ -z "${LINE1}" ]; then
 			LANG_FILE="${DB_PATH}/i18n/en"
-			LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head -n 1 | cut -d: -f2-`
+			LINE1=`grep "^${MSG}:" ${LANG_FILE} 2>/dev/null | head ${HEAD_OPT}1 | cut -d: -f2-`
 
 			if [ -z "${LINE1}" ]; then
 				echo "Error: Invalid display - keyword cannot be found: Display line: ${DISPLAY_LINE}"
@@ -626,7 +644,7 @@ get_option() {
 	else
 		case "${OPTMULTI}" in
 		single)
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
 			;;
 		multi)
 			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | sed -e "s/${OPTV}=//"`
@@ -635,7 +653,7 @@ get_option() {
 			echo "Error: Invalid multi-line argument in get_option function: $*" >&2
 
 			# Treat this as a single-line option.
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail -1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
 			;;
 		esac
 	fi
@@ -4057,7 +4075,7 @@ get_hash_function() {
 				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA256 Digest::SHA::PurePerl 2>/dev/null`
 			fi
 
-			USE_MOD=`echo "${MOD_INSTALLED}" | grep -v 'NOT installed' | head -n 1 | cut -d' ' -f1`
+			USE_MOD=`echo "${MOD_INSTALLED}" | grep -v 'NOT installed' | head ${HEAD_OPT}1 | cut -d' ' -f1`
 
 			if [ -n "${USE_MOD}" ]; then
 				HF="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl ${USE_MOD} $SHA_SIZE"
@@ -5150,7 +5168,7 @@ rkh_dat_set_version() {
 
 	TODAY=`date +%Y%m%d 2>/dev/null`
 
-	OLDVER=`grep '^[Vv]ersion:' ${RKHDAT_FILE} 2>/dev/null | tail -1 | cut -d: -f2`
+	OLDVER=`grep '^[Vv]ersion:' ${RKHDAT_FILE} 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f2`
 
 	if [ -n "${OLDVER}" ]; then
 		OLDDATE=`echo "${OLDVER}" | cut -c1-8`
@@ -5231,7 +5249,7 @@ rkh_dat_get_os_info() {
 				fi
 				;;
 			/var/ipcop/general-functions.pl)
-				OSNAME=`grep 'version *=' ${RELEASE} | head -n 1`
+				OSNAME=`grep 'version *=' ${RELEASE} | head ${HEAD_OPT}1`
 				;;
 			/etc/debian_version)
 				OSNAME="Debian `cat ${RELEASE}`"
@@ -5246,7 +5264,7 @@ rkh_dat_get_os_info() {
 				OSNAME="Zenwalk `cat ${RELEASE}`"
 				;;
 			*)
-				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head -n 1`
+				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head ${HEAD_OPT}1`
 				;;
 			esac
 
@@ -5266,7 +5284,7 @@ rkh_dat_get_os_info() {
 			#
 
 			if [ $RKH_IN_LSB -eq 0 -a -z "${OSNAME}" ]; then
-				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head -n 1`
+				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' ${RELEASE} | head ${HEAD_OPT}1`
 				OSNAME=`echo ${OSNAME}`
 			fi
 
@@ -5329,19 +5347,19 @@ rkh_dat_get_os_info() {
 
 	if [ -z "${OSNAME}" ]; then
 		if [ -f "/etc/issue" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue | head -n 1`
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue | head ${HEAD_OPT}1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/issue"
 		fi
 
 		if [ $RKH_LSB_SEEN -eq 1 -a -z "${OSNAME}" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release | head -n 1`
+			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release | head ${HEAD_OPT}1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/lsb-release"
 		fi
 	elif [ -n "`echo \"${OSNAME}\" | grep '^[0-9.][0-9.]*$'`" ]; then
 		if [ -f "/etc/issue" ]; then
-			RKHTMPVAR=`awk '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue | head -n 1`
+			RKHTMPVAR=`awk '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue | head ${HEAD_OPT}1`
 
 			test -n "${RKHTMPVAR}" && OSNAME="${RKHTMPVAR} ${OSNAME}"
 		fi
@@ -5523,7 +5541,7 @@ ${DIR}:1"
 				#
 
 				FILE_IS_PKGD=1
-				PKGNAME=`echo "${RKHTMPVAR}" | tail -1`
+				PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1`
 
 				RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FNAME} 2>/dev/null | grep ":${FNAMEGREP}\$"`
 				ERRCODE=$?
@@ -5537,9 +5555,9 @@ ${DIR}:1"
 					# this is what RPM does).
 					#
 
-					RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep ':(x86_64|ia64):' | tail -1`
+					RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep ':(x86_64|ia64):' | tail ${TAIL_OPT}1`
 
-					test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail -1`
+					test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail ${TAIL_OPT}1`
 
 					FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
 					FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
@@ -5588,7 +5606,7 @@ ${DIR}:1"
 				# Now we sort out the base part of the package name.
 				#
 
-				PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | cut -d: -f1`
+				PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1 | cut -d: -f1`
 			fi
 			;;
 		BSD)
@@ -5608,7 +5626,7 @@ ${DIR}:1"
 				# Now we sort out the base part of the package name.
 				#
 
-				PKGNAME=`echo "${RKHTMPVAR}" | tail -1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
+				PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
 			fi
 			;;
 		SOLARIS)
@@ -5694,7 +5712,7 @@ ${DIR}:1"
 
 					if [ -n "${PKGNAME}" ]; then
 						FILNAM=`echo "${FNAME}" | sed -e 's:^/usr/pkg/::; s:\.:\\\.:g'`
-						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail -1 | cut -d: -f3`
+						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
 					;;
@@ -6037,13 +6055,13 @@ get_next_mirror() {
 
 	case $MIRRORS_MODE in
 	0)
-		MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head -n 1`
+		MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}1`
 		;;
 	1)
-		MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head -n 1`
+		MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}1`
 		;;
 	2)
-		MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head -n 1`
+		MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}1`
 		;;
 	esac
 
@@ -6063,13 +6081,13 @@ get_next_mirror() {
 
 		case $MIRRORS_MODE in
 		0)
-			MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head -n $N | tail -1 | cut -d= -f2-`
+			MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		1)
-			MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head -n $N | tail -1 | cut -d= -f2-`
+			MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		2)
-			MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head -n $N | tail -1 | cut -d= -f2-`
+			MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		esac
 
@@ -6084,7 +6102,7 @@ get_next_mirror() {
 	# option is used.
 	#
 
-	MIRRORSVERSION=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/mirrors.dat | tail -1`
+	MIRRORSVERSION=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/mirrors.dat | tail ${TAIL_OPT}1`
 
 	if [ -z "${MIRRORSVERSION}" ]; then
 		display --to LOG --type INFO MIRRORS_NO_VERSION "${DB_PATH}/mirrors.dat"
@@ -6382,7 +6400,7 @@ do_i18n_update() {
 			fi
 
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
-				PROG_VERS=`grep ${GREP_OPT} '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail -1 | cut -d: -f2`
+				PROG_VERS=`grep ${GREP_OPT} '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/i18n/${LANGFILE} 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f2`
 
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
@@ -6490,7 +6508,7 @@ do_update() {
 		LATEST_VERS=0
 
 		if [ -s "${DB_PATH}/${UPDFILE}" ]; then
-			PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/${UPDFILE} | tail -1 | cut -d: -f2`
+			PROG_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/${UPDFILE} | tail ${TAIL_OPT}1 | cut -d: -f2`
 
 			if [ -z "${PROG_VERS}" ]; then
 				PROG_VERS=0
@@ -6524,7 +6542,7 @@ do_update() {
 		#
 
 		if [ $ERRCODE -eq 0 ]; then
-			LATEST_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE} | tail -1 | cut -d: -f2`
+			LATEST_VERS=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${RKHUPD_FILE} | tail ${TAIL_OPT}1 | cut -d: -f2`
 
 			if [ -z "${LATEST_VERS}" ]; then
 				LATEST_VERS=0
@@ -6542,7 +6560,7 @@ do_update() {
 
 				display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result VCHK_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
 
-				LATEST_VERS=`head -n 1 ${RKHUPD_FILE}`
+				LATEST_VERS=`head ${HEAD_OPT}1 ${RKHUPD_FILE}`
 
 				display --to LOG --type WARNING VERSIONCHECK_CONV_FAIL "${PROG_VERS}" "${LATEST_VERS}"
 			elif [ $PROG_VERS -lt $LATEST_VERS ]; then
@@ -9342,9 +9360,9 @@ ${RKHLINE}"
 
 					FILE_IS_PKGD=1
 
-					PKGNAME=`echo "${PKGNAME_ARCH}" | egrep '\.(x86_64|ia64)$' | tail -1`
+					PKGNAME=`echo "${PKGNAME_ARCH}" | egrep '\.(x86_64|ia64)$' | tail ${TAIL_OPT}1`
 
-					test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail -1`
+					test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail ${TAIL_OPT}1`
 
 					RKHTMPVAR=`echo "${PKGNAME}" | sed -e 's/\./\\\./g'`
 
@@ -9379,7 +9397,7 @@ ${RKHLINE}"
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
-						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail -1`
+						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail ${TAIL_OPT}1`
 
 						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
 						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
@@ -9541,7 +9559,7 @@ ${RKHLINE}"
 
 						FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's:^/usr/pkg/::'`
 
-						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FNAMEGREP}\$" | tail -1 | cut -d: -f3`
+						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FNAMEGREP}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
@@ -10435,9 +10453,9 @@ suspscan() {
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
 					SUSPSCAN_STRINGS=""
 
-					$STRINGS_CMD -n 4 "${SUSPSCAN_ITEM}" | head -n $SUSPSCAN_LINETHRESH >${FILENAME} 2>&1
+					$STRINGS_CMD -n 4 "${SUSPSCAN_ITEM}" | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >${FILENAME} 2>&1
 
-					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail -1` ; do
+					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail ${TAIL_OPT}1` ; do
 
 						#
 						# Break off if the score already exceeds the threshold.
@@ -10567,7 +10585,7 @@ suspscan() {
 		esac
 	done
 
-	FOUNDDIRS=`grep '^6 SUSPSCAN_FILE_CHECK' ${SUSPSCAN_TMPFILE} | head -n 1`
+	FOUNDDIRS=`grep '^6 SUSPSCAN_FILE_CHECK' ${SUSPSCAN_TMPFILE} | head ${HEAD_OPT}1`
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else
@@ -11124,7 +11142,7 @@ rootkit_file_dir_checks() {
 					NLINKS1=`${STAT_CMD} -c %h /etc 2>/dev/null`
 				fi
 
-				NLINKS2=`ls -ld /etc 2>/dev/null | awk -F' ' '/^d/ {print $2}' | head -n 1`
+				NLINKS2=`ls -ld /etc 2>/dev/null | awk -F' ' '/^d/ {print $2}' | head ${HEAD_OPT}1`
 
 				test -z "${NLINKS1}" && NLINKS1=-1
 				test -z "${NLINKS2}" && NLINKS2=-2
@@ -12022,7 +12040,7 @@ malware_checks() {
 			FOUND=0
 			WHITEPROC=""; BLACKPROC=""
 
-			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele' | head -n 1`
+			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele' | head ${HEAD_OPT}1`
 
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
@@ -12062,7 +12080,7 @@ malware_checks() {
 
 					if [ -z "${PROC}" ]; then
 						if [ $SUNOS -eq 1 ]; then
-							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | awk '{ print $NF }'`
 						else
 							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 						fi
@@ -12352,7 +12370,7 @@ ${RKHTMPVAR}:${FNAME}"
 				# Dig out the version number for use later on.
 				#
 
-				UNHIDE_VERS=`${UNHIDE_CMD} -V 2>/dev/null | head -n 1`
+				UNHIDE_VERS=`${UNHIDE_CMD} -V 2>/dev/null | head ${HEAD_OPT}1`
 
 				if [ -n "`echo ${UNHIDE_VERS} | grep '^Unhide [0-9][0-9]*$'`" ]; then
 					UNHIDE_VERS=`echo ${UNHIDE_VERS} | cut -d' ' -f2`
@@ -13490,7 +13508,7 @@ check_port_wl() {
 
 			if [ -z "${FNAME}" ]; then
 				if [ $SUNOS -eq 1 ]; then
-					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head -n 1 | awk '{ print $NF }'`
+					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | awk '{ print $NF }'`
 				else
 					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 				fi
@@ -14034,7 +14052,7 @@ do_network_interface_checks() {
 	FOUND=0
 	WHITEPROC=""; BLACKPROC=""
 
-	LIBPCAPRES=`egrep -v '^sk|888e' /proc/net/packet | head -n 1`
+	LIBPCAPRES=`egrep -v '^sk|888e' /proc/net/packet | head ${HEAD_OPT}1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
 		#
@@ -14950,7 +14968,7 @@ do_system_config_files_check() {
 		# First we check for allowed root access.
 		#
 
-		RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
+		RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' ${SSH_CONFIG_FILE} | tail ${TAIL_OPT}1`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			#
@@ -14981,7 +14999,7 @@ do_system_config_files_check() {
 		# Next we check to see if protocol version 1 is allowed.
 		#
 
-		RKHTMPVAR=`grep -i '^[ 	]*Protocol[ 	=]' ${SSH_CONFIG_FILE} | tail -1`
+		RKHTMPVAR=`grep -i '^[ 	]*Protocol[ 	=]' ${SSH_CONFIG_FILE} | tail ${TAIL_OPT}1`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			#
@@ -17808,7 +17826,7 @@ if [ $CHECK -eq 1 ]; then
 	# as certain security frameworks hide this.
 	#
 
-	if [ -z "`head -1 /proc/kallsyms 2>/dev/null`" ]; then
+	if [ -z "`head ${HEAD_OPT}1 /proc/kallsyms 2>/dev/null`" ]; then
 		KSYMS_FILE=""
 	fi
 fi

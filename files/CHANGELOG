@@ -71,6 +71,9 @@
    real reason being stated. Now the hash test will proceed but the
    user will still get a warning (because it detects that prelinking was
    used and is not now, or vice-versa).
+ - Rkhunter will now check to see if the 'head' and 'tail' commands
+   understand the '-n' option. If they do, then it will be used. If they
+   do not, then the older 'head -1' and 'tail -1' commands will be used.
 
  -- 
 
