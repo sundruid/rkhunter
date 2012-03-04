@@ -28,6 +28,7 @@
  - Added Jynx rootkit check.
  - Added Turtle/Turtle2 rootkit check.
  - Added KBeast rootkit check.
+ - The installer now supports the Slackware TXZ package layout option.
 
  Changes:
  - Allow the ALLOWDEVFILE, ALLOWHIDDENFILE and ALLOWHIDDENDIR options to
