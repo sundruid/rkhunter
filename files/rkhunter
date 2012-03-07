@@ -8505,12 +8505,11 @@ do_system_check_initialisation() {
 			 ld_poison.so:Jynx Rootkit
 			 .xsyslog:Flooder (Linux/Bckdr-RKC) component
 			 .ssyslog:Flooder (Linux/Bckdr-RKC) component
-			 pscan2
-			 scanssh
-			 sshf
-			 ssh-scan
-			 atac
-			 "
+			 pscan2:Port scanner
+			 scanssh:Port scanner
+			 sshf:Possible port scanner
+			 ssh-scan:Port scanner
+			 atac:Port scanner component"
 
 
 	# System startup file pathnames
