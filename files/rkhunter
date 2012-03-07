@@ -7349,8 +7349,7 @@ do_system_check_initialisation() {
 		     h4x_rename
 		     h4x_rmdir
 		     h4x_tcp4_seq_show
-		     h4x_write
-		     sys_call_table"
+		     h4x_write"
 
 
 	# Kitko Rootkit
@@ -8305,7 +8304,11 @@ do_system_check_initialisation() {
 		    rcfile:sourcemask:Rootkit component
 		    rcfile:/bin/vobiscum:Rootkit component
 		    rcfile:/usr/sbin/in.telnet:Rootkit component
-		    rcfile:hdparm:Xzibit Rootkit
+		    rcfile:/usr/bin/hdparm?-t1?-X53?-p:Xzibit Rootkit
+		    rcfile:/lib/.xsyslog:Flooder (Linux/Bckdr-RKC) component
+		    rcfile:/etc/.xsyslog:Flooder (Linux/Bckdr-RKC) component
+		    rcfile:/lib/.ssyslog:Flooder (Linux/Bckdr-RKC) component
+		    rcfile:/tmp/.sendmail:Flooder (Linux/Bckdr-RKC) component
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:T0rn Rootkit
@@ -8331,7 +8334,7 @@ do_system_check_initialisation() {
 		    w:/usr/include/mysql/mysql.hh1:Rootkit component
 		    top:/usr/include/mysql/mysql.hh1:Rootkit component
 		    bc:backconnect:Jynx Rootkit
-		    bc:magic.packet.received:Jynx Rootkit"
+		    bc:magic?packet?received:Jynx Rootkit"
 
 
 	# Possible rootkit files and directories
@@ -8407,6 +8410,10 @@ do_system_check_initialisation() {
 		  file:/etc/rpm/sshdOLD:Trojaned SSH daemon (original sshd binary)
 		  file:/etc/rpm/sshOLD:Trojaned SSH daemon (original ssh binary)
 		  file:/usr/share/passwd.h:Trojaned SSH daemon (default configuration)
+		  file:/lib/.xsyslog:Flooder (Linux/Bckdr-RKC) component
+		  file:/etc/.xsyslog:Flooder (Linux/Bckdr-RKC) component
+		  file:/lib/.ssyslog:Flooder (Linux/Bckdr-RKC) component
+		  file:/tmp/.sendmail:Flooder (Linux/Bckdr-RKC) component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
@@ -8495,7 +8502,15 @@ do_system_check_initialisation() {
 			 Phantasmagoria.o:Process hiding Linux kernel module
 			 lkt.o:Portacelo Rootkit
 			 nlkt.o:Portacelo Rootkit
-			 ld_poison.so:Jynx Rootkit"
+			 ld_poison.so:Jynx Rootkit
+			 .xsyslog:Flooder (Linux/Bckdr-RKC) component
+			 .ssyslog:Flooder (Linux/Bckdr-RKC) component
+			 pscan2
+			 scanssh
+			 sshf
+			 ssh-scan
+			 atac
+			 "
 
 
 	# System startup file pathnames
