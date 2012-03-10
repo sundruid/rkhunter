@@ -8265,6 +8265,13 @@ do_system_check_initialisation() {
 		    sshd:magic_pass_active:Trojaned SSH daemon
 		    sshd:/usr/include/gpm2.h:Trojaned SSH daemon
 		    sshd:/usr/include/openssl:Trojaned SSH daemon
+		    sshd:aion:Trojaned SSH daemon
+		    sshd:pcszPass:Trojaned SSH daemon
+		    sshd:LogPass:Trojaned SSH daemon
+		    sshd:Login_Check:Trojaned SSH daemon
+		    sshd:includes.h:Trojaned SSH daemon
+		    sshd:DecodeString:Trojaned SSH daemon
+		    sshd:EncodeString:Trojaned SSH daemon
 		    xntps:/.config:SHV4 Rootkit
 		    syslogd:promiscuous:Sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
@@ -8449,7 +8456,11 @@ do_system_check_initialisation() {
 		  dir:/usr/include/sslv3:Rootkit component
 		  dir:/dev/shm/sshd:Trojaned SSH daemon
 		  dir:/usr/share/locale/mk/.dev/sk:Sniffer
-		  dir:/usr/share/locale/mk/.dev:Sniffer"
+		  dir:/usr/share/locale/mk/.dev:Sniffer
+		  dir:/usr/include/netda.h:Trojaned SSH daemon
+		  dir:/usr/include/.ssh:Trojaned SSH daemon
+		  dir:/usr/share/locale/jp/.%:IRC bot
+		  dir:/usr/share/.sqe:IRC bot"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -8509,7 +8520,8 @@ do_system_check_initialisation() {
 			 scanssh:Port scanner
 			 sshf:Possible port scanner
 			 ssh-scan:Port scanner
-			 atac:Port scanner component"
+			 atac:Port scanner component
+			 \[pdflush\]:IRC bot"
 
 
 	# System startup file pathnames
