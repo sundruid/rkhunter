@@ -8404,8 +8404,8 @@ do_system_check_initialisation() {
 		  file:/sbin/zinit:Rootkit component
 		  file:/tmp/pass_ssh.log:Trojaned SSH daemon
 		  file:/usr/include/gpm2.h:Trojaned SSH daemon
-		  file:/etc/ssh/.sshd_auth:Trojaned SSH daemon
-		  file:/usr/lib/.sshd.h:Trojaned SSH daemon
+		  file:/etc/ssh/.sshd_auth:Trojaned SSH daemon (logins)
+		  file:/usr/lib/.sshd.h:Trojaned SSH daemon (logins)
 		  file:/var/run/.defunct:Trojaned SSH daemon
 		  file:/etc/httpd/run/.defunct:Trojaned SSH daemon
 		  file:/usr/share/pci.r:Trojaned Syslog daemon
@@ -8421,6 +8421,9 @@ do_system_check_initialisation() {
 		  file:/etc/.xsyslog:Flooder (Linux/Bckdr-RKC) component
 		  file:/lib/.ssyslog:Flooder (Linux/Bckdr-RKC) component
 		  file:/tmp/.sendmail:Flooder (Linux/Bckdr-RKC) component
+		  file:/usr/share/sshd.sync:Trojaned SSH daemon
+		  file:/bin/zcut:Trojaned SSH daemon
+		  file:/usr/bin/zmuie:Trojaned SSH daemon
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
