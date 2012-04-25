@@ -8444,7 +8444,6 @@ do_system_check_initialisation() {
 		  dir:/tmp/zmeu/...%:Rootkit component
 		  dir:/var/log/ssh:Rootkit component
 		  dir:/dev/ida:Rootkit component
-		  dir:/lib/java:Rootkit component
 		  dir:/var/lib/games/.src/ssk/shit:Rootkit component
 		  dir:/usr/lib/libshtift:Rootkit component
 		  dir:/usr/src/.poop:Ramen worm
