@@ -12435,7 +12435,7 @@ ${RKHTMPVAR}:${FNAME}"
 					fi
 
 					SEEN=1
-					FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|\[\*\]|$)'`
+					FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|Copyright |License |\[\*\]|$)'`
 
 					if [ -z "${FOUND_PROCS}" ]; then
 						# Nothing found.
@@ -16837,7 +16837,7 @@ trap - 13 >/dev/null 2>&1
 #
 
 PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="1.4.0"
+PROGRAM_version="1.4.1"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2012, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
