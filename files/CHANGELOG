@@ -25,6 +25,7 @@
  Changes:
 
  Bugfixes:
+ - Cater for the latest version of the 'unhide' command.
 
  -- 
 
