@@ -26,6 +26,8 @@
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
+ - Allow the ALLOWDEVFILE option to handle file names containing
+   forward slashes.
 
  -- 
 

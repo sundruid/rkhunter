@@ -15230,7 +15230,7 @@ do_dev_whitelist_check() {
 		return
 	fi
 
-	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
+	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\\\\/\\\\\\\\/g; s/\./\\\./g'`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FNAMEGREP} \"`" ]; then
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "${RKHTMPVAR}"
