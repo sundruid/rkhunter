@@ -23,6 +23,8 @@
  New:
 
  Changes:
+ - The test 'possible_rkts' has been removed because this is exactly the
+   same as the 'additional_rkts' test.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.

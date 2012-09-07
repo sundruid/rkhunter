@@ -17080,7 +17080,7 @@ RKHCHKLOCALE=0
 KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     deleted_files packet_cap_apps apps rootkits known_rkts
 	     additional_rkts malware local_host network passwd_changes
-	     group_changes possible_rkts possible_rkt_files possible_rkt_strings
+	     group_changes possible_rkt_files possible_rkt_strings
 	     system_commands shared_libs shared_libs_path running_procs
 	     hidden_procs trojans other_malware os_specific startup_malware
 	     startup_files group_accounts system_configs filesystem suspscan
@@ -17096,9 +17096,8 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:shared_libs_path:immutable:attributes
 	       properties:hashes:scripts:immutable:attributes
 	       shared_libs:shared_libs_path
-	       rootkits:known_rkts:additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:other_malware:os_specific:suspscan:loaded_modules:avail_modules
-	       additional_rkts:possible_rkts:possible_rkt_files:possible_rkt_strings
-	       possible_rkts:possible_rkt_files:possible_rkt_strings
+	       rootkits:known_rkts:additional_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:other_malware:os_specific:suspscan:loaded_modules:avail_modules
+	       additional_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps:ports:hidden_ports:promisc
 	       malware:running_procs:hidden_procs:deleted_files:suspscan:other_malware
 	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem
