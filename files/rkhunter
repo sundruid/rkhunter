@@ -16322,8 +16322,8 @@ set_file_prop_dirs_files() {
 	    newsyslog nologin passwd perl pgrep ping pkgdb pkg_info pkill prelink ps pstree pwck
 	    pwd readlink rkhunter rmmod route rpm rsyslogd runcon runlevel sed sestatus sh
 	    sha1 sha1sum sha224 sha224sum sha256 sha256sum sha384 sha384sum sha512
-	    sha512sum size skdet slocate sockstat sort stat strace strings su sudo
-	    sulogin sysctl syslogd systat tail tcpd test top touch tr uname
+	    sha512sum size skdet slocate sockstat sort ssh sshd stat strace strings su sudo
+	    sulogin sysctl syslogd systat tail tcpd telnet test top touch tr uname
 	    uniq useradd userdel usermod users vipw vmstat w watch wc wget whatis
 	    whereis which who whoami xinetd"
 

@@ -21,6 +21,8 @@
  * 1.4.1 (xx/xx/xxxx)
 
  New:
+ - The 'ssh', 'sshd' and 'telnet' commands are now checked as part of
+   the file properties test.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly the
