@@ -14080,7 +14080,7 @@ do_network_interface_checks() {
 	FOUND=0
 	WHITEPROC=""; BLACKPROC=""
 
-	LIBPCAPRES=`egrep -v '^sk|888e' /proc/net/packet | head ${HEAD_OPT}1`
+	LIBPCAPRES=`egrep -v '(^sk | 888e )' /proc/net/packet | head ${HEAD_OPT}1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
 		#
@@ -14092,7 +14092,7 @@ do_network_interface_checks() {
 
 		INODE_LIST=""
 
-		for INODE in `egrep -v '^sk|888e' /proc/net/packet | awk '{ print $9 }'`; do
+		for INODE in `egrep -v '(^sk | 888e )' /proc/net/packet | awk '{ print $9 }'`; do
 			INODE_LIST="${INODE_LIST}|$INODE"
 		done
 
@@ -14100,7 +14100,7 @@ do_network_interface_checks() {
 		test -z "${INODE_LIST}" && INODE_LIST="RKHunterPktCapture"
 
 
-		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](${INODE_LIST})[ 	]" | awk '{ print $2 }'`; do
+		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](pack|sock)[ 	]+(${INODE_LIST})[ 	]" | awk '{ print $2 }'`; do
 			NAME=""
 
 			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
