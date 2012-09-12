@@ -14100,7 +14100,7 @@ do_network_interface_checks() {
 		test -z "${INODE_LIST}" && INODE_LIST="RKHunterPktCapture"
 
 
-		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](pack|sock)[ 	]+(${INODE_LIST})[ 	]" | awk '{ print $2 }'`; do
+		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep " (pack +(${INODE_LIST})|sock +[^ ]+ +[^ ]+ +(${INODE_LIST})) " | awk '{ print $2 }'`; do
 			NAME=""
 
 			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
