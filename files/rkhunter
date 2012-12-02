@@ -638,22 +638,22 @@ get_option() {
 	# it is then process it according to the multi-line argument.
 	#
 
-	if [ -z "`grep -h \"^${OPTV}=\" ${CONFIGFILE} ${LOCALCONFIGFILE}`" ]; then
+	if [ -z "`grep -h \"^${OPTV}=\" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`" ]; then
 		echo ""
 		return 0
 	else
 		case "${OPTMULTI}" in
 		single)
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
 			;;
 		multi)
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} | sed -e "s/${OPTV}=//"`
 			;;
 		*)
 			echo "Error: Invalid multi-line argument in get_option function: $*" >&2
 
 			# Treat this as a single-line option.
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
 			;;
 		esac
 	fi
@@ -685,8 +685,14 @@ get_option() {
 			# line, we join the lines together and remove any leading or
 			# trailing spaces.
 			#
-			# Note: Do not combine these two lines. Sun 'sed' won't like it!
+			# Note: Do not combine these two lines. Solaris 'sed' won't like it!
 			#
+
+#jh - this is where we need to process the "" option - this needs to be done in sed or awk
+#jh - this line works for 'bash' but needs testing with other shells (e.g. Solaris 'sh') or use awk/sed.
+			OPTVAR=`echo "${OPTVAR/*
+
+}"`
 
 			OPTVAR=`echo "${OPTVAR}" | tr '\n' ' '`
 			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *//; s/ *$//'`
@@ -2039,7 +2045,7 @@ add_extra_dirs() {
 	if [ $SUNOS -eq 1 ]; then
 		#
 		# Add in some other directories, and those which
-		# contain the Sun 'companion' software.
+		# contain the Solaris 'companion' software.
 		#
 
 		test -d /usr/gnu && EXTRA_DIRS="${EXTRA_DIRS} /usr/gnu/bin /usr/gnu/sbin /usr/gnu/libexec"
@@ -2351,7 +2357,7 @@ get_mailonwarn_option() {
 	LEAVE=0
 	ERRCODE=0
 
-	MAILONWARNING=`get_option 2 single MAIL-ON-WARNING` || exit 1
+	MAILONWARNING=`get_option 2 multi MAIL-ON-WARNING` || exit 1
 
 	if [ -n "${MAILONWARNING}" ]; then
 		MAIL_CMD=`get_option 2 single MAIL_CMD` || exit 1
@@ -2396,9 +2402,6 @@ get_mailonwarn_option() {
 				RET_CODE=1
 			fi
 		fi
-	elif [ -z "`grep -h \"^MAIL-ON-WARNING=\" ${CONFIGFILE} ${LOCALCONFIGFILE}`" ]; then
-		RET_CODE=1
-		echo "No MAIL-ON-WARNING option has been configured."
 	fi
 
 	return
@@ -3164,7 +3167,7 @@ get_enable_option() {
 		# We get the configuration file entries by default.
 		#
 
-		ENABLE_TESTS=`get_option 2 single ENABLE_TESTS` || exit 1
+		ENABLE_TESTS=`get_option 2 multi ENABLE_TESTS` || exit 1
 		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 
 		# The system default.
@@ -3210,9 +3213,10 @@ get_disable_option() {
 	#
 
 	if [ $USECF -eq 1 ]; then
-		CONFIG_DISABLE_TESTS=`get_option 2 single DISABLE_TESTS` || exit 1
+		CONFIG_DISABLE_TESTS=`get_option 2 multi DISABLE_TESTS` || exit 1
 	fi
 
+#jh - Also allow test list to be set to "" to reset it. If the user does this then the defaults will be used (e.g enable=all, disable=none).
 	DISABLE_TESTS="${CL_DISABLE_TESTS} ${CONFIG_DISABLE_TESTS}"
 	DISABLE_TESTS=`echo ${DISABLE_TESTS}`
 
@@ -3685,7 +3689,7 @@ get_unhide_options() {
 	LEAVE=0
 	ERRCODE=0
 
-	UNHIDE_TESTS=`get_option 2 single UNHIDE_TESTS` || exit 1
+	UNHIDE_TESTS=`get_option 2 multi UNHIDE_TESTS` || exit 1
 
 	if [ -z "${UNHIDE_TESTS}" ]; then
 		UNHIDE_TESTS="sys"
@@ -6723,7 +6727,7 @@ do_config_check() {
 	# Now check to see if any unknown options have been configured.
 	#
 
-	RKHTMPVAR=`egrep -h -v '^[ 	]*(#|$)' ${CONFIGFILE} ${LOCALCONFIGFILE}`
+	RKHTMPVAR=`egrep -h -v '^[ 	]*(#|$)' ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`
 
 	IFS=$IFSNL
 
@@ -9051,7 +9055,7 @@ file_properties_check() {
 				SKIP_IMMUT=1
 				RKHTMPVAR="${RKHTMPVAR} immutable"
 			else
-				for FNAME in ${CONFIGFILE} ${LOCALCONFIGFILE} ${DB_PATH}/*.dat ${DB_PATH}/i18n/*; do
+				for FNAME in ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} ${DB_PATH}/*.dat ${DB_PATH}/i18n/*; do
 					test -f "${FNAME}" -a ! -h "${FNAME}" && break
 				done
 
@@ -10271,6 +10275,7 @@ File:${FNAME}:.*"
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 					PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
+# jh - not right (can cause FPs when command dirs are links (eg '/bin' -> '/usr/bin')
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
 					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${FNAME}"
 				fi
@@ -16949,6 +16954,15 @@ CONFIGFILE=""
 # be in the same directory as the main config file.
 LOCALCONFIGFILE=""
 
+# Users cannot reset this. The rkhunter.d directory must
+# be in the same directory as the main config file.
+LOCALCONFIGDIR=""
+
+# Users cannot reset this. The rkhunter.d config files
+# can only be stored in the local config directory.
+LOCALCONFDIRCOUNT=0
+LOCALCONFDIRFILES=""
+
 # This will be set similar to the current root PATH. Users can
 # include new command directories to use as well.
 BINPATHS=""
@@ -17725,7 +17739,18 @@ fi
 
 RKHTMPVAR=`echo "${CONFIGFILE}" | sed -e 's:/[^/]*$::'`
 
-test -f "${RKHTMPVAR}/rkhunter.conf.local" && LOCALCONFIGFILE="${RKHTMPVAR}/rkhunter.conf.local"
+test -f "${RKHTMPVAR}/rkhunter.conf.local" -a ! -h "${RKHTMPVAR}/rkhunter.conf.local" -a -r "${RKHTMPVAR}/rkhunter.conf.local" && LOCALCONFIGFILE="${RKHTMPVAR}/rkhunter.conf.local"
+
+if [ -d "${RKHTMPVAR}/rkhunter.d" ]; then
+	LOCALCONFIGDIR="${RKHTMPVAR}/rkhunter.d"
+
+	for FNAME in ${LOCALCONFIGDIR}/*.conf; do
+		test ! -f "${FNAME}" -o -h "${FNAME}" -o ! -r "${FNAME}" && continue
+
+		LOCALCONFDIRCOUNT=`expr ${LOCALCONFDIRCOUNT} + 1`
+		LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
+	done
+fi
 
 get_configfile_options
 
@@ -18223,6 +18248,11 @@ if [ $NOLOG -eq 0 ]; then
 	display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
 
 	test -n "${LOCALCONFIGFILE}" && display --to LOG --type INFO CONFIG_LOCALCONFIGFILE "${LOCALCONFIGFILE}"
+
+	if [ -n "${LOCALCONFIGDIR}" ]; then
+		test $LOCALCONFDIRCOUNT -eq 1 && RKHTMPVAR="" || RKHTMPVAR="s"
+		display --to LOG --type INFO CONFIG_LOCALCONFIGDIR "${LOCALCONFIGDIR}" $LOCALCONFDIRCOUNT "${RKHTMPVAR}"
+	fi
 
 	display --to LOG --type INFO CONFIG_INSTALLDIR "${RKHINSTALLDIR}"
 

@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.16"
+INSTALLER_VERSION="1.2.17"
 INSTALLER_COPYRIGHT="Copyright 2003-2012, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -670,6 +670,7 @@ doInstall()  {
 					echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter" >>rkhunter.conf
 					echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter.conf" >>rkhunter.conf
 					test -f "$PREFIX/rkhunter.conf.local" && echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter.conf.local" >>rkhunter.conf
+					test -d "$PREFIX/rkhunter.d" && echo "USER_FILEPROP_FILES_DIRS=$PREFIX/rkhunter.d/*.conf" >>rkhunter.conf
 
 					sed -e "s|-f /etc/rkhunter.conf|-f $PREFIX/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$PREFIX|g" rkhunter >rkhunter.
 					mv -f rkhunter. rkhunter

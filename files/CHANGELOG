@@ -23,16 +23,40 @@
  New:
  - The 'ssh', 'sshd' and 'telnet' commands are now checked as part of
    the file properties test.
+ - It is now possible to include configuration files found in a local
+   configuration directory. This directory, called 'rkhunter.d', must
+   be in the same directory as the main configuration file. Only files
+   ending in '.conf' will be treated as configuration files, all other
+   files will be ignored. The configuration options found in the files
+   will be merged with the options found in the main configuration file
+   and the local configuration file, if present. They will only override
+   a previously specified option if the option can only be specified
+   once. The installer will automatically include any found configuration
+   files to the file properties test.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly the
    same as the 'additional_rkts' test.
+ - To allow for the merging of configuration options from files in the
+   rkhunter.d directory, the UNHIDE_TESTS, MAIL-ON-WARNING, ENABLE_TESTS
+   and DISABLE_TESTS options may now be specified more than once.
+ - It is no longer required that the MAIL-ON-WARNING option exists in the
+   configuration file.
+ - Some configuration options can be specified more than once, and it is
+   now possible to set these options to the null string (""). Previously
+   use of the null string was ignored. In turn some options may assume a
+   default value if the option is set to null.
+   (This change was made in order that configuraton files in the 'rkhunter.d'
+   directory can reset an option to null and then provide new values simply
+   by specifying the option once as null, and then with a value.)
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
  - Allow the ALLOWDEVFILE option to handle file names containing
    forward slashes.
  - Improved the process check in the 'packet_cap_apps' test.
+ - Ensure that the 'rkhunter.conf.local' file, if present, is not a
+   symbolic link and is readable.
 
  -- 
 

@@ -344,7 +344,7 @@ ultimately to the program default value of 'none'. The command-line options
 The supplied RKH configuration file will have some tests already disabled.
 These are generally CPU and/or I/O intensive tests, or ones which may be prone
 to giving false-positive results. They can, of course, be enabled by editing
-the DISABLE_TESTS list. To run the tests from the command line, either user
+the DISABLE_TESTS list. To run the tests from the command line, either use
 the '--enable' command-line option with the specified test name, or use
 either '--enable all' or '--disable none'.
 
