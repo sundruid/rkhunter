@@ -12046,7 +12046,6 @@ additional_rootkit_checks() {
 }
 
 
-
 malware_checks() {
 
 	#
@@ -17655,7 +17654,18 @@ fi
 
 RKHTMPVAR=`${ID_CMD} -u 2>/dev/null`
 
-if [ "${RKHTMPVAR}" != "0" -a "${RKHTMPVAR}" != "root" ]; then
+if [ -z "${RKHTMPVAR}" ]; then
+	RKHTMPVAR=`whoami 2>/dev/null`
+
+	if [ -z "${RKHTMPVAR}" ]; then
+		RKHTMPVAR=`who am i 2>/dev/null | cut -d' ' -f1`
+	fi
+fi
+
+if [ -z "${RKHTMPVAR}" ]; then
+	echo "Unable to determine if you are root."
+	exit 1
+elif [ "${RKHTMPVAR}" != "0" -a "${RKHTMPVAR}" != "root" ]; then
 	echo "You must be the root user to run this program."
 	exit 1
 fi
