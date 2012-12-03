@@ -3216,7 +3216,6 @@ get_disable_option() {
 		CONFIG_DISABLE_TESTS=`get_option 2 multi DISABLE_TESTS` || exit 1
 	fi
 
-#jh - Also allow test list to be set to "" to reset it. If the user does this then the defaults will be used (e.g enable=all, disable=none).
 	DISABLE_TESTS="${CL_DISABLE_TESTS} ${CONFIG_DISABLE_TESTS}"
 	DISABLE_TESTS=`echo ${DISABLE_TESTS}`
 
@@ -17659,6 +17658,10 @@ if [ -z "${RKHTMPVAR}" ]; then
 
 	if [ -z "${RKHTMPVAR}" ]; then
 		RKHTMPVAR=`who am i 2>/dev/null | cut -d' ' -f1`
+
+		if [ -z "${RKHTMPVAR}" ]; then
+			RKHTMPVAR=`who -m 2>/dev/null | cut -d' ' -f1`
+		fi
 	fi
 fi
 

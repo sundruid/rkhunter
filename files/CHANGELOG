@@ -57,6 +57,7 @@
  - Improved the process check in the 'packet_cap_apps' test.
  - Ensure that the 'rkhunter.conf.local' file, if present, is not a
    symbolic link and is readable.
+ - Improve the test that the root user is running rkhunter.
 
  -- 
 
