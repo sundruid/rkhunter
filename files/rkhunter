@@ -608,7 +608,7 @@ get_option() {
 	# parameter is the 'type' of option we are processing. The second
 	# parameter is the word 'single' or 'multi'. This indicates if
 	# the option can occur on one or more lines in the configuration
-	# file. The third parameter is the option name.
+	# files. The third parameter is the option name.
 	#
 	# There are currently two types defined:
 	#
@@ -634,26 +634,41 @@ get_option() {
 
 
 	#
-	# First see if the option is in the configuration file, and if
+	# First see if the option is in the configuration files, and if
 	# it is then process it according to the multi-line argument.
 	#
 
-	if [ -z "`grep -h \"^${OPTV}=\" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`" ]; then
+	RKHTMPVAR2=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`
+
+	if [ -z "${RKHTMPVAR2}" ]; then
 		echo ""
 		return 0
 	else
 		case "${OPTMULTI}" in
 		single)
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`echo "${RKHTMPVAR2}" | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
 			;;
 		multi)
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} | sed -e "s/${OPTV}=//"`
+			#
+			# We must test whether the last line is set to the null string.
+			# We cannot use 'sed' because that will also strip off the following
+			# newline character, thus making it impossible to tell if the option was
+			# blank or not. So we use 'grep' and look to see if there is any character
+			# which is not part of a null string (i.e. not a space, tab or quote).
+			#
+
+			if [ -z "`echo \"${RKHTMPVAR2}\" | tail ${TAIL_OPT}1 | grep \"^${OPTV}=.*[^'\\" 	]\"`" ]; then
+				echo ""
+				return 0
+			fi
+
+			OPTVAR=`echo "${RKHTMPVAR2}" | sed -e "s/${OPTV}=//"`
 			;;
 		*)
 			echo "Error: Invalid multi-line argument in get_option function: $*" >&2
 
 			# Treat this as a single-line option.
-			OPTVAR=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
+			OPTVAR=`echo "${RKHTMPVAR2}" | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
 			;;
 		esac
 	fi
@@ -683,19 +698,14 @@ get_option() {
 			#
 			# For 'multi' options, which are allowed to be on more than one
 			# line, we join the lines together and remove any leading or
-			# trailing spaces.
+			# trailing spaces. We only use the options given after the last
+			# blank line (if any).
 			#
-			# Note: Do not combine these two lines. Solaris 'sed' won't like it!
-			#
 
-#jh - this is where we need to process the "" option - this needs to be done in sed or awk
-#jh - this line works for 'bash' but needs testing with other shells (e.g. Solaris 'sh') or use awk/sed.
-			OPTVAR=`echo "${OPTVAR/*
-
-}"`
-
-			OPTVAR=`echo "${OPTVAR}" | tr '\n' ' '`
-			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *//; s/ *$//'`
+			if [ -n "${OPTVAR}" ]; then
+				OPTVAR=`echo "${OPTVAR}" | awk 'BEGIN { RS="" }; END { print }'`
+				OPTVAR=`echo ${OPTVAR}`
+			fi
 		fi
 		;;
 	*)

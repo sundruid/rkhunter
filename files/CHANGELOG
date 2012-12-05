@@ -31,8 +31,9 @@
    will be merged with the options found in the main configuration file
    and the local configuration file, if present. They will only override
    a previously specified option if the option can only be specified
-   once. The installer will automatically include any found configuration
-   files to the file properties test.
+   once (but also see the change below regarding the null string). The
+   installer will automatically include any configuration files to the
+   file properties test.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly the
@@ -44,11 +45,12 @@
    configuration file.
  - Some configuration options can be specified more than once, and it is
    now possible to set these options to the null string (""). Previously
-   use of the null string was ignored. In turn some options may assume a
-   default value if the option is set to null.
-   (This change was made in order that configuraton files in the 'rkhunter.d'
-   directory can reset an option to null and then provide new values simply
-   by specifying the option once as null, and then with a value.)
+   use of the null string was ignored. Some options may assume a default
+   value if the option is set to null.
+   (This change was made in order that configuraton files in the
+   'rkhunter.d' directory can reset an option to null, and, if required,
+   provide new values simply by specifying the option once as null and
+   then with a value.)
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
