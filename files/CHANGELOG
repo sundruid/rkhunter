@@ -36,13 +36,13 @@
    file properties test.
 
  Changes:
- - The test 'possible_rkts' has been removed because this is exactly the
-   same as the 'additional_rkts' test.
+ - The test 'possible_rkts' has been removed because this is exactly
+   the same as the 'additional_rkts' test.
  - To allow for the merging of configuration options from files in the
    rkhunter.d directory, the UNHIDE_TESTS, MAIL-ON-WARNING, ENABLE_TESTS
    and DISABLE_TESTS options may now be specified more than once.
- - It is no longer required that the MAIL-ON-WARNING option exists in the
-   configuration file.
+ - It is no longer required that the MAIL-ON-WARNING option exists in
+   the configuration file.
  - Some configuration options can be specified more than once, and it is
    now possible to set these options to the null string (""). Previously
    use of the null string was ignored. Some options may assume a default
@@ -51,6 +51,9 @@
    'rkhunter.d' directory can reset an option to null, and, if required,
    provide new values simply by specifying the option once as null and
    then with a value.)
+ - The file properties test will now state if the target of a symbolic
+   link has changed. Previously this would have been detected, but
+   reported as a change of hash value, inode, file size etc.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
@@ -60,6 +63,13 @@
  - Ensure that the 'rkhunter.conf.local' file, if present, is not a
    symbolic link and is readable.
  - Improve the test that the root user is running rkhunter.
+ - The RPM package manager would log (as an info message) if an 'rpm'
+   command failed, but the user would generally be unaware of this.
+   Additionally, the relevant file would pass the file properties
+   test. Now the file is marked as having a missing hash.
+ - The RPM package manager could produce additional spurious warnings
+   if a file from a package was deleted, and the '/bin' or '/sbin'
+   directories were symbolic links (as now occurs with Fedora).
 
  -- 
 

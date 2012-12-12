@@ -1,4 +1,4 @@
-Version:2012110901
+Version:2012120501
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -306,6 +306,9 @@ FILE_PROP_SYSDTM_UNAVAIL:Current file modification time: Unavailable
 FILE_PROP_SYSDTM:Current file modification time: $1
 FILE_PROP_RKHDTM:Stored file modification time : $1
 FILE_PROP_NO_RKHDTM:No file modification time value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_SYSLNK:Current symbolic link target: '$1' -> '$2'
+FILE_PROP_RKHLNK:Stored symbolic link target : '$1' -> '$2'
+FILE_PROP_NO_RKHLNK:No symbolic link target found for file '$1' in the rkhunter.dat file.
 FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file '$1'
 FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
 FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file '$1'
@@ -320,6 +323,7 @@ FILE_PROP_VRFY_PERM:The file permissions have changed
 FILE_PROP_VRFY_UID:The file owner has changed
 FILE_PROP_VRFY_GID:The file group has changed
 FILE_PROP_VRFY_DTM:The file modification time has changed
+FILE_PROP_VRFY_LNK:The symbolic link target has changed
 FILE_PROP_VRFY_SIZE:The file size has changed
 
 FILE_PROP_EPOCH_DATE_CMD:Using '$1' to process epoch second times.

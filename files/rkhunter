@@ -2198,6 +2198,8 @@ get_bindir_option() {
 				echo "Invalid ${RKHTMPVAR2} option: Invalid directory found: ${DIR}"
 			elif [ -e "${DIR}" ]; then
 				if [ -d "${DIR}" ]; then
+					test -h "${DIR}" && BINISLINK=1
+
 					DIR=`echo "${DIR}" | tr -s '/' | sed -e 's:/$::'`
 
 					if [ -z "`echo \" ${RKHTMPVAR} \" | grep \" ${DIR} \"`" ]; then
@@ -5398,7 +5400,8 @@ rkh_dat_set_file_properties() {
 	# files to be checked. The format in the rkhunter.dat file is:
 	#
 	#     File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
-	#          <file size>:<date/time modified>:<package name>
+	#          <file size>:<date/time modified>:<package name>:
+	#	   <symbolic link target>
 	#
 	# The format is actually governed by the stat.pl file, and the
 	# output it produces. Changing the order of options does not
@@ -5460,6 +5463,7 @@ rkh_dat_set_file_properties() {
 		test ! -f "${FNAME}" -a ! -h "${FNAME}" && continue
 
 		FDATA=""
+		SYSLNK=""
 		SYSHASH=""
 		PKGNAME=""
 		FNAMEGREP=""
@@ -5531,7 +5535,7 @@ ${DIR}:1"
 		#
 		# Now start to get the file info by seeing if we are using a
 		# package manager. If we are, then get the package name and
-		# any other info we can excarot the hash value. That will be
+		# any other info we can except the hash value. That will be
 		# dealt with afterwards.
 		#
 
@@ -5541,64 +5545,90 @@ ${DIR}:1"
 			# First see if the file is exempt or belongs to a package.
 			#
 
-			if [ $NOVRFYFILE -eq 1 ]; then
-				ERRCODE=1
-			else
+			if [ $NOVRFYFILE -eq 0 ]; then
 				RKHTMPVAR=`${RPM_CMD} -qf ${FNAME} --queryformat '%{NAME}\n' 2>/dev/null`
-				ERRCODE=$?
-			fi
-
-			if [ $ERRCODE -eq 0 ]; then
-				#
-				# Okay we have a package name.
-				#
-
-				FILE_IS_PKGD=1
-				PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1`
-
-				RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILENAMES}\n]' ${FNAME} 2>/dev/null | grep ":${FNAMEGREP}\$"`
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
 					#
-					# If multiple packages claim the same file, we
-					# use the last one in the list. However, if we
-					# have 64-bit as well as 32-bit packages, then
-					# we use the 64-bit package in preference (as
-					# this is what RPM does).
+					# Okay we have a package name.
 					#
 
-					RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep ':(x86_64|ia64):' | tail ${TAIL_OPT}1`
+					FILE_IS_PKGD=1
+					PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1`
 
-					test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail ${TAIL_OPT}1`
-
-					FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
-					FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
-
-					RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
-					RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
-
-					RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
-					RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
-
-					RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
-
-					RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' ${FNAME} 2>/dev/null | grep ":${FNAMEGREP}\$"`
+					ERRCODE=$?
 
 					#
-					# Now get the inode value directly from the disk,
-					# but only if prelinking is not being used.
+					# The error code actually refers to the 'grep' command above. If the
+					# file is not found in the package, then this is probably due to the
+					# 'bin' directory being a link. So we change the filename, and retest.
 					#
 
-					RKHTMPVAR2=""
+					if [ $ERRCODE -eq 1 -a $BINISLINK -eq 1 ]; then
+						if [ -n "`echo \"$FNAME\" | grep '^\/usr\/'`" ]; then
+							RKHTMPVAR3=`echo "$FNAMEGREP" | sed -e 's:^/usr::'`
+						else
+							RKHTMPVAR3="/usr${FNAMEGREP}"
+						fi
 
-					if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
-						RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+						RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' ${FNAME} 2>/dev/null | grep ":${RKHTMPVAR3}\$"`
+						ERRCODE=$?
 					fi
 
-					FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
-				else
-					display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FNAME}" $ERRCODE
+					if [ $ERRCODE -eq 0 ]; then
+						#
+						# If multiple packages claim the same file, we
+						# use the last one in the list. However, if we
+						# have 64-bit as well as 32-bit packages, then
+						# we use the 64-bit package in preference (as
+						# this is what RPM does).
+						#
+
+						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep ':(x86_64|ia64):' | tail ${TAIL_OPT}1`
+
+						test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail ${TAIL_OPT}1`
+
+						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
+						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
+
+						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
+						RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
+
+						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
+
+						RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+
+						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+
+						if [ -h "${FNAME}" ]; then
+							test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FNAME}` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
+
+							SYSLNK=`echo "${RPM_QUERY_RESULT}" | cut -d: -f8`
+							SYSLNK="${DIR}/${SYSLNK}"
+
+							# This ensures the link target has things like '..' removed.
+							test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f ${SYSLNK}`
+						fi
+
+						#
+						# Now get the inode value directly from the disk,
+						# but only if prelinking is not being used.
+						#
+
+						RKHTMPVAR2=""
+
+						if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
+							RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+						fi
+
+						FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
+					else
+						NOHASH_COUNT=`expr $NOHASH_COUNT + 1`
+						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FNAME}" $ERRCODE
+					fi
 				fi
 			fi
 			;;
@@ -5759,9 +5789,10 @@ ${DIR}:1"
 						fi
 					elif [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
 						if [ $HAVE_READLINK -eq 1 ]; then
-							BL_TARGET=`${READLINK_CMD} -f ${FNAME}`
-							RKHTMPVAR=" -> ${BL_TARGET}"
-							RKHTMPVAR2=`echo "${BL_TARGET}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+							SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+
+							RKHTMPVAR=" -> ${SYSLNK}"
+							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 						else
 							RKHTMPVAR=""
 						fi
@@ -5795,6 +5826,11 @@ ${DIR}:1"
 		fi
 
 
+		if [ -h "${FNAME}" -a -z "${SYSLNK}" ]; then
+			test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+		fi
+
+
 		if [ -z "${SCMD}" ]; then
 			FDATA=":::::"
 		else
@@ -5810,7 +5846,7 @@ ${DIR}:1"
 			fi
 		fi
 
-		echo "File:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:" >>${RKHDAT_TMPFILE}
+		echo "File:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK}:" >>${RKHDAT_TMPFILE}
 	done
 
 
@@ -9272,6 +9308,7 @@ file_properties_check() {
 	VERIFIED_PKG_LIST=""
 
 	for FNAME in `cat ${RKH_FILEPROP_LIST}`; do
+		SYSLNK=""
 		FILENAME=""
 		FNAMEGREP=""
 		TEST_RESULT=""
@@ -9312,7 +9349,12 @@ file_properties_check() {
 					#
 
 					ADDNEWENTRY=1
-					RKHLINE="File:${FNAME}:1:1:1:1:1:1:1::"
+
+					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+						SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+					fi
+
+					RKHLINE="File:${FNAME}:1:1:1:1:1:1:1::${SYSLNK}:"
 				else
 					TEST_RESULT="${TEST_RESULT} norkhline"
 				fi
@@ -9353,6 +9395,8 @@ ${RKHLINE}"
 		SYSSIZE=0
 		SYSPERM=0
 		SYSINODE=0
+
+		RKHLNK=""
 		SYSHASH=""
 
 		if [ $USE_DAT_FILE -eq 1 -a -n "${RKHLINE}" ]; then
@@ -9383,99 +9427,125 @@ ${RKHLINE}"
 				# First we see if the file is exempt or part of a package.
 				#
 
-				if [ $NOVRFYFILE -eq 1 ]; then
-					ERRCODE=1
-				else
+				if [ $NOVRFYFILE -eq 0 ]; then
 					PKGNAME_ARCH=`${RPM_CMD} -qf ${FNAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
-					ERRCODE=$?
-				fi
-
-				if [ $ERRCODE -eq 0 ]; then
-					#
-					# Okay we have a package name. Is it in the list
-					# of packages we have already tested as verified?
-					#
-					# If multiple packages claim the same file, we use
-					# 64-bit over 32-bit, or simply the last one.
-					#
-
-					FILE_IS_PKGD=1
-
-					PKGNAME=`echo "${PKGNAME_ARCH}" | egrep '\.(x86_64|ia64)$' | tail ${TAIL_OPT}1`
-
-					test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail ${TAIL_OPT}1`
-
-					RKHTMPVAR=`echo "${PKGNAME}" | sed -e 's/\./\\\./g'`
-
-					if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
-						#
-						# No, it isn't in the list. So we verify the package
-						# and either add it to the list if it verifies okay,
-						# or get the verification result for the file.
-						#
-
-						PKGMGR_VERIFY_RESULT=`${RPM_CMD} -V "${PKGNAME}" 2>&1`
-
-						if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
-							VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
-						else
-							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FNAME}.* dependenc\"`" ]; then
-								DEPENDENCY_ERR=1
-							fi
-
-							PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FNAMEGREP}\$" | cut -d' ' -f1`
-						fi
-					fi
-
-
-					#
-					# The package manager check does not verify all the items
-					# we check. So we still need to dig out the rest of the
-					# information about this file from the package manager database.
-					#
-
-					RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FNAMEGREP}\$"`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
-						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail ${TAIL_OPT}1`
-
-						FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
-						FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
-
-						RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
-						RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
-
-						RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
-						RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
-
-						RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
-
-						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
-
-						FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
-					else
 						#
-						# If, for some reason, we cannot get the package information,
-						# then treat it as if it returned all null values.
+						# Okay we have a package name. Is it in the list
+						# of packages we have already tested as verified?
+						#
+						# If multiple packages claim the same file, we use
+						# 64-bit over 32-bit, or simply the last one.
 						#
 
-						FDATA=":::::"
-						display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... ${FNAME}" $ERRCODE
+						FILE_IS_PKGD=1
+
+						PKGNAME=`echo "${PKGNAME_ARCH}" | egrep '\.(x86_64|ia64)$' | tail ${TAIL_OPT}1`
+
+						test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail ${TAIL_OPT}1`
+
+						RKHTMPVAR=`echo "${PKGNAME}" | sed -e 's/\./\\\./g'`
+
+						if [ -z "`echo \"${VERIFIED_PKG_LIST}\" | grep \" ${RKHTMPVAR} \"`" ]; then
+							#
+							# No, it isn't in the list. So we verify the package
+							# and either add it to the list if it verifies okay,
+							# or get the verification result for the file.
+							#
+
+							PKGMGR_VERIFY_RESULT=`${RPM_CMD} -V "${PKGNAME}" 2>&1`
+
+							if [ -z "${PKGMGR_VERIFY_RESULT}" ]; then
+								VERIFIED_PKG_LIST="${VERIFIED_PKG_LIST} ${PKGNAME} "
+							else
+								if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep \"prelink.* ${FNAME}.* dependenc\"`" ]; then
+									DEPENDENCY_ERR=1
+								fi
+
+								PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FNAMEGREP}\$" | cut -d' ' -f1`
+							fi
+						fi
+
+
+						#
+						# The package manager check does not verify all the items
+						# we check. So we still need to dig out the rest of the
+						# information about this file from the package manager database.
+						#
+
+						RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILELINKTOS}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FNAMEGREP}\$"`
+						ERRCODE=$?
+
+						#
+						# The error code actually refers to the 'grep' command above. If the
+						# file is not found in the package, then this is probably due to the
+						# 'bin' directory being a link. So we change the filename, and retest.
+						#
+
+						if [ $ERRCODE -eq 1 -a $BINISLINK -eq 1 ]; then
+							if [ -n "`echo \"${FNAME}\" | grep '^\/usr\/'`" ]; then
+								RKHTMPVAR3=`echo "${FNAMEGREP}" | sed -e 's:^/usr::'`
+							else
+								RKHTMPVAR3="/usr${FNAMEGREP}"
+							fi
+
+							RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILELINKTOS}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${RKHTMPVAR3}\$"`
+							ERRCODE=$?
+						fi
+
+						if [ $ERRCODE -eq 0 ]; then
+							RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT}" | tail ${TAIL_OPT}1`
+
+							FPERM="0`echo \"${RPM_QUERY_RESULT}\" | cut -d: -f1 | cut -c 3-`"
+							FPERM=`echo "${FPERM}" | sed -e 's/^00/0/'`
+
+							RKHUID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f2`
+							RKHUID=`grep "^${RKHUID}:" /etc/passwd 2>/dev/null | cut -d: -f3`
+
+							RKHGID=`echo "${RPM_QUERY_RESULT}" | cut -d: -f3`
+							RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
+
+							RKHSIZE=`echo "${RPM_QUERY_RESULT}" | cut -d: -f4`
+
+							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
+
+							if [ -h "${FNAME}" ]; then
+								test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FNAME}` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
+
+								RKHLNK=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
+								RKHLNK="${DIR}/${RKHLNK}"
+
+								# This ensures the link target has things like '..' removed.
+								test $HAVE_READLINK -eq 1 && RKHLNK=`${READLINK_CMD} -f ${RKHLNK}`
+#jh - when we check the link target we must cater for whitelisted (EXISTWHITELIST) entries - as already happens when the hash has changed for a link.
+							fi
+
+							FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
+						else
+							#
+							# If, for some reason, we cannot get the package information,
+							# then treat it as if it returned all null values.
+							#
+
+							FDATA=":::::"
+							display --to LOG --type INFO CMD_ERROR "rpm -qf --queryformat... \"${FNAME}\" (${PKGNAME})" $ERRCODE
+						fi
+
+						#
+						# Now get the inode value directly from the disk,
+						# but only if prelinking is not being used.
+						#
+
+						RKHTMPVAR=""
+
+						if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
+							RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+						fi
+
+						FDATA="${RKHTMPVAR}:${FDATA}"
 					fi
-
-					#
-					# Now get the inode value directly from the disk,
-					# but only if prelinking is not being used.
-					#
-
-					RKHTMPVAR=""
-
-					if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
-						RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
-					fi
-
-					FDATA="${RKHTMPVAR}:${FDATA}"
 				fi
 			elif [ "${PKGMGR}" = "SOLARIS" ]; then
 				#
@@ -9652,7 +9722,7 @@ ${RKHLINE}"
 						fi
 					fi
 
-					if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
+					if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|L|(^..\?)|(^....L)'`" ]; then
 						HASH_TEST_PASSED=1
 					else
 						TEST_RESULT="${TEST_RESULT} verify:hashchanged"
@@ -9675,16 +9745,19 @@ ${RKHLINE}"
 
 						if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
 							# Check the link target to see if it is whitelisted.
-							BL_TARGET=`${READLINK_CMD} -f ${FNAME}`
 
-							FNAMEGREP=`echo "${BL_TARGET}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+							if [ -z "${SYSLNK}" ]; then
+								SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+							fi
+
+							FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
 							if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 								RKHTMPVAR=1
 
 								if [ ! -e "${FNAME}" -a $VERBOSE_LOGGING -eq 1 ]; then
 									# Only log this if it is a broken link.
-									display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "${FNAME} -> ${BL_TARGET}"
+									display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "${FNAME} -> ${SYSLNK}"
 								fi
 							fi
 						fi
@@ -9720,13 +9793,16 @@ ${RKHLINE}"
 							if [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
 								if [ $HAVE_READLINK -eq 1 ]; then
 									# Check the link target to see if it is whitelisted.
-									BL_TARGET=`${READLINK_CMD} -f ${FNAME}`
 
-									FNAMEGREP=`echo "${BL_TARGET}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+									if [ -z "${SYSLNK}" ]; then
+										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+									fi
+
+									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
-											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "${FNAME} -> ${BL_TARGET}"
+											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "${FNAME} -> ${SYSLNK}"
 										fi
 									else
 										TEST_RESULT="${TEST_RESULT} hashchanged"
@@ -9902,6 +9978,29 @@ ${RKHLINE}"
 							TEST_RESULT="${TEST_RESULT} norkhdtm"
 						fi
 					fi
+
+
+					#
+					# If the file is a link, then check that the target has not changed.
+					#
+
+					if [ -h "${FNAME}" ]; then
+						if [ $FILE_IS_PKGD -eq 1 ]; then
+							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'L|(^....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:linkchanged"
+						else
+							RKHLNK=`echo ${RKHLINE} | cut -d: -f11`
+
+							if [ -z "${SYSLNK}" -a $HAVE_READLINK -eq 1 ]; then
+								SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+							fi
+
+							if [ -n "${RKHLNK}" ]; then
+								test "${RKHLNK}" != "${SYSLNK}" && TEST_RESULT="${TEST_RESULT} linkchanged"
+							else
+								TEST_RESULT="${TEST_RESULT} norkhlnk"
+							fi
+						fi
+					fi
 				elif [ -z "${WL_FILE}" ]; then
 					TEST_RESULT="${TEST_RESULT} sysattrunavail"
 				fi
@@ -9949,7 +10048,7 @@ ${RKHLINE}"
 				if [ -n "${TEST_RESULT}" ]; then
 					for RKHTMPVAR in ${TEST_RESULT}; do
 						case "${RKHTMPVAR}" in 
-						hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged)
+						hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged|linkchanged)
 							TEST_RESULT=`echo "${TEST_RESULT}" | sed -e "s/ ${RKHTMPVAR}//"`
 							;;
 						esac
@@ -9957,7 +10056,7 @@ ${RKHLINE}"
 				fi
 
 				NEWRKHENTRIES="${NEWRKHENTRIES}
-File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::"
+File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::${SYSLNK}:"
 			fi
 		fi
 
@@ -10070,7 +10169,7 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 			RKHTMPVAR3=0
 			for RKHTMPVAR in ${TEST_RESULT}; do
 				case "${RKHTMPVAR}" in
-				hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged)
+				hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged|linkchanged)
 					if [ $RKHTMPVAR2 -eq 0 ]; then
 						RKHTMPVAR2=1
 						display --to LOG --type WARNING FILE_PROP_CHANGED
@@ -10149,9 +10248,16 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHDTM "${RKHDTM}"
 						fi
 						;;
+					linkchanged)
+						test -z "${RKHLNK}" && RKHLNK="Unavailable"
+						test -z "${SYSLNK}" && SYSLNK="Unavailable"
+
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSLNK "${FNAME}" "${SYSLNK}"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHLNK "${FNAME}" "${RKHLNK}"
+						;;
 					esac
 					;;
-				verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged|verify:sizechanged|verify:dtmchanged)
+				verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged|verify:sizechanged|verify:dtmchanged|verify:linkchanged)
 					if [ $RKHTMPVAR3 -eq 0 ]; then
 						RKHTMPVAR3=1
 						display --to LOG --type WARNING FILE_PROP_VRFY
@@ -10183,6 +10289,9 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 					verify:dtmchanged)
 						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM
 						;;
+					verify:linkchanged)
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_LNK
+						;;
 					esac
 					;;
 				norkhline)
@@ -10208,6 +10317,9 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 					;;
 				norkhdtm)
 					display --to LOG --type WARNING FILE_PROP_NO_RKHDTM "${FNAME}"
+					;;
+				norkhlnk)
+					display --to LOG --type WARNING FILE_PROP_NO_RKHLNK "${FNAME}"
 					;;
 				sysattrunavail)
 					display --to LOG --type WARNING FILE_PROP_NO_SYSATTR "${FNAME}"
@@ -10272,19 +10384,20 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 
 	if [ $USE_DAT_FILE -eq 1 ]; then
 		for FNAME in `grep '^File:' ${RKHDAT_FILE} | cut -d: -f2`; do
-			if [ -z "`grep \"^${FNAME}$\" ${RKH_FILEPROP_LIST}`" ]; then
-				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAME} \"`" ]; then
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
+
+			if [ -z "`grep \"^${FNAMEGREP}$\" ${RKH_FILEPROP_LIST}`" ]; then
+				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 					#
 					# Remove the entry from the rkhunter.dat file.
 					#
 
 					OLDRKHENTRIES="${OLDRKHENTRIES}
 File:${FNAME}:.*"
-				else
+				elif [ ! -e "${FNAME}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 					PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
-# jh - not right (can cause FPs when command dirs are links (eg '/bin' -> '/usr/bin')
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "${FNAME}"
 					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "${FNAME}"
 				fi
@@ -16977,6 +17090,9 @@ BINPATHS=""
 DFLT_BINPATHS="/bin /usr/bin /sbin /usr/sbin /usr/local/bin /usr/local/sbin /usr/libexec /usr/local/libexec"
 BINDIR_OPT=0
 
+# This will be set if any of the command directories is a symbolic link.
+BINISLINK=0
+
 # Default 'id' command. Solaris may reset this.
 ID_CMD="id"
 
@@ -17389,6 +17505,7 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
+			CHECK=1
 			ENDIS_OPT=1
 			CL_DISABLE_TESTS="${CL_DISABLE_TESTS} ${RKHTMPVAR}"
 			;;
@@ -17410,6 +17527,7 @@ while [ $# -ge 1 ]; do
 			;;
 		*)
 			shift
+			CHECK=1
 			ENDIS_OPT=1
 			ENABLE_OPT=1
 			CL_ENABLE_TESTS="${CL_ENABLE_TESTS} ${RKHTMPVAR}"
@@ -17698,8 +17816,6 @@ if [ $ENDIS_OPT -eq 1 ]; then
 
 	# The '--nocf' option is only for disabled tests.
 	test -z "${CL_DISABLE_TESTS}" && USECF=1
-
-	test $PROP_UPDATE -eq 0 && CHECK=1
 else
 	USECF=1
 fi
@@ -18502,7 +18618,7 @@ if [ $PROP_UPDATE -eq 1 ]; then
 	fi
 fi
 
-if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
+if [ $CHECK -eq 1 ]; then
 	display --to LOG --type INFO ENABLED_TESTS "${ENABLE_TESTS}"
 	display --to LOG --type INFO DISABLED_TESTS "${DISABLE_TESTS}"
 fi
