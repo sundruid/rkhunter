@@ -1,4 +1,4 @@
-Version:2012120501
+Version:2012122101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -235,7 +235,10 @@ USER_DISABLED_TEST:Test '$1' disabled at users request.
 
 CHECK_START:Starting system checks...
 CHECK_WARNINGS_NOT_FOUND:No warnings were found while checking the system.
+CHECK_WARNINGS_NOT_FOUND0:0 warnings were found while checking the system.
 CHECK_WARNINGS_FOUND:One or more warnings have been found while checking the system.
+CHECK_WARNINGS_FOUND_NUMBER:$1 warnings have been found while checking the system.
+CHECK_WARNINGS_FOUND_NUMBER1:1 warning has been found while checking the system.
 CHECK_WARNINGS_FOUND_RERUN:Please re-run rkhunter, ensuring that a log file is created.
 CHECK_WARNINGS_FOUND_CHK_LOG:Please check the log file ($1)
 
@@ -309,6 +312,7 @@ FILE_PROP_NO_RKHDTM:No file modification time value found for file '$1' in the r
 FILE_PROP_SYSLNK:Current symbolic link target: '$1' -> '$2'
 FILE_PROP_RKHLNK:Stored symbolic link target : '$1' -> '$2'
 FILE_PROP_NO_RKHLNK:No symbolic link target found for file '$1' in the rkhunter.dat file.
+FILE_PROP_LINK_WL:The symbolic link target has changed, but it is whitelisted: '$1' -> '$2'
 FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file '$1'
 FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
 FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file '$1'
@@ -494,8 +498,9 @@ HISTORY_CHECK:Checking root account shell history files
 HISTORY_CHECK_FOUND:Root account $1 shell history file is a symbolic link: $2
 
 SYSTEM_CONFIGS_START:Performing system configuration file checks
-SYSTEM_CONFIGS_FILE:Checking for $1 configuration file
-SYSTEM_CONFIGS_FILE_FOUND:Found $1 configuration file: $2
+SYSTEM_CONFIGS_FILE:Checking for a system logging configuration file
+SYSTEM_CONFIGS_FILE_SSH:Checking for an SSH configuration file
+SYSTEM_CONFIGS_FILE_FOUND:Found $1 $2 configuration file: $3
 SYSTEM_CONFIGS_SSH_ROOT:Checking if SSH root access is allowed
 SYSTEM_CONFIGS_SSH_ROOT_FOUND:The SSH and rkhunter configuration options should be the same:
 SYSTEM_CONFIGS_SSH_ROOT_FOUND1:SSH configuration option 'PermitRootLogin': $1
@@ -507,14 +512,12 @@ SYSTEM_CONFIGS_SSH_PROTO_DIFF1:SSH configuration option 'Protocol': $1
 SYSTEM_CONFIGS_SSH_PROTO_DIFF2:Rkhunter configuration option 'ALLOW_SSH_PROT_V1': $1
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The SSH configuration option 'Protocol' has not been set.
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The default value may be '2,1', to allow the use of protocol version 1.
-SYSTEM_CONFIGS_SYSLOG:Checking for running syslog daemon
-SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:The syslog daemon is not running.
-SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:The syslog daemon is not running, but a metalog daemon has been found.
-SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING:The syslog daemon is not running, but a socklog daemon has been found.
-SYSTEM_CONFIGS_SYSLOG_NO_FILE:The syslog daemon is running, but no configuration file can be found.
+SYSTEM_CONFIGS_SYSLOG:Checking for a running system logging daemon
+SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:No running system logging daemon has been found.
+SYSTEM_CONFIGS_SYSLOG_DAEMON:A running '$1' daemon has been found.
+SYSTEM_CONFIGS_SYSLOG_NO_FILE:The '$1' daemon is running, but no configuration file can be found.
 SYSTEM_CONFIGS_SYSLOG_REMOTE:Checking if syslog remote logging is allowed
-SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG:Configuration file allows remote logging: $1
-SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND:$1 configuration file allows remote logging: $2
+SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG:The '$1' configuration file allows remote logging: $2
 SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED:Rkhunter configuration option 'ALLOW_SYSLOG_REMOTE_LOGGING' has been enabled.
 
 FILESYSTEM_START:Performing filesystem checks

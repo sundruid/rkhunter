@@ -3355,10 +3355,12 @@ get_ports_option() {
 					FNAME="${RKHTMPVAR2}"
 				fi
 
-				if [ ! -e "${FNAME}" ]; then
+				RKHTMPVAR3=`echo "${FNAME}" | tr '%' ' '`
+
+				if [ ! -e "${RKHTMPVAR3}" ]; then
 					LEAVE=1
 					echo "Invalid PORT_WHITELIST configuration option - non-existent pathname specified: ${RKHTMPVAR2}"
-				elif [ ! -f "${FNAME}" ]; then
+				elif [ ! -f "${RKHTMPVAR3}" ]; then
 					LEAVE=1
 					echo "Invalid PORT_WHITELIST configuration option - pathname specified is not a file: ${RKHTMPVAR2}"
 				else
@@ -3398,7 +3400,7 @@ get_ports_option() {
 		fi
 
 		PORT_WHITELIST=" ${PORT_WHITELIST} "
-		PORT_WHITELIST_PATH=" ${PORT_WHITELIST_PATH} "
+		PORT_WHITELIST_PATH=`echo ${PORT_WHITELIST_PATH} | tr ' ' '\n' | tr '%' ' '`
 	fi
 
 	return
@@ -4995,6 +4997,37 @@ get_prelink_dep_option() {
 }
 
 
+get_summary_warnings_option() {
+
+	#
+	# Get the configuration option to see if we are to
+	# show the actual number of warnings in the summary.
+	#
+
+	ERRCODE=0
+
+	SHOW_SUMMARY_WARNINGS_NUMBER=`get_option 1 single SHOW_SUMMARY_WARNINGS_NUMBER` || exit 1
+
+	if [ -n "${SHOW_SUMMARY_WARNINGS_NUMBER}" ]; then
+		check_is_digit SHOW_SUMMARY_WARNINGS_NUMBER
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	else
+		SHOW_SUMMARY_WARNINGS_NUMBER=0
+	fi
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
@@ -5093,6 +5126,8 @@ get_configfile_options() {
 		check_test hidden_procs && get_unhide_options
 
 		check_test suspscan && get_suspscan_options
+
+		test $CHECK -eq 1 && get_summary_warnings_option
 	fi
 
 
@@ -9512,14 +9547,16 @@ ${RKHLINE}"
 							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
 
 							if [ -h "${FNAME}" ]; then
-								test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FNAME}` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
-
 								RKHLNK=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
-								RKHLNK="${DIR}/${RKHLNK}"
+
+								if [ -z "`echo \"${RKHLNK}\" | grep '^/'`" ]; then
+									test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} ${FNAME}` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
+
+									RKHLNK="${DIR}/${RKHLNK}"
+								fi
 
 								# This ensures the link target has things like '..' removed.
 								test $HAVE_READLINK -eq 1 && RKHLNK=`${READLINK_CMD} -f ${RKHLNK}`
-#jh - when we check the link target we must cater for whitelisted (EXISTWHITELIST) entries - as already happens when the hash has changed for a link.
 							fi
 
 							FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
@@ -9722,7 +9759,7 @@ ${RKHLINE}"
 						fi
 					fi
 
-					if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|L|(^..\?)|(^....L)'`" ]; then
+					if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
 						HASH_TEST_PASSED=1
 					else
 						TEST_RESULT="${TEST_RESULT} verify:hashchanged"
@@ -9986,16 +10023,48 @@ ${RKHLINE}"
 
 					if [ -h "${FNAME}" ]; then
 						if [ $FILE_IS_PKGD -eq 1 ]; then
-							echo "${PKGMGR_VERIFY_RESULT}" | egrep 'L|(^....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:linkchanged"
+							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep 'L|(^....\?)'`" ]; then
+								if [ $HAVE_READLINK -eq 1 ]; then
+									# Check the link target to see if it is whitelisted.
+
+									if [ -z "${SYSLNK}" ]; then
+										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+									fi
+
+									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+										if [ $VERBOSE_LOGGING -eq 1 ]; then
+											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
+											display --to LOG --type INFO FILE_PROP_LINK_WL "${FNAME}" "${RKHTMPVAR}"
+										fi
+									else
+										TEST_RESULT="${TEST_RESULT} verify:linkchanged"
+									fi
+								else
+									TEST_RESULT="${TEST_RESULT} verify:linkchanged"
+								fi
+							fi
 						else
 							RKHLNK=`echo ${RKHLINE} | cut -d: -f11`
 
-							if [ -z "${SYSLNK}" -a $HAVE_READLINK -eq 1 ]; then
+							if [ $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" ]; then
 								SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 							fi
 
 							if [ -n "${RKHLNK}" ]; then
-								test "${RKHLNK}" != "${SYSLNK}" && TEST_RESULT="${TEST_RESULT} linkchanged"
+								if [ "${RKHLNK}" != "${SYSLNK}" ]; then
+									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+										if [ $VERBOSE_LOGGING -eq 1 ]; then
+											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
+											display --to LOG --type INFO FILE_PROP_LINK_WL "${FNAME}" "${RKHTMPVAR}"
+										fi
+									else
+										TEST_RESULT="${TEST_RESULT} linkchanged"
+									fi
+								fi
 							else
 								TEST_RESULT="${TEST_RESULT} norkhlnk"
 							fi
@@ -12408,6 +12477,8 @@ ${PROC} ${PID} ${FNAME}"
 
 				FOUNDFILES=`grep "/${FNAMEGREP}$" ${RKHLSOF_FILE}`
 
+				ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 				if [ -n "${FOUNDFILES}" ]; then
 					FOUND=0
 
@@ -12826,9 +12897,13 @@ ${RKHTMPVAR}"
 	TRIPWIREFILE="/var/lib/tripwire/`uname -n 2>/dev/null`.twd"
 
 	if [ -f "${TRIPWIREFILE}" ]; then
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 		if [ -z "`grep 'Tripwire segment-faulted !' ${TRIPWIREFILE}`" ]; then
 			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
 		else
+			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
 			display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND "${TRIPWIREFILE}" "Tripwire segment-faulted"
 		fi
@@ -13727,10 +13802,10 @@ check_port_wl() {
 
 		if [ -n "${LSOF_CMD}" ]; then
 			if [ -n "${FNAME}" ]; then
-				if [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \" ${FNAME}:${PROTO}:${PORT} \"`" ]; then
+				if [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAME}:${PROTO}:${PORT}\$\"`" ]; then
 					RKHTMPVAR2=1
 					FOUND="path_whitelisted"
-				elif [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \" ${FNAME} \"`" ]; then
+				elif [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAME}\$\"`" ]; then
 					RKHTMPVAR2=1
 					FOUND="path_whitelisted"
 				elif [ $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
@@ -13837,15 +13912,15 @@ do_network_port_checks() {
 	IFS=$IFSNL
 
 	for LINE in `cat ${DB_PATH}/backdoorports.dat`; do
-		if [ -n "`echo \"${LINE}\" | egrep '^(#|[Vv]ersion:)'`" ]; then
-			continue
-		elif [ -z "${LINE}" ]; then
+		if [ -z "`echo \"${LINE}\" | grep '^[0-9][0-9]*:'`" ]; then
 			continue
 		fi
 
 		PORT=`echo "${LINE}" | cut -d: -f1`
 		DESCRIPTION=`echo "${LINE}" | cut -d: -f2`
 		PROTO=`echo "${LINE}" | cut -d: -f3 | tr '[:lower:]' '[:upper:]'`
+
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 		if [ -z "`echo \"${PORT}\" | grep '^[1-9][0-9]*$'`" ]; then
 			echo "Error: Invalid port in backdoorports.dat file: $LINE"
@@ -13882,6 +13957,8 @@ do_network_port_checks() {
 			;;
 		*)
 			FOUNDPORT=1
+			ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
+
 			display --to LOG --type PLAIN --log-indent 4 --result FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 
 			test -n "${FNAME}" && FNAME=" by ${FNAME}"
@@ -15077,7 +15154,7 @@ do_system_config_files_check() {
 	#
 	# This function carries out checks on some of the system
 	# software configurations. At present this checks the SSH
-	# and syslog configurations.
+	# and system logging configurations.
 	#
 
 	if `check_test system_configs`; then
@@ -15108,9 +15185,9 @@ do_system_config_files_check() {
 	done
 
 	if [ -n "${SSH_CONFIG_FILE}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "SSH"
+		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 
-		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "SSH" "${SSH_CONFIG_FILE}"
+		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "an" "SSH" "${SSH_CONFIG_FILE}"
 
 		display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
 		display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
@@ -15181,15 +15258,16 @@ do_system_config_files_check() {
 			display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND
 		fi
 	else
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "SSH"
+		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 	fi
 
 
 	#
-	# Next we find out if the syslog daemon is running.
+	# Next we find out if a system logging daemon is running.
 	#
 
-	SYSLOG_SEEN=0
+	TITLE_SHOWN=0
+	SYSLOG_SEEN=0; SYSTEMD_SEEN=0
 	METALOG_SEEN=0; SOCKLOG_SEEN=0
 
 	if [ -n "${PS_CMD}" ]; then
@@ -15202,28 +15280,55 @@ do_system_config_files_check() {
 		if [ -n "${RKHTMPVAR}" ]; then
 			SYSLOG_SEEN=1
 
-			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-		else
-			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'metalog( |$)' | grep -v 'egrep'`
+			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
 
-			if [ -n "${RKHTMPVAR}" ]; then
-				METALOG_SEEN=1
-
-				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING
+			if [ -n "`echo \"${RKHTMPVAR}\" | grep 'rsyslog'`" ]; then
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "rsyslog"
+			elif [ -n "`echo \"${RKHTMPVAR}\" | grep 'syslog-ng'`" ]; then
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "syslog-ng"
 			else
-				RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'socklog( |$)' | grep -v 'egrep'`
-
-				if [ -n "${RKHTMPVAR}" ]; then
-					SOCKLOG_SEEN=1
-
-					display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING
-				else
-					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-					display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING
-				fi
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "syslog"
 			fi
+
+			TITLE_SHOWN=1
+		fi
+
+		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'systemd-journald( |$)' | grep -v 'egrep'`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			SYSTEMD_SEEN=1
+
+			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "systemd-journald"
+
+			TITLE_SHOWN=1
+		fi
+
+		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'metalog( |$)' | grep -v 'egrep'`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			METALOG_SEEN=1
+
+			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "metalog"
+
+			TITLE_SHOWN=1
+		fi
+
+		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'socklog( |$)' | grep -v 'egrep'`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			SOCKLOG_SEEN=1
+
+			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "socklog"
+
+			TITLE_SHOWN=1
+		fi
+
+		if [ $TITLE_SHOWN -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
@@ -15232,104 +15337,96 @@ do_system_config_files_check() {
 
 
 	#
-	# Now loop through the syslog configuration files.
+	# Now loop through the system logging configuration files.
 	#
 
 	if [ -z "${SYSLOG_CONFIG_FILE}" ]; then
-		SYSLOG_CONFIG_FILE="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf"
+		SYSLOG_CONFIG_FILE="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf /etc/systemd/journald.conf /etc/systemd/systemd-journald.conf"
 	fi
 
 	if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
-		display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+		display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
 	else
-		FILEFOUND=0
-		REMLOGFOUND=""
+		FILEFOUND=""
+		REM_LOGGING_FOUND=0
+
+		test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
 
 		for FNAME in ${SYSLOG_CONFIG_FILE}; do
-			if [ -f "${FNAME}" ]; then
-				if [ $FILEFOUND -eq 0 ]; then
-					test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
-				fi
-
-				FILEFOUND=1
-			else
-				continue
-			fi
+			test ! -f "${FNAME}" && continue
 
 			# First, log where the configuration file is located.
 
+			RKHTMPVAR="a"
+
 			if [ -n "`echo \"${FNAME}\" | grep '/rsyslog\.conf$'`" ]; then
 				FTYPE="rsyslog"
+				RKHTMPVAR="an"
 			elif [ -n "`echo \"${FNAME}\" | grep '/syslog-ng\.conf$'`" ]; then
 				FTYPE="syslog-ng"
+			elif [ -n "`echo \"${FNAME}\" | egrep '/(systemd-)?journald\.conf$'`" ]; then
+				FTYPE="systemd"
 			else
 				FTYPE="syslog"
 			fi
 
-			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${FTYPE}" "${FNAME}"
+			FILEFOUND="${FILEFOUND} ${FTYPE} "
+
+			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" "${FTYPE}" "${FNAME}"
 
 
 			# Next see if the configuration file allows remote logging.
 
-			if [ -n "`echo \"${FNAME}\" | egrep '/r?syslog\.conf$'`" ]; then
-				RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' ${FNAME} | egrep -i -v '(@|:omrelp:)127\.'`
-			else
-				#
-				# For syslog-ng we must look for a destination
-				# block which uses TCP or UDP.
-				#
+			if [ "${FTYPE}" != "systemd" ]; then
+				RKHTMPVAR=""
 
-				RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${FNAME} | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
-			fi
+				if [ -n "`echo \"${FNAME}\" | egrep '/r?syslog\.conf$'`" ]; then
+					RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' ${FNAME} | egrep -i -v '(@|:omrelp:)127\.'`
+				else
+					#
+					# For syslog-ng we must look for a destination
+					# block which uses TCP or UDP.
+					#
 
-			if [ -n "${RKHTMPVAR}" ]; then
-				REMLOGFOUND="${REMLOGFOUND}
-${FTYPE}:${RKHTMPVAR}"
+					RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' ${FNAME} | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
+				fi
 
-				display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG "${RKHTMPVAR}"
+				if [ -n "${RKHTMPVAR}" ]; then
+					REM_LOGGING_FOUND=1
+					display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG "${FTYPE}" "${RKHTMPVAR}"
+				fi
 			fi
 		done
 
 
 		#
-		# Now display the results.
+		# Now display the results. We need to rank these so
+		# that the warnings are shown before anything else.
 		#
 
-		if [ $FILEFOUND -eq 1 ]; then
-			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-		elif [ $METALOG_SEEN -eq 1 -o $SOCKLOG_SEEN -eq 1 ]; then
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-		elif [ $SYSLOG_SEEN -eq 1 ]; then
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE
+		if [ $SYSLOG_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE "syslog"
+		elif [ $SYSTEMD_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | grep ' systemd '`" ]; then
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE "systemd-journald"
+		elif [ -n "${FILEFOUND}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
 		else
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE "syslog"
+			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
 		fi
 
 		#
 		# We only display the remote logging result if a configuration file was found.
 		#
 
-		if [ $FILEFOUND -eq 1 ]; then
+		if [ -n "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
 			if [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 ]; then
 				display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
-			elif [ -z "${REMLOGFOUND}" ]; then
+			elif [ $REM_LOGGING_FOUND -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
 			else
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
-
-				IFS=$IFSNL
-
-				REMLOGFOUND=`echo "${REMLOGFOUND}" | sed -e '/^$/d'`
-
-				for FNAME in ${REMLOGFOUND}; do
-					FTYPE=`echo ${FNAME} | cut -d: -f1`
-					RKHTMPVAR=`echo ${FNAME} | cut -d: -f2-`
-
-					display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_REMOTE_FOUND "${FTYPE}" "${RKHTMPVAR}"
-				done
-
-				IFS=$RKHIFS
 			fi
 		fi
 	fi
@@ -15982,7 +16079,7 @@ display_check_summary() {
 
 	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_RKT_SCAN
 
-	if `check_test rootkits || check_test startup_malware`; then
+	if `check_test rootkits || check_test startup_malware` || test $ROOTKIT_COUNT -gt 0; then
 		RKHTMPVAR2=""
 
 		if [ -n "${ROOTKIT_FAILED_NAMES}" ]; then
@@ -16213,12 +16310,29 @@ do_system_check() {
 
 		display_check_summary
 
-		if [ $WARNING_COUNT -eq 0 ]; then
-			display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_NOT_FOUND
-		else
-			RKH_WARN_DISPLYD=1
-			display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND
+		if [ $SHOW_SUMMARY_WARNINGS_NUMBER -eq 0 ]; then
+			if [ $WARNING_COUNT -eq 0 ]; then
+				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_NOT_FOUND
+			else
+				RKH_WARN_DISPLYD=1
 
+				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND
+			fi
+		else
+			if [ $WARNING_COUNT -eq 0 ]; then
+				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_NOT_FOUND0
+			else
+				RKH_WARN_DISPLYD=1
+
+				if [ $WARNING_COUNT -eq 1 ]; then
+					display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_NUMBER1
+				else
+					display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_NUMBER "$WARNING_COUNT"
+				fi
+			fi
+		fi
+
+		if [ $WARNING_COUNT -gt 0 ]; then
 			if [ $NOLOG -eq 1 ]; then
 				display --to SCREEN --type PLAIN --nl-after CHECK_WARNINGS_FOUND_RERUN
 			else
@@ -16257,7 +16371,15 @@ do_system_check() {
 			OLD_NOTTY=$NOTTY
 			NOTTY=0
 
-			display --to SCREEN --type PLAIN --nl CHECK_WARNINGS_FOUND
+			if [ $SHOW_SUMMARY_WARNINGS_NUMBER -eq 0 ]; then
+				display --to SCREEN --type PLAIN --nl CHECK_WARNINGS_FOUND
+			else
+				if [ $WARNING_COUNT -eq 1 ]; then
+					display --to SCREEN --type PLAIN --nl CHECK_WARNINGS_FOUND_NUMBER1
+				else
+					display --to SCREEN --type PLAIN --nl CHECK_WARNINGS_FOUND_NUMBER "$WARNING_COUNT"
+				fi
+			fi
 
 			if [ $NOLOG -eq 1 ]; then
 				display --to SCREEN --type PLAIN CHECK_WARNINGS_FOUND_RERUN
@@ -17287,6 +17409,7 @@ NOTTY=0
 # By default show the system check summary.
 SHOW_SUMMARY=1
 SHOW_SUMMARY_OPT=0
+SHOW_SUMMARY_WARNINGS_NUMBER=0
 
 # By default log most things that are checked.
 VERBOSE_LOGGING=1

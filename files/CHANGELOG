@@ -34,6 +34,15 @@
    once (but also see the change below regarding the null string). The
    installer will automatically include any configuration files to the
    file properties test.
+ - A new configuration file option, 'SHOW_SUMMARY_WARNINGS_NUMBER',
+   can be set so that the summary will display the actual number of
+   warnings found, rather than the default message which simply states
+   that one or more warnings were found. If no warnings were found,
+   then it will be stated that '0' warnings were found.
+ - The tests to see if 'syslog' is running, and its configuration
+   file is present, have now been changed. The test has been renamed
+   to state 'system logging' rather than 'syslog', and will now detect
+   if 'systemd' logging is being used as well as, or instead of, syslog.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly
@@ -54,6 +63,8 @@
  - The file properties test will now state if the target of a symbolic
    link has changed. Previously this would have been detected, but
    reported as a change of hash value, inode, file size etc.
+ - The PORT_WHITELIST configuration option can now specify spaces in
+   a pathname by using the '%' character.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
@@ -70,6 +81,9 @@
  - The RPM package manager could produce additional spurious warnings
    if a file from a package was deleted, and the '/bin' or '/sbin'
    directories were symbolic links (as now occurs with Fedora).
+ - The 'tripwire', 'ports' and 'running_procs' tests detect possible
+   rootkits, but these were not being reported in the summary. This
+   has now been fixed, and those tests will always show a summary.
 
  -- 
 
