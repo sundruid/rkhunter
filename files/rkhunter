@@ -8584,7 +8584,6 @@ do_system_check_initialisation() {
 			 t0rnp:T0rn Rootkit
 			 rx4u:Unknown rootkit
 			 rx2me:Unknown rootkit
-			 crontab:Unknown rootkit
 			 sshdu:Unknown rootkit
 			 glotzer:Unknown rootkit
 			 holber:Devil Rootkit
