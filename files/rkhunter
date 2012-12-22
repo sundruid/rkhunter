@@ -891,7 +891,7 @@ check_paths() {
 
 
 				case "${OPT_NAME}" in
-				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILE|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|RTKT_FILE_WHITELIST|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|WEBCMD|*_CMD)
+				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILE|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|RTKT_FILE_WHITELIST|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|WEBCMD|*_CMD)
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
@@ -930,7 +930,7 @@ check_paths() {
 				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|RTKT_DIR_WHITELIST|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
 					RKHTMPVAR2="directory"
 					;;
-				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|WEBCMD|*_CMD)
+				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|WEBCMD|*_CMD)
 					RKHTMPVAR2="file"
 					;;
 				*)
@@ -3692,11 +3692,14 @@ get_hidden_options() {
 }
 
 
-get_logfile_options() {
+get_missing_file_options() {
 
 	#
-	# This function processes the options used
-	# to detect missing or empty files.
+	# This function processes the options used to detect missing or
+	# empty files. Note that we do not use the 'strict' option for
+	# 'check_paths' despite the fact that the files should exist.
+	# However, if they are missing then that is exactly what we want
+	# the test to report.
 	#
 
 	LEAVE=0
@@ -5163,7 +5166,7 @@ get_configfile_options() {
 
 		get_hidden_options
 
-		get_logfile_options
+		get_missing_file_options
 
 		check_test hidden_procs && get_unhide_options
 
