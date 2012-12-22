@@ -43,6 +43,14 @@
    file is present, have now been changed. The test has been renamed
    to state 'system logging' rather than 'syslog', and will now detect
    if 'systemd' logging is being used as well as, or instead of, syslog.
+ - Two new tests have been added to the 'filesystem' checks. The first
+   will check if any configured log files are missing, and the second
+   will check if any configured log files are empty. The second test will
+   also check if the log files are missing, but only report it if the
+   first test has not done so. For both tests the results are only shown
+   if the relevant test has been configured. To enable this there are
+   also two new configuration file options - MISSING_LOGFILES and
+   EMPTY_LOGFILES.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly

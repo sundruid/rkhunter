@@ -1,4 +1,4 @@
-Version:2012122101
+Version:2012122201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -27,6 +27,7 @@ MSG_RESULT_ALLOWED:Allowed
 MSG_RESULT_NOT_ALLOWED:Not allowed
 MSG_RESULT_UNSET:Not set
 MSG_RESULT_WHITELISTED:Whitelisted
+MSG_RESULT_NONE_MISSING:None missing
 
 MSG_RESULT_UPD:Updated
 MSG_RESULT_NO_UPD:No update
@@ -530,6 +531,10 @@ FILESYSTEM_HIDDEN_FILE_WL:Found hidden file '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories
 FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: '$1'
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
+FILESYSTEM_LOGFILE_MISSING:Checking for missing log files
+FILESYSTEM_LOGFILE_MISSING_FOUND:The log file '$1' is missing.
+FILESYSTEM_LOGFILE_EMPTY:Checking for empty log files
+FILESYSTEM_LOGFILE_EMPTY_FOUND:The log file '$1' is empty.
 
 CHECK_APPS:Checking application versions...
 APPS_NONE_FOUND:No known applications found - all version checks skipped.

@@ -3692,6 +3692,46 @@ get_hidden_options() {
 }
 
 
+get_logfile_options() {
+
+	#
+	# This function processes the options used
+	# to detect missing or empty files.
+	#
+
+	LEAVE=0
+	ERRCODE=0
+
+	LOGFILE_MISSING=`get_option 2 multi MISSING_LOGFILES` || exit 1
+
+	if [ -n "${LOGFILE_MISSING}" ]; then
+		check_paths LOGFILE_MISSING MISSING_LOGFILES
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	fi
+
+	ERRCODE=0
+
+	LOGFILE_EMPTY=`get_option 2 multi EMPTY_LOGFILES` || exit 1
+
+	if [ -n "${LOGFILE_EMPTY}" ]; then
+		check_paths LOGFILE_EMPTY EMPTY_LOGFILES
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	fi
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
 get_unhide_options() {
 
 	#
@@ -5122,6 +5162,8 @@ get_configfile_options() {
 		get_dev_options
 
 		get_hidden_options
+
+		get_logfile_options
 
 		check_test hidden_procs && get_unhide_options
 
@@ -6786,10 +6828,10 @@ do_config_check() {
 	VALIDOPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
 		   APPEND_LOG APP_WHITELIST ATTRWHITELIST AUTO_X_DETECT BINDIR COLOR_SET2
-		   COPY_LOG_ON_ERROR DBDIR DISABLE_TESTS DISABLE_UNHIDE ENABLE_TESTS EPOCH_DATE_CMD
+		   COPY_LOG_ON_ERROR DBDIR DISABLE_TESTS DISABLE_UNHIDE EMPTY_LOGFILES ENABLE_TESTS EPOCH_DATE_CMD
 		   EXISTWHITELIST HASH_FLD_IDX HASH_FUNC IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET
 		   IMMUTWHITELIST INETD_ALLOWED_SVC INETD_CONF_PATH INSTALLDIR LANGUAGE LOCK_TIMEOUT
-		   LOGFILE MAIL-ON-WARNING MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE
+		   LOGFILE MAIL-ON-WARNING MAIL_CMD MIRRORS_MODE MISSING_LOGFILES MODULES_DIR OS_VERSION_FILE
 		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST
 		   PWDLESS_ACCOUNTS ROOTDIR ROTATE_MIRRORS RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
 		   SCAN_MODE_DEV SCRIPTDIR SCRIPTWHITELIST SHARED_LIB_WHITELIST SHOW_LOCK_MSGS
@@ -15469,8 +15511,7 @@ ${RKHTMPVAR}: ${FTYPE}"
 do_filesystem_check() {
 
 	#
-	# This function carries out checks on the filesystem
-	# for suspicious files.
+	# This function carries out various checks on the local filesystem.
 	#
 
 	if `check_test filesystem`; then
@@ -15715,6 +15756,103 @@ ${FNAME}: ${FTYPE}"
 
 		IFS=$RKHIFS
 	fi
+
+
+	#
+	# Next check if any configured log files are missing.
+	#
+
+	FOUNDFILES=""
+
+	if [ -n "${LOGFILE_MISSING}" ]; then
+		MISSINGFILES=""
+
+		for FNAME in ${LOGFILE_MISSING}; do
+			if [ ! -f "${FNAME}" ]; then
+				MISSINGFILES="${MISSINGFILES}
+${FNAME}"
+			fi
+		done
+
+		#
+		# Now show the results.
+		#
+
+		MISSINGFILES=`echo "${MISSINGFILES}" | sed -e '/^$/d'`
+
+		if [ -z "${MISSINGFILES}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_MISSING --color GREEN --log-indent 2 --screen-indent 4 FILESYSTEM_LOGFILE_MISSING
+		else
+			FOUNDFILES="${MISSINGFILES}"
+
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_LOGFILE_MISSING
+
+			IFS=$IFSNL
+
+			for FNAME in ${MISSINGFILES}; do
+				display --to LOG --type WARNING FILESYSTEM_LOGFILE_MISSING_FOUND "${FNAME}"
+			done
+
+			IFS=$RKHIFS
+		fi
+	else
+		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 FILESYSTEM_LOGFILE_MISSING
+	fi
+
+
+	#
+	# Next check if any configured log files are empty or missing.
+	#
+
+	if [ -n "${LOGFILE_EMPTY}" ]; then
+		EMPTYFILES=""
+		MISSINGFILES=""
+
+		for FNAME in ${LOGFILE_EMPTY}; do
+			if [ ! -f "${FNAME}" ]; then
+				#
+				# Only record a missing log file if the previous
+				# missing log file test didn't check it.
+				#
+
+				if [ -z "`echo \"${FOUNDFILES}\" | grep \"^${FNAME}$\"`" ]; then
+					MISSINGFILES="${MISSINGFILES}
+${FNAME}"
+				fi
+			elif [ ! -s "${FNAME}" ]; then
+				EMPTYFILES="${EMPTYFILES}
+${FNAME}"
+			fi
+		done
+
+		#
+		# Now show the results.
+		#
+
+		EMPTYFILES=`echo "${EMPTYFILES}" | sed -e '/^$/d'`
+		MISSINGFILES=`echo "${MISSINGFILES}" | sed -e '/^$/d'`
+
+		if [ -z "${EMPTYFILES}" -a -z "${MISSINGFILES}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 FILESYSTEM_LOGFILE_EMPTY
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_LOGFILE_EMPTY
+
+			IFS=$IFSNL
+
+			for FNAME in ${EMPTYFILES}; do
+				display --to LOG --type WARNING FILESYSTEM_LOGFILE_EMPTY_FOUND "${FNAME}"
+			done
+
+			for FNAME in ${MISSINGFILES}; do
+				display --to LOG --type WARNING FILESYSTEM_LOGFILE_MISSING_FOUND "${FNAME}"
+			done
+
+			IFS=$RKHIFS
+		fi
+	else
+		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 FILESYSTEM_LOGFILE_EMPTY
+	fi
+
 
 	return
 }
