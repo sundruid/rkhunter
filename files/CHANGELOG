@@ -73,6 +73,11 @@
    reported as a change of hash value, inode, file size etc.
  - The PORT_WHITELIST configuration option can now specify spaces in
    a pathname by using the '%' character.
+ - Displayed and logged pathnames which contain either space, tab or
+   control characters are now displayed differently. A space character
+   will be displayed as '<SP>', a tab as '<TAB>' and a control character
+   as '?'. This should make pathnames with these characters easier to
+   see when displayed or logged.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
