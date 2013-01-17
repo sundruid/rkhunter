@@ -592,15 +592,10 @@ name2text() {
 	# separate function, and only use it where necessary.
 	#
 	# Note that we must ensure that the 'echo' command does not interpret
-	# any part of the string, and it must not append a newline character
-	# otherwise that will be added to the resulting string as a '?'.
+	# any part of the string.
 	#
 
-	if [ "${ECHON}" = "c" ]; then
-		echo $ECHOOPT "$*\c" | sed -e 's/ /<SP>/g; s/	/<TAB>/g' | tr '[:cntrl:]' '?'
-	else
-		echo $ECHON $ECHOOPT "$*" | sed -e 's/ /<SP>/g; s/	/<TAB>/g' | tr '[:cntrl:]' '?'
-	fi
+	echo $ECHOOPT "$*" | sed -e 's/ /<SP>/g; s/	/<TAB>/g' | tr -d '\n' | tr '[:cntrl:]' '?'
 
 	return
 }
