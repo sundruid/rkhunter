@@ -97,6 +97,12 @@
  - The 'tripwire', 'ports' and 'running_procs' tests detect possible
    rootkits, but these were not being reported in the summary. This
    has now been fixed, and those tests will always show a summary.
+ - The 'filesystem' test did not correctly check a files file type.
+   Additionally, testing the files size prevented character and block
+   file types from being detected. As before, empty files are ignored.
+   The OSX 'file' command can return multiple lines for certain files.
+   This has now been catered for (generally the output was assumed to be
+   on one line.)
 
  -- 
 

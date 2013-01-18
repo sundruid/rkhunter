@@ -15513,9 +15513,13 @@ do_dev_whitelist_check() {
 	#
 
 
-	FTYPE=`${FILE_CMD} "${RKHTMPVAR}" 2>/dev/null | awk -F':' '{ print $NF }' | cut -c2-`
+	FTYPE=`${FILE_CMD} "${RKHTMPVAR}" 2>&1 | awk -F':' '{ print $NF }' | cut -c2-`
 
-	if [ -z "`echo \"${FTYPE}\" | egrep -v '( character special| block special| socket| fifo \(named pipe\)| symbolic link to| empty| directory|/MAKEDEV:)'`" ]; then
+	if [ $MACOSX -eq 1 -a -n "`echo \"${FTYPE}\" | grep 'universal binary'`" ]; then
+		FTYPE=`echo "${FTYPE}" | tail ${TAIL_OPT}1`
+	fi
+
+	if [ -z "`echo \"${FTYPE}\" | egrep -v '(character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|/MAKEDEV:)'`" ]; then
 		return
 	fi
 
@@ -15601,7 +15605,7 @@ do_filesystem_check() {
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			for RKHTMPVAR in /dev/*; do
-				test -s "${RKHTMPVAR}" -a ! -d "${RKHTMPVAR}" -a ! -h "${RKHTMPVAR}" || continue
+				test -d "${RKHTMPVAR}" -o -h "${RKHTMPVAR}" && continue
 
 				if [ $FDESCFS -eq 1 ]; then
 					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
@@ -15613,8 +15617,6 @@ do_filesystem_check() {
 			IFS=$IFSNL
 
 			for RKHTMPVAR in `${FIND_CMD} /dev ! -type d -a ! -type l 2>/dev/null`; do
-				test -s "${RKHTMPVAR}" || continue
-
 				if [ $FDESCFS -eq 1 ]; then
 					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
 				fi
@@ -15642,7 +15644,10 @@ do_filesystem_check() {
 			IFS=$IFSNL
 
 			for RKHTMPVAR in ${FOUNDFILES}; do
-				display --to LOG --type PLAIN --log-indent 9 NAME "`name2text ${RKHTMPVAR}`"
+				FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
+				FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
+
+				display --to LOG --type PLAIN --log-indent 9 NAME "`name2text ${FNAME}`: ${FTYPE}"
 			done
 
 			IFS=$RKHIFS
@@ -15725,7 +15730,7 @@ ${RKHTMPVAR}"
 			test -n "`echo \"${FNAME}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
 		fi
 
-		FTYPE=`${FILE_CMD} "${FNAME}" 2>/dev/null | awk -F':' '{ print $NF }' | cut -c2-`
+		FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | awk -F':' '{ print $NF }' | cut -c2-`
 
 		test -n "`echo \"${FTYPE}\" | egrep 'character special|block special|empty'`" && continue
 
