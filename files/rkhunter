@@ -15735,13 +15735,8 @@ ${RKHTMPVAR}"
 			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "`name2text ${FNAME}`"
 			else
-				if [ "${FTYPE}" = "directory" ]; then
-					FOUNDDIRS="${FOUNDDIRS}
-${FNAME}"
-				else
-					FOUNDDIRS="${FOUNDDIRS}
+				FOUNDDIRS="${FOUNDDIRS}
 ${FNAME}: ${FTYPE}"
-				fi
 			fi
 		else
 			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \" ${FNAMEGREP} \"`" ]; then
@@ -15771,11 +15766,21 @@ ${FNAME}: ${FTYPE}"
 		IFS=$IFSNL
 
 		for RKHTMPVAR in ${FOUNDDIRS}; do
-			display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "`name2text ${RKHTMPVAR}`"
+			FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
+			FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
+
+			if [ "${FTYPE}" = "directory" ]; then
+				display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "`name2text ${FNAME}`"
+			else
+				display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "`name2text ${FNAME}`: ${FTYPE}"
+			fi
 		done
 
 		for RKHTMPVAR in ${FOUNDFILES}; do
-			display --to LOG --type WARNING FILESYSTEM_HIDDEN_FILE_FOUND "`name2text ${RKHTMPVAR}`"
+			FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
+			FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
+
+			display --to LOG --type WARNING FILESYSTEM_HIDDEN_FILE_FOUND "`name2text ${FNAME}`: ${FTYPE}"
 		done
 
 		IFS=$RKHIFS
