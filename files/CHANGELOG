@@ -51,6 +51,9 @@
    if the relevant test has been configured. To enable this there are
    also two new configuration file options - MISSING_LOGFILES and
    EMPTY_LOGFILES.
+ - Added the 'UNHIDETCP_OPTS' configuration option. This may be set to
+   options which are then used by the 'unhide-tcp' command. By default
+   no options are used.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly

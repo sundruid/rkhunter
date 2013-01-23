@@ -698,10 +698,36 @@ get_option() {
 	#
 	# Now process the option.
 	#
+	# However, first we must see if the rkhunter configuration option is
+	# a command option of some sort. That is, if it begins with a hyphen
+	# ('-'). We need to do this because options can cause problems with
+	# the 'echo' command and so give incorrect results.
+	#
+
+	RKHISOPTION=0
+
+	if [ -n "`echo \"RKH${OPTVAR}\" | grep \"^RKH[\\"' 	]*-\"`" ]; then
+		#
+		# If it is an option we reset the variable so that it starts
+		# with 'RKH'. This should avoid problems with 'echo'.
+		#
+
+		RKHISOPTION=1
+		OPTVAR="RKH${OPTVAR}"
+	fi
 
 	case "$OPTTYPE" in
 	1)
 		OPTVAR=`echo "${OPTVAR}" | tr -d '" 	' | tr -d "'"`
+
+		if [ $RKHISOPTION -eq 1 ]; then
+			#
+			# Note that the variable is given a space character at
+			# the end. Again, this helps avoid problems with 'echo'.
+			#
+
+			OPTVAR="`echo \"${OPTVAR}\" | sed -e 's/^RKH//'` "
+		fi
 		;;
 	2)
 		OPTVAR=`echo "${OPTVAR}" | tr -s '	 ' '  '`
@@ -714,7 +740,12 @@ get_option() {
 		#
 
 		if [ "${OPTV}" != "MAIL_CMD" ]; then
-			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+			if [ $RKHISOPTION -eq 0 ]; then
+				OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+			else
+				OPTVAR=`echo "${OPTVAR}" | sed -e 's/^RKH//; s/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+				OPTVAR="RKH${OPTVAR}"
+			fi
 
 			#
 			# For 'multi' options, which are allowed to be on more than one
@@ -726,6 +757,15 @@ get_option() {
 			if [ -n "${OPTVAR}" ]; then
 				OPTVAR=`echo "${OPTVAR}" | awk 'BEGIN { RS="" }; END { print }'`
 				OPTVAR=`echo ${OPTVAR}`
+
+				if [ $RKHISOPTION -eq 1 ]; then
+					#
+					# Note that the variable is given a space character at
+					# the end. Again, this helps avoid problems with 'echo'.
+					#
+
+					OPTVAR="`echo ${OPTVAR} | sed -e 's/^RKH//'` "
+				fi
 			fi
 		fi
 		;;
@@ -3776,6 +3816,33 @@ get_unhide_options() {
 	fi
 
 
+	UNHIDETCP_OPTS=""
+
+	RKHTMPVAR=`get_option 2 multi UNHIDETCP_OPTS` || exit 1
+
+	if [ -n "${RKHTMPVAR}" ]; then
+		for RKHTMPVAR2 in ${RKHTMPVAR}; do
+			#
+			# For options we need to prepend 'RKH' to the variable
+			# to avoid problems with the 'echo' command.
+			#
+
+			if [ "`echo \"RKH${RKHTMPVAR2}\" | cut -c4`" != "-" ]; then
+				# Options must begin with a '-'.
+				LEAVE=1
+				echo "Invalid UNHIDETCP_OPTS configuration option - not a valid option: ${RKHTMPVAR}"
+			elif [ "${RKHTMPVAR2}" = "-V" -o "${RKHTMPVAR2}" = "-h" ]; then
+				# Ignore obvious invalid options.
+				continue
+			else
+				UNHIDETCP_OPTS="${UNHIDETCP_OPTS} ${RKHTMPVAR2}"
+			fi
+		done
+
+		UNHIDETCP_OPTS=`echo "${UNHIDETCP_OPTS}" | sed -e 's/^ *//'`
+	fi
+
+
 	NOUNHIDE=`get_option 1 single DISABLE_UNHIDE` || exit 1
 
 	if [ -n "${NOUNHIDE}" ]; then
@@ -5189,7 +5256,7 @@ get_configfile_options() {
 
 		get_missing_file_options
 
-		check_test hidden_procs && get_unhide_options
+		check_test hidden_procs || check_test hidden_ports && get_unhide_options
 
 		check_test suspscan && get_suspscan_options
 
@@ -6862,7 +6929,7 @@ do_config_check() {
 		   SHOW_SUMMARY_WARNINGS_NUMBER SSH_CONFIG_DIR STARTUP_PATHS SUSPSCAN_DEBUG
 		   SUSPSCAN_DIRS SUSPSCAN_LINETHRESH
 		   SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH SYSLOG_CONFIG_FILE TMPDIR
-		   UID0_ACCOUNTS UNHIDE_TESTS UPDATE_LANG UPDATE_MIRRORS UPDT_ON_OS_CHANGE
+		   UID0_ACCOUNTS UNHIDE_TESTS UNHIDETCP_OPTS UPDATE_LANG UPDATE_MIRRORS UPDT_ON_OS_CHANGE
 		   USE_SUNSUM USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE
 		   WEBCMD WEB_CMD WHITELISTED_IS_WHITE WRITEWHITELIST XINETD_ALLOWED_SVC
 		   XINETD_CONF_PATH"
@@ -14073,7 +14140,7 @@ do_network_hidden_port_checks() {
 	UNHIDETCP_CMD=`find_cmd unhide-tcp`
 
 	if [ -n "${UNHIDETCP_CMD}" ]; then
-		display --to LOG --type INFO FOUND_CMD 'unhide-tcp' "${UNHIDETCP_CMD}"
+		display --to LOG --type INFO FOUND_CMD 'unhide-tcp' "${UNHIDETCP_CMD} ${UNHIDETCP_OPTS}"
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
 		display --to LOG --type INFO NOT_FOUND_CMD "unhide-tcp"
@@ -14132,10 +14199,10 @@ do_network_hidden_port_checks() {
 	# to pick out the TCP ports, and then the UDP ports.
 	#
 
-	RKHTMPVAR=`${UNHIDETCP_CMD} 2>&1`
+	RKHTMPVAR=`${UNHIDETCP_CMD} ${UNHIDETCP_OPTS} 2>&1`
 
-	TCP_PORTS=`echo "${RKHTMPVAR}" | ${AWK_CMD} '/^Starting TCP check/, /^Starting UDP check/ { print $0 }' | grep '^Found ' | cut -d: -f2`
-	UDP_PORTS=`echo "${RKHTMPVAR}" | ${AWK_CMD} '/^Starting UDP check/, 0 { print $0 }' | grep '^Found ' | cut -d: -f2`
+	TCP_PORTS=`echo "${RKHTMPVAR}" | ${AWK_CMD} '/^(\[\*\])?Starting TCP check/, /^(\[\*\])?Starting UDP check/ { print $0 }' | grep '^Found ' | cut -d: -f2`
+	UDP_PORTS=`echo "${RKHTMPVAR}" | ${AWK_CMD} '/^(\[\*\])?Starting UDP check/, 0 { print $0 }' | grep '^Found ' | cut -d: -f2`
 
 	if [ -z "${TCP_PORTS}" -a -z "${UDP_PORTS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 NETWORK_HIDDEN_PORTS
@@ -16758,17 +16825,17 @@ set_file_prop_dirs_files() {
 				gegrep genv gfile gfind ggrep ggroups ghead gid glocate
 				gls gmd5sum gmv gpwd gsed gsize gsort gstrings gsum
 				gtail gtest gtouch guname guniq gusers gwc gwho gwhoami
-				inetadm nawk truss unhide unhide-tcp unhide.rb"
+				inetadm nawk truss unhide unhide-posix unhide-tcp unhide.rb"
 		;;
 	FreeBSD|DragonFly)
 		PROP_FILE_LIST="${PROP_FILE_LIST} fstat kldload kldstat kldunload procstat
-				unhide unhide-tcp unhide.rb"
+				unhide unhide-posix unhide-tcp unhide.rb"
 		;;
 	*BSD)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp unhide.rb"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-posix unhide-tcp unhide.rb"
 		;;
 	Linux)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-tcp unhide.rb"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp unhide.rb"
 
 		if [ -n "`uname -r | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
