@@ -81,6 +81,8 @@
    will be displayed as '<SP>', a tab as '<TAB>' and a control character
    as '?'. This should make pathnames with these characters easier to
    see when displayed or logged.
+ - Updated the 'hidden_procs' test to cater for the latest version of
+   the 'unhide' program (version 20121229).
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.

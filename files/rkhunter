@@ -12708,10 +12708,20 @@ ${RKHTMPVAR}:${FNAME}"
 		RKHTMPVAR="unhide"
 		UNHIDE_CMD=`find_cmd unhide`
 
+		if [ -z "${UNHIDE_CMD}" ]; then
+			RKHTMPVAR="unhide-posix"
+			UNHIDE_CMD=`find_cmd unhide-posix`
+		fi
+
 		if [ $LINUXOS -eq 1 -a -z "${UNHIDE_CMD}" ]; then
-			if [ -n "`uname -r | grep '^2\.6'`" ]; then
-				RKHTMPVAR="unhide-linux26"
-				UNHIDE_CMD=`find_cmd unhide-linux26`
+			RKHTMPVAR="unhide-linux"
+			UNHIDE_CMD=`find_cmd unhide-linux`
+
+			if [ -z "${UNHIDE_CMD}" ]; then
+				if [ -n "`uname -r | grep '^2\.6'`" ]; then
+					RKHTMPVAR="unhide-linux26"
+					UNHIDE_CMD=`find_cmd unhide-linux26`
+				fi
 			fi
 		fi
 
@@ -12730,7 +12740,7 @@ ${RKHTMPVAR}:${FNAME}"
 
 				UNHIDE_VERS=`${UNHIDE_CMD} -V 2>/dev/null | head ${HEAD_OPT}1`
 
-				if [ -n "`echo ${UNHIDE_VERS} | grep '^Unhide [0-9][0-9]*$'`" ]; then
+				if [ -n "`echo ${UNHIDE_VERS} | grep '^Unhide [2-9][0-9]*$'`" ]; then
 					UNHIDE_VERS=`echo ${UNHIDE_VERS} | cut -d' ' -f2`
 				else
 					UNHIDE_VERS=0
@@ -12749,7 +12759,7 @@ ${RKHTMPVAR}:${FNAME}"
 				FOUND_PROCS=""
 
 				for RKHTMPVAR in ${UNHIDE_TESTS}; do
-					if [ -n "`echo ${RKHTMPVAR} | grep '^-'`" ]; then
+					if [ -n "`echo \"RKH${RKHTMPVAR}\" | grep '^RKH-'`" ]; then
 						# Only newer versions have command-line options.
 						if [ $UNHIDE_VERS -ge 20100919 ]; then
 							# Ignore obvious invalid options.
@@ -12765,12 +12775,12 @@ ${RKHTMPVAR}:${FNAME}"
 					fi
 
 					SEEN=1
-					FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|Copyright |License |\[\*\]|$)'`
+					FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
 
 					if [ -z "${FOUND_PROCS}" ]; then
 						# Nothing found.
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "`echo unhide ${UNHIDE_OPTS} ${RKHTMPVAR}`"
+							display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 						fi
 					else
 						# For newer versions we can sort the messages.
@@ -12781,7 +12791,7 @@ ${RKHTMPVAR}:${FNAME}"
 						HIDDEN_PROCS="${HIDDEN_PROCS}
 ${FOUND_PROCS}"
 
-						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "`echo unhide ${UNHIDE_OPTS} ${RKHTMPVAR}`"
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 					fi
 				done
 
@@ -12791,14 +12801,14 @@ ${FOUND_PROCS}"
 				#
 
 				if [ $SEEN -eq 0 ]; then
-					display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "`echo unhide ${UNHIDE_OPTS} ${RKHTMPVAR}`"
+					display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 				fi
 			fi
 		else
 			SEEN=1
 			display --to LOG --type INFO NOT_FOUND_CMD 'unhide'
 
-			if [ "${RKHTMPVAR}" = "unhide-linux26" ]; then
+			if [ "${RKHTMPVAR}" != "unhide" ]; then
 				display --to LOG --type INFO NOT_FOUND_CMD "${RKHTMPVAR}"
 			fi
 		fi
