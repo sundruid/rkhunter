@@ -8642,6 +8642,10 @@ do_system_check_initialisation() {
 		  file:/usr/share/sshd.sync:Trojaned SSH daemon
 		  file:/bin/zcut:Trojaned SSH daemon
 		  file:/usr/bin/zmuie:Trojaned SSH daemon
+		  file:/lib/libkeyutils.so.1.9:Sniffer component
+		  file:/lib64/libkeyutils.so.1.9:Sniffer component
+		  file:/usr/lib/libkeyutils.so.1.9:Spam tool component
+		  file:/usr/lib64/libkeyutils.so.1.9:Spam tool component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
@@ -8740,7 +8744,8 @@ do_system_check_initialisation() {
 			 sshf:Possible port scanner
 			 ssh-scan:Port scanner
 			 atac:Port scanner component
-			 \[pdflush\]:IRC bot"
+			 \[pdflush\]:IRC bot
+			 libkeyutils.so.1.9:Spam tool component"
 
 
 	# System startup file pathnames
