@@ -5400,7 +5400,7 @@ rkh_dat_get_os_info() {
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		REL_FILES="${OS_VERSION_FILE}"
 	else
-		REL_FILES="/etc/system-release /etc/lsb-release /etc/debian_version /etc/slackware-version /var/ipcop/general-functions.pl /etc/lunar.release /etc/ROCK-VERSION /etc/GoboLinuxVersion /etc/kanotix-version /etc/sidux-version /etc/knoppix-version /etc/zenwalk-version /etc/release /etc/*-release"
+		REL_FILES="/etc/system-release /etc/os-release /etc/lsb-release /etc/debian_version /etc/slackware-version /var/ipcop/general-functions.pl /etc/lunar.release /etc/ROCK-VERSION /etc/GoboLinuxVersion /etc/kanotix-version /etc/sidux-version /etc/knoppix-version /etc/zenwalk-version /etc/release /etc/*-release"
 	fi
 
 	RKH_LSB_SEEN=0
@@ -5419,6 +5419,15 @@ rkh_dat_get_os_info() {
 			RKH_IN_LSB=0
 
 			case "${RELEASE}" in
+			/etc/os-release)
+				OSNAME=`grep '^PRETTY_NAME=' "${RELEASE}" | sed -e 's/PRETTY_NAME=//' | tr -d '"'`
+
+				if [ -z "${OSNAME}" ]; then
+					RKHTMPVAR=`grep '^NAME=' "${RELEASE}" | sed -e 's/NAME=//'`;
+					RKHTMPVAR2=`grep '^VERSION=' "${RELEASE}" | sed -e 's/VERSION=//' | tr -d '"'`;
+					OSNAME="${RKHTMPVAR} ${RKHTMPVAR2}"
+				fi
+				;;
 			/etc/lsb-release)
 				RKH_IN_LSB=1
 				RKH_LSB_SEEN=1

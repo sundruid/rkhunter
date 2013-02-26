@@ -83,6 +83,8 @@
    see when displayed or logged.
  - Updated the 'hidden_procs' test to cater for the latest version of
    the 'unhide' program (version 20121229).
+ - Detection of the O/S being used now includes looking for the
+   '/etc/os-release' file.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
