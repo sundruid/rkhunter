@@ -427,7 +427,7 @@ systems, 'DPKG' for Debian-based systems, 'BSD' for *BSD systems, and
 indicate not to use a package manager. The program default is 'NONE'.
 
 Any file which is not part of a package is treated as before, that is,
-the HASH_FUNC configuration file option, or the '--hash' command-line
+the HASH_CMD configuration file option, or the '--hash' command-line
 option, will be used.
 
 It should be noted that all the package managers, except 'SOLARIS', provide

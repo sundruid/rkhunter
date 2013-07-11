@@ -85,6 +85,12 @@
    the 'unhide' program (version 20121229).
  - Detection of the O/S being used now includes looking for the
    '/etc/os-release' file.
+ - In the configuration file the HASH_FUNC option has now changed
+   name to HASH_CMD. However, the old name will still be recognised.
+ - The ALLOWDEVFILE and EXISTWHITELIST configuration options are now
+   treated as newline-separated lists. As such, the options can only
+   have one entry per line, and that entry can contain any character
+   other than a newline.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.

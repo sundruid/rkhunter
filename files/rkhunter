@@ -618,6 +618,170 @@ keypresspause() {
 }
 
 
+new_get_option() {
+#jh - done
+
+	#
+	# This function is used to process configuration file options.
+	#
+	# Syntax: get_option [single | space-list | newline-list] <option name>
+	#
+	# The first parameter indicates if the option can occur on one
+	# or more lines in the configuration files. A 'space-list' is a
+	# space-separated list, and 'newline-list' is a newline-separated
+	# list. These will both typically be multiline. A space-separated
+	# list will be converted here to a newline-separated list.
+	# The second parameter is the configuration file option name.
+	#
+	# Single line options are typically numbers, a single word or pathname.
+	# Multiline options are usually pathnames, and will be a space-separated
+	# or newline-separated list. Space-separated lists are, obviously, not
+	# expected to contain any special characters such as a space.
+	#
+	# The function will output the final, non-expanded, option value.
+	# It will also return an error code. A code of zero indicates no
+	# problem, but a code of one indicates an error.
+	#
+
+	OPTMULTI="$1"
+	OPTNAME="$2"
+
+	if [ -z "${OPTMULTI}" -o -z "${OPTNAME}" ]; then
+		echo "Error: Missing arguments in get_option function: $*" >&2
+		return 1
+	fi
+
+
+	#
+	# First see if the option is in the configuration files.
+	#
+
+	RKHTMPVAR2=`grep -h "^${OPTNAME}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`
+
+	if [ -z "${RKHTMPVAR2}" ]; then
+		echo ""
+		return 0
+	fi
+
+	#
+	# We have an option, so process it.
+	#
+
+	case "${OPTMULTI}" in
+	single)
+		OPTVAR=`echo "${RKHTMPVAR2}" | tail ${TAIL_OPT}1 | sed -e "s/${OPTNAME}=//"`
+
+		# If the option is unset, then just return.
+		if [ -z "${OPTVAR}" -o "${OPTVAR}" = '""' -o "${OPTVAR}" = "''" ]; then
+			echo ""
+			return 0
+		fi
+
+		#
+		# We must handle any _CMD option specially because they may
+		# contain quote characters, and we do not want to remove these.
+		#
+
+		case "${OPTNAME}" in
+		*_CMD|WEBCMD|HASH_FUNC)
+			;;
+		*_OPTS)
+			#
+			# Rkhunter configuration options which are command options may
+			# begin with a hyphen ('-'). This can cause problems for the
+			# 'echo' command. To prevent this, the simplest solution is to
+			# append a space to the option value.
+			#
+
+			OPTVAR=`echo "${OPTVAR} " | tr -d '" 	' | tr -d "'"`
+
+			if [ -n "`echo \"${OPTVAR} \" | grep '^-'`" ]; then
+				OPTVAR="${OPTVAR} "
+			fi
+			;;
+		*)
+			OPTVAR=`echo "${OPTVAR}" | tr -d '" 	' | tr -d "'"`
+			;;
+		esac
+		;;
+	space-list|newline-list)
+		#
+		# We must test whether the last line is set to the null string because
+		# a multiline option is reset by specifying the last setting as null.
+		#
+
+		RKHTMPVAR3=`echo "${RKHTMPVAR2}" | tail ${TAIL_OPT}1 | sed -e "s/${OPTNAME}=//"`
+
+		# If the option is unset, then just return.
+		if [ -z "${RKHTMPVAR3}" -o "${RKHTMPVAR3}" = '""' -o "${RKHTMPVAR3}" = "''" ]; then
+			echo ""
+			return 0
+		fi
+
+		OPTVAR=`echo "${RKHTMPVAR2}" | sed -e "s/${OPTNAME}=//"`
+
+		#
+		# If a pathname begins with a hyphen, then this will cause problems
+		# for the 'echo' command. Actually this is only true if there is only
+		# one pathname. However, we are not going to check the number of
+		# pathnames, so to prevent the problem we simply add a space to
+		# the option value. This option will be rejected later when the
+		# pathnames are checked.
+		# 
+
+		HASHYPHEN=0
+
+		if [ -n "`echo \"${OPTVAR} \" | grep '^-'`" ]; then
+			HASHYPHEN=1
+			OPTVAR="${OPTVAR} "
+		fi
+
+
+		#
+		# Newline-separated list can contain virtually any character, so
+		# we leave them alone. But for space-separated lists we can be nice
+		# and compress spaces and remove quotes, and then convert it into a
+		# newline-separated list.
+		#
+
+		if [ "${OPTMULTI}" = "space-list" ]; then
+			OPTVAR=`echo "${OPTVAR}" | tr -s ' 	' '  '`
+
+			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+
+			#
+			# For 'space-list' options, which are allowed to be on
+			# more than one line, we join the lines together and
+			# remove any leading or trailing spaces. We only use
+			# the options given after the last blank line (if any).
+			#
+
+			if [ -n "${OPTVAR}" ]; then
+				OPTVAR=`echo "${OPTVAR} " | awk 'BEGIN { RS="" }; END { print }'`
+
+				# We convert the list to newline-separated here.
+				OPTVAR=`echo ${OPTVAR} | tr ' ' '\n'`
+
+				# The above echo may have removed trailing spaces.
+				if [ -n "${OPTVAR}" ]; then
+					test $HASHYPHEN -eq 1 && OPTVAR="${OPTVAR} "
+				fi
+			fi
+		fi
+		;;
+	*)
+		echo "Error: Invalid argument in get_option function: $*" >&2
+		return 1
+		;;
+	esac
+
+
+	echo "${OPTVAR}"
+
+	return 0
+}
+
+
 get_option() {
 
 	#
@@ -656,7 +820,7 @@ get_option() {
 
 	#
 	# First see if the option is in the configuration files, and if
-	# it is then process it according to the multi-line argument.
+	# it is then process it according to the multiline argument.
 	#
 
 	RKHTMPVAR2=`grep -h "^${OPTV}=" ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`
@@ -686,7 +850,7 @@ get_option() {
 			OPTVAR=`echo "${RKHTMPVAR2}" | sed -e "s/${OPTV}=//"`
 			;;
 		*)
-			echo "Error: Invalid multi-line argument in get_option function: $*" >&2
+			echo "Error: Invalid multiline argument in get_option function: $*" >&2
 
 			# Treat this as a single-line option.
 			OPTVAR=`echo "${RKHTMPVAR2}" | tail ${TAIL_OPT}1 | sed -e "s/${OPTV}=//"`
@@ -781,6 +945,306 @@ get_option() {
 }
 
 
+new_check_paths() {
+#jh - done
+	#
+	# This function will check a supplied list of pathnames to
+	# ensure the files and directories exist. It will also
+	# check that directories such as '/' (root) are not present,
+	# nor are pathnames with unwanted characters.
+	#
+	# The function only checks the pathnames. It is not possible
+	# to modify the list in any way. The variable ERRCODE must be
+	# set to zero before this function is called, and will be
+	# set to one if any pathname fails a check.
+	#
+	# The first parameter is the list of pathnames to check. The
+	# second parameter is the option name to be used in the error
+	# messages. The third parameter is a space-separated list
+	# indicating how strict the checks need to be with respect to
+	# the pathnames existence, whether wildcard characters are
+	# allowed, and whether symbolic links are allowed. The
+	# argument is a space-separated list of the words 'EXIST'
+	# (meaning the pathname must exist), 'NOWILD' (meaning that
+	# shell wildcard characters are not allowed), and 'NOBROKENLINK'
+	# (meaning that the pathname must not be a broken link).
+	# The words may be given in any order.
+	#
+
+	OPT_VALUE_OPT=$1
+	OPT_NAME=$2
+	STRICT=$3
+
+	test -z "${OPT_NAME}" && OPT_NAME=${OPT_VALUE_OPT}
+
+	OPT_VALUE=`eval echo \"\\$${OPT_VALUE_OPT}\"`
+
+	test -z "${OPT_VALUE}" && return
+
+	MUSTEXIST=0
+	NOWILD=0
+	NOLINK=0
+
+	for RKHTMPVAR in ${STRICT}; do
+		case "${RKHTMPVAR}" in
+		EXIST)
+			MUSTEXIST=1
+			;;
+		NOWILD)
+			NOWILD=1
+			;;
+		NOBROKENLINK)
+			NOLINK=1
+			;;
+		*)
+			echo "Error: Invalid argument in check_paths function: $*" >&2
+			;;
+		esac
+	done
+
+
+	#
+	# If a pathname begins with a hyphen, then this will cause problems
+	# for the 'echo' command. Since we generally don't allow plain filenames,
+	# as opposed to a pathname, and these won't begin with a hyphen, we can
+	# test and reject these.
+	#
+
+	if [ -n "`echo \"${OPT_VALUE} \" | grep '^-'`" ]; then
+		ERRCODE=1
+		test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
+		# We need to get RKHTMPVAR into a single line now, but we can't use a
+		# straight echo command here because that would expand the wildcards.
+		if [ "${ECHON}" = "c" ]; then
+			RKHTMPVAR=`echo $ECHOOPT "${RKHTMPVAR}\c" | tr '\n' ' '`
+		else
+			RKHTMPVAR=`echo $ECHON $ECHOOPT "${RKHTMPVAR}" | tr '\n' ' '`
+		fi
+
+		echo "Invalid ${OPT_NAME} configuration option: Pathname begins with a hyphen: ${OPT_VALUE}"
+		return
+	fi
+
+
+	#
+	# We must check the entry for wildcard characters first
+	# because the following 'for' command will expand them.
+	#
+
+	if [ $NOWILD -eq 1 ]; then
+		RKHTMPVAR=`echo "${OPT_VALUE}" | egrep '(^|[^\\])[][?*{}]'`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			ERRCODE=1
+			test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
+			# We need to get RKHTMPVAR into a single line now, but we can't use a
+			# straight echo command here because that would expand the wildcards.
+			if [ "${ECHON}" = "c" ]; then
+				RKHTMPVAR=`echo $ECHOOPT "${RKHTMPVAR}\c" | tr '\n' ' '`
+			else
+				RKHTMPVAR=`echo $ECHON $ECHOOPT "${RKHTMPVAR}" | tr '\n' ' '`
+			fi
+
+			echo "Invalid ${OPT_NAME} configuration option: Pathname contains wildcard characters: ${RKHTMPVAR}"
+			return
+		fi
+	fi
+
+
+	#
+	# Now check each pathname in the option.
+	#
+
+	IFS=$IFSNL
+
+	for FNAME in ${OPT_VALUE}; do
+		test -z "${FNAME}" && continue
+
+		#
+		# For some options we may have to remove the leading character.
+		#
+
+		if [ "${OPT_NAME}" = "BINDIR" ]; then
+			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
+				FNAME=`echo "${FNAME}" | cut -c2-`
+			fi
+		elif [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
+			if [ -n "`echo \"${FNAME}\" | grep '^!'`" ]; then
+				FNAME=`echo "${FNAME}" | cut -c2-`
+				# Re-expand the name in case it has globbing characters.
+				FNAME=`echo ${FNAME}`
+			fi
+		fi
+
+
+		#
+		# First check for anything which contains just dots.
+		# Also check that '/' has not been set.
+		#
+
+		if [ -n "`echo \"${FNAME}\" | egrep '(^[./]*$)|[;&]|/\.\./'`" ]; then
+			ERRCODE=1
+			test $CONFIG_CHECK -eq 1 && RET_CODE=1
+			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
+			continue
+		fi
+
+		#
+		# For the user file properties list none of the filenames may
+		# contain a colon character, because they are going to be
+		# stored in a colon-separated record.
+		#
+#jh - This needs to be fixed. Reformat rkhunter.dat so that the filename is last.
+
+		if [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
+			if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
+				ERRCODE=1
+				test $CONFIG_CHECK -eq 1 && RET_CODE=1
+				echo "Invalid ${OPT_NAME} configuration option: Pathname contains a colon: ${FNAME}"
+				continue
+			fi
+		fi
+
+		#
+		# Next we check to see if it is a relative pathname.
+		#
+
+		if [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
+			ERRCODE=1
+			test $CONFIG_CHECK -eq 1 && RET_CODE=1
+			echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAME}"
+		elif [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+			#
+			# Now we check to see if it is a simple file name.
+			#
+
+			#
+			# Simple file names are allowed for some options.
+			#
+
+			case "${OPT_NAME}" in
+			USER_FILEPROP_FILES_DIRS|*_CMD)
+				continue
+				;;
+			esac
+
+			ERRCODE=1
+			test $CONFIG_CHECK -eq 1 && RET_CODE=1
+			echo "Invalid ${OPT_NAME} configuration option: Simple filename: ${FNAME}"
+		else
+			#
+			# It's an absolute pathname. This could be a file, a directory,
+			# some other file type, or a non-existent name.
+			#
+
+			#
+			# This is as far as we go for some options. These pathnames may,
+			# or may not exist, or may be things other than just files and
+			# directories.
+			#
+
+			case "${OPT_NAME}" in
+			PKGMGR_NO_VRFY|EXISTWHITELIST|ALLOWDEVFILE)
+				continue
+				;;
+			esac
+
+			#
+			# Now test for the different file types.
+			#
+
+			if [ -f "${FNAME}" ]; then
+				case "${OPT_NAME}" in
+				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+					ERRCODE=1
+					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
+					;;
+				esac
+			elif [ -d "${FNAME}" ]; then
+				#
+				# For the ALLOWHIDDENFILE option we need to allow
+				# a hidden symbolic link to a directory.
+				#
+
+				test "${OPT_NAME}" = "ALLOWHIDDENFILE" -a -h "${FNAME}" && continue
+
+
+				case "${OPT_NAME}" in
+				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|*_CMD)
+					ERRCODE=1
+					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
+					;;
+				esac
+			elif [ -h "${FNAME}" ]; then
+				#
+				# Generally we will accept broken links since the code will
+				# simply not be able to use them. However, for some paths
+				# these are not allowed at all.
+				#
+
+#jh - the BINDIR option must not be marked 'NOBROKENLINK'     test "${OPT_NAME}" = "BINDIR" && continue
+
+				if [ $NOLINK -eq 1 ]; then
+					ERRCODE=1
+					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+					echo "Invalid ${OPT_NAME} configuration option: Broken link found: ${FNAME}"
+				fi
+			elif [ -e "${FNAME}" ]; then
+				#
+				# This is as far as we go for the hidden files. A hidden
+				# 'file' can actually be anything other than a directory.
+				# Similarly, a rootkit 'file' could be something other than
+				# a regular file. So we allow them.
+				#
+
+				test "${OPT_NAME}" = "ALLOWHIDDENFILE" -o "${OPT_NAME}" = "RTKT_FILE_WHITELIST" && continue
+
+				ERRCODE=1
+				test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
+				case "${OPT_NAME}" in
+				ALLOWHIDDENDIR|RTKT_DIR_WHITELIST|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+					RKHTMPVAR2="directory"
+					;;
+				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|*_CMD)
+					RKHTMPVAR2="file"
+					;;
+				*)
+					RKHTMPVAR2="file or directory"
+					;;
+				esac
+
+				echo "Invalid ${OPT_NAME} configuration option: Not a ${RKHTMPVAR2}: ${FNAME}"
+			else
+				#
+				# Some pathnames don't need to exist.
+				#
+
+				test $MUSTEXIST -eq 0 && continue
+#jh - these options must not be set to 'exist'	LOGFILE|BINDIR|SUSPSCAN_DIRS)
+
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					ERRCODE=1
+					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+					echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: ${FNAME}"
+				fi
+			fi
+		fi
+	done
+
+	IFS=$RKHIFS
+
+
+	return
+}
+
+
 check_paths() {
 
 	#
@@ -820,7 +1284,7 @@ check_paths() {
 	#
 
 	if [ $STRICT -eq 1 ]; then
-		if [ -n "`echo \"${RKHTMPVAR}\" | grep '[][?*]'`" ]; then
+		if [ -n "`echo \"${RKHTMPVAR}\" | grep '[][?*{}]'`" ]; then
 			ERRCODE=1
 			test $CONFIG_CHECK -eq 1 && RET_CODE=1
 			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${RKHTMPVAR}"
@@ -904,7 +1368,7 @@ check_paths() {
 			#
 
 			case "${OPT_NAME}" in
-			USER_FILEPROP_FILES_DIRS|HASH_FUNC|WEBCMD|*_CMD)
+			USER_FILEPROP_FILES_DIRS|*_CMD)
 				continue
 				;;
 			esac
@@ -952,7 +1416,7 @@ check_paths() {
 
 
 				case "${OPT_NAME}" in
-				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILE|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|RTKT_FILE_WHITELIST|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|WEBCMD|*_CMD)
+				WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|ALLOWHIDDENFILE|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|RTKT_FILE_WHITELIST|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|*_CMD)
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
@@ -991,7 +1455,7 @@ check_paths() {
 				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|RTKT_DIR_WHITELIST|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
 					RKHTMPVAR2="directory"
 					;;
-				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|WEBCMD|*_CMD)
+				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|*_CMD)
 					RKHTMPVAR2="file"
 					;;
 				*)
@@ -1023,6 +1487,38 @@ check_paths() {
 			fi
 		fi
 	done
+
+	return
+}
+
+
+expand_paths() {
+#jh - done
+	#
+	# This function will output an expanded list of pathnames.
+	#
+	# The parameter is the variable name containing the list
+	# of pathnames.
+	#
+
+	PATH_LIST=`eval echo \"\\$${1}\"`
+
+	test -z "${PATH_LIST}" && return
+
+
+	LIST=""
+	IFS=$IFSNL
+
+	for FNAME in ${PATH_LIST}; do
+		test -z "${FNAME}" && continue
+
+		LIST="${LIST}
+${FNAME}"
+	done
+
+	IFS=$RKHIFS
+
+	echo "${LIST}" | sed -e '/^$/d'
 
 	return
 }
@@ -1590,7 +2086,7 @@ check_commands() {
 		# the configuration file.
 		#
 
-		CFG_CMD=`get_option 2 single "${CMDNAME}"` || exit 1
+		CFG_CMD=`new_get_option single "${CMDNAME}"` || exit 1
 
 		if [ -n "${CFG_CMD}" ]; then
 			if [ "${CFG_CMD}" = "DISABLED" -o "${CFG_CMD}" = "BUILTIN" ]; then
@@ -1604,7 +2100,7 @@ check_commands() {
 				# used multiple dots, and we do not allow that.
 				#
 
-				check_paths MCMD "${CMDNAME}" STRICT
+				new_check_paths MCMD "${CMDNAME}" "EXIST NOWILD NOBROKENLINK"
 
 				test $ERRCODE -eq 1 && continue
 
@@ -2393,21 +2889,20 @@ get_existwl_option() {
 	#
 
 	ERRCODE=0
+	EXISTWHITELIST=""
 
-	EXISTWHITELIST=`get_option 2 multi EXISTWHITELIST` || exit 1
+#jh - modify rkunter.conf existwhitelist option to say it is a newline list.
+#jh - modify the CHANGELOG to say that existwhitelist is a newline list.
+#jh - changelog/upgading to say hash_func being deprecated for hash_cmd
 
-	if [ -n "${EXISTWHITELIST}" ]; then
-		#
-		# We 'echo' the variable so that any wildcards get expanded.
-		#
+	EXISTWL_OPT=`new_get_option newline-list EXISTWHITELIST` || exit 1
 
-		EXISTWHITELIST=`echo ${EXISTWHITELIST}`
+	if [ -n "${EXISTWL_OPT}" ]; then
+		EXISTWHITELIST=`expand_paths EXISTWL_OPT`
 
-		check_paths EXISTWHITELIST
+		new_check_paths EXISTWHITELIST EXISTWHITELIST
 
-		if [ $ERRCODE -eq 0 ]; then
-			EXISTWHITELIST=" ${EXISTWHITELIST} "
-		else
+		if [ $ERRCODE -ne 0 ]; then
 			if [ $CONFIG_CHECK -eq 0 ]; then
 				exit 1
 			else
@@ -2433,7 +2928,7 @@ get_mailonwarn_option() {
 	MAILONWARNING=`get_option 2 multi MAIL-ON-WARNING` || exit 1
 
 	if [ -n "${MAILONWARNING}" ]; then
-		MAIL_CMD=`get_option 2 single MAIL_CMD` || exit 1
+		MAIL_CMD=`new_get_option single MAIL_CMD` || exit 1
 
 		test -z "${MAIL_CMD}" && MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
 
@@ -2493,16 +2988,16 @@ get_webcmd_option() {
 	LEAVE=0
 	ERRCODE=0
 
-	RKHWEBCMD=`get_option 2 single WEB_CMD` || exit 1
+	RKHWEBCMD=`new_get_option single WEB_CMD` || exit 1
 
 	if [ -z "${RKHWEBCMD}" ]; then
-		RKHWEBCMD=`get_option 2 single WEBCMD` || exit 1
+		RKHWEBCMD=`new_get_option single WEBCMD` || exit 1
 	fi
 
 	if [ -n "${RKHWEBCMD}" ]; then
 		WCMD=`echo "${RKHWEBCMD}" | cut -d' ' -f1`
 
-		check_paths WCMD WEB_CMD STRICT
+		new_check_paths WCMD WEB_CMD "EXIST NOWILD NOBROKENLINK"
 
 		#
 		# Check that the command is executable.
@@ -3552,7 +4047,7 @@ get_epoch_date_cmd_option() {
 
 	ERRCODE=0
 
-	EPOCH_DATE_CMD=`get_option 2 single EPOCH_DATE_CMD` || exit 1
+	EPOCH_DATE_CMD=`new_get_option single EPOCH_DATE_CMD` || exit 1
 
 	#
 	# Check the type of config file option we have. They user may have
@@ -3668,18 +4163,15 @@ get_dev_options() {
 	ERRCODE=0
 	ALLOWDEVFILES=""
 
-	ALLOWDEVFILE_OPT=`get_option 2 multi ALLOWDEVFILE` || exit 1
+	ALLOWDEVFILE_OPT=`new_get_option newline-list ALLOWDEVFILE` || exit 1
 
 	if [ -n "${ALLOWDEVFILE_OPT}" ]; then
-		#
-		# We 'echo' the variable so that any wildcards get expanded.
-		#
+		ALLOWDEVFILES=${ALLOWDEVFILE_OPT}
 
-		ALLOWDEVFILES=`echo ${ALLOWDEVFILE_OPT}`
+		new_check_paths ALLOWDEVFILES ALLOWDEVFILE
 
-		check_paths ALLOWDEVFILES ALLOWDEVFILE
-
-		ALLOWDEVFILES=`echo " ${ALLOWDEVFILES} " | tr '%' ' '`
+		# Note that we do not get the expanded list of pathnames at
+		# this point. That will be done when the test actually runs.
 	fi
 
 	if [ $ERRCODE -eq 1 ]; then
@@ -3818,16 +4310,16 @@ get_unhide_options() {
 
 	UNHIDETCP_OPTS=""
 
-	RKHTMPVAR=`get_option 2 multi UNHIDETCP_OPTS` || exit 1
+	RKHTMPVAR=`new_get_option space-list UNHIDETCP_OPTS` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
 			#
-			# For options we need to prepend 'RKH' to the variable
+			# For options we need to add a space to the variable
 			# to avoid problems with the 'echo' command.
 			#
 
-			if [ "`echo \"RKH${RKHTMPVAR2}\" | cut -c4`" != "-" ]; then
+			if [ -z "`echo \"${RKHTMPVAR2} \" | grep '^-'`" ]; then
 				# Options must begin with a '-'.
 				LEAVE=1
 				echo "Invalid UNHIDETCP_OPTS configuration option - not a valid option: ${RKHTMPVAR}"
@@ -3839,7 +4331,8 @@ get_unhide_options() {
 			fi
 		done
 
-		UNHIDETCP_OPTS=`echo "${UNHIDETCP_OPTS}" | sed -e 's/^ *//'`
+		# Add a space to avoid the 'echo' problem with options.
+		UNHIDETCP_OPTS=`echo "${UNHIDETCP_OPTS} " | sed -e 's/^ *//'`
 	fi
 
 
@@ -4128,7 +4621,7 @@ get_hash_function() {
 		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 
 		# Stop globbing from being expanded.
-		if [ -z "`echo \"${HASH_CMD}\" | grep '[][*?]'`" ]; then
+		if [ -z "`echo \"${HASH_CMD}\" | grep '[][*?{}]'`" ]; then
 			HASH_FUNC=`echo ${HASH_FUNC}`
 		else
 			LEAVE=1
@@ -4142,7 +4635,11 @@ get_hash_function() {
 			echo "Invalid '--hash' option: no hash function given."
 		fi
 	else
-		HASH_FUNC=`get_option 2 single HASH_FUNC` || exit 1
+		HASH_FUNC=`new_get_option single HASH_CMD` || exit 1
+
+		if [ -z "${HASH_FUNC}" ]; then
+			HASH_FUNC=`new_get_option single HASH_FUNC` || exit 1
+		fi
 	fi
 
 	#
@@ -4153,7 +4650,7 @@ get_hash_function() {
 	if [ -n "${HASH_FUNC}" ]; then
 		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 
-		check_paths HASH_CMD HASH_FUNC STRICT
+		new_check_paths HASH_CMD HASH_CMD "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 1 ]; then
 			LEAVE=1
@@ -4323,7 +4820,7 @@ get_hash_function() {
 
 	ERRCODE=0
 
-	RKHTMPVAR=`get_option 1 single HASH_FLD_IDX` || exit 1
+	RKHTMPVAR=`new_get_option single HASH_FLD_IDX` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		check_is_digit RKHTMPVAR HASH_FLD_IDX ANY1
@@ -4349,7 +4846,7 @@ get_hash_function() {
 			echo "Invalid '--pkgmgr' option: no package manager given."
 		fi
 	else
-		PKGMGR=`get_option 1 single PKGMGR` || exit 1
+		PKGMGR=`new_get_option single PKGMGR` || exit 1
 	fi
 
 	PKGMGR=`echo "${PKGMGR}" | tr '[:lower:]' '[:upper:]'`
@@ -4420,7 +4917,7 @@ get_hash_function() {
 		# to use the stored 16-bit checksum or not.
 		#
 
-		USE_SUNSUM=`get_option 1 single USE_SUNSUM` || exit 1
+		USE_SUNSUM=`new_get_option single USE_SUNSUM` || exit 1
 
 		if [ -n "${USE_SUNSUM}" ]; then
 			check_is_digit USE_SUNSUM
@@ -4897,7 +5394,7 @@ get_user_fileprop_list() {
 
 		test -z "${FNAME}" && break
 
-		if [ -n "`echo \"${FNAME}\" | grep '^[^/]*[][*?][^/]*$'`" ]; then
+		if [ -n "`echo \"${FNAME}\" | grep '^[^/]*[][*?{}][^/]*$'`" ]; then
 			ERRCODE=1
 			echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
 		fi
@@ -6918,7 +7415,10 @@ do_versioncheck() {
 do_config_check() {
 
 	#
-	# This function performs a basic configuration file check.
+	# This function performs a basic configuration file check. Use of
+	# the configuration check command-line option will cause the known
+	# configured options to be checked as usual. So all we need to do
+	# here is look for any configuration options which are unknown.
 	#
 
 	#
@@ -6929,7 +7429,7 @@ do_config_check() {
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
 		   APPEND_LOG APP_WHITELIST ATTRWHITELIST AUTO_X_DETECT BINDIR COLOR_SET2
 		   COPY_LOG_ON_ERROR DBDIR DISABLE_TESTS DISABLE_UNHIDE EMPTY_LOGFILES ENABLE_TESTS EPOCH_DATE_CMD
-		   EXISTWHITELIST HASH_FLD_IDX HASH_FUNC IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET
+		   EXISTWHITELIST HASH_FLD_IDX HASH_FUNC HASH_CMD IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET
 		   IMMUTWHITELIST INETD_ALLOWED_SVC INETD_CONF_PATH INSTALLDIR LANGUAGE LOCK_TIMEOUT
 		   LOGFILE MAIL-ON-WARNING MAIL_CMD MIRRORS_MODE MISSING_LOGFILES MODULES_DIR OS_VERSION_FILE
 		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST
@@ -6955,50 +7455,32 @@ do_config_check() {
 	IFS=$IFSNL
 
 	for CONFIGOPT in ${RKHTMPVAR}; do
-		CONFIGCMD=`echo ${CONFIGOPT} | cut -d= -f 1`
+		CONFIGCMD=`echo ${CONFIGOPT} | cut -d= -f1`
 
 		#
-		# We have to handle the *_CMD entries specially.
+		# We have to handle the *_CMD entries specially because
+		# only certain commands are allowed to be replaced by
+		# a configuration option.
 		#
 
 		if [ -n "`echo ${CONFIGCMD} | grep '_CMD$'`" ]; then
-			CMD_OK=0
-
-			# We know about these ones.
-			test "${CONFIGCMD}" = "EPOCH_DATE_CMD" -o "${CONFIGCMD}" = "MAIL_CMD" -o "${CONFIGCMD}" = "WEB_CMD" && CMD_OK=1
-
-			if [ $CMD_OK -eq 0 ]; then
+			case "${CONFIGCMD}" in
+			EPOCH_DATE_CMD|MAIL_CMD|WEB_CMD|HASH_CMD)
+				# We know about these ones.
+				;;
+			*)
 				# Dig out the actual command name used.
 				CFG_CMD=`echo ${CONFIGCMD} | sed -e 's/_CMD$//'`
 
 				# Check to see if the command is one we now about.
-				test -n "`echo \" ${CMDLIST} \" | grep -i \" ${CFG_CMD} \"`" && CMD_OK=1
-			fi
-
-			#
-			# Now check to see if the supplied command is actually exectuable.
-			#
-
-			if [ $CMD_OK -eq 1 ]; then
-				# Dig out the command name.
-				CFG_CMD=`echo ${CONFIGOPT} | cut -d= -f 2 | awk '{ print $1 }'`
-
-				# We know about these values.
-				if [ "${CFG_CMD}" = "DISABLED" ]; then
-					:
-				elif [ \( "${CONFIGCMD}" = "STAT_CMD" -o "${CONFIGCMD}" = "READLINK_CMD" \) -a "${CFG_CMD}" = "BUILTIN" ]; then
-					:
-				elif [ "${CONFIGCMD}" = "EPOCH_DATE_CMD" -a \( "${CFG_CMD}" = "NONE" -o "${CFG_CMD}" = "PERL" \) ]; then
-					:
-				else
-					if [ -z "`IFS=$RKHIFS find_cmd ${CFG_CMD}`" ]; then
-						RET_CODE=1
-						echo "Command cannot be found: ${CONFIGOPT}"
-					fi
+				if [ -z "`echo \" ${CMDLIST} \" | grep -i \" ${CFG_CMD} \"`" ]; then
+					RET_CODE=1
+					echo "Unknown configuration file option: ${CONFIGOPT}"
 				fi
+				;;
+			esac
 
-				continue
-			fi
+			continue
 		fi
 
 		if [ -z "`echo \"${VALIDOPTS}\" | grep \" ${CONFIGCMD} \"`" ]; then
@@ -12773,7 +13255,7 @@ ${RKHTMPVAR}:${FNAME}"
 				FOUND_PROCS=""
 
 				for RKHTMPVAR in ${UNHIDE_TESTS}; do
-					if [ -n "`echo \"RKH${RKHTMPVAR}\" | grep '^RKH-'`" ]; then
+					if [ -n "`echo \"${RKHTMPVAR} \" | grep '^-'`" ]; then
 						# Only newer versions have command-line options.
 						if [ $UNHIDE_VERS -ge 20100919 ]; then
 							# Ignore obvious invalid options.
@@ -15614,9 +16096,12 @@ do_dev_whitelist_check() {
 		return
 	fi
 
-	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\\\\/\\\\\\\\/g; s/\./\\\./g'`
+#jhjh - Use this line for setting the grep variable.
+	# Not sure why but '?' doesn't seem to need to be escaped. Neither do parentheses or braces.
+	# Also, cannot get the '[]' characters to work in the bracket expression. So these are handled individually.
+	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \" ${FNAMEGREP} \"`" ]; then
+	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "`name2text ${RKHTMPVAR}`"
 	else
 		FOUNDFILES="${FOUNDFILES}
@@ -15665,8 +16150,7 @@ do_filesystem_check() {
 		#
 
 		if [ -n "${ALLOWDEVFILE_OPT}" ]; then
-			ALLOWDEVFILES=`echo ${ALLOWDEVFILE_OPT}`
-			ALLOWDEVFILES=`echo " ${ALLOWDEVFILES} " | tr '%' ' '`
+			ALLOWDEVFILES=`expand_paths ALLOWDEVFILE_OPT`
 		fi
 
 		#
