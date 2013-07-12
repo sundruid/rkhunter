@@ -6466,13 +6466,13 @@ ${DIR}:1"
 							SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 
 							RKHTMPVAR=" -> ${SYSLNK}"
-							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 						else
 							RKHTMPVAR=""
 						fi
 
 						# Check the link target to see if it is whitelisted.
-						if [ $HAVE_READLINK -eq 1 -a -n "`echo \"${EXISTWHITELIST}\" | grep \" ${RKHTMPVAR2} \"`" ]; then
+						if [ $HAVE_READLINK -eq 1 -a -n "`echo \"${EXISTWHITELIST}\" | grep \"^${RKHTMPVAR2}$\"`" ]; then
 							if [ $VERBOSE_LOGGING -eq 1 ]; then
 								display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}${RKHTMPVAR}`"
 							fi
@@ -10001,12 +10001,12 @@ file_properties_check() {
 		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
-				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					#
 					# We need to add the file to the rkhunter.dat file.
 					# We add a dummy entry to start with, but it must contain values.
@@ -10023,7 +10023,7 @@ file_properties_check() {
 					TEST_RESULT="${TEST_RESULT} norkhline"
 				fi
 			elif [ $FILE_EXISTS -eq 0 ]; then
-				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ -n "${RKHLINE}" ]; then
 						#
 						# We need to remove the file from the rkhunter.dat file.
@@ -10416,9 +10416,9 @@ ${RKHLINE}"
 								SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 							fi
 
-							FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+							FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-							if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+							if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 								RKHTMPVAR=1
 
 								if [ ! -e "${FNAME}" -a $VERBOSE_LOGGING -eq 1 ]; then
@@ -10464,9 +10464,9 @@ ${RKHLINE}"
 										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 									fi
 
-									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}` -> `name2text ${SYSLNK}`"
 										fi
@@ -10660,9 +10660,9 @@ ${RKHLINE}"
 										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 									fi
 
-									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
 											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
@@ -10683,9 +10683,9 @@ ${RKHLINE}"
 
 							if [ -n "${RKHLNK}" ]; then
 								if [ "${RKHLNK}" != "${SYSLNK}" ]; then
-									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
 											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
@@ -11082,10 +11082,10 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 
 	if [ $USE_DAT_FILE -eq 1 ]; then
 		for FNAME in `grep '^File:' "${RKHDAT_FILE}" | cut -d: -f2`; do
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`grep \"^${FNAMEGREP}$\" \"${RKH_FILEPROP_LIST}\"`" ]; then
-				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					#
 					# Remove the entry from the rkhunter.dat file.
 					#
