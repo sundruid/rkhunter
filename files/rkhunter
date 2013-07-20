@@ -619,14 +619,11 @@ keypresspause() {
 
 
 new_get_option() {
-#jh - done
 
 	#
 	# This function is used to process configuration file options.
 	#
-#
-#jh - space-list - converted to nl list? If so code for opts needs to change.
-#
+
 	# Syntax: get_option (single | space-list | newline-list) <option name>
 	#
 	# The first parameter indicates if the option can occur on one
@@ -952,7 +949,7 @@ get_option() {
 
 
 new_check_paths() {
-#jh - done
+
 	#
 	# This function will check a supplied list of pathnames to
 	# ensure the files and directories exist. It will also
@@ -1018,18 +1015,16 @@ new_check_paths() {
 	# test and reject these.
 	#
 
-	if [ -n "`echo \"${OPT_VALUE} \" | grep '^-'`" ]; then
+	RKHTMPVAR=`echo "${OPT_VALUE} " | grep '^-'`
+
+	if [ -n "${RKHTMPVAR}" ]; then
 		ERRCODE=1
 		test $CONFIG_CHECK -eq 1 && RET_CODE=1
 
 		# We need to get RKHTMPVAR into a single line now, but we can't use a
-		# straight echo command here because that would expand the wildcards.
-#jhjh - make function? Yes, then use when displaying newline list (do we ever do that)?
-		if [ "${ECHON}" = "c" ]; then
-			RKHTMPVAR=`echo $ECHOOPT "${RKHTMPVAR}\c" | tr '\n' ' '`
-		else
-			RKHTMPVAR=`echo $ECHON $ECHOOPT "${RKHTMPVAR}" | tr '\n' ' '`
-		fi
+		# straight echo command here because that would expand any wildcards.
+
+		RKHTMPVAR=`make_space_list "${RKHTMPVAR}"`
 
 		echo "Invalid ${OPT_NAME} configuration option: Pathname begins with a hyphen: ${RKHTMPVAR}"
 		return
@@ -1050,11 +1045,8 @@ new_check_paths() {
 
 			# We need to get RKHTMPVAR into a single line now, but we can't use a
 			# straight echo command here because that would expand the wildcards.
-			if [ "${ECHON}" = "c" ]; then
-				RKHTMPVAR=`echo $ECHOOPT "${RKHTMPVAR}\c" | tr '\n' ' '`
-			else
-				RKHTMPVAR=`echo $ECHON $ECHOOPT "${RKHTMPVAR}" | tr '\n' ' '`
-			fi
+
+			RKHTMPVAR=`make_space_list "${RKHTMPVAR}"`
 
 			echo "Invalid ${OPT_NAME} configuration option: Pathname contains wildcard characters: ${RKHTMPVAR}"
 			return
@@ -1199,8 +1191,6 @@ new_check_paths() {
 				# these are not allowed at all.
 				#
 
-#jh - the BINDIR option must not be marked 'NOBROKENLINK'     test "${OPT_NAME}" = "BINDIR" && continue
-
 				if [ $NOLINK -eq 1 ]; then
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
@@ -1238,7 +1228,6 @@ new_check_paths() {
 				#
 
 				test $MUSTEXIST -eq 0 && continue
-#jh - these options must not be set to 'exist'	LOGFILE|BINDIR|SUSPSCAN_DIRS)
 
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
@@ -1506,7 +1495,7 @@ check_paths() {
 
 
 expand_paths() {
-#jh - done
+#jh - new
 	#
 	# This function will output an expanded list of pathnames.
 	#
@@ -1532,6 +1521,23 @@ ${FNAME}"
 	IFS=$RKHIFS
 
 	echo "${LIST}" | sed -e '/^$/d'
+
+	return
+}
+
+
+make_space_list() {
+#jh - new
+
+	#
+	# This function simply converts its argument into a space-separated list.
+	#
+
+	if [ "${ECHON}" = "c" ]; then
+		echo $ECHOOPT "${1}\c" | tr '\n' ' '
+	else
+		echo $ECHON $ECHOOPT "${1}" | tr '\n' ' '
+	fi
 
 	return
 }
@@ -2904,7 +2910,7 @@ get_existwl_option() {
 	ERRCODE=0
 	EXISTWHITELIST=""
 
-#jh - modify rkunter.conf existwhitelist option to say it is a newline list.
+#jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile option to say it is a newline list.
 #jh - modify the CHANGELOG to say that existwhitelist is a newline list.
 #jh - changelog/upgading to say hash_func being deprecated for hash_cmd
 
@@ -4210,40 +4216,31 @@ get_hidden_options() {
 	ERRCODE=0
 	ALLOWHIDDENFILES=""
 
-	ALLOWHIDDENFILE_OPT=`get_option 2 multi ALLOWHIDDENFILE` || exit 1
+	ALLOWHIDDENFILE_OPT=`new_get_option newline-list ALLOWHIDDENFILE` || exit 1
 
 	if [ -n "${ALLOWHIDDENFILE_OPT}" ]; then
-		#
-		# We 'echo' the variable so that any wildcards get expanded.
-		#
+		# Note that we do not get the expanded list of pathnames at
+		# this point. That will be done when the test actually runs.
 
-		ALLOWHIDDENFILES=`echo ${ALLOWHIDDENFILE_OPT}`
+		ALLOWHIDDENFILES=${ALLOWHIDDENFILE_OPT}
 
-		check_paths ALLOWHIDDENFILES ALLOWHIDDENFILE
+		new_check_paths ALLOWHIDDENFILES ALLOWHIDDENFILE
 
 		test $ERRCODE -eq 1 && LEAVE=1
-
-		ALLOWHIDDENFILES=`echo " ${ALLOWHIDDENFILES} " | tr '%' ' '`
 	fi
 
 
 	ERRCODE=0
 	ALLOWHIDDENDIRS=""
 
-	ALLOWHIDDENDIR_OPT=`get_option 2 multi ALLOWHIDDENDIR` || exit 1
+	ALLOWHIDDENDIR_OPT=`new_get_option newline-list ALLOWHIDDENDIR` || exit 1
 
 	if [ -n "${ALLOWHIDDENDIR_OPT}" ]; then
-		#
-		# We 'echo' the variable so that any wildcards get expanded.
-		#
+		ALLOWHIDDENDIRS=${ALLOWHIDDENDIR_OPT}
 
-		ALLOWHIDDENDIRS=`echo ${ALLOWHIDDENDIR_OPT}`
-
-		check_paths ALLOWHIDDENDIRS ALLOWHIDDENDIR
+		new_check_paths ALLOWHIDDENDIRS ALLOWHIDDENDIR
 
 		test $ERRCODE -eq 1 && LEAVE=1
-
-		ALLOWHIDDENDIRS=`echo " ${ALLOWHIDDENDIRS} " | tr '%' ' '`
 	fi
 
 	if [ $LEAVE -eq 1 ]; then
@@ -7445,7 +7442,7 @@ do_config_check() {
 	#
 
 	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
-		   ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
+		   ALLOWPROCDELFILE ALLOWPROCLISTEN
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
 		   APPEND_LOG ATTRWHITELIST AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR
 		   DISABLE_UNHIDE EPOCH_DATE_CMD HASH_FLD_IDX HASH_FUNC HASH_CMD
@@ -11187,7 +11184,6 @@ suspscan() {
 	#
 
 	if [ $SUSPSCAN_DFLT_DIRS -eq 1 ]; then
-#jhjh - is this displayed okay? Or do we need to convert newline lists before displaying?
 		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_DIRS "${SUSPSCAN_DIRS}"
 	else
 		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIRS "${SUSPSCAN_DIRS}"
@@ -16119,8 +16115,11 @@ do_dev_whitelist_check() {
 	fi
 
 #jhjh - Use this line for setting the grep variable.
+	#
 	# Not sure why but '?' doesn't seem to need to be escaped. Neither do parentheses or braces.
 	# Also, cannot get the '[]' characters to work in the bracket expression. So these are handled individually.
+	#
+
 	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -16167,7 +16166,7 @@ do_filesystem_check() {
 
 
 		#
-		# First we re-evaluate the whitelist option to ensure
+		# First we expand the whitelist option to ensure
 		# that any wildcard entries are the most recent.
 		#
 
@@ -16301,18 +16300,16 @@ ${RKHTMPVAR}"
 
 
 	#
-	# We re-evaluate the whitelisting options to ensure that any
+	# We expand the whitelisting options to ensure that any
 	# wildcard entries are the most recent.
 	#
 
 	if [ -n "${ALLOWHIDDENFILE_OPT}" ]; then
-		ALLOWHIDDENFILES=`echo ${ALLOWHIDDENFILE_OPT}`
-		ALLOWHIDDENFILES=`echo " ${ALLOWHIDDENFILES} " | tr '%' ' '`
+		ALLOWHIDDENFILES=`expand_paths ALLOWHIDDENFILE_OPT`
 	fi
 
 	if [ -n "${ALLOWHIDDENDIR_OPT}" ]; then
-		ALLOWHIDDENDIRS=`echo ${ALLOWHIDDENDIR_OPT}`
-		ALLOWHIDDENDIRS=`echo " ${ALLOWHIDDENDIRS} " | tr '%' ' '`
+		ALLOWHIDDENDIRS=`expand_paths ALLOWHIDDENDIR_OPT`
 	fi
 
 	#
@@ -16331,17 +16328,17 @@ ${RKHTMPVAR}"
 
 		test -n "`echo \"${FTYPE}\" | egrep 'character special|block special|empty'`" && continue
 
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 		if [ -n "`echo \"${FTYPE}\" | grep 'directory'`" ]; then
-			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "`name2text ${FNAME}`"
 			else
 				FOUNDDIRS="${FOUNDDIRS}
 ${FNAME}: ${FTYPE}"
 			fi
 		else
-			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "`name2text ${FNAME}`"
 			else
 				FOUNDFILES="${FOUNDFILES}
@@ -18159,7 +18156,7 @@ SPACE_LIST_OPTS="UPDATE_LANG BINDIR MAIL-ON-WARNING SYSLOG_CONFIG_FILE ENABLE_TE
 SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 
 # A list of configuration options which are newline-separated lists.
-NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE"
+NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE ALLOWHIDDENFILE ALLOWHIDDENDIR"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.
