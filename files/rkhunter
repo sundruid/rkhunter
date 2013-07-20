@@ -624,7 +624,10 @@ new_get_option() {
 	#
 	# This function is used to process configuration file options.
 	#
-	# Syntax: get_option [single | space-list | newline-list] <option name>
+#
+#jh - space-list - converted to nl list? If so code for opts needs to change.
+#
+	# Syntax: get_option (single | space-list | newline-list) <option name>
 	#
 	# The first parameter indicates if the option can occur on one
 	# or more lines in the configuration files. A 'space-list' is a
@@ -637,6 +640,9 @@ new_get_option() {
 	# Multiline options are usually pathnames, and will be a space-separated
 	# or newline-separated list. Space-separated lists are, obviously, not
 	# expected to contain any special characters such as a space.
+	#
+	# NOTE:	A space-separated list is converted to a newline-separated
+	#	list. So tests using the list need to cater for this.
 	#
 	# The function will output the final, non-expanded, option value.
 	# It will also return an error code. A code of zero indicates no
@@ -760,12 +766,12 @@ new_get_option() {
 				OPTVAR=`echo "${OPTVAR} " | awk 'BEGIN { RS="" }; END { print }'`
 
 				# We convert the list to newline-separated here.
-				OPTVAR=`echo ${OPTVAR} | tr ' ' '\n'`
+#jhjh - not needed?			OPTVAR=`echo ${OPTVAR} | tr ' ' '\n'`
 
 				# The above echo may have removed trailing spaces.
-				if [ -n "${OPTVAR}" ]; then
-					test $HASHYPHEN -eq 1 && OPTVAR="${OPTVAR} "
-				fi
+#jhjh - if so then HASHYPHEN	if [ -n "${OPTVAR}" ]; then
+#jhjh - is also not needed		test $HASHYPHEN -eq 1 && OPTVAR="${OPTVAR} "
+#jhjh				fi
 			fi
 		fi
 		;;
@@ -952,6 +958,8 @@ new_check_paths() {
 	# ensure the files and directories exist. It will also
 	# check that directories such as '/' (root) are not present,
 	# nor are pathnames with unwanted characters.
+	#
+	# Syntax: check_paths <pathnames> <option_name> "[EXIST] [NOWILD] [NOBROKENLINK]"
 	#
 	# The function only checks the pathnames. It is not possible
 	# to modify the list in any way. The variable ERRCODE must be
@@ -2210,7 +2218,7 @@ get_installdir_option() {
 
 	LEAVE=0
 
-	RKHINSTALLDIR=`get_option 1 single INSTALLDIR` || exit 1
+	RKHINSTALLDIR=`new_get_option single INSTALLDIR` || exit 1
 
 	if [ -z "${RKHINSTALLDIR}" ]; then
 		LEAVE=1
@@ -2253,7 +2261,7 @@ get_language_option() {
 			echo "Invalid '--language' option - no language given."
 		fi
 	else
-		LANGUAGE=`get_option 1 single LANGUAGE` || exit 1
+		LANGUAGE=`new_get_option single LANGUAGE` || exit 1
 	fi
 
 	#
@@ -2319,7 +2327,7 @@ get_language_option() {
 	#
 
 	if [ $UPDATE -eq 1 ]; then
-		UPDATE_LANG=`get_option 2 single UPDATE_LANG` || exit 1
+		UPDATE_LANG=`new_get_option space-list UPDATE_LANG` || exit 1
 
 		if [ -n "${UPDATE_LANG}" ]; then
 			if [ -z "`echo \" ${UPDATE_LANG} \" | grep \" ${LANGUAGE} \"`" ]; then
@@ -2363,9 +2371,9 @@ get_logfile_option() {
 			echo "Invalid '--logfile' option - no logfile name given."
 		fi
 	else
-		RKHLOGFILE=`get_option 1 single LOGFILE` || exit 1
+		RKHLOGFILE=`new_get_option single LOGFILE` || exit 1
 
-		check_paths RKHLOGFILE LOGFILE STRICT
+		new_check_paths RKHLOGFILE LOGFILE "NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ -z "${RKHLOGFILE}" ]; then
@@ -2422,7 +2430,7 @@ get_logfile_option() {
 		#
 
 		if [ $APPEND_OPT -eq 0 ]; then
-			APPEND_LOG=`get_option 1 single APPEND_LOG` || exit 1
+			APPEND_LOG=`new_get_option single APPEND_LOG` || exit 1
 
 			if [ -n "${APPEND_LOG}" ]; then
 				check_is_digit APPEND_LOG
@@ -2438,7 +2446,7 @@ get_logfile_option() {
 		# copy is done if no logfile is used.
 		#
 
-		RKHTMPVAR=`get_option 1 single COPY_LOG_ON_ERROR` || exit 1
+		RKHTMPVAR=`new_get_option single COPY_LOG_ON_ERROR` || exit 1
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			check_is_digit RKHTMPVAR COPY_LOG_ON_ERROR
@@ -2478,9 +2486,9 @@ get_tmpdir_option() {
 			echo "Invalid '--tmpdir' option - no directory name given."
 		fi
 	else
-		RKHTMPDIR=`get_option 1 single TMPDIR` || exit 1
+		RKHTMPDIR=`new_get_option single TMPDIR` || exit 1
 
-		check_paths RKHTMPDIR TMPDIR STRICT
+		new_check_paths RKHTMPDIR TMPDIR "NOWILD NOBROKENLINK EXIST"
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ -z "${RKHTMPDIR}" ]; then
@@ -2549,9 +2557,9 @@ get_dbdir_option() {
 			echo "Invalid '--dbdir' option - no directory name given."
 		fi
 	else
-		DB_PATH=`get_option 1 single DBDIR` || exit 1
+		DB_PATH=`new_get_option single DBDIR` || exit 1
 
-		check_paths DB_PATH DBDIR STRICT
+		new_check_paths DB_PATH DBDIR "NOWILD EXIST NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ -z "${DB_PATH}" ]; then
@@ -2685,9 +2693,9 @@ get_bindir_option() {
 			echo "Invalid '--bindir' option - no directory names given."
 		fi
 	else
-		BINPATHS=`get_option 2 multi BINDIR` || exit 1
+		BINPATHS=`new_get_option space-list BINDIR` || exit 1
 
-		check_paths BINPATHS BINDIR STRICT
+		new_check_paths BINPATHS BINDIR "NOWILD"
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ -z "${BINPATHS}" ]; then
@@ -2798,9 +2806,9 @@ get_scriptdir_option() {
 	LEAVE=0
 	ERRCODE=0
 
-	SCRIPT_PATH=`get_option 1 single SCRIPTDIR` || exit 1
+	SCRIPT_PATH=`new_get_option single SCRIPTDIR` || exit 1
 
-	check_paths SCRIPT_PATH SCRIPTDIR STRICT
+	new_check_paths SCRIPT_PATH SCRIPTDIR "NOWILD EXIST NOBROKENLINK"
 
 	if [ $ERRCODE -eq 0 ]; then
 		if [ -z "${SCRIPT_PATH}" ]; then
@@ -2866,7 +2874,7 @@ find_cmd() {
 
 get_rootdir_option() {
 
-	RKHTMPVAR=`get_option 1 single ROOTDIR` || exit 1
+	RKHTMPVAR=`new_get_option single ROOTDIR` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		echo "The ROOTDIR configuration option is now deprecated."
@@ -2925,7 +2933,7 @@ get_mailonwarn_option() {
 	LEAVE=0
 	ERRCODE=0
 
-	MAILONWARNING=`get_option 2 multi MAIL-ON-WARNING` || exit 1
+	MAILONWARNING=`new_get_option space-list MAIL-ON-WARNING` || exit 1
 
 	if [ -n "${MAILONWARNING}" ]; then
 		MAIL_CMD=`new_get_option single MAIL_CMD` || exit 1
@@ -2934,7 +2942,7 @@ get_mailonwarn_option() {
 
 		MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f1`
 
-		check_paths MCMD MAIL_CMD STRICT
+		new_check_paths MCMD MAIL_CMD "NOWILD EXIST NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			#
@@ -3056,7 +3064,7 @@ get_syslog_option() {
 			echo "Invalid '--syslog' option - no facility/priority names given."
 		fi
 	else
-		USE_SYSLOG=`get_option 1 single USE_SYSLOG` || exit 1
+		USE_SYSLOG=`new_get_option single USE_SYSLOG` || exit 1
 	fi
 
 
@@ -3145,7 +3153,7 @@ get_ssh_options() {
 
 	LEAVE=0
 
-	ALLOW_SSH_ROOT_USER=`get_option 1 single ALLOW_SSH_ROOT_USER` || exit 1
+	ALLOW_SSH_ROOT_USER=`new_get_option single ALLOW_SSH_ROOT_USER` || exit 1
 
 	if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
 		ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[:upper:]' '[:lower:]'`
@@ -3167,7 +3175,7 @@ get_ssh_options() {
 
 	ERRCODE=0
 
-	ALLOW_SSH_PROT_V1=`get_option 1 single ALLOW_SSH_PROT_V1` || exit 1
+	ALLOW_SSH_PROT_V1=`new_get_option single ALLOW_SSH_PROT_V1` || exit 1
 
 	if [ -n "${ALLOW_SSH_PROT_V1}" ]; then
 		check_is_digit ALLOW_SSH_PROT_V1 ALLOW_SSH_PROT_V1 2
@@ -3184,10 +3192,10 @@ get_ssh_options() {
 
 	ERRCODE=0
 
-	SSH_CONFIG_DIR=`get_option 1 single SSH_CONFIG_DIR` || exit 1
+	SSH_CONFIG_DIR=`new_get_option single SSH_CONFIG_DIR` || exit 1
 
 	if [ -n "${SSH_CONFIG_DIR}" ]; then
-		check_paths SSH_CONFIG_DIR SSH_CONFIG_DIR STRICT
+		new_check_paths SSH_CONFIG_DIR SSH_CONFIG_DIR "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ ! -r "${SSH_CONFIG_DIR}" ]; then
@@ -3225,7 +3233,7 @@ get_syslog_config_options() {
 
 	ERRCODE=0
 
-	ALLOW_SYSLOG_REMOTE_LOGGING=`get_option 1 single ALLOW_SYSLOG_REMOTE_LOGGING` || exit 1
+	ALLOW_SYSLOG_REMOTE_LOGGING=`new_get_option single ALLOW_SYSLOG_REMOTE_LOGGING` || exit 1
 
 	if [ -n "${ALLOW_SYSLOG_REMOTE_LOGGING}" ]; then
 		check_is_digit ALLOW_SYSLOG_REMOTE_LOGGING
@@ -3238,13 +3246,13 @@ get_syslog_config_options() {
 	# See if the pathname to the syslog configuration file has been set.
 	#
 
-	SYSLOG_CONFIG_FILE=`get_option 2 multi SYSLOG_CONFIG_FILE` || exit 1
+	SYSLOG_CONFIG_FILE=`get_option space-list SYSLOG_CONFIG_FILE` || exit 1
 
 	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
 		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep -i '^none$'`" ]; then
 			SYSLOG_CONFIG_FILE="NONE"
 		else
-			check_paths SYSLOG_CONFIG_FILE SYSLOG_CONFIG_FILE STRICT
+			new_check_paths SYSLOG_CONFIG_FILE SYSLOG_CONFIG_FILE "EXIST NOWILD NOBROKENLINK"
 		fi
 	fi
 
@@ -3275,7 +3283,7 @@ get_auto_x_option() {
 	ERRCODE=0
 
 	if [ $AUTO_X_OPT -eq 0 ]; then
-		AUTO_X_DTCT=`get_option 1 single AUTO_X_DETECT` || exit 1
+		AUTO_X_DTCT=`new_get_option single AUTO_X_DETECT` || exit 1
 
 		if [ -n "${AUTO_X_DTCT}" ]; then
 			check_is_digit AUTO_X_DTCT AUTO_X_DETECT
@@ -3295,7 +3303,7 @@ get_auto_x_option() {
 	if [ $CLRSET2 -eq 0 ]; then
 		ERRCODE=0
 
-		CLRSET2=`get_option 1 single COLOR_SET2` || exit 1
+		CLRSET2=`new_get_option single COLOR_SET2` || exit 1
 
 		if [ -n "${CLRSET2}" ]; then
 			check_is_digit CLRSET2 COLOR_SET2
@@ -3314,7 +3322,7 @@ get_auto_x_option() {
 
 	ERRCODE=0
 
-	WLIST_IS_WHITE=`get_option 1 single WHITELISTED_IS_WHITE` || exit 1
+	WLIST_IS_WHITE=`new_get_option single WHITELISTED_IS_WHITE` || exit 1
 
 	if [ -n "${WLIST_IS_WHITE}" ]; then
 		check_is_digit WLIST_IS_WHITE WHITELISTED_IS_WHITE
@@ -3350,7 +3358,7 @@ get_locking_options() {
 	LEAVE=0
 	ERRCODE=0
 
-	USE_LOCKING=`get_option 1 single USE_LOCKING` || exit 1
+	USE_LOCKING=`new_get_option single USE_LOCKING` || exit 1
 
 	if [ -n "${USE_LOCKING}" ]; then
 		check_is_digit USE_LOCKING
@@ -3373,7 +3381,7 @@ get_locking_options() {
 
 	ERRCODE=0
 
-	LOCK_TIMEOUT=`get_option 1 single LOCK_TIMEOUT` || exit 1
+	LOCK_TIMEOUT=`new_get_option single LOCK_TIMEOUT` || exit 1
 
 	if [ -n "${LOCK_TIMEOUT}" ]; then
 		check_is_digit LOCK_TIMEOUT LOCK_TIMEOUT ANY1
@@ -3394,7 +3402,7 @@ get_locking_options() {
 
 	ERRCODE=0
 
-	SHOW_LOCK_MSGS=`get_option 1 single SHOW_LOCK_MSGS` || exit 1
+	SHOW_LOCK_MSGS=`new_get_option single SHOW_LOCK_MSGS` || exit 1
 
 	if [ -n "${SHOW_LOCK_MSGS}" ]; then
 		check_is_digit SHOW_LOCK_MSGS
@@ -3735,7 +3743,7 @@ get_enable_option() {
 		# We get the configuration file entries by default.
 		#
 
-		ENABLE_TESTS=`get_option 2 multi ENABLE_TESTS` || exit 1
+		ENABLE_TESTS=`new_get_option space-list ENABLE_TESTS` || exit 1
 		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 
 		# The system default.
@@ -3781,7 +3789,7 @@ get_disable_option() {
 	#
 
 	if [ $USECF -eq 1 ]; then
-		CONFIG_DISABLE_TESTS=`get_option 2 multi DISABLE_TESTS` || exit 1
+		CONFIG_DISABLE_TESTS=`new_get_option space-list DISABLE_TESTS` || exit 1
 	fi
 
 	DISABLE_TESTS="${CL_DISABLE_TESTS} ${CONFIG_DISABLE_TESTS}"
@@ -3809,17 +3817,17 @@ get_xinetd_option() {
 	LEAVE=0
 	ERRCODE=0
 
-	FNAME=`get_option 1 single INETD_CONF_PATH` || exit 1
+	FNAME=`new_get_option single INETD_CONF_PATH` || exit 1
 
 	if [ -n "${FNAME}" ]; then
-		check_paths FNAME INETD_CONF_PATH STRICT
+		new_check_paths FNAME INETD_CONF_PATH "NOWILD EXIST NOBROKENLINK"
 
 		test $ERRCODE -eq 1 && LEAVE=1
 
 		INETD_CONF_PATH="${FNAME}"
 	fi
 
-	INETDALLOWEDSVCS=`get_option 2 multi INETD_ALLOWED_SVC` || exit 1
+	INETDALLOWEDSVCS=`new_get_option space-list INETD_ALLOWED_SVC` || exit 1
 
 
 	#
@@ -3828,17 +3836,17 @@ get_xinetd_option() {
 
 	ERRCODE=0
 
-	FNAME=`get_option 1 single XINETD_CONF_PATH` || exit 1
+	FNAME=`new_get_option single XINETD_CONF_PATH` || exit 1
 
 	if [ -n "${FNAME}" ]; then
-		check_paths FNAME XINETD_CONF_PATH STRICT
+		new_check_paths FNAME XINETD_CONF_PATH "EXIST NOWILD NOBROKENLINK"
 
 		test $ERRCODE -eq 1 && LEAVE=1
 
 		XINETD_CONF_PATH="${FNAME}"
 	fi
 
-	XINETDALLOWEDSVCS=`get_option 2 multi XINETD_ALLOWED_SVC` || exit 1
+	XINETDALLOWEDSVCS=`new_get_option space-list XINETD_ALLOWED_SVC` || exit 1
 
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
@@ -3974,10 +3982,10 @@ get_shadow_file_option() {
 
 	ERRCODE=0
 
-	SHADOW_FILE=`get_option 1 single PASSWORD_FILE` || exit 1
+	SHADOW_FILE=`new_get_option single PASSWORD_FILE` || exit 1
 
 	if [ -n "${SHADOW_FILE}" ]; then
-		check_paths SHADOW_FILE PASSWORD_FILE STRICT
+		new_check_paths SHADOW_FILE PASSWORD_FILE "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ -s "${SHADOW_FILE}" ]; then
@@ -4065,7 +4073,7 @@ get_epoch_date_cmd_option() {
 	elif [ -n "${EPOCH_DATE_CMD}" ]; then
 		RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
 
-		check_paths RKHTMPVAR EPOCH_DATE_CMD STRICT
+		new_check_paths RKHTMPVAR EPOCH_DATE_CMD "EXIST NOWILD NOBROKENLINK"
 
 		#
 		# Check that the command exists and is executable.
@@ -4133,7 +4141,7 @@ get_phalanx2_option() {
 
 	ERRCODE=0
 
-	ROOTKIT_PHALANX2_DIRTESTVAL=`get_option 1 single PHALANX2_DIRTEST` || exit 1
+	ROOTKIT_PHALANX2_DIRTESTVAL=`new_get_option single PHALANX2_DIRTEST` || exit 1
 
 	if [ -n "${ROOTKIT_PHALANX2_DIRTESTVAL}" ]; then
 		check_is_digit ROOTKIT_PHALANX2_DIRTESTVAL
@@ -4258,20 +4266,20 @@ get_missing_file_options() {
 	LEAVE=0
 	ERRCODE=0
 
-	LOGFILE_MISSING=`get_option 2 multi MISSING_LOGFILES` || exit 1
+	LOGFILE_MISSING=`new_get_option space-list MISSING_LOGFILES` || exit 1
 
 	if [ -n "${LOGFILE_MISSING}" ]; then
-		check_paths LOGFILE_MISSING MISSING_LOGFILES
+		new_check_paths LOGFILE_MISSING MISSING_LOGFILES "NOWILD"
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 	ERRCODE=0
 
-	LOGFILE_EMPTY=`get_option 2 multi EMPTY_LOGFILES` || exit 1
+	LOGFILE_EMPTY=`new_get_option space-list EMPTY_LOGFILES` || exit 1
 
 	if [ -n "${LOGFILE_EMPTY}" ]; then
-		check_paths LOGFILE_EMPTY EMPTY_LOGFILES
+		new_check_paths LOGFILE_EMPTY EMPTY_LOGFILES "NOWILD"
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	fi
@@ -4298,7 +4306,7 @@ get_unhide_options() {
 	LEAVE=0
 	ERRCODE=0
 
-	UNHIDE_TESTS=`get_option 2 multi UNHIDE_TESTS` || exit 1
+	UNHIDE_TESTS=`new_get_option space-list UNHIDE_TESTS` || exit 1
 
 	if [ -z "${UNHIDE_TESTS}" ]; then
 		UNHIDE_TESTS="sys"
@@ -4336,7 +4344,7 @@ get_unhide_options() {
 	fi
 
 
-	NOUNHIDE=`get_option 1 single DISABLE_UNHIDE` || exit 1
+	NOUNHIDE=`new_get_option single DISABLE_UNHIDE` || exit 1
 
 	if [ -n "${NOUNHIDE}" ]; then
 		check_is_digit NOUNHIDE DISABLE_UNHIDE 2
@@ -4394,10 +4402,10 @@ get_suspscan_options() {
 
 	ERRCODE=0
 
-	SUSPSCAN_TEMP=`get_option 1 single SUSPSCAN_TEMP` || exit 1
+	SUSPSCAN_TEMP=`new_get_option single SUSPSCAN_TEMP` || exit 1
 
 	if [ -n "${SUSPSCAN_TEMP}" ]; then
-		check_paths SUSPSCAN_TEMP SUSPSCAN_TEMP STRICT
+		new_check_paths SUSPSCAN_TEMP SUSPSCAN_TEMP "EXIST NOBROKENLINK NOWILD"
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	else
@@ -4428,7 +4436,7 @@ get_suspscan_options() {
 
 	ERRCODE=0
 
-	SUSPSCAN_MAXSIZE=`get_option 1 single SUSPSCAN_MAXSIZE` || exit 1
+	SUSPSCAN_MAXSIZE=`new_get_option single SUSPSCAN_MAXSIZE` || exit 1
 
 	if [ -n "${SUSPSCAN_MAXSIZE}" ]; then
 		check_is_digit SUSPSCAN_MAXSIZE SUSPSCAN_MAXSIZE ANY1
@@ -4445,7 +4453,7 @@ get_suspscan_options() {
 
 	ERRCODE=0
 
-	SUSPSCAN_THRESH=`get_option 1 single SUSPSCAN_THRESH` || exit 1
+	SUSPSCAN_THRESH=`new_get_option single SUSPSCAN_THRESH` || exit 1
 
 	if [ -n "${SUSPSCAN_THRESH}" ]; then
 		check_is_digit SUSPSCAN_THRESH SUSPSCAN_THRESH ANY1
@@ -4464,7 +4472,7 @@ get_suspscan_options() {
 
 	ERRCODE=0
 
-	SUSPSCAN_LINETHRESH=`get_option 1 single SUSPSCAN_LINETHRESH` || exit 1
+	SUSPSCAN_LINETHRESH=`new_get_option single SUSPSCAN_LINETHRESH` || exit 1
 
 	if [ -n "${SUSPSCAN_LINETHRESH}" ]; then
 		check_is_digit SUSPSCAN_LINETHRESH SUSPSCAN_LINETHRESH ANY1
@@ -4482,7 +4490,7 @@ get_suspscan_options() {
 
 	ERRCODE=0
 
-	SUSPSCAN_DEBUG=`get_option 1 single SUSPSCAN_DEBUG` || exit 1
+	SUSPSCAN_DEBUG=`new_get_option single SUSPSCAN_DEBUG` || exit 1
 
 	if [ -n "${SUSPSCAN_DEBUG}" ]; then
 		check_is_digit SUSPSCAN_DEBUG
@@ -4984,7 +4992,7 @@ get_scan_mode_dev_option() {
 
 	#
 	# SCAN_MODE_DEV governs how we scan '/dev' for suspicious files.
-	# The two allowed options are "THOROUGH" or "LAZY". If the option
+	# The two allowed values are "THOROUGH" or "LAZY". If the option
 	# is commented out, the default, then we do a THOROUGH scan, which
 	# will increase the runtime of rkhunter.
 	#
@@ -4993,7 +5001,7 @@ get_scan_mode_dev_option() {
 	# See if the option is specified in the configuration file.
 	#
 
-	SCAN_MODE_DEV=`get_option 1 single SCAN_MODE_DEV` || exit 1
+	SCAN_MODE_DEV=`new_get_option single SCAN_MODE_DEV` || exit 1
 
 	if [ -n "${SCAN_MODE_DEV}" ]; then
 		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | tr '[:lower:]' '[:upper:]'`
@@ -5168,7 +5176,7 @@ get_mirror_options() {
 	LEAVE=0
 	ERRCODE=0
 
-	ROTATE_MIRRORS=`get_option 1 single ROTATE_MIRRORS` || exit 1
+	ROTATE_MIRRORS=`new_get_option single ROTATE_MIRRORS` || exit 1
 
 	if [ -n "${ROTATE_MIRRORS}" ]; then
 		check_is_digit ROTATE_MIRRORS
@@ -5218,7 +5226,7 @@ get_mirror_options() {
 	if [ $UPDATE -eq 1 ]; then
 		ERRCODE=0
 
-		UPDATE_MIRRORS=`get_option 1 single UPDATE_MIRRORS` || exit 1
+		UPDATE_MIRRORS=`new_get_option single UPDATE_MIRRORS` || exit 1
 
 		if [ -n "${UPDATE_MIRRORS}" ]; then
 			check_is_digit UPDATE_MIRRORS
@@ -5236,7 +5244,7 @@ get_mirror_options() {
 
 	ERRCODE=0
 
-	MIRRORS_MODE=`get_option 1 single MIRRORS_MODE` || exit 1
+	MIRRORS_MODE=`new_get_option single MIRRORS_MODE` || exit 1
 
 	if [ -n "${MIRRORS_MODE}" ]; then
 		check_is_digit MIRRORS_MODE MIRRORS_MODE 2
@@ -5272,14 +5280,14 @@ get_os_info_options() {
 	LEAVE=0
 	ERRCODE=0
 
-	OS_VERSION_FILE=`get_option 1 single OS_VERSION_FILE` || exit 1
+	OS_VERSION_FILE=`new_get_option single OS_VERSION_FILE` || exit 1
 
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		#
 		# Check that the given file is usable.
 		#
 
-		check_paths OS_VERSION_FILE OS_VERSION_FILE STRICT
+		new_check_paths OS_VERSION_FILE OS_VERSION_FILE "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			if [ ! -r "${OS_VERSION_FILE}" ]; then
@@ -5302,7 +5310,7 @@ get_os_info_options() {
 
 	ERRCODE=0
 
-	WARN_ON_OS_CHANGE=`get_option 1 single WARN_ON_OS_CHANGE` || exit 1
+	WARN_ON_OS_CHANGE=`new_get_option single WARN_ON_OS_CHANGE` || exit 1
 
 	if [ -n "${WARN_ON_OS_CHANGE}" ]; then
 		check_is_digit WARN_ON_OS_CHANGE
@@ -5320,7 +5328,7 @@ get_os_info_options() {
 
 	ERRCODE=0
 
-	UPDT_ON_OS_CHANGE=`get_option 1 single UPDT_ON_OS_CHANGE` || exit 1
+	UPDT_ON_OS_CHANGE=`new_get_option single UPDT_ON_OS_CHANGE` || exit 1
 
 	if [ -n "${UPDT_ON_OS_CHANGE}" ]; then
 		check_is_digit UPDT_ON_OS_CHANGE
@@ -5565,7 +5573,7 @@ get_properties_options() {
 	fi
 
 
-	IMMUTABLE_SET=`get_option 1 single IMMUTABLE_SET` || exit 1
+	IMMUTABLE_SET=`new_get_option single IMMUTABLE_SET` || exit 1
 
 	if [ -n "${IMMUTABLE_SET}" ]; then
 		check_is_digit IMMUTABLE_SET
@@ -5634,7 +5642,7 @@ get_summary_warnings_option() {
 
 	ERRCODE=0
 
-	SHOW_SUMMARY_WARNINGS_NUMBER=`get_option 1 single SHOW_SUMMARY_WARNINGS_NUMBER` || exit 1
+	SHOW_SUMMARY_WARNINGS_NUMBER=`new_get_option single SHOW_SUMMARY_WARNINGS_NUMBER` || exit 1
 
 	if [ -n "${SHOW_SUMMARY_WARNINGS_NUMBER}" ]; then
 		check_is_digit SHOW_SUMMARY_WARNINGS_NUMBER
@@ -14159,10 +14167,14 @@ linux_avail_modules() {
 	LKM_PATH=""
 	LKM_NAMES=""
 
-	RKHTMPVAR=`get_option 1 single MODULES_DIR` || exit 1
+	RKHTMPVAR=`new_get_option single MODULES_DIR` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		LKM_PATH="${RKHTMPVAR}"
+
+#jh - this 'get_option' needs to be done before the prog starts, then
+#jh - we can check check_paths and exit or set LEAVE as with other options.
+#jh		new_check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
 	else
 		LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
 		test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
