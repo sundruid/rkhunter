@@ -1024,13 +1024,14 @@ new_check_paths() {
 
 		# We need to get RKHTMPVAR into a single line now, but we can't use a
 		# straight echo command here because that would expand the wildcards.
+#jhjh - make function? Yes, then use when displaying newline list (do we ever do that)?
 		if [ "${ECHON}" = "c" ]; then
 			RKHTMPVAR=`echo $ECHOOPT "${RKHTMPVAR}\c" | tr '\n' ' '`
 		else
 			RKHTMPVAR=`echo $ECHON $ECHOOPT "${RKHTMPVAR}" | tr '\n' ' '`
 		fi
 
-		echo "Invalid ${OPT_NAME} configuration option: Pathname begins with a hyphen: ${OPT_VALUE}"
+		echo "Invalid ${OPT_NAME} configuration option: Pathname begins with a hyphen: ${RKHTMPVAR}"
 		return
 	fi
 
@@ -1065,7 +1066,11 @@ new_check_paths() {
 	# Now check each pathname in the option.
 	#
 
-	IFS=$IFSNL
+	# If this is a newline list option then we need to read a line at a time.
+
+	if [ -n "`echo \"${NEWLINE_LIST_OPTS}\" | grep \" ${OPT_NAME} \"`" ]; then
+		IFS=$IFSNL
+	fi
 
 	for FNAME in ${OPT_VALUE}; do
 		test -z "${FNAME}" && continue
@@ -4174,12 +4179,12 @@ get_dev_options() {
 	ALLOWDEVFILE_OPT=`new_get_option newline-list ALLOWDEVFILE` || exit 1
 
 	if [ -n "${ALLOWDEVFILE_OPT}" ]; then
+		# Note that we do not get the expanded list of pathnames at
+		# this point. That will be done when the test actually runs.
+
 		ALLOWDEVFILES=${ALLOWDEVFILE_OPT}
 
 		new_check_paths ALLOWDEVFILES ALLOWDEVFILE
-
-		# Note that we do not get the expanded list of pathnames at
-		# this point. That will be done when the test actually runs.
 	fi
 
 	if [ $ERRCODE -eq 1 ]; then
@@ -4385,10 +4390,10 @@ get_suspscan_options() {
 	# Get the directories to scan.
 	#
 
-	SUSPSCAN_DIRS=`get_option 2 multi SUSPSCAN_DIRS` || exit 1
+	SUSPSCAN_DIRS=`new_get_option space-list SUSPSCAN_DIRS` || exit 1
 
 	if [ -n "${SUSPSCAN_DIRS}" ]; then
-		check_paths SUSPSCAN_DIRS SUSPSCAN_DIRS STRICT
+		new_check_paths SUSPSCAN_DIRS SUSPSCAN_DIRS "NOBROKENLINK NOWILD"
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	else
@@ -5634,6 +5639,7 @@ get_prelink_dep_option() {
 
 
 get_summary_warnings_option() {
+#jh - change this to get_summary_options - then include option to (not) display time taken.
 
 	#
 	# Get the configuration option to see if we are to
@@ -7433,23 +7439,26 @@ do_config_check() {
 	# First we define the list of valid configuration options.
 	#
 
-	VALIDOPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
+	#
+	# All the following specified options should be single
+	# value options (that is, not any sort of list).
+	#
+
+	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
+		   ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
-		   APPEND_LOG APP_WHITELIST ATTRWHITELIST AUTO_X_DETECT BINDIR COLOR_SET2
-		   COPY_LOG_ON_ERROR DBDIR DISABLE_TESTS DISABLE_UNHIDE EMPTY_LOGFILES ENABLE_TESTS EPOCH_DATE_CMD
-		   EXISTWHITELIST HASH_FLD_IDX HASH_FUNC HASH_CMD IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET
-		   IMMUTWHITELIST INETD_ALLOWED_SVC INETD_CONF_PATH INSTALLDIR LANGUAGE LOCK_TIMEOUT
-		   LOGFILE MAIL-ON-WARNING MAIL_CMD MIRRORS_MODE MISSING_LOGFILES MODULES_DIR OS_VERSION_FILE
+		   APPEND_LOG ATTRWHITELIST AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR
+		   DISABLE_UNHIDE EPOCH_DATE_CMD HASH_FLD_IDX HASH_FUNC HASH_CMD
+		   IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET IMMUTWHITELIST INETD_CONF_PATH INSTALLDIR
+		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE
 		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST
 		   PWDLESS_ACCOUNTS ROOTDIR ROTATE_MIRRORS RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
 		   SCAN_MODE_DEV SCRIPTDIR SCRIPTWHITELIST SHARED_LIB_WHITELIST SHOW_LOCK_MSGS
 		   SHOW_SUMMARY_WARNINGS_NUMBER SSH_CONFIG_DIR STARTUP_PATHS SUSPSCAN_DEBUG
-		   SUSPSCAN_DIRS SUSPSCAN_LINETHRESH
-		   SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH SYSLOG_CONFIG_FILE TMPDIR
-		   UID0_ACCOUNTS UNHIDE_TESTS UNHIDETCP_OPTS UPDATE_LANG UPDATE_MIRRORS UPDT_ON_OS_CHANGE
-		   USE_SUNSUM USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE
-		   WEBCMD WEB_CMD WHITELISTED_IS_WHITE WRITEWHITELIST XINETD_ALLOWED_SVC
-		   XINETD_CONF_PATH"
+		   SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH TMPDIR
+		   UID0_ACCOUNTS UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM
+		   USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD
+		   WEB_CMD WHITELISTED_IS_WHITE WRITEWHITELIST XINETD_CONF_PATH"
 
 	VALIDOPTS=" `echo ${VALIDOPTS}` "
 
@@ -11178,6 +11187,7 @@ suspscan() {
 	#
 
 	if [ $SUSPSCAN_DFLT_DIRS -eq 1 ]; then
+#jhjh - is this displayed okay? Or do we need to convert newline lists before displaying?
 		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_DIRS "${SUSPSCAN_DIRS}"
 	else
 		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIRS "${SUSPSCAN_DIRS}"
@@ -16602,7 +16612,7 @@ do_app_checks() {
 
 	APP_WHITELIST=""
 
-	RKHTMVAR=`get_option 2 multi APP_WHITELIST` || exit 1
+	RKHTMVAR=`new_get_option space-list APP_WHITELIST` || exit 1
 
 	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[:upper:]' '[:lower:]'`
 
@@ -18141,6 +18151,16 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
 # A space-separated list of perl modules that may be required.
 LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA Digest::SHA1 Digest::SHA256
 	      Digest::SHA::PurePerl Digest::Whirlpool LWP URI HTTP::Status HTTP::Date Socket Carp"
+
+# A list of configuration options which are space-separated lists.
+SPACE_LIST_OPTS="UPDATE_LANG BINDIR MAIL-ON-WARNING SYSLOG_CONFIG_FILE ENABLE_TESTS DISABLE_TESTS
+		 INETD_ALLOWED_SVC XINETD_ALLOWED_SVC MISSING_LOGFILES EMPTY_LOGFILES UNHIDE_TESTS
+		 UNHIDETCP_OPTS SUSPSCAN_DIRS APP_WHITELIST"
+SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
+
+# A list of configuration options which are newline-separated lists.
+NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE"
+NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.
 ENABLE_TESTS=""
