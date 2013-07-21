@@ -2910,7 +2910,7 @@ get_existwl_option() {
 	ERRCODE=0
 	EXISTWHITELIST=""
 
-#jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile + file property whitelists, ALLOWPROCLISTEN PKGMGR_NO_VRFY option to say it is a newline list.
+#jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile + file property whitelists, ALLOWPROCLISTEN PKGMGR_NO_VRFY ALLOWPROCDELFILE option to say it is a newline list.
 #jh - modify the CHANGELOG to say that existwhitelist is a newline list.
 #jh - changelog/upgading to say hash_func being deprecated for hash_cmd
 
@@ -5424,7 +5424,7 @@ get_user_fileprop_list() {
 	#
 
 	for FNAME in ${FILENAMES}; do
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 		#
 		# First check for any files or directories to be excluded.
@@ -5463,7 +5463,7 @@ get_user_fileprop_list() {
 					RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
 
 					if [ -n "${RKHTMPVAR}" ]; then
-						FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+						FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 							FNAME="${FNAME}
@@ -5499,7 +5499,7 @@ ${FNAME}"
 				# Check that the name hasn't already been set. If it has, then we just ignore it.
 				#
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${FNAMEGREP} \"`" ]; then
 					test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST} ${FNAME}"
@@ -6075,7 +6075,7 @@ rkh_dat_get_os_info() {
 
 
 rkh_dat_set_file_properties() {
-#jh - same here, check that fnamegrep is not changed
+
 	#
 	# This function obtains various bits of information about the
 	# files to be checked. The format in the rkhunter.dat file is:
@@ -6623,7 +6623,7 @@ create_rkh_file_prop_list() {
 			# We must exclude any user requested files or directories.
 			#
 
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "${USER_EXCLUDE_PROP}" ]; then
 				test -n "`echo \" ${USER_EXCLUDE_PROP} \" | grep \" ${FNAMEGREP} \"`" && continue
@@ -7439,7 +7439,6 @@ do_config_check() {
 
 #jh - create single opt list?
 	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
-		   ALLOWPROCDELFILE 
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
 		   APPEND_LOG AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR
 		   DISABLE_UNHIDE EPOCH_DATE_CMD HASH_FLD_IDX HASH_FUNC HASH_CMD
@@ -9602,7 +9601,6 @@ updt_rkhdat() {
 
 
 file_properties_check() {
-#jh - check where fnamegrep used - should not change once set.
 
 	#
 	# This function carries out a check of system command property
@@ -12899,7 +12897,7 @@ malware_checks() {
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
 
-				ALLOWPROCDELFILES=`get_option 2 multi ALLOWPROCDELFILE` || exit 1
+				ALLOWPROCDELFILES=`new_get_option newline-list ALLOWPROCDELFILE` || exit 1
 
 				IFS=$IFSNL
 
@@ -12967,8 +12965,6 @@ malware_checks() {
 					PROCWHITELISTED=0
 					PROCDELFILES_GIVEN=0
 
-					IFS=$RKHIFS
-
 					for RKHTMPVAR in ${ALLOWPROCDELFILES}; do
 						PROCDELFILES_GIVEN=0
 
@@ -13000,7 +12996,6 @@ malware_checks() {
 						fi
 					done
 
-					IFS=$IFSNL
 
 					test $HAVE_READLINK -eq 0 && PROC="\"${PROC}\""
 
@@ -13100,11 +13095,11 @@ ${PROC} ${PID} ${FNAME}"
 			IFS=$IFSNL
 
 			for RKHTMPVAR in ${SUSP_FILES_INFO}; do
-				RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
+				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
 
-				FNAME=`echo ${RKHTMPVAR} | cut -d: -f1`
+				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
 
-				FNAMEGREP=`echo ${FNAME} | sed -e 's/\./\\\./g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				FOUNDFILES=`grep "/${FNAMEGREP}$" "${RKHLSOF_FILE}"`
 
@@ -13113,7 +13108,7 @@ ${PROC} ${PID} ${FNAME}"
 				if [ -n "${FOUNDFILES}" ]; then
 					FOUND=0
 
-					INFO=`echo ${RKHTMPVAR} | cut -d: -f2`
+					INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
 					#
 					# It is possible that more than one line of output was found.
@@ -13126,7 +13121,7 @@ ${PROC} ${PID} ${FNAME}"
 						#
 
 						FILENAME=`echo "${FNAME}" | sed -e 's/^.*[ 	]\([^ 	][^ 	]*\)$/\1/'`
-						FNAMEGREP=`echo ${FILENAME} | sed -e 's/\./\\\./g'`
+						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\./\\\./g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 							display --to LOG --type INFO FILE_PROP_WL "`name2text ${FILENAME}`" running_procs
@@ -13567,7 +13562,7 @@ ${RKHTMPVAR}"
 
 	for FNAME in ${SNIFFER_FILES}; do
 		if [ -f "${FNAME}" ]; then
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" other_malware
@@ -15151,7 +15146,7 @@ ${STRING}:${INFO}"
 	for FNAME in ${RC_PATHS}; do
 		IFS=$IFSNL
 
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 		for STR in ${RCSTRINGS}; do
 			STRING=`echo ${STR} | cut -d: -f1`
@@ -17382,7 +17377,7 @@ set_file_prop_dirs_files() {
 		RKHTMPVAR=""
 
 		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			test -z "`echo \" ${PROP_FILE_LIST} \" | grep \" ${FNAMEGREP} \"`" && RKHTMPVAR="${RKHTMPVAR} ${FNAME}"
 		done
@@ -17432,7 +17427,7 @@ set_file_prop_dirs_files() {
 
 					LINKFNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
 
-					FNAMEGREP=`echo "${LINKFNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+					FNAMEGREP=`echo "${LINKFNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					#
 					# And finally check if we already have it listed.
@@ -18157,7 +18152,7 @@ SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 # A list of configuration options which are newline-separated lists.
 #jh - all newline lists must use expand_paths if they allow wildcards
 NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE ALLOWHIDDENFILE ALLOWHIDDENDIR ATTRWHITELIST WRITEWHITELIST
-		   IMMUTWHITELIST SCRIPTWHITELIST PKGMGR_NO_VRFY ALLOWPROCLISTEN"
+		   IMMUTWHITELIST SCRIPTWHITELIST PKGMGR_NO_VRFY ALLOWPROCLISTEN ALLOWPROCDELFILE"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.
@@ -18977,7 +18972,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				echo "Relative file or directory name specified: ${FNAME}"
 			elif [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
 				# Filename is absolute
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				RKHTMPVAR2=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
@@ -19000,9 +18995,12 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 					RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
 				fi
 			else
-				# Filename could be a package name
-				# The package names are in field 10 in the rkhunter.dat file
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+				#
+				# Filename could be a package name.
+				# The package names are in field 10 in the rkhunter.dat file.
+				#
+
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
 
