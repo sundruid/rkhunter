@@ -2910,7 +2910,7 @@ get_existwl_option() {
 	ERRCODE=0
 	EXISTWHITELIST=""
 
-#jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile + file property whitelists option to say it is a newline list.
+#jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile + file property whitelists, ALLOWPROCLISTEN PKGMGR_NO_VRFY option to say it is a newline list.
 #jh - modify the CHANGELOG to say that existwhitelist is a newline list.
 #jh - changelog/upgading to say hash_func being deprecated for hash_cmd
 
@@ -4967,14 +4967,12 @@ get_hash_function() {
 
 	ERRCODE=0
 
-	PKGMGRNOVRFY=`get_option 2 multi PKGMGR_NO_VRFY` || exit 1
+	PKGMGRNOVRFY=`new_get_option newline-list PKGMGR_NO_VRFY` || exit 1
 
 	if [ -n "${PKGMGRNOVRFY}" ]; then
-		check_paths PKGMGRNOVRFY PKGMGR_NO_VRFY STRICT
+		new_check_paths PKGMGRNOVRFY PKGMGR_NO_VRFY "EXIST NOWILD NOBROKENLINK"
 
 		test $ERRCODE -eq 1 && LEAVE=1
-
-		PKGMGRNOVRFY=" ${PKGMGRNOVRFY} "
 	fi
 
 
@@ -6077,7 +6075,7 @@ rkh_dat_get_os_info() {
 
 
 rkh_dat_set_file_properties() {
-
+#jh - same here, check that fnamegrep is not changed
 	#
 	# This function obtains various bits of information about the
 	# files to be checked. The format in the rkhunter.dat file is:
@@ -6210,7 +6208,7 @@ ${DIR}:1"
 		# See if the file is to be exempt from any package manager verification.
 		#
 
-		if [ -n "`echo \"${PKGMGRNOVRFY}\" | grep \" ${FNAMEGREP} \"`" ]; then
+		if [ -n "`echo \"${PKGMGRNOVRFY}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 			NOVRFYFILE=1
 		fi
 
@@ -7441,13 +7439,13 @@ do_config_check() {
 
 #jh - create single opt list?
 	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
-		   ALLOWPROCDELFILE ALLOWPROCLISTEN
+		   ALLOWPROCDELFILE 
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
 		   APPEND_LOG AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR
 		   DISABLE_UNHIDE EPOCH_DATE_CMD HASH_FLD_IDX HASH_FUNC HASH_CMD
 		   IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
 		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE
-		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST
+		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR PORT_WHITELIST
 		   ROOTDIR ROTATE_MIRRORS RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
 		   SCAN_MODE_DEV SCRIPTDIR SHOW_LOCK_MSGS
 		   SHOW_SUMMARY_WARNINGS_NUMBER SSH_CONFIG_DIR SUSPSCAN_DEBUG
@@ -10086,7 +10084,7 @@ ${RKHLINE}"
 			# See if the file is to be exempt from any package manager verification.
 			#
 
-			if [ -n "`echo \"${PKGMGRNOVRFY}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			if [ -n "`echo \"${PKGMGRNOVRFY}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				NOVRFYFILE=1
 			fi
 
@@ -12892,7 +12890,9 @@ malware_checks() {
 
 		if [ -n "${LSOF_CMD}" ]; then
 			FOUND=0
-			WHITEPROC=""; BLACKPROC=""
+
+			WHITEPROC=""
+			BLACKPROC=""
 
 			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele' | head ${HEAD_OPT}1`
 
@@ -14166,7 +14166,7 @@ linux_avail_modules() {
 	if [ -n "${RKHTMPVAR}" ]; then
 		LKM_PATH="${RKHTMPVAR}"
 
-#jh - this 'get_option' needs to be done before the prog startsi - do that for all config options??, then
+#jh - this 'get_option' needs to be done before the prog starts - do that for all config options??, then
 #jh - we can check check_paths and exit or set LEAVE as with other options.
 #jh		new_check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
 	else
@@ -14926,7 +14926,9 @@ do_network_interface_checks() {
 	#
 
 	FOUND=0
-	WHITEPROC=""; BLACKPROC=""
+
+	WHITEPROC=""
+	BLACKPROC=""
 
 	LIBPCAPRES=`egrep -v '(^sk | 888e )' /proc/net/packet | head ${HEAD_OPT}1`
 
@@ -14935,7 +14937,13 @@ do_network_interface_checks() {
 		# We only need to get the whitelisted processes once.
 		#
 
-		ALLOWPROCLISTENERS=`get_option 2 multi ALLOWPROCLISTEN` || exit 1
+		ALLOWPROCLISTENERS=""
+
+		ALLOWPROCLIST_OPT=`new_get_option newline-list ALLOWPROCLISTEN` || exit 1
+
+		if [ -n "${ALLOWPROCLIST_OPT}" ]; then
+			ALLOWPROCLISTENERS=`expand_paths ALLOWPROCLIST_OPT`
+		fi
 
 
 		INODE_LIST=""
@@ -14960,24 +14968,17 @@ do_network_interface_checks() {
 
 			test -z "${NAME}" && continue
 
-			AMATCH=1
+			FNAMEGREP=`echo "${NAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			for RKHTMPVAR in ${ALLOWPROCLISTENERS}; do
-				if [ "${NAME}" = "${RKHTMPVAR}" ]; then
-					AMATCH=0; break
-				fi
-			done
-
-			if [ $AMATCH -eq 0 ]; then
-				FNAME=`echo "${NAME}" | sed -e 's/\./\\\./g'`
-
-				if [ -z "`echo \"${WHITEPROC} \" | grep \"${FNAME} \"`" ]; then
-					WHITEPROC="${WHITEPROC} ${NAME}"
+			if [ -n "`echo \"${ALLOWPROCLISTENERS}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+				if [ -z "`echo \"${WHITEPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					WHITEPROC="${WHITEPROC}
+${NAME}"
 				fi
 			else
 				FOUND=1
 				BLACKPROC="${BLACKPROC}
-${NAME} ${PID}"
+${PID}:${NAME}"
 			fi
 		done
 	fi
@@ -14998,8 +14999,8 @@ ${NAME} ${PID}"
 		for RKHTMPVAR in ${BLACKPROC}; do
 			test -z "${RKHTMPVAR}" && continue
 
-			NAME=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
-			PID=`echo "${RKHTMPVAR}" | cut -d' ' -f2`
+			PID=`echo "${RKHTMPVAR}" | cut -d: -f1`
+			NAME=`echo "${RKHTMPVAR}" | cut -d: -f2-`
 
 			display --to LOG --type WARNING NETWORK_PACKET_CAP_FOUND "`name2text ${NAME}`" "${PID}"
 		done
@@ -15007,9 +15008,17 @@ ${NAME} ${PID}"
 		IFS=$RKHIFS
 	fi
 
+
+	IFS=$IFSNL
+
 	for NAME in ${WHITEPROC}; do
+		test -z "${NAME}" && continue
+
 		display --to LOG --type INFO NETWORK_PACKET_CAP_WL "`name2text ${NAME}`"
 	done
+
+	IFS=$RKHIFS
+
 
 	return
 }
@@ -18146,8 +18155,9 @@ SPACE_LIST_OPTS="UPDATE_LANG BINDIR MAIL-ON-WARNING SYSLOG_CONFIG_FILE ENABLE_TE
 SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 
 # A list of configuration options which are newline-separated lists.
+#jh - all newline lists must use expand_paths if they allow wildcards
 NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE ALLOWHIDDENFILE ALLOWHIDDENDIR ATTRWHITELIST WRITEWHITELIST
-		   IMMUTWHITELIST SCRIPTWHITELIST"
+		   IMMUTWHITELIST SCRIPTWHITELIST PKGMGR_NO_VRFY ALLOWPROCLISTEN"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.
