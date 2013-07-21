@@ -5032,13 +5032,10 @@ get_startup_paths_option() {
 	# This function gets the system startup files and directories
 	# from the configuration file. There are no defaults.
 	#
-	# For backward compatability we still check for the old options
-	# of LOCAL_RC_PATH and SYSTEM_RC_DIR.
-	#
 
 	ERRCODE=0
 
-	STARTUP_PATHS=`get_option 2 multi STARTUP_PATHS` || exit 1
+	STARTUP_PATHS=`new_get_option space-list STARTUP_PATHS` || exit 1
 
 	if [ -n "${STARTUP_PATHS}" ]; then
 		#
@@ -5052,7 +5049,7 @@ get_startup_paths_option() {
 			# Check that the given files and directories are usable.
 			#
 
-			check_paths STARTUP_PATHS STARTUP_PATHS
+			new_check_paths STARTUP_PATHS STARTUP_PATHS "EXIST"
 
 			if [ $ERRCODE -eq 0 ]; then
 				for FNAME in ${STARTUP_PATHS}; do
@@ -5061,9 +5058,6 @@ get_startup_paths_option() {
 					if [ -h "${FNAME}" ]; then
 						ERRCODE=1
 						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is a link: ${FNAME}"
-					elif [ ! -e "${FNAME}" ]; then
-						ERRCODE=1
-						echo "Invalid STARTUP_PATHS configuration option: the name does not exist: ${FNAME}"
 					elif [ ! -r "${FNAME}" ]; then
 						ERRCODE=1
 						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is not readable: ${FNAME}"
@@ -5144,10 +5138,10 @@ get_shared_lib_whitelist_option() {
 
 	ERRCODE=0
 
-	SHARED_LIB_WHITELIST=`get_option 2 multi SHARED_LIB_WHITELIST` || exit 1
+	SHARED_LIB_WHITELIST=`new_get_option space-list SHARED_LIB_WHITELIST` || exit 1
 
 	if [ -n "${SHARED_LIB_WHITELIST}" ]; then
-		check_paths SHARED_LIB_WHITELIST SHARED_LIB_WHITELIST STRICT
+		new_check_paths SHARED_LIB_WHITELIST SHARED_LIB_WHITELIST "EXIST NOWILD NOBROKENLINK"
 
 		SHARED_LIB_WHITELIST=" ${SHARED_LIB_WHITELIST} "
 	fi
@@ -7450,8 +7444,8 @@ do_config_check() {
 		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE
 		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST
 		   ROOTDIR ROTATE_MIRRORS RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
-		   SCAN_MODE_DEV SCRIPTDIR SCRIPTWHITELIST SHARED_LIB_WHITELIST SHOW_LOCK_MSGS
-		   SHOW_SUMMARY_WARNINGS_NUMBER SSH_CONFIG_DIR STARTUP_PATHS SUSPSCAN_DEBUG
+		   SCAN_MODE_DEV SCRIPTDIR SCRIPTWHITELIST SHOW_LOCK_MSGS
+		   SHOW_SUMMARY_WARNINGS_NUMBER SSH_CONFIG_DIR SUSPSCAN_DEBUG
 		   SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH TMPDIR
 		   UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM
 		   USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD
@@ -9387,7 +9381,7 @@ shared_libs_check() {
 		FOUND=0
 
 		for FNAME in ${RKHTMPVAR_RES}; do
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				FOUND=1
@@ -9432,7 +9426,7 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 		display --to LOG --type INFO SHARED_LIBS_PRELOAD_FILE_FOUND "${RKHTMPVAR}"
 
 		for FNAME in `cat "${RKHTMPVAR}"`; do
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				RKHLIBLIST="${RKHLIBLIST} ${FNAME}"
@@ -18152,7 +18146,8 @@ LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA D
 # A list of configuration options which are space-separated lists.
 SPACE_LIST_OPTS="UPDATE_LANG BINDIR MAIL-ON-WARNING SYSLOG_CONFIG_FILE ENABLE_TESTS DISABLE_TESTS
 		 INETD_ALLOWED_SVC XINETD_ALLOWED_SVC MISSING_LOGFILES EMPTY_LOGFILES UNHIDE_TESTS
-		 UNHIDETCP_OPTS SUSPSCAN_DIRS APP_WHITELIST UID0_ACCOUNTS PWDLESS_ACCOUNTS"
+		 UNHIDETCP_OPTS SUSPSCAN_DIRS APP_WHITELIST UID0_ACCOUNTS PWDLESS_ACCOUNTS
+		 SHARED_LIB_WHITELIST STARTUP_PATHS"
 SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 
 # A list of configuration options which are newline-separated lists.
