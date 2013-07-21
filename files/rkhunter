@@ -1499,8 +1499,8 @@ expand_paths() {
 	#
 	# This function will output an expanded list of pathnames.
 	#
-	# The parameter is the variable name containing the list
-	# of pathnames.
+	# The parameter is the variable name containing the
+	# newline-separated list of pathnames.
 	#
 
 	PATH_LIST=`eval echo \"\\$${1}\"`
@@ -2910,7 +2910,7 @@ get_existwl_option() {
 	ERRCODE=0
 	EXISTWHITELIST=""
 
-#jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile option to say it is a newline list.
+#jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile + file property whitelists option to say it is a newline list.
 #jh - modify the CHANGELOG to say that existwhitelist is a newline list.
 #jh - changelog/upgading to say hash_func being deprecated for hash_cmd
 
@@ -5538,34 +5538,36 @@ get_properties_options() {
 
 	ERRCODE=0
 
-	ATTRWHITELIST=`get_option 2 multi ATTRWHITELIST` || exit 1
+	ATTRWHITELIST=""
 
-	if [ -n "${ATTRWHITELIST}" ]; then
-		#
-		# We 'echo' the variable so that any wildcards get expanded.
-		#
+	ATTRWL_OPT=`new_get_option newline-list ATTRWHITELIST` || exit 1
 
-		ATTRWHITELIST=`echo ${ATTRWHITELIST}`
+	if [ -n "${ATTRWL_OPT}" ]; then
+		ATTRWHITELIST=`expand_paths ATTRWL_OPT`
 
-		check_paths ATTRWHITELIST
+		new_check_paths ATTRWHITELIST ATTRWHITELIST "EXIST"
 	fi
 
 
-	WRITEWHITELIST=`get_option 2 multi WRITEWHITELIST` || exit 1
+	WRITEWHITELIST=""
 
-	if [ -n "${WRITEWHITELIST}" ]; then
-		WRITEWHITELIST=`echo ${WRITEWHITELIST}`
+	WRITEWL_OPT=`new_get_option newline-list WRITEWHITELIST` || exit 1
 
-		check_paths WRITEWHITELIST
+	if [ -n "${WRITEWL_OPT}" ]; then
+		WRITEWHITELIST=`expand_paths WRITEWL_OPT`
+
+		new_check_paths WRITEWHITELIST WRITEWHITELIST "EXIST"
 	fi
 
 
-	IMMUTWHITELIST=`get_option 2 multi IMMUTWHITELIST` || exit 1
+	IMMUTWHITELIST=""
 
-	if [ -n "${IMMUTWHITELIST}" ]; then
-		IMMUTWHITELIST=`echo ${IMMUTWHITELIST}`
+	IMMUTWL_OPT=`new_get_option newline-list IMMUTWHITELIST` || exit 1
 
-		check_paths IMMUTWHITELIST
+	if [ -n "${IMMUTWL_OPT}" ]; then
+		IMMUTWHITELIST=`expand_paths IMMUTWL_OPT`
+
+		new_check_paths IMMUTWHITELIST IMMUTWHITELIST "EXIST"
 	fi
 
 
@@ -5578,12 +5580,14 @@ get_properties_options() {
 	fi
 
 
-	SCRIPTWHITELIST=`get_option 2 multi SCRIPTWHITELIST` || exit 1
+	SCRIPTWHITELIST=""
 
-	if [ -n "${SCRIPTWHITELIST}" ]; then
-		SCRIPTWHITELIST=`echo ${SCRIPTWHITELIST}`
+	SCRIPTWL_OPT=`new_get_option newline-list SCRIPTWHITELIST` || exit 1
 
-		check_paths SCRIPTWHITELIST
+	if [ -n "${SCRIPTWL_OPT}" ]; then
+		SCRIPTWHITELIST=`expand_paths SCRIPTWL_OPT`
+
+		new_check_paths SCRIPTWHITELIST SCRIPTWHITELIST "EXIST"
 	fi
 
 
@@ -5609,10 +5613,10 @@ get_prelink_dep_option() {
 
 	ERRCODE=0
 
-	RKHTMPVAR=`get_option 2 multi IGNORE_PRELINK_DEP_ERR` || exit 1
+	RKHTMPVAR=`new_get_option space-list IGNORE_PRELINK_DEP_ERR` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
-		check_paths RKHTMPVAR IGNORE_PRELINK_DEP_ERR STRICT
+		new_check_paths RKHTMPVAR IGNORE_PRELINK_DEP_ERR "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			PRELINK_DEP_ERR_CMDS=" ${RKHTMPVAR} "
@@ -6158,7 +6162,7 @@ rkh_dat_set_file_properties() {
 		# Test to see if we are looking for specific files or not.
 		#
 
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.[]\)/\\\\\1/g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 		if [ -n "${PROPUPD_OPT}" ]; then
 			#
@@ -7435,21 +7439,22 @@ do_config_check() {
 	# value options (that is, not any sort of list).
 	#
 
+#jh - create single opt list?
 	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
 		   ALLOWPROCDELFILE ALLOWPROCLISTEN
 		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
-		   APPEND_LOG ATTRWHITELIST AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR
+		   APPEND_LOG AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR
 		   DISABLE_UNHIDE EPOCH_DATE_CMD HASH_FLD_IDX HASH_FUNC HASH_CMD
-		   IGNORE_PRELINK_DEP_ERR IMMUTABLE_SET IMMUTWHITELIST INETD_CONF_PATH INSTALLDIR
+		   IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
 		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE
 		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR_NO_VRFY PKGMGR PORT_WHITELIST
 		   ROOTDIR ROTATE_MIRRORS RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
-		   SCAN_MODE_DEV SCRIPTDIR SCRIPTWHITELIST SHOW_LOCK_MSGS
+		   SCAN_MODE_DEV SCRIPTDIR SHOW_LOCK_MSGS
 		   SHOW_SUMMARY_WARNINGS_NUMBER SSH_CONFIG_DIR SUSPSCAN_DEBUG
 		   SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH TMPDIR
 		   UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM
 		   USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD
-		   WEB_CMD WHITELISTED_IS_WHITE WRITEWHITELIST XINETD_CONF_PATH"
+		   WEB_CMD WHITELISTED_IS_WHITE XINETD_CONF_PATH"
 
 	VALIDOPTS=" `echo ${VALIDOPTS}` "
 
@@ -9599,6 +9604,7 @@ updt_rkhdat() {
 
 
 file_properties_check() {
+#jh - check where fnamegrep used - should not change once set.
 
 	#
 	# This function carries out a check of system command property
@@ -10051,7 +10057,7 @@ ${RKHLINE}"
 			fi
 		elif [ $FILE_EXISTS -eq 1 ]; then
 			RKHLINE=""
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's:\([.[]\):\\\\\1:g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 		else
 			continue
 		fi
@@ -10307,9 +10313,9 @@ ${RKHLINE}"
 					fi
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-						FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::'`
+						FNGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::'`
 
-						SYSHASH=`egrep "( |\./)${FNAMEGREP}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+						SYSHASH=`egrep "( |\./)${FNGREP}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
@@ -10342,9 +10348,9 @@ ${RKHLINE}"
 						# pathname, and then get the hash value.
 						#
 
-						FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's:^/usr/pkg/::'`
+						FNGREP=`echo "${FNAMEGREP}" | sed -e 's:^/usr/pkg/::'`
 
-						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FNAMEGREP}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
+						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FNGREP}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
@@ -10424,9 +10430,9 @@ ${RKHLINE}"
 								SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 							fi
 
-							FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+							FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-							if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+							if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 								RKHTMPVAR=1
 
 								if [ ! -e "${FNAME}" -a $VERBOSE_LOGGING -eq 1 ]; then
@@ -10472,9 +10478,9 @@ ${RKHLINE}"
 										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 									fi
 
-									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}` -> `name2text ${SYSLNK}`"
 										fi
@@ -10522,13 +10528,10 @@ ${RKHLINE}"
 
 				WL_FILE=""
 
-				for WHITELISTFILE in ${ATTRWHITELIST}; do
-					if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
-						WL_FILE="whitelisted"
-						WHITELIST_RESULT="${WHITELIST_RESULT} attr"
-						break
-					fi
-				done
+				if [ -n "`echo \"${ATTRWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					WL_FILE="whitelisted"
+					WHITELIST_RESULT="${WHITELIST_RESULT} attr"
+				fi
 
 				if [ -z "${FDATA}" ]; then
 					FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':'`
@@ -10668,9 +10671,9 @@ ${RKHLINE}"
 										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
 									fi
 
-									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
 											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
@@ -10691,9 +10694,9 @@ ${RKHLINE}"
 
 							if [ -n "${RKHLNK}" ]; then
 								if [ "${RKHLNK}" != "${SYSLNK}" ]; then
-									FNAMEGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
 											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
@@ -10721,13 +10724,10 @@ ${RKHLINE}"
 				if [ ! -h "${FNAME}" -a $FILE_IS_PKGD -eq 0 ]; then
 					WL_FILE=""
 
-					for WHITELISTFILE in ${WRITEWHITELIST}; do
-						if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
-							WL_FILE="whitelisted"
-							WHITELIST_RESULT="${WHITELIST_RESULT} write"
-							break
-						fi
-					done
+					if [ -n "`echo \"${WRITEWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+						WL_FILE="whitelisted"
+						WHITELIST_RESULT="${WHITELIST_RESULT} write"
+					fi
 
 					if [ -z "${WL_FILE}" ]; then
 						SYSPERM=`echo ${FDATA} | cut -d: -f2`
@@ -10784,13 +10784,10 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 			WL_FILE=""
 			RKHTMPVAR=""
 
-			for WHITELISTFILE in ${IMMUTWHITELIST}; do
-				if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
-					WL_FILE="whitelisted"
-					WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
-					break
-				fi
-			done
+			if [ -n "`echo \"${IMMUTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+				WL_FILE="whitelisted"
+				WHITELIST_RESULT="${WHITELIST_RESULT} immutable"
+			fi
 
 			if [ -z "${WL_FILE}" ]; then
 				if [ $BSDOS -eq 0 ]; then
@@ -10837,13 +10834,10 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 				WL_FILE=""
 				SYSSCRIPT=""
 
-				for WHITELISTFILE in ${SCRIPTWHITELIST}; do
-					if [ "${WHITELISTFILE}" = "${FNAME}" ]; then
-						WL_FILE="whitelisted"
-						WHITELIST_RESULT="${WHITELIST_RESULT} script"
-						break
-					fi
-				done
+				if [ -n "`echo \"${SCRIPTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					WL_FILE="whitelisted"
+					WHITELIST_RESULT="${WHITELIST_RESULT} script"
+				fi
 
 				if [ -z "${WL_FILE}" ]; then
 					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
@@ -14172,7 +14166,7 @@ linux_avail_modules() {
 	if [ -n "${RKHTMPVAR}" ]; then
 		LKM_PATH="${RKHTMPVAR}"
 
-#jh - this 'get_option' needs to be done before the prog starts, then
+#jh - this 'get_option' needs to be done before the prog startsi - do that for all config options??, then
 #jh - we can check check_paths and exit or set LEAVE as with other options.
 #jh		new_check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
 	else
@@ -18144,14 +18138,16 @@ LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA D
 	      Digest::SHA::PurePerl Digest::Whirlpool LWP URI HTTP::Status HTTP::Date Socket Carp"
 
 # A list of configuration options which are space-separated lists.
+#jh - reorder these lists into alphabetical
 SPACE_LIST_OPTS="UPDATE_LANG BINDIR MAIL-ON-WARNING SYSLOG_CONFIG_FILE ENABLE_TESTS DISABLE_TESTS
 		 INETD_ALLOWED_SVC XINETD_ALLOWED_SVC MISSING_LOGFILES EMPTY_LOGFILES UNHIDE_TESTS
 		 UNHIDETCP_OPTS SUSPSCAN_DIRS APP_WHITELIST UID0_ACCOUNTS PWDLESS_ACCOUNTS
-		 SHARED_LIB_WHITELIST STARTUP_PATHS"
+		 SHARED_LIB_WHITELIST STARTUP_PATHS IGNORE_PRELINK_DEP_ERR"
 SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 
 # A list of configuration options which are newline-separated lists.
-NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE ALLOWHIDDENFILE ALLOWHIDDENDIR"
+NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE ALLOWHIDDENFILE ALLOWHIDDENDIR ATTRWHITELIST WRITEWHITELIST
+		   IMMUTWHITELIST SCRIPTWHITELIST"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.
