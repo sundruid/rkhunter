@@ -3904,7 +3904,7 @@ get_ports_option() {
 	# checks that it is valid.
 	#
 
-	RKHTMPVAR=`get_option 2 multi PORT_WHITELIST` || exit 1
+	RKHTMPVAR=`new_get_option newline-list PORT_WHITELIST` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		#
@@ -3913,10 +3913,7 @@ get_ports_option() {
 
 		LEAVE=0
 
-		if [ -n "`echo \"${RKHTMPVAR}\" | grep '\*'`" ]; then
-			PORT_WHITELIST_ALL_TRUSTED=1
-			RKHTMPVAR=`echo "${RKHTMPVAR}" | tr -d '*'`
-		fi
+		IFS=$IFSNL
 
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
 			if [ -n "`echo \"${RKHTMPVAR2}\" | grep '^/'`" ]; then
@@ -3930,67 +3927,67 @@ get_ports_option() {
 
 					if [ $PORT -gt 65535 ]; then
 						LEAVE=1
-						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: ${RKHTMPVAR2}"
+						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
 					fi
 
 					# If the port is present, then the protocol must be as well.
-					if [ -n "`echo \"${RKHTMPVAR2}\" | grep '.:[^:][^:]*:[1-9][0-9]*$'`" ]; then
-						PROTO=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([^:][^:]*\):[1-9][0-9]*$/\1/'`
+					if [ -n "`echo \"${RKHTMPVAR2}\" | grep '.:[a-zA-Z]*:[1-9][0-9]*$'`" ]; then
+						PROTO=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([a-zA-Z]*\):[1-9][0-9]*$/\1/'`
 
 						PROTO=`echo ${PROTO} | tr '[:lower:]' '[:upper:]'`
 
 						if [ "${PROTO}" != "TCP" -a "${PROTO}" != "UDP" ]; then
 							LEAVE=1
-							echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: ${RKHTMPVAR2}"
+							echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: `name2text ${RKHTMPVAR2}`"
 						fi
 					else
 						LEAVE=1
-						echo "Invalid PORT_WHITELIST configuration option - no protocol specified: ${RKHTMPVAR2}"
+						echo "Invalid PORT_WHITELIST configuration option - no protocol specified: `name2text ${RKHTMPVAR2}`"
 					fi
 				fi
 
 				# Dig out the pathname.
 				if [ $PORT -gt 0 ]; then
-					FNAME=`echo "${RKHTMPVAR2}" | sed -e 's/^\(.*\):[^:]*:[1-9][0-9]*$/\1/'`
+					FNAME=`echo "${RKHTMPVAR2}" | sed -e 's/^\(.*\):[a-zA-Z]*:[1-9][0-9]*$/\1/'`
 				else
 					FNAME="${RKHTMPVAR2}"
 				fi
 
-				RKHTMPVAR3=`echo "${FNAME}" | tr '%' ' '`
-
-				if [ ! -e "${RKHTMPVAR3}" ]; then
+				if [ ! -e "${FNAME}" ]; then
 					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - non-existent pathname specified: ${RKHTMPVAR2}"
-				elif [ ! -f "${RKHTMPVAR3}" ]; then
+					echo "Invalid PORT_WHITELIST configuration option - non-existent pathname specified: `name2text ${RKHTMPVAR2}`"
+				elif [ ! -f "${FNAME}" ]; then
 					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - pathname specified is not a file: ${RKHTMPVAR2}"
+					echo "Invalid PORT_WHITELIST configuration option - pathname specified is not a file: `name2text ${RKHTMPVAR2}`"
 				else
-					if [ $PORT -gt 0 ]; then
-						PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH} ${FNAME}:${PROTO}:${PORT}"
-					else
-						PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH} ${FNAME}"
-					fi
+					PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH}
+${FNAME}:${PROTO}:${PORT}"
 				fi
-			elif [ -n "`echo \"${RKHTMPVAR2}\" | grep '^[^:][^:]*:[1-9][0-9]*$'`" ]; then
+			elif [ -n "`echo \"${RKHTMPVAR2}\" | grep '^[a-zA-Z][a-zA-Z]*:[1-9][0-9]*$'`" ]; then
 				PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
 				PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
 
 				if [ "${PROTO}" != "TCP" -a "${PROTO}" != "UDP" ]; then
 					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: ${RKHTMPVAR2}"
+					echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: `name2text ${RKHTMPVAR2}`"
 				fi
 
 				if [ $PORT -gt 65535 ]; then
 					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - invalid port specified: ${RKHTMPVAR2}"
+					echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
 				fi
 
-				PORT_WHITELIST="${PORT_WHITELIST} ${PROTO}:${PORT}"
+				PORT_WHITELIST="${PORT_WHITELIST}
+${PROTO}:${PORT}"
+			elif [ "${RKHTMPVAR2}" = "*" ]; then
+				PORT_WHITELIST_ALL_TRUSTED=1
 			else
 				LEAVE=1
-				echo "Invalid entry specified in PORT_WHITELIST configuration option: ${RKHTMPVAR2}"
+				echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text ${RKHTMPVAR2}`"
 			fi
 		done
+
+		IFS=$RKHIFS
 
 		if [ $LEAVE -eq 1 ]; then
 			if [ $CONFIG_CHECK -eq 0 ]; then
@@ -4000,8 +3997,8 @@ get_ports_option() {
 			fi
 		fi
 
-		PORT_WHITELIST=" ${PORT_WHITELIST} "
-		PORT_WHITELIST_PATH=`echo ${PORT_WHITELIST_PATH} | tr ' ' '\n' | tr '%' ' '`
+		PORT_WHITELIST=`echo "${PORT_WHITELIST}" | sed -e 's/^$/d'`
+		PORT_WHITELIST_PATH=`echo "${PORT_WHITELIST_PATH}" | sed -e 's/^$/d'`
 	fi
 
 	return
@@ -14463,30 +14460,30 @@ check_port_wl() {
 	else
 		case "${OPERATING_SYSTEM}" in
 		Linux)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}\$"`
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}$"`
 			;;
 		*BSD|Darwin|IRIX*|DragonFly)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}$"`
 			;;
 		AIX)
 			if [ "${PROTO}" = "UDP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}\$"`
+				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}$"`
 			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}\$"`
+				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}$"`
 			fi
 			;;
 		SunOS)
 			if [ "${PROTO}" = "UDP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+				FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}$"`
 
 				if [ -z "${FOUND}" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}\$"`
+					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}$"`
 				fi
 			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+				FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}$"`
 
 				if [ -z "${FOUND}" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}\$"`
+					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}$"`
 				fi
 			fi
 			;;
@@ -14503,10 +14500,12 @@ check_port_wl() {
 
 		if [ -n "${LSOF_CMD}" ]; then
 			if [ -n "${FNAME}" ]; then
-				if [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAME}:${PROTO}:${PORT}\$\"`" ]; then
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				if [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAMEGREP}:${PROTO}:${PORT}$\"`" ]; then
 					RKHTMPVAR2=1
 					FOUND="path_whitelisted"
-				elif [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAME}\$\"`" ]; then
+				elif [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAMEGREP}::$\"`" ]; then
 					RKHTMPVAR2=1
 					FOUND="path_whitelisted"
 				elif [ $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
@@ -14522,7 +14521,7 @@ check_port_wl() {
 			fi
 		fi
 
-		if [ $RKHTMPVAR2 -eq 0 -a -n "`echo \"${PORT_WHITELIST}\" | grep \" ${PROTO}:${PORT} \"`" ]; then
+		if [ $RKHTMPVAR2 -eq 0 -a -n "`echo \"${PORT_WHITELIST}\" | grep \"^${PROTO}:${PORT}$\"`" ]; then
 			FOUND="port_whitelisted"
 		fi
 	fi
