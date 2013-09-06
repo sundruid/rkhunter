@@ -1162,7 +1162,7 @@ new_check_paths() {
 
 			if [ -f "${FNAME}" ]; then
 				case "${OPT_NAME}" in
-				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|RTKT_DIR_WHITELIST)
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
 					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
@@ -1941,9 +1941,9 @@ ${RKHTMPVAR}"
 			# names with spaces, but without causing problems for our space-delimited test.
 			#
 
-			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text ${RKHTMPVAR}`" known_rkts
 			else
 				SCAN_STATUS=1
@@ -2444,6 +2444,7 @@ get_logfile_option() {
 			APPEND_LOG=`new_get_option single APPEND_LOG` || exit 1
 
 			if [ -n "${APPEND_LOG}" ]; then
+#jhxxx - check_is_digit should check ERRCODE always afterwards, set LEAVE if necessary.
 				check_is_digit APPEND_LOG
 			else
 				APPEND_LOG=0
@@ -3242,12 +3243,15 @@ get_syslog_config_options() {
 	# in the configuration file.
 	#
 
+	LEAVE=0
 	ERRCODE=0
 
 	ALLOW_SYSLOG_REMOTE_LOGGING=`new_get_option single ALLOW_SYSLOG_REMOTE_LOGGING` || exit 1
 
 	if [ -n "${ALLOW_SYSLOG_REMOTE_LOGGING}" ]; then
 		check_is_digit ALLOW_SYSLOG_REMOTE_LOGGING
+
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
 		ALLOW_SYSLOG_REMOTE_LOGGING=0
 	fi
@@ -3257,18 +3261,28 @@ get_syslog_config_options() {
 	# See if the pathname to the syslog configuration file has been set.
 	#
 
-	SYSLOG_CONFIG_FILE=`get_option space-list SYSLOG_CONFIG_FILE` || exit 1
+	ERRCODE=0
 
-	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
-		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep -i '^none$'`" ]; then
-			SYSLOG_CONFIG_FILE="NONE"
-		else
-			new_check_paths SYSLOG_CONFIG_FILE SYSLOG_CONFIG_FILE "EXIST NOWILD NOBROKENLINK"
+	SYSLOG_CONFIG_FILE=`new_get_option space-list SYSLOG_CONFIG_FILE` || exit 1
+
+	if [ $ERRCODE -eq 0 ]; then
+		if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+			if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep -i '^none$'`" ]; then
+				SYSLOG_CONFIG_FILE="NONE"
+			else
+				ERRCODE=0
+
+				new_check_paths SYSLOG_CONFIG_FILE SYSLOG_CONFIG_FILE "EXIST NOWILD NOBROKENLINK"
+
+				test $ERRCODE -eq 1 && LEAVE=1
+			fi
 		fi
+	else
+		LEAVE=1
 	fi
 
 
-	if [ $ERRCODE -eq 1 ]; then
+	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
 		else
@@ -5103,16 +5117,14 @@ get_rtkt_whitelist_options() {
 	fi
 
 
-	RTKT_DIR_WHITELIST=`get_option 2 multi RTKT_DIR_WHITELIST` || exit 1
+	RTKT_DIR_WHITELIST=`new_get_option newline-list RTKT_DIR_WHITELIST` || exit 1
 
 	if [ -n "${RTKT_DIR_WHITELIST}" ]; then
 		#
 		# Check that the given directories are usable.
 		#
 
-		check_paths RTKT_DIR_WHITELIST RTKT_DIR_WHITELIST STRICT
-
-		RTKT_DIR_WHITELIST=" ${RTKT_DIR_WHITELIST} "
+		new_check_paths RTKT_DIR_WHITELIST RTKT_DIR_WHITELIST "EXIST NOWILD NOBROKENLINK"
 	fi
 
 	if [ $ERRCODE -eq 1 ]; then
@@ -5631,14 +5643,15 @@ get_prelink_dep_option() {
 }
 
 
-get_summary_warnings_option() {
-#jh - change this to get_summary_options - then include option to (not) display time taken.
+get_summary_options() {
+#jh - include option to (not) display time taken.
 
 	#
 	# Get the configuration option to see if we are to
 	# show the actual number of warnings in the summary.
 	#
 
+	LEAVE=0
 	ERRCODE=0
 
 	SHOW_SUMMARY_WARNINGS_NUMBER=`new_get_option single SHOW_SUMMARY_WARNINGS_NUMBER` || exit 1
@@ -5650,6 +5663,39 @@ get_summary_warnings_option() {
 	else
 		SHOW_SUMMARY_WARNINGS_NUMBER=0
 	fi
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
+get_network_options() {
+#jh - new
+#jh - in get_option and check_is_digit etc set ERRCODE=0 at start. Then remove this from all functions. Finally check all functions to ensure LEAVE is set, and ERRCODE *always* checked.
+
+	#
+	# Get any options used for network tests.
+	#
+
+	LEAVE=0
+	ERRCODE=0
+
+	IFWLIST=`new_get_option space_list ALLOWPROMISCIF` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
+
+
+	ALLOWPROCLIST_OPT=`new_get_option newline-list ALLOWPROCLISTEN` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
+
 
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
@@ -5764,7 +5810,9 @@ get_configfile_options() {
 
 		check_test suspscan && get_suspscan_options
 
-		get_summary_warnings_option
+		get_summary_options
+
+		get_network_options
 	fi
 
 
@@ -12509,9 +12557,9 @@ possible_rootkit_file_dir_checks() {
 		case "${TYPE}" in
 		dir)
 			if [ -d "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
+				FNAMEGREP=`echo "${FILE}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text ${FNAME}`" possible_rkt_files
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text ${FNAME}`"
 				else
@@ -13495,9 +13543,9 @@ ${RKHTMPVAR}"
 
 	for DIR in ${SUSPICIOUS_DIRS}; do
 		if [ -d "${DIR}" ]; then
-			FNAMEGREP=`echo "${DIR}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text ${DIR}`" other_malware
 			else
 				FOUND=1
@@ -14799,8 +14847,6 @@ do_network_interface_checks() {
 		if [ -n "${IFCONFIG_CMD}" ]; then
 			PROMISCSCAN1=""; PROMISCSCAN2=""
 
-			IFWLIST=`get_option 2 multi ALLOWPROMISCIF` || exit 1
-
 			if [ -n "${IFWLIST}" ]; then
 				display --to LOG --type INFO NETWORK_PROMISC_WLIST "${IFWLIST}"
 
@@ -14928,13 +14974,7 @@ do_network_interface_checks() {
 	LIBPCAPRES=`egrep -v '(^sk | 888e )' /proc/net/packet | head ${HEAD_OPT}1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
-		#
-		# We only need to get the whitelisted processes once.
-		#
-
 		ALLOWPROCLISTENERS=""
-
-		ALLOWPROCLIST_OPT=`new_get_option newline-list ALLOWPROCLISTEN` || exit 1
 
 		if [ -n "${ALLOWPROCLIST_OPT}" ]; then
 			ALLOWPROCLISTENERS=`expand_paths ALLOWPROCLIST_OPT`
@@ -18279,6 +18319,12 @@ EXISTWHITELIST=""
 
 # This will be set if we are just doing a config file check.
 CONFIG_CHECK=0
+
+# Network interface whitelist.
+IFWLIST=""
+
+# This will be set to any allowed processes listening on the network.
+ALLOWPROCLIST_OPT=""
 
 
 ######################################################################
