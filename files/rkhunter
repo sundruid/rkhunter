@@ -1081,6 +1081,10 @@ new_check_paths() {
 				# Re-expand the name in case it has globbing characters.
 				FNAME=`echo ${FNAME}`
 			fi
+		elif [ "${OPT_NAME}" = "RTKT_FILE_WHITELIST" ]; then
+#jh - Argh! How we do we tell a filename with a colon from a filename but with a colon and some text appended to it (as per the option)??
+#jh - also we want the filename up to the last colon.
+			FNAME=`echo "${FNAME}" | cut -d: -f1`
 		fi
 
 
@@ -1092,6 +1096,7 @@ new_check_paths() {
 		if [ -n "`echo \"${FNAME}\" | egrep '(^[./]*$)|[;&]|/\.\./'`" ]; then
 			ERRCODE=1
 			test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
 			continue
 		fi
@@ -1107,6 +1112,7 @@ new_check_paths() {
 			if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
 				ERRCODE=1
 				test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 				echo "Invalid ${OPT_NAME} configuration option: Pathname contains a colon: ${FNAME}"
 				continue
 			fi
@@ -1119,6 +1125,7 @@ new_check_paths() {
 		if [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
 			ERRCODE=1
 			test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 			echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAME}"
 		elif [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 			#
@@ -1137,6 +1144,7 @@ new_check_paths() {
 
 			ERRCODE=1
 			test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 			echo "Invalid ${OPT_NAME} configuration option: Simple filename: ${FNAME}"
 		else
 			#
@@ -1165,6 +1173,7 @@ new_check_paths() {
 				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|RTKT_DIR_WHITELIST)
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
 					;;
 				esac
@@ -1181,6 +1190,7 @@ new_check_paths() {
 				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|*_CMD)
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
 					;;
 				esac
@@ -1194,6 +1204,7 @@ new_check_paths() {
 				if [ $NOLINK -eq 1 ]; then
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 					echo "Invalid ${OPT_NAME} configuration option: Broken link found: ${FNAME}"
 				fi
 			elif [ -e "${FNAME}" ]; then
@@ -1234,6 +1245,7 @@ new_check_paths() {
 				if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					ERRCODE=1
 					test $CONFIG_CHECK -eq 1 && RET_CODE=1
+
 					echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: ${FNAME}"
 				fi
 			fi
@@ -1906,9 +1918,9 @@ ${FNAME}"
 					# with spaces, but without causing problems for our space-delimited test.
 					#
 
-					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\./\\\./g'`
+					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 						display --to LOG --type INFO FILE_PROP_WL "`name2text ${RKHTMPVAR}`" known_rkts
 					else
 						SCAN_STATUS=1
@@ -5104,16 +5116,15 @@ get_rtkt_whitelist_options() {
 
 	ERRCODE=0
 
-	RTKT_FILE_WHITELIST=`get_option 2 multi RTKT_FILE_WHITELIST` || exit 1
+	RTKT_FILE_WHITELIST=`new_get_option newline-list RTKT_FILE_WHITELIST` || exit 1
 
 	if [ -n "${RTKT_FILE_WHITELIST}" ]; then
 		#
 		# Check that the given files are usable.
 		#
 
-		check_paths RTKT_FILE_WHITELIST RTKT_FILE_WHITELIST STRICT
-
-		RTKT_FILE_WHITELIST=" ${RTKT_FILE_WHITELIST} "
+#jh - can we do this here? The option may have paths with colons and text after them (see rkhunter.conf).
+		new_check_paths RTKT_FILE_WHITELIST RTKT_FILE_WHITELIST "EXIST NOWILD NOBROKENLINK"
 	fi
 
 
@@ -12260,7 +12271,9 @@ rootkit_file_dir_checks() {
 				FOUNDINDIR="NOT_FOUND"
 
 				for FNAME in `${FIND_CMD} "${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
-					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAME} \"`" ]; then
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" known_rkts
 					elif `grep -i 'sinar' "${FNAME}" >/dev/null 2>&1`; then
 						FOUND=1
@@ -12577,9 +12590,9 @@ ${FNAME}:${INFO}"
 			;;
 		file)
 			if [ -f "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FILE}" | sed -e 's/\./\\\./g'`
+				FNAMEGREP=`echo "${FILE}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_files
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text ${FNAME}`"
 				else
@@ -12779,12 +12792,12 @@ possible_rootkit_string_checks() {
 				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep -v '^[ 	]*#' | grep "${STRING}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
-					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
+					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
 						RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
 						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${RKHTMPVAR2}" possible_rkt_strings
-					elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:\"`" ]; then
+					elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
 						display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_strings
 					else
 						FOUND=1
@@ -12814,12 +12827,12 @@ ${FNAME}:${FILESTRING}:${INFO}"
 					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep "${STRING}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
-						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
+						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
 							RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
 							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${RKHTMPVAR2}" possible_rkt_strings
-						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:\"`" ]; then
+						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
 							display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_strings
 						else
 							FOUND=1
@@ -13169,9 +13182,9 @@ ${PROC} ${PID} ${FNAME}"
 						#
 
 						FILENAME=`echo "${FNAME}" | sed -e 's/^.*[ 	]\([^ 	][^ 	]*\)$/\1/'`
-						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\./\\\./g'`
+						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 							display --to LOG --type INFO FILE_PROP_WL "`name2text ${FILENAME}`" running_procs
 						else
 							FOUND=1
@@ -13499,9 +13512,9 @@ ${RKHTMPVAR}"
 
 	for FNAME in ${LOGIN_BACKDOOR_FILES}; do
 		if [ -e "${FNAME}" ]; then
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\./\\\./g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" other_malware
 			else
 				FOUND=1
@@ -13612,7 +13625,7 @@ ${RKHTMPVAR}"
 		if [ -f "${FNAME}" ]; then
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
+			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" other_malware
 			else
 				FOUND=1
@@ -15196,10 +15209,10 @@ ${STRING}:${INFO}"
 			if [ -n "${RKHTMPVAR}" ]; then
 				test -z "`echo \"${RKHTMPVAR}\" | egrep -v '^[ 	]*#'`" && continue
 
-				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:${STRING} \"`" ]; then
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
 					STRING=`echo ${STRING} | sed -e 's/\\\//g'`
 					display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${STRING}" startup_malware
-				elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \" ${FNAMEGREP}:\"`" ]; then
+				elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" startup_malware
 				else
 					FOUND=1
