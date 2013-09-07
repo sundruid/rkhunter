@@ -91,6 +91,10 @@
    treated as newline-separated lists. As such, the options can only
    have one entry per line, and that entry can contain any character
    other than a newline.
+ - The USER_FILEPROP_FILES_DIRS no longer recognises the '!' character
+   as being special. Any pathnames to be excluded from the file
+   properties checks should use the new EXCLUDE_USER_FILEPROP_FILES_DIRS
+   configuration option instead. No '!' is required with that option.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.

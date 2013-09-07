@@ -1075,15 +1075,10 @@ new_check_paths() {
 			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
 				FNAME=`echo "${FNAME}" | cut -c2-`
 			fi
-		elif [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
-			if [ -n "`echo \"${FNAME}\" | grep '^!'`" ]; then
-				FNAME=`echo "${FNAME}" | cut -c2-`
-				# Re-expand the name in case it has globbing characters.
-				FNAME=`echo ${FNAME}`
-			fi
 		elif [ "${OPT_NAME}" = "RTKT_FILE_WHITELIST" ]; then
 #jh - Argh! How we do we tell a filename with a colon from a filename but with a colon and some text appended to it (as per the option)??
 #jh - also we want the filename up to the last colon.
+#jh - use separate lists?? (as per USER_FILEPROP_FILES_DIRS)
 			FNAME=`echo "${FNAME}" | cut -d: -f1`
 		fi
 
@@ -1511,7 +1506,7 @@ expand_paths() {
 	#
 	# This function will output an expanded list of pathnames.
 	#
-	# The parameter is the variable name containing the
+	# The first parameter is the variable name containing the
 	# newline-separated list of pathnames.
 	#
 
@@ -2682,7 +2677,7 @@ add_extra_dirs() {
 		# with RKH.
 		#
 
-		test -d "/System/Links/Executables" && EXTRA_DIRS="/System/Links/Executables"
+		test -d "/System/Links/Executables" && EXTRA_DIRS="${EXTRA_DIRS} /System/Links/Executables"
 	fi
 
 
@@ -2925,7 +2920,7 @@ get_existwl_option() {
 
 #jh - modify rkunter.conf existwhitelist allowhiddenfile allowhiddendir allowdevfile + file property whitelists, ALLOWPROCLISTEN PKGMGR_NO_VRFY ALLOWPROCDELFILE option to say it is a newline list.
 #jh - modify the CHANGELOG to say that existwhitelist is a newline list.
-#jh - changelog/upgading to say hash_func being deprecated for hash_cmd
+#jh - changelog/upgrading to say hash_func being deprecated for hash_cmd
 
 	EXISTWL_OPT=`new_get_option newline-list EXISTWHITELIST` || exit 1
 
@@ -3904,6 +3899,7 @@ get_ports_option() {
 	# checks that it is valid.
 	#
 
+#jh - setup new option PORT_WHITELIST_PATH to handle pathnames??
 	RKHTMPVAR=`new_get_option newline-list PORT_WHITELIST` || exit 1
 
 	if [ -n "${RKHTMPVAR}" ]; then
@@ -3989,6 +3985,10 @@ ${PROTO}:${PORT}"
 
 		IFS=$RKHIFS
 
+		PORT_WHITELIST=`echo "${PORT_WHITELIST}" | sed -e 's/^$/d'`
+		PORT_WHITELIST_PATH=`echo "${PORT_WHITELIST_PATH}" | sed -e 's/^$/d'`
+
+
 		if [ $LEAVE -eq 1 ]; then
 			if [ $CONFIG_CHECK -eq 0 ]; then
 				exit 1
@@ -3996,9 +3996,6 @@ ${PROTO}:${PORT}"
 				RET_CODE=1
 			fi
 		fi
-
-		PORT_WHITELIST=`echo "${PORT_WHITELIST}" | sed -e 's/^$/d'`
-		PORT_WHITELIST_PATH=`echo "${PORT_WHITELIST_PATH}" | sed -e 's/^$/d'`
 	fi
 
 	return
@@ -5373,7 +5370,7 @@ get_user_fileprop_list() {
 	# found in different variables. Only basic syntax checking is
 	# done here, further checking will be done later on.
 	#
-	# The configuration option can have three basic values:
+	# The configuration options can have three basic values:
 	#
 	#    1) A simple file (command) name - for example, 'top'
 	#    2) A directory - for example, '/usr/local/sbin'
@@ -5384,151 +5381,159 @@ get_user_fileprop_list() {
 	# file list. The third type is added directly to the end of the file.
 	#
 	# The second and third types may be wildcarded. They may also be
-	# excluded from the checks by preceding them with a '!'. Only
-	# files and directories matching user added ones can be excluded.
-	# This prevents users from excluding anything in the internal list.
-	# For example: USER_FILEPROP_FILES_DIRS="/opt/b* !/opt/backup"
+	# excluded from the checks by including them in the
+	# EXCLUDE_USER_FILEPROP_FILES_DIRS option. Only files and directories
+	# matching user added ones can be excluded. This prevents users from
+	# excluding anything in the internal list.
+	# For example: USER_FILEPROP_FILES_DIRS=/opt/b*
+	#              EXCLUDE_USER_FILEPROP_FILES_DIRS=/opt/backup
 	#
 
-	FILENAMES=`get_option 2 multi USER_FILEPROP_FILES_DIRS` || exit 1
+	LEAVE=0
 
-	test -z "${FILENAMES}" && return
+	for WHICH_OPT in USER_FILEPROP_FILES_DIRS EXCLUDE_USER_FILEPROP_FILES_DIRS; do
+		FILENAMES=`new_get_option newline-list ${WHICH_OPT}` || exit 1
 
-	#
-	# We must first check to see if any of the names are simple names but
-	# with wildcard characters included. This is a little messy, but we
-	# need to loop over the names without them being expanded.
-	#
+		test $ERRCODE -eq 1 && LEAVE=1
 
-	N=0
-	ERRCODE=0
+		test -z "${FILENAMES}" && continue
 
-	# Take a copy of the filenames.
-	RKHTMPVAR="${FILENAMES}"
 
-	# Single pathnames won't have a space in them.
-	test -n "`echo \"${RKHTMPVAR}\" | grep ' '`" && RKHTMPVAR2=1 || RKHTMPVAR2=0
+		#
+		# We must first check to see if any of the names are
+		# simple names but with wildcard characters included.
+		#
 
-	while :; do
-		N=`expr $N + 1`
+		RKHTMPVAR=`echo "${FILENAMES}" | grep '^[^/]*[][?*{}]'`
 
-		FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f $N`
+		if [ -n "${RKHTMPVAR}" ]; then
+			LEAVE=1
 
-		test -z "${FNAME}" && break
+			# Make a space-separated list but without expanding the wildcards.
+			RKHTMPVAR=`make_space_list "${RKHTMPVAR}"`
 
-		if [ -n "`echo \"${FNAME}\" | grep '^[^/]*[][*?{}][^/]*$'`" ]; then
-			ERRCODE=1
-			echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME}"
+			echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname(s): ${RKHTMPVAR}"
 		fi
 
-		test $RKHTMPVAR2 -eq 0 && break
-	done
-
-	#
-	# We now 'echo' the variable so that any wildcards get expanded.
-	#
-
-	FILENAMES=`echo ${FILENAMES}`
-
-	#
-	# Next check the pathnames to ensure they are basically valid.
-	#
-
-	check_paths FILENAMES USER_FILEPROP_FILES_DIRS
-
-
-	#
-	# Now we loop through the entries and check them again. They
-	# are then added to the relevant variable used to build the
-	# file properties file list.
-	#
-
-	for FNAME in ${FILENAMES}; do
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
 		#
-		# First check for any files or directories to be excluded.
+		# Next check the pathnames to ensure they are basically valid.
 		#
 
-		if [ -n "`echo \"${FNAME}\" | grep '^!'`" ]; then
-			RKHTMPVAR=`echo ${FNAME} | cut -c2-`
-			# Re-expand the name in case it has globbing characters.
-			RKHTMPVAR=`echo ${RKHTMPVAR}`
+		new_check_paths FILENAMES ${WHICH_OPT} "EXIST"
 
-			test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${RKHTMPVAR}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP} ${RKHTMPVAR}"
-
-			continue
-		fi
-
+		test $ERRCODE -eq 1 && LEAVE=1
 
 		#
-		# Now check to see if it is a simple file name.
+		# Now expand any wildcards.
 		#
 
-		if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
-			# Check that it hasn't already been set. If it has, then we just ignore it.
+		FNAMES=`expand_paths FILENAMES`
 
-			if [ -z "`echo \" ${USER_SIMPLE_FILE_LIST} \" | grep \" ${FNAMEGREP} \"`" ]; then
-				test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST} ${FNAME}"
+		#
+		# Now we loop through the entries and check them again. They
+		# are then added to the relevant variable used to build the
+		# file properties file list.
+		#
+
+		IFS=$IFSNL
+
+		for FNAME in ${FNAMES}; do
+			#
+			# First check for any files or directories to be excluded.
+			# We ignore any real checks on the pathnames since it is
+			# safer if they fail (the relevant files/directories will
+			# then be included in the file properties checks).
+			#
+
+			if [ "${WHICH_OPT}" = "EXCLUDE_USER_FILEPROP_FILES_DIRS" ]; then
+				test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${FNAME}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP}
+${FNAME}"
+
+				continue
 			fi
-		else
-			# It's an absolute pathname. This could be a file or a directory.
 
-			if [ -f "${FNAME}" -o -h "${FNAME}" ]; then
-				# Check that it hasn't already been set. If it has, then we just ignore it.
 
-				test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
+			#
+			# Now check to see if it is a simple file name.
+			#
 
-				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-					RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-					if [ -n "${RKHTMPVAR}" ]; then
-						FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+				# Check that the file name hasn't already been set. If it has, then we just ignore it.
 
-						if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-							FNAME="${FNAME}
+				if [ -z "`echo \"${USER_SIMPLE_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST}
+${FNAME}"
+				fi
+			else
+				# It's an absolute pathname. This could be a file or a directory.
+
+				if [ -f "${FNAME}" -o -h "${FNAME}" ]; then
+					# Check that it hasn't already been set. If it has, then we just ignore it.
+
+					test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
+
+					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+						RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
+
+						if [ -n "${RKHTMPVAR}" ]; then
+							FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+							if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+								FNAME="${FNAME}
 ${RKHTMPVAR}"
+							fi
+						elif [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+							LEAVE=1
+							echo "Invalid ${WHICH_OPT} configuration option: Broken link found: ${FNAME}"
+							continue
 						fi
 					fi
-				fi
 
-				#
-				# Now add the file name.
-				#
+					#
+					# Now add the file name.
+					#
 
-				test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
+					test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
 ${FNAME}"
-			elif [ -d "${FNAME}" ]; then
-				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-					RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
+				elif [ -d "${FNAME}" ]; then
+					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+						RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
 
-					if [ -z "${RKHTMPVAR}" ]; then
-						ERRCODE=1
-						echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid link found: ${FNAME}"
-						continue
-					elif [ "${RKHTMPVAR}" = "/" ]; then
-						ERRCODE=1
-						echo "Invalid USER_FILEPROP_FILES_DIRS configuration option: Invalid pathname: ${FNAME} -> /"
-						continue
+						if [ -z "${RKHTMPVAR}" ]; then
+							if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+								LEAVE=1
+								echo "Invalid ${WHICH_OPT} configuration option: Broken link found: ${FNAME}"
+								continue
+							fi
+						elif [ "${RKHTMPVAR}" = "/" ]; then
+							LEAVE=1
+							echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: ${FNAME} -> /"
+							continue
+						fi
+
+						FNAME="${RKHTMPVAR}"
 					fi
 
-					FNAME="${RKHTMPVAR}"
-				fi
+					#
+					# Check that the name hasn't already been set. If it has, then we just ignore it.
+					#
 
-				#
-				# Check that the name hasn't already been set. If it has, then we just ignore it.
-				#
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
-				if [ -z "`echo \" ${USER_DIR_LIST} \" | grep \" ${FNAMEGREP} \"`" ]; then
-					test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST} ${FNAME}"
+					if [ -z "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+						test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
+${FNAME}"
+					fi
 				fi
 			fi
-		fi
+		done
+
+		IFS=$RKHIFS
 	done
 
-	if [ $ERRCODE -eq 1 ]; then
+	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
 		else
@@ -6661,6 +6666,8 @@ create_rkh_file_prop_list() {
 
 	rm -f ${RKH_FILEPROP_LIST} >/dev/null 2>&1
 
+	IFS=$IFSNL
+
 	for DIR in ${PROP_DIR_LIST}; do
 		for FNAME in ${PROP_FILE_LIST}; do
 			echo "${DIR}/${FNAME}" >>${RKH_FILEPROP_LIST}
@@ -6682,12 +6689,14 @@ create_rkh_file_prop_list() {
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "${USER_EXCLUDE_PROP}" ]; then
-				test -n "`echo \" ${USER_EXCLUDE_PROP} \" | grep \" ${FNAMEGREP} \"`" && continue
+				test -n "`echo \"${USER_EXCLUDE_PROP}\" | grep \"^${FNAMEGREP}$\"`" && continue
 			fi
 
 			test -z "`grep \"^${FNAMEGREP}$\" ${RKH_FILEPROP_LIST} 2>/dev/null`" && echo "${FNAME}" >>${RKH_FILEPROP_LIST}
 		done
 	fi
+
+	IFS=$RKHIFS
 
 	chmod 640 ${RKH_FILEPROP_LIST} >/dev/null 2>&1
 
@@ -7493,21 +7502,17 @@ do_config_check() {
 	# value options (that is, not any sort of list).
 	#
 
-#jh - create single opt list?
 	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
-		   ALLOWPROMISCIF ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING
-		   APPEND_LOG AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR
-		   DISABLE_UNHIDE EPOCH_DATE_CMD HASH_FLD_IDX HASH_FUNC HASH_CMD
-		   IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
-		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR OS_VERSION_FILE
-		   PASSWORD_FILE PHALANX2_DIRTEST PKGMGR PORT_WHITELIST
-		   ROOTDIR ROTATE_MIRRORS RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
-		   SCAN_MODE_DEV SCRIPTDIR SHOW_LOCK_MSGS
-		   SHOW_SUMMARY_WARNINGS_NUMBER SSH_CONFIG_DIR SUSPSCAN_DEBUG
-		   SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP SUSPSCAN_THRESH TMPDIR
-		   UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM
-		   USER_FILEPROP_FILES_DIRS USE_LOCKING USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD
-		   WEB_CMD WHITELISTED_IS_WHITE XINETD_CONF_PATH"
+		   ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING APPEND_LOG
+		   AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR DISABLE_UNHIDE EPOCH_DATE_CMD
+		   HASH_FLD_IDX HASH_FUNC HASH_CMD IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
+		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
+		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
+		   SCAN_MODE_DEV SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_WARNINGS_NUMBER
+		   SSH_CONFIG_DIR SUSPSCAN_DEBUG SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP
+		   SUSPSCAN_THRESH TMPDIR UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM USE_LOCKING
+		   USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD WEB_CMD WHITELISTED_IS_WHITE
+		   XINETD_CONF_PATH"
 
 	VALIDOPTS=" `echo ${VALIDOPTS}` "
 
@@ -13028,6 +13033,7 @@ malware_checks() {
 
 						if [ -n "`echo \"${RKHTMPVAR}\" | grep ':/'`" ]; then
 							PROCDELFILES_GIVEN=1
+#jh - need to be carful her again - need to get last 2 colon paths? (not use cut)
 							RKHTMPVAR2=`echo "${RKHTMPVAR}" | cut -d: -f1`
 						else
 							RKHTMPVAR2="${RKHTMPVAR}"
@@ -17354,19 +17360,32 @@ set_file_prop_dirs_files() {
 
 	PROP_DIR_LIST=""
 
-	for DIR in ${BINPATHS} ${USER_DIR_LIST}; do
-		LINKDIR="${DIR}"
+	#
+	# We have to change BINDIR to a newline-separated list here
+	# because USER_DIR_LIST is one. If USER_DIR_LIST contained
+	# a space anywhere, then the directories would not be searched.
+	#
 
-		test ! -d "${LINKDIR}" && continue
+	BINPS=`echo ${BINPATHS} | tr ' ' '\n'`
 
-		if [ -h "${LINKDIR}" -a $HAVE_READLINK -eq 1 ]; then
-			LINKDIR=`${READLINK_CMD} -f ${LINKDIR}`
+	IFS=$IFSNL
+
+	for DIR in ${BINPS} ${USER_DIR_LIST}; do
+		test ! -d "${DIR}" && continue
+
+		if [ -h "${DIR}" -a $HAVE_READLINK -eq 1 ]; then
+			LINKDIR=`${READLINK_CMD} -f ${DIR}`
+		else
+			LINKDIR="${DIR}"
 		fi
 
-		if [ -z "`echo \" ${PROP_DIR_LIST} \" | grep \" ${LINKDIR} \"`" ]; then
-			PROP_DIR_LIST="${PROP_DIR_LIST} ${LINKDIR}"
+		if [ -z "`echo \"${PROP_DIR_LIST}\" | grep \"^${LINKDIR}$\"`" ]; then
+			PROP_DIR_LIST="${PROP_DIR_LIST}
+${LINKDIR}"
 		fi
 	done
+
+	IFS=$RKHIFS
 
 
 	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
@@ -17420,23 +17439,34 @@ set_file_prop_dirs_files() {
 
 	#
 	# Next we quickly loop through the user supplied list of files,
-	# and ignore any that are already in the builtin list.
+	# and ignore any that are already in the builtin list. At this
+	# point we also change PROP_FILE_LIST from a space-separated
+	# list to a newline-separated one. We have to do this because
+	# we are about to add in the user-supplied pathnames.
 	#
 
-	PROP_FILE_LIST=`echo ${PROP_FILE_LIST}`
+	PROP_FILE_LIST=`echo ${PROP_FILE_LIST} | tr ' ' '\n'`
 
 	if [ -n "${USER_SIMPLE_FILE_LIST}" ]; then
 		RKHTMPVAR=""
 
+		IFS=$IFSNL
+
 		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			test -z "`echo \" ${PROP_FILE_LIST} \" | grep \" ${FNAMEGREP} \"`" && RKHTMPVAR="${RKHTMPVAR} ${FNAME}"
+			test -z "`echo \"${PROP_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && RKHTMPVAR="${RKHTMPVAR}
+${FNAME}"
 		done
 
-		USER_SIMPLE_FILE_LIST=`echo ${RKHTMPVAR}`
+		IFS=$RKHIFS
 
-		PROP_FILE_LIST="${PROP_FILE_LIST} ${USER_SIMPLE_FILE_LIST}"
+		USER_SIMPLE_FILE_LIST=`echo "${RKHTMPVAR}" | sed -e '/^$/d'`
+
+		if [ -n "${USER_SIMPLE_FILE_LIST}" ]; then
+			PROP_FILE_LIST="${PROP_FILE_LIST}
+${USER_SIMPLE_FILE_LIST}"
+		fi
 	fi
 
 
@@ -17449,6 +17479,8 @@ set_file_prop_dirs_files() {
 	if [ $HAVE_READLINK -eq 1 ]; then
 		EXTRA_DIRS=""
 		EXTRA_FILES=""
+
+		IFS=$IFSNL
 
 		for DIR in ${PROP_DIR_LIST}; do
 			for FNAME in ${PROP_FILE_LIST}; do
@@ -17468,8 +17500,12 @@ set_file_prop_dirs_files() {
 					# If not, then we add it on.
 					#
 
-					if [ -z "`echo \" ${PROP_DIR_LIST} ${EXTRA_DIRS} \" | grep \" ${LINKDIR} \"`" ]; then
-						EXTRA_DIRS="${EXTRA_DIRS} ${LINKDIR}"
+					RKHTMPVAR3="${PROP_DIR_LIST}
+${EXTRA_DIRS}"
+
+					if [ -z "`echo \"${RKHTMPVAR3}\" | grep \"^${LINKDIR}$\"`" ]; then
+						EXTRA_DIRS="${EXTRA_DIRS}
+${LINKDIR}"
 					fi
 
 
@@ -17485,18 +17521,29 @@ set_file_prop_dirs_files() {
 					# And finally check if we already have it listed.
 					#
 
-					if [ -z "`echo \" ${PROP_FILE_LIST} ${EXTRA_FILES} \" | grep \" ${FNAMEGREP} \"`" ]; then
-						EXTRA_FILES="${EXTRA_FILES} ${LINKFNAME}"
+					RKHTMPVAR3="${PROP_FILE_LIST}
+${EXTRA_FILES}"
+
+					if [ -z "`echo \"${RKHTMPVAR3}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+						EXTRA_FILES="${EXTRA_FILES}
+${LINKFNAME}"
 					fi
 				fi
 			done
 		done
 
-		test -n "${EXTRA_DIRS}" && PROP_DIR_LIST="${PROP_DIR_LIST} ${EXTRA_DIRS}"
-		test -n "${EXTRA_FILES}" && PROP_FILE_LIST="${PROP_FILE_LIST} ${EXTRA_FILES}"
+		IFS=$RKHIFS
+
+		EXTRA_DIRS=`echo "${EXTRA_DIRS}" | sed -e '/^$/d'`
+		EXTRA_FILES=`echo "${EXTRA_FILES}" | sed -e '/^$/d'`
+
+		test -n "${EXTRA_DIRS}" && PROP_DIR_LIST="${PROP_DIR_LIST}
+${EXTRA_DIRS}"
+		test -n "${EXTRA_FILES}" && PROP_FILE_LIST="${PROP_FILE_LIST}
+${EXTRA_FILES}"
 	fi
 
-	PROP_FILE_LIST_TOTAL=`echo ${PROP_FILE_LIST} | wc -w | tr -d ' '`
+	PROP_FILE_LIST_TOTAL=`echo "${PROP_FILE_LIST}" | wc -l | tr -d ' '`
 
 	return
 }
@@ -18194,17 +18241,18 @@ LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA D
 	      Digest::SHA::PurePerl Digest::Whirlpool LWP URI HTTP::Status HTTP::Date Socket Carp"
 
 # A list of configuration options which are space-separated lists.
-#jh - reorder these lists into alphabetical
-SPACE_LIST_OPTS="UPDATE_LANG BINDIR MAIL-ON-WARNING SYSLOG_CONFIG_FILE ENABLE_TESTS DISABLE_TESTS
-		 INETD_ALLOWED_SVC XINETD_ALLOWED_SVC MISSING_LOGFILES EMPTY_LOGFILES UNHIDE_TESTS
-		 UNHIDETCP_OPTS SUSPSCAN_DIRS APP_WHITELIST UID0_ACCOUNTS PWDLESS_ACCOUNTS
-		 SHARED_LIB_WHITELIST STARTUP_PATHS IGNORE_PRELINK_DEP_ERR"
+SPACE_LIST_OPTS="ALLOWPROMISCIF APP_WHITELIST BINDIR DISABLE_TESTS EMPTY_LOGFILES ENABLE_TESTS
+		 IGNORE_PRELINK_DEP_ERR INETD_ALLOWED_SVC MAIL-ON-WARNING MISSING_LOGFILES
+		 PWDLESS_ACCOUNTS SHARED_LIB_WHITELIST STARTUP_PATHS SUSPSCAN_DIRS
+		 SYSLOG_CONFIG_FILE UID0_ACCOUNTS UNHIDE_TESTS UNHIDETCP_OPTS UPDATE_LANG
+		 XINETD_ALLOWED_SVC"
 SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 
 # A list of configuration options which are newline-separated lists.
-#jh - all newline lists must use expand_paths if they allow wildcards
-NEWLINE_LIST_OPTS="EXISTWHITELIST ALLOWDEVFILE ALLOWHIDDENFILE ALLOWHIDDENDIR ATTRWHITELIST WRITEWHITELIST
-		   IMMUTWHITELIST SCRIPTWHITELIST PKGMGR_NO_VRFY ALLOWPROCLISTEN ALLOWPROCDELFILE"
+NEWLINE_LIST_OPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
+		   ATTRWHITELIST EXCLUDE_USER_FILEPROP_FILES_DIRS EXISTWHITELIST IMMUTWHITELIST
+		   PKGMGR_NO_VRFY PORT_WHITELIST RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
+		   SCRIPTWHITELIST USER_FILEPROP_FILES_DIRS WRITEWHITELIST"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.
@@ -19583,33 +19631,49 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 	if [ -n "${USER_FILE_LIST}" ]; then
 		display --to LOG --type INFO USER_FILE_LIST
 
+		IFS=$IFSNL
+
 		for FNAME in ${USER_FILE_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
 		done
+
+		IFS=$RKHIFS
 	fi
 
 	if [ -n "${USER_SIMPLE_FILE_LIST}" ]; then
 		display --to LOG --type INFO USER_CMD_LIST
 
+		IFS=$IFSNL
+
 		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
 		done
+
+		IFS=$RKHIFS
 	fi
 
 	if [ -n "${USER_DIR_LIST}" ]; then
 		display --to LOG --type INFO USER_DIR_LIST
 
+		IFS=$IFSNL
+
 		for FNAME in ${USER_DIR_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
 		done
+
+		IFS=$RKHIFS
 	fi
 
 	if [ -n "${USER_EXCLUDE_PROP}" ]; then
 		display --to LOG --type INFO USER_EXCLUDE_PROP
 
+		IFS=$IFSNL
+
 		for FNAME in ${USER_EXCLUDE_PROP}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "${FNAME}"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
 		done
+
+		IFS=$RKHIFS
 	fi
 fi
 
