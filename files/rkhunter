@@ -2735,6 +2735,7 @@ get_syslog_option() {
 		fi
 	fi
 
+
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
@@ -2816,6 +2817,7 @@ get_ssh_options() {
 			LEAVE=1
 		fi
 	fi
+
 
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
@@ -3593,18 +3595,20 @@ ${PROTO}:${PORT}"
 }
 
 
-get_shadow_file_option() {
+get_groups_accounts_options() {
 
 	#
-	# Get the option from the configuration file. We also cater
+	# Get the location of the password/shadow file. We also cater
 	# for cases such as BSD systems and users of TCB shadow files.
 	# If the shadow file itself does not exist, then we look in
-	# the password file to see if it contains the passwords.
+	# the password file itself to see if it contains the passwords.
 	#
 
-	ERRCODE=0
+	LEAVE=0
 
 	SHADOW_FILE=`get_option single PASSWORD_FILE` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
 
 	if [ -n "${SHADOW_FILE}" ]; then
 		check_paths SHADOW_FILE PASSWORD_FILE "EXIST NOWILD NOBROKENLINK"
@@ -3615,6 +3619,8 @@ get_shadow_file_option() {
 			else
 				SHADOW_FILE=""
 			fi
+		else
+			LEAVE=1
 		fi
 	elif [ -s "/etc/shadow" ]; then
 		SHADOW_FILE="/etc/shadow"
@@ -3636,7 +3642,36 @@ get_shadow_file_option() {
 		fi
 	fi
 
-	if [ $ERRCODE -eq 1 ]; then
+
+	#
+	# Now get the passwordless account whitelist option.
+	#
+
+	PWD_WHITELIST=""
+
+	PWD_WHITELIST=`get_option space-list PWDLESS_ACCOUNTS` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
+
+	test -n "${PWD_WHITELIST}" && PWD_WHITELIST=" ${PWD_WHITELIST} "
+
+
+	#
+	# Next get any root-equivalent whitelisted account names.
+	#
+
+	UID0_WHITELIST=""
+
+	UID0_WHITELIST=`get_option space-list UID0_ACCOUNTS` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
+
+	# By default we allow the root account.
+
+	UID0_WHITELIST=" root ${UID0_WHITELIST} "
+
+
+	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
 		else
@@ -3966,6 +4001,37 @@ get_unhide_options() {
 	else
 		NOUNHIDE=0
 	fi
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
+get_process_options() {
+
+	#
+	# Get any options used by checks on processes.
+	#
+
+	LEAVE=0
+
+	#
+	# We do no testing of this option because if the user gets it wrong,
+	# then the processes will show up as warnings. The user should (!)
+	# then check the configuration file to make sure it is correct.
+	#
+
+	ALLOWPROCDELFILES=`get_option newline-list ALLOWPROCDELFILE` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
+
 
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
@@ -4699,9 +4765,11 @@ get_rtkt_whitelist_options() {
 	# There are no defaults.
 	#
 
-	ERRCODE=0
+	LEAVE=0
 
 	RTKT_FILE_WHITELIST=`get_option newline-list RTKT_FILE_WHITELIST` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
 
 	if [ -n "${RTKT_FILE_WHITELIST}" ]; then
 		#
@@ -4710,10 +4778,14 @@ get_rtkt_whitelist_options() {
 
 #jh - can we do this here? The option may have paths with colons and text after them (see rkhunter.conf).
 		check_paths RTKT_FILE_WHITELIST RTKT_FILE_WHITELIST "EXIST NOWILD NOBROKENLINK"
+
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
 	RTKT_DIR_WHITELIST=`get_option newline-list RTKT_DIR_WHITELIST` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
 
 	if [ -n "${RTKT_DIR_WHITELIST}" ]; then
 		#
@@ -4721,9 +4793,12 @@ get_rtkt_whitelist_options() {
 		#
 
 		check_paths RTKT_DIR_WHITELIST RTKT_DIR_WHITELIST "EXIST NOWILD NOBROKENLINK"
+
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
-	if [ $ERRCODE -eq 1 ]; then
+
+	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
 		else
@@ -5313,6 +5388,75 @@ get_network_options() {
 }
 
 
+get_os_specific_options() {
+
+	#
+	# Get any O/S specific options.
+	#
+
+	LEAVE=0
+
+	if [ "${OPERATING_SYSTEM}" = "Linux" ]; then
+		LKM_PATH=`get_option single MODULES_DIR` || exit 1
+
+		if [ $ERRCODE -eq 0 ]; then
+			if [ -z "${LKM_PATH}" ]; then
+				LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
+				test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
+			fi
+
+			check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
+
+			test $ERRCODE -eq 1 && LEAVE=1
+		else
+			LEAVE=1
+		fi
+	fi
+
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
+get_app_options() {
+
+	#
+	# Get any options used for the application check.
+	#
+
+	LEAVE=0
+
+	APP_WHITELIST=""
+
+	RKHTMPVAR=`get_option space-list APP_WHITELIST` || exit 1
+
+	test $ERRCODE -eq 1 && LEAVE=1
+
+	if [ -n "${RKHTMPVAR}" ]; then
+		APP_WHITELIST=`echo " ${RKHTMPVAR} " | tr '[:upper:]' '[:lower:]'`
+	fi
+
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
 get_configfile_options() {
 
 	#
@@ -5380,12 +5524,14 @@ get_configfile_options() {
 	if [ $CHECK -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
 		test $NOMOW -eq 0 && get_mailonwarn_option
 
-		get_ssh_options
-
-		get_syslog_config_options
+		if `check_test system_configs`; then
+			get_ssh_options
+			get_syslog_config_options
+		fi
 
 		get_syslog_option
 
+#jh - got here
 		get_scan_mode_dev_option
 
 		get_startup_paths_option
@@ -5396,7 +5542,7 @@ get_configfile_options() {
 
 		check_test ports || check_test hidden_ports && get_ports_option
 
-		check_test group_accounts && get_shadow_file_option
+		check_test group_accounts && get_groups_accounts_options
 
 		check_test shared_libs && get_shared_lib_whitelist_option
 
@@ -5412,11 +5558,17 @@ get_configfile_options() {
 
 		check_test hidden_procs || check_test hidden_ports && get_unhide_options
 
+		check_test deleted_files && get_process_options
+
 		check_test suspscan && get_suspscan_options
 
 		get_summary_options
 
 		get_network_options
+
+		check_test os_specific && get_os_specific_options
+
+		check_test apps && get_app_options
 	fi
 
 
@@ -7075,7 +7227,7 @@ do_versioncheck() {
 }
 
 
-do_config_check() {
+do_config_file_check() {
 
 	#
 	# This function performs a basic configuration file check. Use of
@@ -12551,8 +12703,6 @@ malware_checks() {
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
 
-				ALLOWPROCDELFILES=`get_option newline-list ALLOWPROCDELFILE` || exit 1
-
 				IFS=$IFSNL
 
 				for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele'`; do
@@ -12624,7 +12774,7 @@ malware_checks() {
 
 						if [ -n "`echo \"${RKHTMPVAR}\" | grep ':/'`" ]; then
 							PROCDELFILES_GIVEN=1
-#jh - need to be carful her again - need to get last 2 colon paths? (not use cut)
+#jh - need to be careful here again - need to get last 2 colon paths? (not use cut)
 							RKHTMPVAR2=`echo "${RKHTMPVAR}" | cut -d: -f1`
 						else
 							RKHTMPVAR2="${RKHTMPVAR}"
@@ -13808,28 +13958,14 @@ linux_avail_modules() {
 
 	FOUND=0
 	FOUNDFILES=""
-	LKM_PATH=""
 	LKM_NAMES=""
-
-	RKHTMPVAR=`get_option single MODULES_DIR` || exit 1
-
-	if [ -n "${RKHTMPVAR}" ]; then
-		LKM_PATH="${RKHTMPVAR}"
-
-#jh - this 'get_option' needs to be done before the prog starts - do that for all config options??, then
-#jh - we can check check_paths and exit or set LEAVE as with other options.
-#jh		check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
-	else
-		LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
-		test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
-	fi
 
 	display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKM_PATH}"
 
 
 	#
-	# Next, we reformat the LKM names at this point since
-	# we only need to do it once.
+	# We reformat the LKM names at this point
+	# since we only need to do it once.
 	#
 
 	for RKHTMPVAR in ${LKM_BADNAMES}; do
@@ -15059,13 +15195,6 @@ do_group_accounts_check() {
 	#
 
 	if [ -s "/etc/passwd" ]; then
-		#
-		# We need to ignore any whitelisted UID 0 accounts.
-		#
-
-		UID0_WHITELIST=`get_option space-list UID0_ACCOUNTS` || exit 1
-		UID0_WHITELIST=" root ${UID0_WHITELIST} "
-
 		UID_LIST=""
 		RKHTMPVAR2=""
 
@@ -15089,6 +15218,10 @@ do_group_accounts_check() {
 			test "${RKHTMPVAR}" = "root" && continue
 
 			RKHUSERID=`echo "${RKHTMPVAR}" | sed -e 's/\./\\\./g'`
+
+			#
+			# We will ignore any whitelisted UID 0 accounts.
+			#
 
 			if [ -z "`echo \"${UID0_WHITELIST}\" | grep \" ${RKHUSERID} \"`" ]; then
 				UID_LIST="${UID_LIST}
@@ -15130,18 +15263,11 @@ ${RKHTMPVAR}"
 	# The first is to check the shadow file, and for TCB shadow files we
 	# have to loop through all the shadow files in the /etc/tcb directory.
 	# Then we check the /etc/passwd file for any passwordless accounts.
-	# Finally we display the overall result.
-	#
-
-	#
-	# We need to ignore any whitelisted passwordless accounts.
+	# Finally we display the overall result. We ignore any whitelisted
+	# passwordless accounts.
 	#
 
 	WL_SEEN=""
-
-	PWD_WHITELIST=`get_option space-list PWDLESS_ACCOUNTS` || exit 1
-	PWD_WHITELIST=" ${PWD_WHITELIST} "
-
 	PWD_PWDLESS_LIST=""
 	SHAD_PWDLESS_LIST=""
 
@@ -16241,17 +16367,6 @@ do_app_checks() {
 		   sshd:OpenSSH"
 
 	APPS_TOTAL_COUNT=`echo "${APP_NAMES}" | wc -l | tr -d ' '`
-
-
-	#
-	# Get the list of whitelisted application versions.
-	#
-
-	APP_WHITELIST=""
-
-	RKHTMVAR=`get_option space-list APP_WHITELIST` || exit 1
-
-	test -n "${RKHTMVAR}" && APP_WHITELIST=`echo " ${RKHTMVAR} " | tr '[:upper:]' '[:lower:]'`
 
 
 	IFS=$IFSNL
@@ -18490,7 +18605,7 @@ get_configfile_options
 #
 
 if [ $CONFIG_CHECK -eq 1 ]; then
-	do_config_check
+	do_config_file_check
 	exit $RET_CODE
 fi
 
