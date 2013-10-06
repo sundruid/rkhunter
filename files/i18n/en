@@ -1,4 +1,4 @@
-Version:2012122201
+Version:2013100601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -282,7 +282,7 @@ FILE_PROP_CHANGED2:File: $1
 FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
 FILE_PROP_NO_SYSHASH_BL:The file is a broken link: $1
-FILE_PROP_BROKEN_LINK_WL_TGT:Found a broken link, but the targets existence is whitelisted: '$1'
+FILE_PROP_BROKEN_LINK_WL_TGT:Found a broken link, but the targets existence is whitelisted: $1
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
 FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.
 FILE_PROP_IGNORE_PRELINK_DEP_ERR:Ignoring prelink dependency error for file '$1'
@@ -529,7 +529,7 @@ FILESYSTEM_DEV_FILE_FOUND:Suspicious file types found in ${1}:
 FILESYSTEM_HIDDEN_DIR_WL:Found hidden directory '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_FILE_WL:Found hidden file '$1': it is whitelisted.
 FILESYSTEM_HIDDEN_CHECK:Checking for hidden files and directories
-FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: '$1'
+FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 FILESYSTEM_LOGFILE_MISSING:Checking for missing log files
 FILESYSTEM_LOGFILE_MISSING_FOUND:The log file '$1' is missing.
@@ -610,13 +610,13 @@ SUSPSCAN_SIZE:Maximum file size to check (in bytes): $1
 SUSPSCAN_NO_SIZE:No maximum file size specified: using default ($1)
 SUSPSCAN_THRESH:Score threshold is set to: $1
 SUSPSCAN_NO_THRESH:No score threshold specified: using default ($1)
-SUSPSCAN_DIR_CHECK:Checking directory: '$1'
+SUSPSCAN_DIR_CHECK:Checking directory: $1
 SUSPSCAN_FILE_CHECK:File checked: Name: '$1' Score: $2
 SUSPSCAN_FILE_CHECK_DEBUG:File checked: Name: '$1' Score: $2 Hitcount: $3 Hits: ($4)
-SUSPSCAN_FILE_SKIPPED_EMPTY:File ignored: empty: '$1'
-SUSPSCAN_FILE_SKIPPED_LINK:File ignored: symbolic link: '$1'
+SUSPSCAN_FILE_SKIPPED_EMPTY:File ignored: empty: $1
+SUSPSCAN_FILE_SKIPPED_LINK:File ignored: symbolic link: $1
 SUSPSCAN_FILE_SKIPPED_TYPE:File ignored: wrong type: '$1': '$2'
-SUSPSCAN_FILE_SKIPPED_SIZE:File ignored: too big: '$1'
+SUSPSCAN_FILE_SKIPPED_SIZE:File ignored: too big: $1
 SUSPSCAN_FILE_LINK_CHANGE:Symbolic link found: '$1' -> '$2'
 SUSPSCAN_DAT_MISSING:The data file of suspicious contents is missing or empty: $1
 SUSPSCAN_DAT_MISSING:Run 'rkhunter --update' to restore the default file.
