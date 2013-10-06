@@ -5,7 +5,7 @@
 #
 ####################################################################
 
- !! Important notices !!:
+ !! Important notices !!
 
  - Dates in this file are formatted as DD/MM/YYYY (European format)
  - The rkhunter configuration file (default /etc/rkhunter.conf) will
@@ -87,10 +87,11 @@
    '/etc/os-release' file.
  - In the configuration file the HASH_FUNC option has now changed
    name to HASH_CMD. However, the old name will still be recognised.
- - The ALLOWDEVFILE and EXISTWHITELIST configuration options are now
-   treated as newline-separated lists. As such, the options can only
-   have one entry per line, and that entry can contain any character
-   other than a newline.
+ - Most configuration options which take pathnames are now treated as
+   newline-separated lists. As such, the options can only have one entry
+   per line, and that entry can contain any character other than a
+   newline. (Note: do not use quotes around the pathname as they will
+   be treated as part of the pathname and probably give an error.)
  - The USER_FILEPROP_FILES_DIRS no longer recognises the '!' character
    as being special. Any pathnames to be excluded from the file
    properties checks should use the new EXCLUDE_USER_FILEPROP_FILES_DIRS
@@ -118,8 +119,19 @@
    Additionally, testing the files size prevented character and block
    file types from being detected. As before, empty files are ignored.
    The OSX 'file' command can return multiple lines for certain files.
-   This has now been catered for (generally the output was assumed to be
-   on one line.)
+   This has now been catered for (generally the output was assumed to
+   be on one line.)
+ - Some configuration options were not being processed until late in
+   the code. Now, all options are processed early in the program. This
+   means that any error messages will show up much earlier.
+ - Some configuration options, for specific tests, were being processed
+   even if the test was disabled. The configuration options are now
+   only processed if the relevant test is enabled.
+ - Some configuration options were not being checked fully for errors.
+   Now, all options are checked, and any errors reported.
+ - If the '--propupd' option was used with the '--enable' option,
+   it could cause a shell error to appear and some tests not to run
+   correctly.
 
  -- 
 
