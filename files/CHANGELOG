@@ -54,6 +54,10 @@
  - Added the 'UNHIDETCP_OPTS' configuration option. This may be set to
    options which are then used by the 'unhide-tcp' command. By default
    no options are used.
+ - Added the SHOW_SUMMARY_TIME configuration option. This can be used
+   to specify where the summary scan time should be displayed, if at
+   all. The default (as before) is to display the time both on the
+   screen and in the log file.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly

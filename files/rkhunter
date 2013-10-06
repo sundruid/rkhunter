@@ -5634,8 +5634,12 @@ get_summary_options() {
 #jh - include option to (not) display time taken.
 
 	#
-	# Get the configuration option to see if we are to
-	# show the actual number of warnings in the summary.
+	# Get the configuration options for the summary.
+	#
+
+	#
+	# Get the option to see if we are to show the
+	# actual number of warnings in the summary.
 	#
 
 	LEAVE=0
@@ -5649,6 +5653,34 @@ get_summary_options() {
 			test $ERRCODE -eq 1 && LEAVE=1
 		else
 			SHOW_SUMMARY_WARNINGS_NUMBER=0
+		fi
+	else
+		LEAVE=1
+	fi
+
+
+	#
+	# Get the option to see where, if at all,
+	# we are to show the summary scan time.
+	#
+
+	SHOW_SUMMARY_TIME=`get_option single SHOW_SUMMARY_TIME` || exit 1
+
+	if [ $ERRCODE -eq 0 ]; then
+#jh - ensure calls to check_is_digit check the get_option is non-null first
+		if [ -n "${SHOW_SUMMARY_TIME}" ]; then
+			check_is_digit SHOW_SUMMARY_TIME SHOW_SUMMARY_TIME ANY
+
+			if [ $ERRCODE -eq 0 ]; then
+				if [ $SHOW_SUMMARY_TIME -gt 3 ]; then
+					LEAVE=1
+					echo "Invalid SHOW_SUMMARY_TIME configuration option: not a valid number: ${SHOW_SUMMARY_TIME}"
+				fi
+			else
+				LEAVE=1
+			fi
+		else
+			SHOW_SUMMARY_TIME=3
 		fi
 	else
 		LEAVE=1
@@ -7560,7 +7592,7 @@ do_config_file_check() {
 		   HASH_FLD_IDX HASH_FUNC HASH_CMD IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
 		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
 		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
-		   SCAN_MODE_DEV SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_WARNINGS_NUMBER
+		   SCAN_MODE_DEV SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_TIME SHOW_SUMMARY_WARNINGS_NUMBER
 		   SSH_CONFIG_DIR SUSPSCAN_DEBUG SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP
 		   SUSPSCAN_THRESH TMPDIR UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM USE_LOCKING
 		   USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD WEB_CMD WHITELISTED_IS_WHITE
@@ -16956,10 +16988,20 @@ display_check_summary() {
 	# Display the amount of time the system check took.
 	#
 
-	if [ $BEGINTIME -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --nl SUMMARY_NO_SCAN_TIME
-	else
-		display --to SCREEN+LOG --type PLAIN --nl SUMMARY_SCAN_TIME "${TOTAL_SCANTIME}"
+	if [ $SHOW_SUMMARY_TIME -gt 0 ]; then
+		if [ $SHOW_SUMMARY_TIME -eq 1 ]; then
+			RKHTMPVAR="SCREEN"
+		elif [ $SHOW_SUMMARY_TIME -eq 2 ]; then
+			RKHTMPVAR="LOG"
+		else
+			RKHTMPVAR="SCREEN+LOG"
+		fi
+
+		if [ $BEGINTIME -eq 0 ]; then
+			display --to ${RKHTMPVAR} --type PLAIN --nl SUMMARY_NO_SCAN_TIME
+		else
+			display --to ${RKHTMPVAR} --type PLAIN --nl SUMMARY_SCAN_TIME "${TOTAL_SCANTIME}"
+		fi
 	fi
 
 
@@ -18298,6 +18340,7 @@ NOTTY=0
 # By default show the system check summary.
 SHOW_SUMMARY=1
 SHOW_SUMMARY_OPT=0
+SHOW_SUMMARY_TIME=3
 SHOW_SUMMARY_WARNINGS_NUMBER=0
 
 # By default log most things that are checked.
