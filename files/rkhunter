@@ -6788,6 +6788,29 @@ create_rkh_file_prop_list() {
 }
 
 
+get_old_prop_attrs() {
+
+	#
+	# This function simply determines some of the attributes
+	# used when the file properties database was created.
+	#
+
+	FNAME=$1
+
+	test -z "${FNAME}" -o ! -f "${FNAME}" && return
+
+	if [ -s "${FNAME}" ]; then
+		OLD_HASH_FUNC=`grep '^Hash:' "${FNAME}" | cut -d: -f2-`
+
+		OLD_PKGMGR=`grep '^Pkgmgr:' "${FNAME}" | cut -d: -f2`
+
+		OLD_ATTRUPD=`grep '^Attributes:' "${FNAME}" | cut -d: -f2`
+	fi
+
+	return
+}
+
+
 do_prop_update() {
 
 	#
@@ -6883,6 +6906,14 @@ do_prop_update() {
 	#
 
 	rkh_dat_set_file_properties
+
+
+	#
+	# We now need to record the hash function and
+	# package manager as if they were the old values.
+	#
+
+	get_old_prop_attrs "${RKHDAT_TMPFILE}"
 
 
 	#
@@ -19203,13 +19234,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	# hash function and package manager.
 	#
 
-	if [ -s ${RKHDAT_FILE} ]; then
-		OLD_HASH_FUNC=`grep '^Hash:' "${RKHDAT_FILE}" | cut -d: -f2-`
-
-		OLD_PKGMGR=`grep '^Pkgmgr:' "${RKHDAT_FILE}" | cut -d: -f2`
-
-		OLD_ATTRUPD=`grep '^Attributes:' "${RKHDAT_FILE}" | cut -d: -f2`
-	fi
+	get_old_prop_attrs "${RKHDAT_FILE}"
 fi
 
 

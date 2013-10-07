@@ -136,6 +136,12 @@
  - If the '--propupd' option was used with the '--enable' option,
    it could cause a shell error to appear and some tests not to run
    correctly.
+ - If the '--propupd' option was used in conjunction with the file
+   properties test, and the hash function was changed, or a package
+   manager used, then the file properties test would fail stating that
+   the new and old hash functions, or package managers, were
+   incompatible. The test now runs as it should using the new hash
+   function or package manager.
 
  -- 
 
