@@ -85,8 +85,6 @@
    will be displayed as '<SP>', a tab as '<TAB>' and a control character
    as '?'. This should make pathnames with these characters easier to
    see when displayed or logged.
- - Updated the 'hidden_procs' test to cater for the latest version of
-   the 'unhide' program (version 20121229).
  - Detection of the O/S being used now includes looking for the
    '/etc/os-release' file.
  - In the configuration file the HASH_FUNC option has now changed
@@ -100,6 +98,9 @@
    as being special. Any pathnames to be excluded from the file
    properties checks should use the new EXCLUDE_USER_FILEPROP_FILES_DIRS
    configuration option instead. No '!' is required with that option.
+ - The 'promisc' test for promiscuous network interfaces now uses
+   either the 'ifconfig' command or, for Linux systems, the 'ip'
+   command. Previously the 'ifconfig' command had to be present.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
@@ -132,7 +133,7 @@
    even if the test was disabled. The configuration options are now
    only processed if the relevant test is enabled.
  - Some configuration options were not being checked fully for errors.
-   Now, all options are checked, and any errors reported.
+   Now, all options are fully checked, and any errors reported.
  - If the '--propupd' option was used with the '--enable' option,
    it could cause a shell error to appear and some tests not to run
    correctly.

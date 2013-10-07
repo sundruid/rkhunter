@@ -1,4 +1,4 @@
-Version:2013100601
+Version:2013100701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -578,8 +578,8 @@ NETWORK_HIDDEN_PORTS_PORT_WHITELIST:Hidden $1 port $2 found: the port is whiteli
 NETWORK_INTERFACE_START:Performing checks on the network interfaces
 NETWORK_PROMISC_WLIST:Network interfaces allowed to be in promiscuous mode: $1
 NETWORK_PROMISC_CHECK:Checking for promiscuous interfaces
-NETWORK_PROMISC_NO_IFCONFIG:Promiscuous network interface check skipped - unable to find the 'ifconfig' command.
-NETWORK_PROMISC_NO_IP:Promiscuous network interface check using 'ip' command skipped - unable to find the 'ip' command.
+NETWORK_PROMISC_NO_IFCONF_IP:Promiscuous network interface check skipped - unable to find the 'ifconfig' or 'ip' command.
+NETWORK_PROMISC_NO_CMD:Promiscuous network interface check using the '$1' command skipped - unable to find the '$1' command. Using the '$2' command.
 NETWORK_PROMISC_IF:Possible promiscuous interfaces:
 NETWORK_PROMISC_IF_1:'ifconfig' command output:
 NETWORK_PROMISC_IF_2:'ip' command output:
