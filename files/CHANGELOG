@@ -101,6 +101,8 @@
  - The 'promisc' test for promiscuous network interfaces now uses
    either the 'ifconfig' command or, for Linux systems, the 'ip'
    command. Previously the 'ifconfig' command had to be present.
+ - If either of the APPEND_LOG or COPY_LOG_ON_ERROR configuration
+   options is set, then this is now logged.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
@@ -143,6 +145,9 @@
    the new and old hash functions, or package managers, were
    incompatible. The test now runs as it should using the new hash
    function or package manager.
+ - The pathname of the log file is now logged if the summary is
+   disabled or a check is not being run. Previously the log file
+   path only appeared in the check summary.
 
  -- 
 

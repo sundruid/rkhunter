@@ -1,4 +1,4 @@
-Version:2013100701
+Version:2013101501
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -70,7 +70,10 @@ CONFIG_X_AUTO:X will be automatically detected
 CONFIG_CLRSET2:Using second color set
 CONFIG_NO_SHOW_SUMMARY:Disabling system check summary at users request
 CONFIG_SCAN_MODE_DEV:SCAN_MODE_DEV set to '$1'
+CONFIG_LOG_FILE:Logging to log file: $1
 CONFIG_NO_VL:Disabling verbose logging at users request
+CONFIG_APPEND_LOG:Current logging will be appended to the log file
+CONFIG_COPY_LOG:The log file will be copied if there are any errors
 CONFIG_XINETD_PATH:Using $1 configuration file '$2'
 CONFIG_SOL10_INETD:Using Solaris 10 and later inetd mechanism
 CONFIG_STARTUP_PATHS:Using system startup paths: $1
@@ -150,7 +153,7 @@ SUMMARY_APPS_COUNT:Applications checked: $1
 SUMMARY_APPS_FAILED:Suspect applications: $1
 SUMMARY_SCAN_TIME:The system checks took: $1
 SUMMARY_NO_SCAN_TIME:The system check took: Unable to determine clock time
-SUMMARY_LOGFILE:All results have been written to the log file ($1)
+SUMMARY_LOGFILE:All results have been written to the log file: $1
 SUMMARY_NO_LOGFILE:No log file created.
 SUMMARY_LOGFILE_COPIED:Log file copied to $1
 
@@ -331,7 +334,7 @@ FILE_PROP_VRFY_DTM:The file modification time has changed
 FILE_PROP_VRFY_LNK:The symbolic link target has changed
 FILE_PROP_VRFY_SIZE:The file size has changed
 
-FILE_PROP_EPOCH_DATE_CMD:Using '$1' to process epoch second times.
+FILE_PROP_EPOCH_DATE_CMD:Using '$1' to process epoch second times
 
 CHECK_ROOTKITS:Checking for rootkits...
 ROOTKIT_FILES_DIRS_START:Performing check of known rootkit files and directories
