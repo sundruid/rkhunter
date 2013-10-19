@@ -92,8 +92,9 @@
  - Most configuration options which take pathnames are now treated as
    newline-separated lists. As such, the options can only have one entry
    per line, and that entry can contain any character other than a
-   newline. (Note: do not use quotes around the pathname as they will
-   be treated as part of the pathname and probably give an error.)
+   newline character. (Note: Do not use quotes around the pathname.)
+   Options which previously used the '%' character to represent a space,
+   no longer require this.
  - The USER_FILEPROP_FILES_DIRS no longer recognises the '!' character
    as being special. Any pathnames to be excluded from the file
    properties checks should use the new EXCLUDE_USER_FILEPROP_FILES_DIRS

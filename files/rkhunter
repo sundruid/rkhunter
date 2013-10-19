@@ -772,6 +772,21 @@ get_option() {
 #jhjh - is also not needed		test $HASHYPHEN -eq 1 && OPTVAR="${OPTVAR} "
 #jhjh				fi
 			fi
+		else
+			#
+			# For newline-separated lists, which will be pathnames, we are
+			# nice to the user and will strip of a leading single or double
+			# quote character *if* it also ends in the same quote character.
+			# Since these ashould be pathnames they should start with the
+			# '/' character. A quote as the first character implies that the
+			# user has quoted the pathname.
+			#
+
+			if [ -n "`echo \"${OPTVAR}\" | grep '^\".*\"$'`" ]; then
+				OPTVAR=`echo "${OPTVAR}" | sed -e 's/^"\(.*\)"$/\1/'`
+			elif [ -n "`echo \"${OPTVAR}\" | grep \"^'.*'$\"`" ]; then
+				OPTVAR=`echo "${OPTVAR}" | sed -e "s/^'\(.*\)'$/\1/"`
+			fi
 		fi
 		;;
 	*)
@@ -18588,7 +18603,7 @@ while [ $# -ge 1 ]; do
 	--debug)
 		SKIP_KEY_PRESS=1
 		;;
-	--display-logfile | --displaylogfile | --display-log | --displaylog)
+	--display-logfile | --displaylogfile | --display-log | --displaylog | --showlog)
 		CATLOGFILE=1
 		;;
 	--disable)
