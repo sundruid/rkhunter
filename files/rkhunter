@@ -629,17 +629,13 @@ get_option() {
 	# The first parameter indicates if the option can occur on one
 	# or more lines in the configuration files. A 'space-list' is a
 	# space-separated list, and 'newline-list' is a newline-separated
-	# list. These will both typically be multiline. A space-separated
-	# list will be converted here to a newline-separated list.
-	# The second parameter is the configuration file option name.
+	# list. These will both typically be multiline. The second parameter
+	# is the configuration file option name.
 	#
 	# Single line options are typically numbers, a single word or pathname.
 	# Multiline options are usually pathnames, and will be a space-separated
 	# or newline-separated list. Space-separated lists are, obviously, not
 	# expected to contain any special characters such as a space.
-	#
-	# NOTE:	A space-separated list is converted to a newline-separated
-	#	list. So tests using the list need to cater for this.
 	#
 	# The function will output the final, non-expanded, option value.
 	# It will also return an error code. A code of zero indicates no
@@ -734,10 +730,7 @@ get_option() {
 		# pathnames are checked.
 		# 
 
-		HASHYPHEN=0
-
 		if [ -n "`echo \"${OPTVAR} \" | grep '^-'`" ]; then
-			HASHYPHEN=1
 			OPTVAR="${OPTVAR} "
 		fi
 
@@ -745,8 +738,7 @@ get_option() {
 		#
 		# Newline-separated list can contain virtually any character, so
 		# we leave them alone. But for space-separated lists we can be nice
-		# and compress spaces and remove quotes, and then convert it into a
-		# newline-separated list.
+		# and compress spaces and remove quotes.
 		#
 
 		if [ "${OPTMULTI}" = "space-list" ]; then
@@ -763,21 +755,13 @@ get_option() {
 
 			if [ -n "${OPTVAR}" ]; then
 				OPTVAR=`echo "${OPTVAR} " | awk 'BEGIN { RS="" }; END { print }'`
-
-				# We convert the list to newline-separated here.
-#jhjh - not needed?			OPTVAR=`echo ${OPTVAR} | tr ' ' '\n'`
-
-				# The above echo may have removed trailing spaces.
-#jhjh - if so then HASHYPHEN	if [ -n "${OPTVAR}" ]; then
-#jhjh - is also not needed		test $HASHYPHEN -eq 1 && OPTVAR="${OPTVAR} "
-#jhjh				fi
 			fi
 		else
 			#
 			# For newline-separated lists, which will be pathnames, we are
-			# nice to the user and will strip of a leading single or double
+			# nice to the user and will strip off a leading single or double
 			# quote character *if* it also ends in the same quote character.
-			# Since these ashould be pathnames they should start with the
+			# Since these should be pathnames they should start with the
 			# '/' character. A quote as the first character implies that the
 			# user has quoted the pathname.
 			#
@@ -6574,7 +6558,7 @@ ${DIR}:1"
 					;;
 				DPKG)
 					#
-					# If we have a package name, then strip of the leading
+					# If we have a package name, then strip off the leading
 					# '/' from the pathname, and then get the hash value.
 					#
 
@@ -6588,7 +6572,7 @@ ${DIR}:1"
 					;;
 				BSD)
 					#
-					# If we have a package name, then strip of the leading
+					# If we have a package name, then strip off the leading
 					# '/usr/pkg' from the pathname, and then get the hash value.
 					#
 
@@ -10529,7 +10513,7 @@ ${RKHLINE}"
 
 					if [ -n "${PKGNAME}" ]; then
 						#
-						# Next strip of the '/usr/pkg' from the
+						# Next strip off the '/usr/pkg' from the
 						# pathname, and then get the hash value.
 						#
 
