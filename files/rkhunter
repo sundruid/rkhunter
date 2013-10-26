@@ -938,6 +938,8 @@ check_paths() {
 		# stored in a colon-separated record.
 		#
 #jh - This needs to be fixed. Reformat rkhunter.dat so that the filename is last.
+#jh - reformat rkhunter.dat so that 2nd field os pathname colon count, 3rd field is pkg name colon count (probably 0 to start with).
+#jh - 		then adjust calculations of required fields accordingly.
 
 		if [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
 			if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
@@ -1014,7 +1016,7 @@ check_paths() {
 
 
 				case "${OPT_NAME}" in
-				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|*_CMD)
+				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|*_CMD)
 					ERRCODE=1
 
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
@@ -1048,7 +1050,7 @@ check_paths() {
 				ALLOWHIDDENDIR|RTKT_DIR_WHITELIST|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
 					RKHTMPVAR2="directory"
 					;;
-				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|*_CMD)
+				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|*_CMD)
 					RKHTMPVAR2="file"
 					;;
 				*)
@@ -3626,23 +3628,74 @@ get_xinetd_option() {
 }
 
 
-get_ports_option() {
+get_port_options() {
 
 	#
-	# Get the option from the configuration file, and do some
-	# checks that it is valid.
+	# This function will get the various PORT configuration options, and
+	# build up PORT_WHITELIST as a newline-seperated list.
+	#
+	# First get the PORT_WHITELIST option from the configuration file.
 	#
 
-#jh - setup new option PORT_WHITELIST_PATH to handle pathnames??
-#jh - this subroutine needs sorting out once above done re: errcode/leave etc.
-	RKHTMPVAR=`get_option newline-list PORT_WHITELIST` || exit 1
+	LEAVE=0
 
-	if [ -n "${RKHTMPVAR}" ]; then
+	PORT_WHITELIST=""
+
+	RKHTMPVAR=`get_option space-list PORT_WHITELIST` || exit 1
+
+	if [ $ERRCODE -eq 1 ]; then
+		LEAVE=1
+	else
+		if [ -n "${RKHTMPVAR}" ]; then
+			#
+			# Loop through the list checking that it all looks okay.
+			#
+
+			for RKHTMPVAR2 in ${RKHTMPVAR}; do
+				if [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
+					PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
+					PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
+
+					if [ $PORT -gt 65535 ]; then
+						LEAVE=1
+						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
+					fi
+
+					PORT_WHITELIST="${PORT_WHITELIST}
+${PROTO}:${PORT}"
+				elif [ "${RKHTMPVAR2}" = "*" ]; then
+					if [ -n "${LSOF_CMD}" ]; then
+						PORT_WHITELIST_ALL_TRUSTED=1
+					else
+						LEAVE=1
+						echo "Invalid PORT_WHITELIST configuration option - '*' requires the 'lsof' command."
+					fi
+				else
+					LEAVE=1
+					echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text ${RKHTMPVAR2}`"
+				fi
+			done
+		fi
+	fi
+
+
+	#
+	# Now get the PORT_PATH_WHITELIST option from the configuration file.
+	#
+
+	RKHTMPVAR=`get_option newline-list PORT_PATH_WHITELIST` || exit 1
+
+	if [ $ERRCODE -eq 1 ]; then
+		LEAVE=1
+	elif [ -z "${LSOF_CMD}" ]; then
+		if [ -n "${RKHTMPVAR}" ]; then
+			LEAVE=1
+			echo "Invalid PORT_PATH_WHITELIST configuration option - the 'lsof' command is required."
+		fi
+	elif [ -n "${RKHTMPVAR}" ]; then
 		#
 		# Loop through the list checking that it all looks okay.
 		#
-
-		LEAVE=0
 
 		IFS=$IFSNL
 
@@ -3652,29 +3705,17 @@ get_ports_option() {
 				FNAME=""
 				PROTO=""
 
-				# Dig out the port number, if present.
-				if [ -n "`echo \"${RKHTMPVAR2}\" | grep '.:[1-9][0-9]*$'`" ]; then
+				# Dig out the protocol and port number, if present.
+				if [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '.:(TCP|UDP):[1-9][0-9]*$'`" ]; then
+					PROTO=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([a-zA-Z]*\):[1-9][0-9]*$/\1/'`
 					PORT=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([1-9][0-9]*\)$/\1/'`
 
 					if [ $PORT -gt 65535 ]; then
 						LEAVE=1
-						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
+						echo "Invalid PORT_PATH_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
 					fi
 
-					# If the port is present, then the protocol must be as well.
-					if [ -n "`echo \"${RKHTMPVAR2}\" | grep '.:[a-zA-Z]*:[1-9][0-9]*$'`" ]; then
-						PROTO=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([a-zA-Z]*\):[1-9][0-9]*$/\1/'`
-
-						PROTO=`echo ${PROTO} | tr '[:lower:]' '[:upper:]'`
-
-						if [ "${PROTO}" != "TCP" -a "${PROTO}" != "UDP" ]; then
-							LEAVE=1
-							echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: `name2text ${RKHTMPVAR2}`"
-						fi
-					else
-						LEAVE=1
-						echo "Invalid PORT_WHITELIST configuration option - no protocol specified: `name2text ${RKHTMPVAR2}`"
-					fi
+					PROTO=`echo ${PROTO} | tr '[:lower:]' '[:upper:]'`
 				fi
 
 				# Dig out the pathname.
@@ -3684,52 +3725,40 @@ get_ports_option() {
 					FNAME="${RKHTMPVAR2}"
 				fi
 
-				if [ ! -e "${FNAME}" ]; then
+				IFS=$RKHIFS
+				check_paths FNAME PORT_PATH_WHITELIST "EXIST NOWILD NOBROKENLINK"
+				IFS=$IFSNL
+
+				if [ $ERRCODE -eq 1 ]; then
 					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - non-existent pathname specified: `name2text ${RKHTMPVAR2}`"
-				elif [ ! -f "${FNAME}" ]; then
-					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - pathname specified is not a file: `name2text ${RKHTMPVAR2}`"
 				else
-					PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH}
+					if [ $PORT -gt 0 ]; then
+						PORT_WHITELIST="${PORT_WHITELIST}
 ${FNAME}:${PROTO}:${PORT}"
+					else
+						PORT_WHITELIST="${PORT_WHITELIST}
+${FNAME}"
+					fi
 				fi
-			elif [ -n "`echo \"${RKHTMPVAR2}\" | grep '^[a-zA-Z][a-zA-Z]*:[1-9][0-9]*$'`" ]; then
-				PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
-				PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
-
-				if [ "${PROTO}" != "TCP" -a "${PROTO}" != "UDP" ]; then
-					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - invalid protocol specified: `name2text ${RKHTMPVAR2}`"
-				fi
-
-				if [ $PORT -gt 65535 ]; then
-					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
-				fi
-
-				PORT_WHITELIST="${PORT_WHITELIST}
-${PROTO}:${PORT}"
-			elif [ "${RKHTMPVAR2}" = "*" ]; then
-				PORT_WHITELIST_ALL_TRUSTED=1
 			else
 				LEAVE=1
-				echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text ${RKHTMPVAR2}`"
+				echo "Invalid entry specified in PORT_PATH_WHITELIST configuration option: `name2text ${RKHTMPVAR2}`"
 			fi
 		done
 
 		IFS=$RKHIFS
+	fi
 
-		PORT_WHITELIST=`echo "${PORT_WHITELIST}" | sed -e 's/^$/d'`
-		PORT_WHITELIST_PATH=`echo "${PORT_WHITELIST_PATH}" | sed -e 's/^$/d'`
+	if [ -n "${PORT_WHITELIST}" ]; then
+		PORT_WHITELIST=`echo "${PORT_WHITELIST}" | sed -e '/^$/d'`
+	fi
 
 
-		if [ $LEAVE -eq 1 ]; then
-			if [ $CONFIG_CHECK -eq 0 ]; then
-				exit 1
-			else
-				RET_CODE=1
-			fi
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
 		fi
 	fi
 
@@ -5890,7 +5919,7 @@ get_configfile_options() {
 
 		check_test trojans && get_xinetd_option
 
-		check_test ports || check_test hidden_ports && get_ports_option
+		check_test ports || check_test hidden_ports && get_port_options
 
 		check_test group_accounts && get_groups_accounts_options
 
@@ -14604,13 +14633,13 @@ check_port_wl() {
 			if [ -n "${FNAME}" ]; then
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-				if [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAMEGREP}:${PROTO}:${PORT}$\"`" ]; then
+				if [ -n "`echo \"${PORT_WHITELIST}\" | grep \"^${FNAMEGREP}:${PROTO}:${PORT}$\"`" ]; then
 					RKHTMPVAR2=1
 					FOUND="path_whitelisted"
-				elif [ -n "`echo \"${TEST_PORT_WHITELIST_PATH}\" | grep \"^${FNAMEGREP}::$\"`" ]; then
+				elif [ -n "`echo \"${PORT_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					RKHTMPVAR2=1
 					FOUND="path_whitelisted"
-				elif [ $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
+				elif [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 ]; then
 					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 					RKHTMPVAR=`IFS=$RKHIFS find_cmd ${RKHTMPVAR}`
@@ -14680,19 +14709,9 @@ do_network_port_checks() {
 	# Next we do some further testing and the initial logging.
 	#
 
-	TEST_PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH}"
-	TEST_PORT_WHITELIST_ALL_TRUSTED=$PORT_WHITELIST_ALL_TRUSTED
-
 	if [ -z "${LSOF_CMD}" ]; then
 		case "${OPERATING_SYSTEM}" in
 		*BSD|Linux|AIX|SunOS|Darwin|IRIX*|DragonFly)
-			#
-			# We can only use pathnames if we have the 'lsof' command.
-			#
-
-			TEST_PORT_WHITELIST_PATH=""
-			TEST_PORT_WHITELIST_ALL_TRUSTED=0
-			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
 			;;
 		*)
 			display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color RED --result WARNING NETWORK_PORTS_BACKDOOR
@@ -14702,7 +14721,7 @@ do_network_port_checks() {
 		esac
 	fi
 
-	test $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 
 
 	#
@@ -14843,24 +14862,7 @@ do_network_hidden_port_checks() {
 	# if it is available then it will be used to find out pathnames.
 	#
 
-	TEST_PORT_WHITELIST_PATH="${PORT_WHITELIST_PATH}"
-	TEST_PORT_WHITELIST_ALL_TRUSTED=$PORT_WHITELIST_ALL_TRUSTED
-
-	if [ -z "${LSOF_CMD}" ]; then
-		case "${OPERATING_SYSTEM}" in
-		*BSD|Linux|AIX|SunOS|Darwin|IRIX*|DragonFly)
-			#
-			# We can only use pathnames if we have the 'lsof' command.
-			#
-
-			TEST_PORT_WHITELIST_PATH=""
-			TEST_PORT_WHITELIST_ALL_TRUSTED=0
-			display --to LOG --type INFO NETWORK_PORTS_DISABLE_PATHS
-			;;
-		esac
-	fi
-
-	test $TEST_PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 
 
 	#
@@ -18337,7 +18339,7 @@ LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA D
 # A list of configuration options which are space-separated lists.
 SPACE_LIST_OPTS="ALLOWPROMISCIF APP_WHITELIST BINDIR DISABLE_TESTS EMPTY_LOGFILES ENABLE_TESTS
 		 IGNORE_PRELINK_DEP_ERR INETD_ALLOWED_SVC MAIL-ON-WARNING MISSING_LOGFILES
-		 PWDLESS_ACCOUNTS SHARED_LIB_WHITELIST STARTUP_PATHS SUSPSCAN_DIRS
+		 PORT_WHITELIST PWDLESS_ACCOUNTS SHARED_LIB_WHITELIST STARTUP_PATHS SUSPSCAN_DIRS
 		 SYSLOG_CONFIG_FILE UID0_ACCOUNTS UNHIDE_TESTS UNHIDETCP_OPTS UPDATE_LANG
 		 XINETD_ALLOWED_SVC"
 SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
@@ -18345,7 +18347,7 @@ SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 # A list of configuration options which are newline-separated lists.
 NEWLINE_LIST_OPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
 		   ATTRWHITELIST EXCLUDE_USER_FILEPROP_FILES_DIRS EXISTWHITELIST IMMUTWHITELIST
-		   PKGMGR_NO_VRFY PORT_WHITELIST RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
+		   PKGMGR_NO_VRFY PORT_PATH_WHITELIST RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
 		   SCRIPTWHITELIST USER_FILEPROP_FILES_DIRS WRITEWHITELIST"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
@@ -18425,7 +18427,7 @@ SELINUX_ENABLED=0
 
 # These get set if any network ports are to be whitelisted.
 PORT_WHITELIST=""
-PORT_WHITELIST_PATH=""
+PORT_PATH_WHITELIST=""
 PORT_WHITELIST_ALL_TRUSTED=0
 
 # This will be set to the shadow file location if required.
@@ -18845,7 +18847,7 @@ while [ $# -ge 1 ]; do
 		echo "${PROGRAM_blurb}"
 		exit 0
 		;;
-	--versioncheck)
+	--versioncheck | --version-check)
 		VERSIONCHECK=1
 		;;
 	-x | --autox)

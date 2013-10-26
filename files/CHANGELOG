@@ -58,6 +58,9 @@
    to specify where the summary scan time should be displayed, if at
    all. The default (as before) is to display the time both on the
    screen and in the log file.
+ - Added the PORT_PATH_WHITELIST configuration option to be used when
+   specifying a pathname. Other port whitelisting types use the
+   PORT_WHITELIST option as before.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly
@@ -78,8 +81,9 @@
  - The file properties test will now state if the target of a symbolic
    link has changed. Previously this would have been detected, but
    reported as a change of hash value, inode, file size etc.
- - The PORT_WHITELIST configuration option can now specify spaces in
-   a pathname by using the '%' character.
+ - The PORT_WHITELIST configuration option can now only be used to
+   specify protocol:port pairs or the '*' option. To specify pathnames,
+   the new PORT_PATH_WHITELIST option must be used.
  - Displayed and logged pathnames which contain either space, tab or
    control characters are now displayed differently. A space character
    will be displayed as '<SP>', a tab as '<TAB>' and a control character
@@ -89,12 +93,12 @@
    '/etc/os-release' file.
  - In the configuration file the HASH_FUNC option has now changed
    name to HASH_CMD. However, the old name will still be recognised.
- - Most configuration options which take pathnames are now treated as
-   newline-separated lists. As such, the options can only have one entry
-   per line, and that entry can contain any character other than a
-   newline character. (Note: Do not use quotes around the pathname.)
-   Options which previously used the '%' character to represent a space,
-   no longer require this.
+ - Most configuration options which take pathnames are now internally
+   treated as newline-separated lists. As such, the options can only
+   have one entry per line, and that entry can contain any character
+   other than a newline character. (Note: Do not use quotes around the
+   pathname.) Options which previously used the '%' character to
+   represent a space, no longer require this.
  - The USER_FILEPROP_FILES_DIRS no longer recognises the '!' character
    as being special. Any pathnames to be excluded from the file
    properties checks should use the new EXCLUDE_USER_FILEPROP_FILES_DIRS

@@ -363,10 +363,8 @@ A.   See the README file for information about the test names.
 
 3.5) Can rkhunter handle filenames with spaces in them?
 
-A.   Generally no. Within the tests the space character is typically
-     used to delimit command output fields. Some tests will work, but
-     others will not. Additionally some tests will not like filenames
-     with the colon (:) character in them either.
+A.   Generally yes. Some tests still may not like filenames
+     with the colon (:) character in them though.
 
 
 3.6) What does the following warning mean:

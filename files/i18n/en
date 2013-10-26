@@ -1,4 +1,4 @@
-Version:2013101501
+Version:2013102601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -563,7 +563,6 @@ NETWORK_PORTS_FILE_MISSING:Run 'rkhunter --update' to restore the default file.
 NETWORK_PORTS_FILE_NOTAFILE:The file of known backdoor ports is not a file: $1
 NETWORK_PORTS_UNKNOWN_NETSTAT:All backdoor port checks skipped.
 NETWORK_PORTS_UNKNOWN_NETSTAT:Unknown netstat command format with this O/S.
-NETWORK_PORTS_DISABLE_PATHS:Disabling pathnames and '*' in PORT_WHITELIST setting: no 'lsof' command present.
 NETWORK_PORTS_ENABLE_TRUSTED:Trusted pathnames are enabled for port whitelisting.
 NETWORK_PORTS_BACKDOOR_CHK:Checking for $1 port $2
 NETWORK_PORTS_PATH_WHITELIST:Network $1 port $2 is being used by $3: the pathname is whitelisted.
