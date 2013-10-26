@@ -91,13 +91,19 @@ you chose using the '--layout' switch. You can either edit the main
 configuration file itself, or create a 'local' configuration file
 for your own settings. This file, which must be called
 'rkhunter.conf.local', must reside in the same directory as the main
-configuration file. You should edit either, or both, of these files
-according to your own system requirements. If the installer 
-encounters an existing 'rkhunter.conf' file, it will not be overwritten.
-Instead the installer creates a new configuration file, but with a
-unique number as its suffix. Please inspect the new configuration file
-and copy over any changes to the existing main configuration file, or
-to your local configuration file.
+configuration file. Alternatively you can create a directory, named
+'rkhunter.d', in the same directory as the main configuration file.
+Within 'rkhunter.d' you can then create further configuration files.
+The only restriction is that the file names end in '.conf'.
+
+You should edit the configuration file(s) according to your own
+system requirements.
+
+If the installer encounters an existing 'rkhunter.conf' file, it will
+not be overwritten. Instead the installer creates a new configuration
+file, but with a unique number as its suffix. Please inspect the new
+configuration file, and copy over any changes to the existing main
+configuration file or to your local configuration file(s).
 
 The main RKH script will be installed into the '/usr/local/bin'
 directory or where you chose using the '--layout' switch. Man pages will 
@@ -133,6 +139,8 @@ To see what other options can be used with rkhunter, enter:
 
     rkhunter --help
 
+or see the 'rkhunter' man page.
+
 
 NOTE: The first run of 'rkhunter' after installation may give some
       warning messages. Please see the FAQ file and the rkhunter mailing
@@ -156,7 +164,7 @@ It is then necessary to change to the 'files' directory:
 
 Within the directory will be a copy of the 'rkhunter.conf' configuration
 file. You can modify this file according to your requirements if you
-wish, but note the installer has already set the necessary variables.
+wish.
 
 To run RKH, as root simply enter the following command:
 
@@ -193,7 +201,7 @@ way is to use the 'tar' command, such as:
 Obviously, for official releases, you will need to use the correct tarball
 name. For example:
 
-       tar xzf rkhunter-1.3.6.tar.gz
+       tar xzf rkhunter-1.4.0.tar.gz
 
 For users of systems with alternative implementations of 'tar', for example
 Solaris users, you may need to break the extraction process into two steps
@@ -212,7 +220,7 @@ rkhunter files. The sub-directory name will contain the rkhunter version
 number, or, for CVS tarballs, it will simply be called 'rkhunter'.
 Change into this directory:
 
-       cd rkhunter-1.3.6         (for an official release tarball)
+       cd rkhunter-1.4.0         (for an official release tarball)
    or  cd rkhunter               (for CVS and CVS tarballs)
 
 Now, we can run the installer program as described in the section above
@@ -286,7 +294,7 @@ sub-directory).
 
 During uninstallation, the installer will remove the initial configuration
 file (usually '/etc/rkhunter.conf'). However, any other files beginning with
-'rkhunter.conf' are not removed. These may be removed manually.
+'rkhunter.conf' are not removed. These may be removed manually if wished.
 
 When installing RKH, some directories may have been created. However,
 RKH is unaware of this when being uninstalled. As such, and especially

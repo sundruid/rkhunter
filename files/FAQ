@@ -198,18 +198,18 @@ A.   Prior to any incident it is recommended that you have read
      If you have a warning from another part of the checks, then
      please subscribe first and then email the rkhunter-users mailing list
      and tell us about your system configuration:
-        the purpose of the server (for example, web server, intranet
-        fileserver, shell server);
-        the (aproximate) date of the incident and when you found out;
-        the running distribution name, release and kernel version;
-        whether any passwd/shadow file data has changed;
-        any anomalies you find from reading the system, daemon, IDS
-        and firewall logs;
-        if all the installed software was recently updated;
-        what services are or were running at the time;
-        if you found setuid root files in directories for temporary
-        files;
-        any anomalies you find from reading user shell histories.
+        The purpose of the server
+           (for example: web server, intranet fileserver, shell server);
+        The (approximate) date of the incident and when you found out;
+        The running distribution name, release and kernel version;
+        Whether any passwd or shadow file data has changed;
+        Any anomalies you find from reading the system, daemon, IDS
+           and firewall logs;
+        If all the installed software was recently updated;
+        What services are or were running at the time;
+        If you found setuid root files in directories for temporary
+           files;
+        Any anomalies you find from reading user shell histories.
 
      If your system is infected with a rootkit, cleaning it up is
      not an option. Restoring is also not an option unless you are
@@ -520,9 +520,10 @@ A.   You have a choice:
         PHP Warning: Function registration failed - duplicate name
         - pg_update in Unknown on line 0. What does this mean?
 
-A.   This is usually because you have updated the Apache version
-     of PHP, but forgot to update/recompile the CLI (console
-     version) of PHP. So recompile/update it and try again.
+A.   This may occur during the 'apps' test. It is usually because
+     you have updated the Apache version of PHP, but forgot to
+     update or recompile the CLI (console version) of PHP. So
+     update or recompile it, and then try again.
 
 
 4.4) After performing some updates, all, or some, binaries in the
@@ -576,8 +577,8 @@ A.   The first thing would be to verify that the update is the cause
 
 A.   Usually you install a tool and upgrade it later. Sometimes
      if you use a 'non-official' updater or package manager
-     (for example, from an external party, or a build from source
-     using an installer like RPM/DEB/TGZ), the binaries may be
+     (for example, from an external party, or build from source
+     using an installer like RPM/DEB/TGZ/TXZ), the binaries may be
      installed into a different location from the original. So there
      are then two binaries with the same name, but in different
      locations. You will have to check which are the old binaries,
