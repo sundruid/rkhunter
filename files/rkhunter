@@ -912,11 +912,6 @@ check_paths() {
 			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
 				FNAME=`echo "${FNAME}" | cut -c2-`
 			fi
-		elif [ "${OPT_NAME}" = "RTKT_FILE_WHITELIST" ]; then
-#jh - Argh! How we do we tell a filename with a colon from a filename but with a colon and some text appended to it (as per the option)??
-#jh - also we want the filename up to the last colon.
-#jh - use separate lists?? (as per USER_FILEPROP_FILES_DIRS)
-			FNAME=`echo "${FNAME}" | cut -d: -f1`
 		fi
 
 
@@ -12728,7 +12723,7 @@ possible_rootkit_file_dir_checks() {
 		case "${TYPE}" in
 		dir)
 			if [ -d "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FILE}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text ${FNAME}`" possible_rkt_files
@@ -12748,7 +12743,7 @@ ${FNAME}:${INFO}"
 			;;
 		file)
 			if [ -f "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FILE}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_files
@@ -12934,11 +12929,12 @@ possible_rootkit_string_checks() {
 		FILE=`echo ${RKHTMPVAR} | cut -d: -f1`
 		FILESTRING=`echo ${RKHTMPVAR} | cut -d: -f2`
 
+		# If the string begins with '+', then it is already a regular expression.
 		if [ "`echo ${FILESTRING} | cut -c 1`" = "+" ]; then
-			STRING=`echo ${FILESTRING} | cut -c 2-`
-			FILESTRING="${STRING}"
+			STRINGGREP=`echo ${FILESTRING} | cut -c 2-`
+			FILESTRING="${STRINGGREP}"
 		else
-			STRING=`echo ${FILESTRING} | sed -e 's/\./\\\./g'`
+			STRINGGREP=`echo ${FILESTRING} | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 		fi
 
 		INFO=`echo ${RKHTMPVAR} | cut -d: -f3`
@@ -12947,14 +12943,13 @@ possible_rootkit_string_checks() {
 			FOUNDFILE=1
 
 			for FNAME in ${RC_PATHS}; do
-				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep -v '^[ 	]*#' | grep "${STRING}"`
+				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep -v '^[ 	]*#' | grep "${STRINGGREP}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
-						RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
-						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${RKHTMPVAR2}" possible_rkt_strings
+					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
+						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${FILESTRING}" possible_rkt_strings
 					elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
 						display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_strings
 					else
@@ -12982,14 +12977,13 @@ ${FNAME}:${FILESTRING}:${INFO}"
 
 				if [ -f "${FNAME}" ]; then
 					FOUNDFILE=1
-					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep "${STRING}"`
+					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep "${STRINGGREP}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
 						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
-							RKHTMPVAR2=`echo "${STRING}" | sed -e 's/\\\//g'`
-							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${RKHTMPVAR2}" possible_rkt_strings
+						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
+							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${FILESTRING}" possible_rkt_strings
 						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
 							display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_strings
 						else
