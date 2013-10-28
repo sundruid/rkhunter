@@ -5034,11 +5034,26 @@ get_rtkt_whitelist_options() {
 	if [ $ERRCODE -eq 0 ]; then
 		if [ -n "${RTKT_FILE_WHITELIST}" ]; then
 			#
-			# Check that the given files are usable.
+			# Check that the given files are usable. But we must
+			# first strip off any trailing text from the end if
+			# it is present.
 			#
 
-#jh - can we do this here? The option may have paths with colons and text after them (see rkhunter.conf).
-			check_paths RTKT_FILE_WHITELIST RTKT_FILE_WHITELIST "EXIST NOWILD NOBROKENLINK"
+			IFS=$IFSNL
+			RKHTMPVAR=""
+
+			for RKHTMPVAR2 in ${RTKT_FILE_WHITELIST}; do
+				FNAME=`echo "${RKHTMPVAR2}" | sed -e 's/^\(.*\):[^:]*$/\1/'`
+
+				RKHTMPVAR="${RKHTMPVAR}
+${FNAME}"
+			done
+
+			IFS=$RKHIFS
+
+			RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e '/^$/d'`
+
+			check_paths RKHTMPVAR RTKT_FILE_WHITELIST "EXIST NOWILD NOBROKENLINK"
 
 			test $ERRCODE -eq 1 && LEAVE=1
 		fi
