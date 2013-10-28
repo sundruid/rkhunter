@@ -2352,35 +2352,29 @@ get_bindir_option() {
 		BINPATHS=`get_option space-list BINDIR` || exit 1
 
 		if [ $ERRCODE -eq 0 ]; then
-			check_paths BINPATHS BINDIR "NOWILD"
-
-			if [ $ERRCODE -eq 0 ]; then
-				if [ -z "${BINPATHS}" ]; then
-					BINPATHS="${DFLT_BINPATHS}"
+			if [ -z "${BINPATHS}" ]; then
+				BINPATHS="${DFLT_BINPATHS}"
 
 
-					#
-					# Under some OS's /bin is a link to /usr/bin, so
-					# there is no need to look in it.
-					#
+				#
+				# Under some OS's /bin is a link to /usr/bin, so
+				# there is no need to look in it.
+				#
 
-					if [ $SUNOS -eq 1 -o $IRIXOS -eq 1 -o "${OPERATING_SYSTEM}" = "AIX" ]; then
-						if [ -h "/bin" ]; then
-							RKHTMPVAR=""
+				if [ $SUNOS -eq 1 -o $IRIXOS -eq 1 -o "${OPERATING_SYSTEM}" = "AIX" ]; then
+					if [ -h "/bin" ]; then
+						RKHTMPVAR=""
 
-							for DIR in ${BINPATHS}; do
-								test "${DIR}" != "/bin" && RKHTMPVAR="${RKHTMPVAR} ${DIR}"
-							done
+						for DIR in ${BINPATHS}; do
+							test "${DIR}" != "/bin" && RKHTMPVAR="${RKHTMPVAR} ${DIR}"
+						done
 
-							BINPATHS=`echo ${RKHTMPVAR}`
-						fi
+						BINPATHS=`echo ${RKHTMPVAR}`
 					fi
-
-					add_extra_dirs
-					BINPATHS="${BINPATHS}${EXTRA_DIRS}"
 				fi
-			else
-				LEAVE=1
+
+				add_extra_dirs
+				BINPATHS="${BINPATHS}${EXTRA_DIRS}"
 			fi
 		else
 			LEAVE=1
@@ -2437,7 +2431,18 @@ get_bindir_option() {
 			fi
 		done
 
-		BINPATHS=`echo ${RKHTMPVAR}`
+		if [ $LEAVE -eq 0 ]; then
+			BINPATHS=`echo ${RKHTMPVAR}`
+
+			test $BINDIR_OPT -eq 1 && RKHTMPVAR="--bindir" || RKHTMPVAR="BINDIR"
+
+			check_paths BINPATHS "${RKHTMPVAR}" "NOWILD"
+
+			test $ERRCODE -eq 1 && LEAVE=1
+		else
+			# We need to set something for the remaining checks.
+			BINPATHS="${DFLT_BINPATHS}"
+		fi
 	fi
 
 

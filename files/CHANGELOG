@@ -153,6 +153,9 @@
  - The pathname of the log file is now logged if the summary is
    disabled or a check is not being run. Previously the log file
    path only appeared in the check summary.
+ - Both the '--bindir' command-line option, and the BINDIR configuration
+   option, are now checked more thoroughly to ensure that the
+   directories are valid.
 
  -- 
 
