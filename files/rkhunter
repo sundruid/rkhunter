@@ -4506,7 +4506,6 @@ get_md5_hash_function() {
 
 		test -z "${HFUNC}" && HFUNC=`find_cmd md5`
 
-#jh - allow use of 'Digest' module on its own.
 		if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
 			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>/dev/null | grep 'Digest::MD5 installed'`
 
