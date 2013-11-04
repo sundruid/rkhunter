@@ -908,11 +908,13 @@ check_paths() {
 		# For some options we may have to remove the leading character.
 		#
 
-		if [ "${OPT_NAME}" = "BINDIR" ]; then
-			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
-				FNAME=`echo "${FNAME}" | cut -c2-`
-			fi
-		fi
+#jh - no longer needed since we moved the check_paths for bindir paths.
+#jh - code left here since we may need something very similar for overloaded options.
+#jh		if [ "${OPT_NAME}" = "BINDIR" ]; then
+#jh			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
+#jh				FNAME=`echo "${FNAME}" | cut -c2-`
+#jh			fi
+#jh		fi
 
 
 		#
@@ -2092,6 +2094,8 @@ get_logfile_option() {
 			else
 				LEAVE=1
 			fi
+		else
+			COPY_LOG_ON_ERROR=0
 		fi
 	else
 		LEAVE=1
@@ -4502,6 +4506,7 @@ get_md5_hash_function() {
 
 		test -z "${HFUNC}" && HFUNC=`find_cmd md5`
 
+#jh - allow use of 'Digest' module on its own.
 		if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
 			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>/dev/null | grep 'Digest::MD5 installed'`
 

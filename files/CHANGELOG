@@ -492,7 +492,7 @@
    the scanrootkit function will search for filenames in all directories.
    While still not optimal this is one step away from the rigidity of
    searching only in known locations. Enabling this feature implies you have
-   the knowledge to interprete results properly.
+   the knowledge to interpret the results properly.
  - Added OSX rootkit check.
  - Added weaponX rootkit check.
  - Added the PKGMGR_NO_VRFY configuration option. This allows specified
