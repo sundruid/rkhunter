@@ -86,7 +86,7 @@ if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 
 	if [ -e "${RKHDEBUGFILE}" ]; then
 		if [ -f "${RKHDEBUGFILE}" -a ! -h "${RKHDEBUGFILE}" ]; then
-			rm -f ${RKHDEBUGFILE} >/dev/null 2>&1
+			rm -f "${RKHDEBUGFILE}" >/dev/null 2>&1
 		else
 			echo "Cannot use '--debug' option. \"${RKHDEBUGFILE}\" already exists, but it is not a file."
 			exit 1
@@ -95,8 +95,8 @@ if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 
 	DEBUG_OPT=1
 
-	exec 1>${RKHDEBUGFILE} 2>&1
-	chmod 600 ${RKHDEBUGFILE} >/dev/null 2>&1
+	exec 1>"${RKHDEBUGFILE}" 2>&1
+	chmod 600 "${RKHDEBUGFILE}" >/dev/null 2>&1
 	set -x
 else
 	DEBUG_OPT=0
@@ -910,6 +910,7 @@ check_paths() {
 
 #jh - no longer needed since we moved the check_paths for bindir paths.
 #jh - code left here since we may need something very similar for overloaded options.
+#jh - overloaded options - ALLOWPROCDELFILE PORT_PATH_WHITELIST RTKT_FILE_WHITELIST
 #jh		if [ "${OPT_NAME}" = "BINDIR" ]; then
 #jh			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
 #jh				FNAME=`echo "${FNAME}" | cut -c2-`
@@ -927,24 +928,6 @@ check_paths() {
 
 			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
 			continue
-		fi
-
-		#
-		# For the user file properties list none of the filenames may
-		# contain a colon character, because they are going to be
-		# stored in a colon-separated record.
-		#
-#jh - This needs to be fixed. Reformat rkhunter.dat so that the filename is last.
-#jh - reformat rkhunter.dat so that 2nd field os pathname colon count, 3rd field is pkg name colon count (probably 0 to start with).
-#jh - 		then adjust calculations of required fields accordingly.
-
-		if [ "${OPT_NAME}" = "USER_FILEPROP_FILES_DIRS" ]; then
-			if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
-				ERRCODE=1
-
-				echo "Invalid ${OPT_NAME} configuration option: Pathname contains a colon: ${FNAME}"
-				continue
-			fi
 		fi
 
 		#
@@ -1221,7 +1204,7 @@ get_temp_file() {
 	# Remove the file just in case it already exists!
 	#
 
-	rm -f ${TEMPFILE} >/dev/null 2>&1
+	rm -f "${TEMPFILE}" >/dev/null 2>&1
 
 	return
 }
@@ -1292,9 +1275,9 @@ suckit_extra_checks() {
 	for EXT in xrk mem; do
 		get_temp_file "${RKHTMPDIR}/suckitexttest"
 
-		touch ${TEMPFILE}
-		rm -f ${TEMPFILE}.${EXT} >/dev/null 2>&1
-		mv ${TEMPFILE} ${TEMPFILE}.${EXT}
+		touch "${TEMPFILE}"
+		rm -f "${TEMPFILE}.${EXT}" >/dev/null 2>&1
+		mv "${TEMPFILE}" "${TEMPFILE}.${EXT}"
 
 		if [ ! -f "${TEMPFILE}.${EXT}" ]; then
 			if [ -n "${HIDDEN}" ]; then
@@ -5456,7 +5439,7 @@ ${FNAME}"
 					test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
 					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
+						RKHTMPVAR=`${READLINK_CMD} -f "${FNAME}"`
 
 						if [ -n "${RKHTMPVAR}" ]; then
 							FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -5480,7 +5463,7 @@ ${RKHTMPVAR}"
 ${FNAME}"
 				elif [ -d "${FNAME}" ]; then
 					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						RKHTMPVAR=`${READLINK_CMD} -f ${FNAME}`
+						RKHTMPVAR=`${READLINK_CMD} -f "${FNAME}"`
 
 						if [ -z "${RKHTMPVAR}" ]; then
 							if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -6267,21 +6250,22 @@ rkh_dat_get_os_info() {
 rkh_dat_set_file_properties() {
 
 	#
-	# This function obtains various bits of information about the
-	# files to be checked. The format in the rkhunter.dat file is:
+	# This function obtains various bits of information about the files to
+	# be checked. The current format in the rkhunter.dat file is:
 	#
-	#     File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
-	#          <file size>:<date/time modified>:<package name>:
-	#	   <symbolic link target>
+	#     File:<colon count>:<pathname>:<hash value>:<inode>:<permissions>:
+	#	   <uid>:<gid>:<file size>:<date/time modified>:<package name>:
+	#	   <symbolic link colon count>:<symbolic link target>
 	#
-	# The format is actually governed by the stat.pl file, and the
-	# output it produces. Changing the order of options does not
-	# change the order of the output.
+	# The format is actually governed by the stat.pl file, and the output
+	# it produces. Changing the order of options does not change the order
+	# of the output.
 	#
 	# To save time in the loops below, we determine the exact commands
 	# required before using them.
 	#
 
+	NODATFILE=0
 	NOHASH_COUNT=0
 	BROKEN_LINK_COUNT=0
 	PROP_FILE_LIST_COUNT=0
@@ -6325,6 +6309,19 @@ rkh_dat_set_file_properties() {
 		HASH_CMD="${HASH_FUNC}"
 	fi
 
+	#
+	# Next dig out the old file format version. We may need this if
+	# we are only updating one file and the format has changed.
+	#
+
+	if [ -s "${RKHDAT_FILE}" ]; then
+		OLD_FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
+
+		test -z "${OLD_FMTVERSION}" && OLD_FMTVERSION=0
+	else
+		NODATFILE=1
+	fi
+
 
 	#
 	# Now loop through the pathnames looking for the files.
@@ -6339,7 +6336,9 @@ rkh_dat_set_file_properties() {
 		PKGNAME=""
 		FNAMEGREP=""
 		RPM_QUERY_RESULT=""
+		SYSLNK_CC=0
 		NOVRFYFILE=0
+		COLON_COUNT=0
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
 
@@ -6347,10 +6346,18 @@ rkh_dat_set_file_properties() {
 
 
 		#
-		# Test to see if we are looking for specific files or not.
+		# Set up some variables here based on the file name. We will
+		# need them later on.
 		#
 
+		COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c`
+
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+
+		#
+		# Test to see if we are looking for specific files or not.
+		#
 
 		if [ -n "${PROPUPD_OPT}" ]; then
 			#
@@ -6360,12 +6367,18 @@ rkh_dat_set_file_properties() {
 			# through and process them as before.
 			#
 
-			if [ -z "`echo \"${PROPUPD_OPT}\" | grep \" ${FNAMEGREP} \"`" ]; then
-				RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+			if [ $NODATFILE -eq 0 ]; then
+				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					if [ $OLD_FMTVERSION -eq 0 ]; then
+						RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+					else
+						RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+					fi
 
-				if [ -n "${RKHTMPVAR}" ]; then
-					echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
-					continue
+					if [ -n "${RKHTMPVAR}" ]; then
+						echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
+						continue
+					fi
 				fi
 			fi
 
@@ -6387,7 +6400,7 @@ rkh_dat_set_file_properties() {
 			DIR_FILE_COUNT="${DIR_FILE_COUNT}
 ${DIR}:1"
 		else
-			RKHTMPVAR=`echo ${RKHTMPVAR} | cut -d: -f2`
+			RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^.*:\([0-9]*\)$/\1/'`
 			RKHTMPVAR=`expr ${RKHTMPVAR} + 1`
 
 			DIR_FILE_COUNT=`echo "${DIR_FILE_COUNT}" | sed -e "s;^\(${DIR}:\).*;\1${RKHTMPVAR};"`
@@ -6481,7 +6494,7 @@ ${DIR}:1"
 							SYSLNK="${DIR}/${SYSLNK}"
 
 							# This ensures the link target has things like '..' removed.
-							test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f ${SYSLNK}`
+							test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f "${SYSLNK}"`
 						fi
 
 						#
@@ -6492,7 +6505,7 @@ ${DIR}:1"
 						RKHTMPVAR2=""
 
 						if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
-							RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+							RKHTMPVAR2=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
 						fi
 
 						FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
@@ -6511,7 +6524,7 @@ ${DIR}:1"
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
 			else
-				RKHTMPVAR=`${DPKG_CMD} --search ${FNAME} 2>/dev/null`
+				RKHTMPVAR=`${DPKG_CMD} --search "${FNAME}" 2>/dev/null`
 				ERRCODE=$?
 			fi
 
@@ -6531,7 +6544,7 @@ ${DIR}:1"
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
 			else
-				RKHTMPVAR=`${PKG_CMD} -F -e ${FNAME} 2>/dev/null`
+				RKHTMPVAR=`${PKG_CMD} -F -e "${FNAME}" 2>/dev/null`
 				ERRCODE=$?
 			fi
 
@@ -6586,7 +6599,7 @@ ${DIR}:1"
 
 				RKHTMPVAR2=""
 
-				test -n "${INODECMD}" && RKHTMPVAR2=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+				test -n "${INODECMD}" && RKHTMPVAR2=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
 
 				FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 			fi
@@ -6626,7 +6639,7 @@ ${DIR}:1"
 
 					if [ -n "${PKGNAME}" ]; then
 						FILNAM=`echo "${FNAME}" | sed -e 's:^/usr/pkg/::; s:\.:\\\.:g'`
-						SYSHASH=`${PKG_CMD} -v -L ${RKHTMPVAR} 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
+						SYSHASH=`${PKG_CMD} -v -L "${RKHTMPVAR}" 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
 					;;
@@ -6643,7 +6656,7 @@ ${DIR}:1"
 			if [ $FILE_IS_PKGD -eq 0 ]; then
 				if [ "${HASH_CMD}" != "NONE" ]; then
 					SYSHASH=""
-					RKHTMPVAR=`${HASH_CMD} ${FNAME} 2>&1`
+					RKHTMPVAR=`${HASH_CMD} "${FNAME}" 2>&1`
 
 					if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 						DEPENDENCY_ERR=1
@@ -6660,7 +6673,7 @@ ${DIR}:1"
 						fi
 					elif [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
 						if [ $HAVE_READLINK -eq 1 ]; then
-							SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+							SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 
 							RKHTMPVAR=" -> ${SYSLNK}"
 							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -6698,7 +6711,7 @@ ${DIR}:1"
 
 
 		if [ -h "${FNAME}" -a -z "${SYSLNK}" ]; then
-			test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+			test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 		fi
 
 
@@ -6706,7 +6719,7 @@ ${DIR}:1"
 			FDATA=":::::"
 		else
 			if [ -z "${FDATA}" ]; then
-				FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
+				FDATA=`eval ${SCMD} "${FNAME}" 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
 
 				if [ -z "${FDATA}" ]; then
 					FDATA=":::::"
@@ -6717,7 +6730,10 @@ ${DIR}:1"
 			fi
 		fi
 
-		echo "File:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK}:" >>${RKHDAT_TMPFILE}
+		# Check if the symbolic link has any colon characters in it.
+		SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
+
+		echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>${RKHDAT_TMPFILE}
 	done
 
 
@@ -6739,7 +6755,7 @@ ${DIR}:1"
 	# Finally put the new file in place.
 	#
 
-	if [ -f ${RKHDAT_FILE} ]; then
+	if [ -f "${RKHDAT_FILE}" ]; then
 		RKHTMPVAR="updated"
 	else
 		RKHTMPVAR="created"
@@ -6793,7 +6809,7 @@ create_rkh_file_prop_list() {
 	# used for the file properties check.
 	#
 
-	rm -f ${RKH_FILEPROP_LIST} >/dev/null 2>&1
+	rm -f "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
 
 	IFS=$IFSNL
 
@@ -6827,7 +6843,7 @@ create_rkh_file_prop_list() {
 
 	IFS=$RKHIFS
 
-	chmod 640 ${RKH_FILEPROP_LIST} >/dev/null 2>&1
+	chmod 640 "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
 
 	return
 }
@@ -6937,6 +6953,8 @@ do_prop_update() {
 		echo "Attributes:Stored" >>${RKHDAT_TMPFILE}
 	fi
 
+	echo "FormatVersion:1" >>${RKHDAT_TMPFILE}
+
 
 	#
 	# Before we get the actual file properties we need
@@ -6965,8 +6983,8 @@ do_prop_update() {
 	# Now put the new rkhunter.dat file in place.
 	#
 
-	cp -f -p ${RKHDAT_FILE} ${RKHDAT_FILE}.old >/dev/null 2>&1
-	cp -f ${RKHDAT_TMPFILE} ${RKHDAT_FILE} >/dev/null 2>&1
+	cp -f -p "${RKHDAT_FILE}" "${RKHDAT_FILE}.old" >/dev/null 2>&1
+	cp -f "${RKHDAT_TMPFILE}" "${RKHDAT_FILE}" >/dev/null 2>&1
 	ERRCODE=$?
 
 	if [ $ERRCODE -ne 0 ]; then
@@ -6977,9 +6995,9 @@ do_prop_update() {
 		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
 
-	chmod 640 ${RKHDAT_FILE} >/dev/null 2>&1
+	chmod 640 "${RKHDAT_FILE}" >/dev/null 2>&1
 
-	rm -f ${RKHDAT_TMPFILE} >/dev/null 2>&1
+	rm -f "${RKHDAT_TMPFILE}" >/dev/null 2>&1
 
 	return
 }
@@ -7010,13 +7028,13 @@ get_next_mirror() {
 
 	case $MIRRORS_MODE in
 	0)
-		MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}1`
+		MIRROR=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" | head ${HEAD_OPT}1`
 		;;
 	1)
-		MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}1`
+		MIRROR=`grep -i '^local=' "${DB_PATH}/mirrors.dat" | head ${HEAD_OPT}1`
 		;;
 	2)
-		MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}1`
+		MIRROR=`grep -i '^remote=' "${DB_PATH}/mirrors.dat" | head ${HEAD_OPT}1`
 		;;
 	esac
 
@@ -7036,13 +7054,13 @@ get_next_mirror() {
 
 		case $MIRRORS_MODE in
 		0)
-			MIRROR=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		1)
-			MIRROR=`grep -i '^local=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`grep -i '^local=' "${DB_PATH}/mirrors.dat" | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		2)
-			MIRROR=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`grep -i '^remote=' "${DB_PATH}/mirrors.dat" | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		esac
 
@@ -7057,7 +7075,7 @@ get_next_mirror() {
 	# option is used.
 	#
 
-	MIRRORSVERSION=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' ${DB_PATH}/mirrors.dat | tail ${TAIL_OPT}1`
+	MIRRORSVERSION=`grep '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' "${DB_PATH}/mirrors.dat" | tail ${TAIL_OPT}1`
 
 	if [ -z "${MIRRORSVERSION}" ]; then
 		display --to LOG --type INFO MIRRORS_NO_VERSION "${DB_PATH}/mirrors.dat"
@@ -7069,7 +7087,7 @@ get_next_mirror() {
 	# Next get the remaining mirrors.
 	#
 
-	OTHERMIRRORS=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | grep -v "^${MIRROR}\$"`
+	OTHERMIRRORS=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" | grep -v "^${MIRROR}\$"`
 
 
 	#
@@ -7102,9 +7120,9 @@ get_next_mirror() {
 	# Move the new file into place, and delete the temporary file.
 	#
 
-	cat ${MIRRORS_FILE} >${DB_PATH}/mirrors.dat
+	cat "${MIRRORS_FILE}" >${DB_PATH}/mirrors.dat
 
-	rm -f ${MIRRORS_FILE} >/dev/null 2>&1
+	rm -f "${MIRRORS_FILE}" >/dev/null 2>&1
 
 	display --to LOG --type INFO MIRRORS_ROTATED "${DB_PATH}/mirrors.dat"
 
@@ -7151,13 +7169,13 @@ download_file() {
 
 		case $MIRRORS_MODE in
 		0)
-			MIRROR_COUNT=`egrep -i '^(local|remote|mirror)=' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
+			MIRROR_COUNT=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		1)
-			MIRROR_COUNT=`grep -i '^local=' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
+			MIRROR_COUNT=`grep -i '^local=' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		2)
-			MIRROR_COUNT=`grep -i '^remote=' ${DB_PATH}/mirrors.dat | wc -l | tr -d ' '`
+			MIRROR_COUNT=`grep -i '^remote=' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		esac
 
@@ -7211,7 +7229,7 @@ download_file() {
 		CMD=""
 		DNLOADERR=0
 
-		rm -f ${OUTPUT_FILE} >/dev/null 2>&1
+		rm -f "${OUTPUT_FILE}" >/dev/null 2>&1
 
 		case "${RKHWEBCMD_BASE}" in
 		wget)
@@ -7318,7 +7336,7 @@ do_i18n_update() {
 
 		FOUNDFILES=`grep '^[a-zA-Z][a-zA-Z0-9._-]*:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' "${RKHUPD_FILE}"`
 
-		rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+		rm -f "${RKHUPD_FILE}" >/dev/null 2>&1
 
 		if [ -z "${FOUNDFILES}" ]; then
 			RET_CODE=1
@@ -7364,8 +7382,8 @@ do_i18n_update() {
 			else
 				PROG_VERS=0
 
-				touch ${DB_PATH}/i18n/${LANGFILE} >/dev/null 2>&1
-				chmod 640 ${DB_PATH}/i18n/${LANGFILE} >/dev/null 2>&1
+				touch "${DB_PATH}/i18n/${LANGFILE}" >/dev/null 2>&1
+				chmod 640 "${DB_PATH}/i18n/${LANGFILE}" >/dev/null 2>&1
 
 				display --to LOG --type INFO UPDATE_FILE_MISSING "${DB_PATH}/i18n/${LANGFILE}"
 			fi
@@ -7394,7 +7412,7 @@ do_i18n_update() {
 					display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n/${LANGFILE}"
 				fi
 
-				rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+				rm -f "${RKHUPD_FILE}" >/dev/null 2>&1
 			else
 				display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result NO_UPD UPDATE_CHECKING_FILE "i18n/${LANGFILE}"
 			fi
@@ -7409,7 +7427,7 @@ do_i18n_update() {
 	fi
 
 
-	rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+	rm -f "${RKHUPD_FILE}" >/dev/null 2>&1
 
 	return
 }
@@ -7472,8 +7490,8 @@ do_update() {
 		else
 			PROG_VERS=0
 
-			touch ${DB_PATH}/${UPDFILE} >/dev/null 2>&1
-			chmod 640 ${DB_PATH}/${UPDFILE} >/dev/null 2>&1
+			touch "${DB_PATH}/${UPDFILE}" >/dev/null 2>&1
+			chmod 640 "${DB_PATH}/${UPDFILE}" >/dev/null 2>&1
 
 			display --to LOG --type INFO UPDATE_FILE_MISSING "${UPDFILE}"
 		fi
@@ -7537,7 +7555,7 @@ do_update() {
 			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "${UPDFILE}"
 		fi
 
-		rm -f ${RKHUPD_FILE} >/dev/null 2>&1
+		rm -f "${RKHUPD_FILE}" >/dev/null 2>&1
 	done
 
 
@@ -7638,7 +7656,7 @@ do_versioncheck() {
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 VERSIONCHECK_LATEST_FAIL
 	fi
 
-	rm -f ${RKHVC_FILE} >/dev/null 2>&1
+	rm -f "${RKHVC_FILE}" >/dev/null 2>&1
 
 	return
 }
@@ -9542,6 +9560,7 @@ strings_check() {
 
 	STRINGSFAILED=0
 
+#jh - add the '-a' option to the strings command. Check if it should be used elsewhere.
 	for STRING in ${STRINGS_INTEGRITY}; do
 		STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
 		STRING_SEEN=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
@@ -9763,7 +9782,7 @@ updt_rkhdat() {
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE}"
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE2}"
 
-	cp -f -p ${RKHDAT_FILE} ${RKHDAT_TMPFILE}
+	cp -f -p "${RKHDAT_FILE}" "${RKHDAT_TMPFILE}"
 
 
 	IFS=$IFSNL
@@ -9771,7 +9790,14 @@ updt_rkhdat() {
 	OLDRKHENTRIES=`echo "${OLDRKHENTRIES}" | sed -e '/^$/d'`
 
 	for FNAME in ${OLDRKHENTRIES}; do
-		FILENAME=`echo "${FNAME}" | cut -d: -f2`
+		if [ $FMTVERSION -eq 0 ]; then
+			FILENAME=`echo "${FNAME}" | cut -d: -f2`
+		else
+			RKH_CC=`echo "${FNAME}" | cut -d: -f2`
+			RKH_CC2=`expr 3 + $RKH_CC`
+
+			FILENAME=`echo "${FNAME}" | cut -d: -f3-$RKH_CC2`
+		fi
 
 		display --to LOG --type INFO RKHDAT_DEL_OLD_ENTRY "`name2text ${FILENAME}`"
 
@@ -9779,14 +9805,21 @@ updt_rkhdat() {
 
 		sed -e "/^${FNAMEGREP}$/d" ${RKHDAT_TMPFILE} >${RKHDAT_TMPFILE2}
 
-		cp -f ${RKHDAT_TMPFILE2} ${RKHDAT_TMPFILE}
+		cp -f "${RKHDAT_TMPFILE2}" "${RKHDAT_TMPFILE}"
 	done
 
 
 	NEWRKHENTRIES=`echo "${NEWRKHENTRIES}" | sed -e '/^$/d'`
 
 	for FNAME in ${NEWRKHENTRIES}; do
-		FILENAME=`echo "${FNAME}" | cut -d: -f2`
+		if [ $FMTVERSION -eq 0 ]; then
+			FILENAME=`echo "${FNAME}" | cut -d: -f2`
+		else
+			RKH_CC=`echo "${FNAME}" | cut -d: -f2`
+			RKH_CC2=`expr 3 + $RKH_CC`
+
+			FILENAME=`echo "${FNAME}" | cut -d: -f3-$RKH_CC2`
+		fi
 
 		display --to LOG --type INFO RKHDAT_ADD_NEW_ENTRY "`name2text ${FILENAME}`"
 
@@ -9800,8 +9833,8 @@ updt_rkhdat() {
 	# Now put the new rkhunter.dat file in place.
 	#
 
-	cp -f -p ${RKHDAT_FILE} ${RKHDAT_FILE}.old >/dev/null 2>&1
-	cp -f ${RKHDAT_TMPFILE} ${RKHDAT_FILE} >/dev/null 2>&1
+	cp -f -p "${RKHDAT_FILE}" "${RKHDAT_FILE}.old" >/dev/null 2>&1
+	cp -f "${RKHDAT_TMPFILE}" "${RKHDAT_FILE}" >/dev/null 2>&1
 	ERRCODE=$?
 
 	if [ $ERRCODE -ne 0 ]; then
@@ -9812,9 +9845,9 @@ updt_rkhdat() {
 		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
 
-	chmod 640 ${RKHDAT_FILE} >/dev/null 2>&1
+	chmod 640 "${RKHDAT_FILE}" >/dev/null 2>&1
 
-	rm -f ${RKHDAT_TMPFILE} ${RKHDAT_TMPFILE2} >/dev/null 2>&1
+	rm -f "${RKHDAT_TMPFILE}" "${RKHDAT_TMPFILE2}" >/dev/null 2>&1
 
 
 	return
@@ -10018,7 +10051,7 @@ file_properties_check() {
 	fi
 
 	if [ $SKIP_ATTR -eq 0 -o $SKIP_HASH -eq 0 ]; then
-		if [ ! -f ${RKHDAT_FILE} ]; then
+		if [ ! -f "${RKHDAT_FILE}" ]; then
 			SKIP_HASH=1
 			SKIP_ATTR=1
 			USE_DAT_FILE=0
@@ -10196,6 +10229,19 @@ file_properties_check() {
 
 
 	#
+	# We need the current 'rkhunter.dat' file format.
+	#
+
+	if [ $USE_DAT_FILE -eq 1 ]; then
+		FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" | cut -d: -f2`
+
+		test -z "${FMTVERSION}" && FMTVERSION=0
+	else
+		FMTVERSION=0
+	fi
+
+
+	#
 	# Now loop through each of the files and
 	# perform the tests on each one.
 	#
@@ -10209,8 +10255,11 @@ file_properties_check() {
 		TEST_RESULT=""
 		WHITELIST_RESULT=""
 
+		RKH_CC=0
+		SYSLNK_CC=0
 		NOVRFYFILE=0
 		ADDNEWENTRY=0
+		COLON_COUNT=0
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
 		HASH_TEST_PASSED=0
@@ -10234,7 +10283,13 @@ file_properties_check() {
 		if [ $USE_DAT_FILE -eq 1 ]; then
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+			if [ $FMTVERSION -eq 0 ]; then
+				RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+			else
+				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c`
+
+				RKHLINE=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+			fi
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
 				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -10246,10 +10301,16 @@ file_properties_check() {
 					ADDNEWENTRY=1
 
 					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+						SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 					fi
 
-					RKHLINE="File:${FNAME}:1:1:1:1:1:1:1::${SYSLNK}:"
+					if [ $FMTVERSION -eq 0 ]; then
+						RKHLINE="File:${FNAME}:1:1:1:1:1:1:1::${SYSLNK}:"
+					else
+						SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
+
+						RKHLINE="File:${COLON_COUNT}:${FNAME}:1:1:1:1:1:1:1::${SYSLNK_CC}:${SYSLNK}:"
+					fi
 				else
 					TEST_RESULT="${TEST_RESULT} norkhline"
 				fi
@@ -10300,6 +10361,18 @@ ${RKHLINE}"
 			PKGMGR_VERIFY_RESULT=""
 
 			#
+			# We need to calculate if the filename (in the file) has any colons in it.
+			# We then set RKH_CC to point to the field after the filename (the hash field).
+			#
+
+			if [ $FMTVERSION -eq 0 ]; then
+				RKH_CC=3
+			else
+				RKH_CC=`echo "${RKHLINE}" | cut -d: -f2`
+				RKH_CC=`expr 4 + $RKH_CC`
+			fi
+
+			#
 			# See if the file is to be exempt from any package manager verification.
 			#
 
@@ -10323,7 +10396,7 @@ ${RKHLINE}"
 				#
 
 				if [ $NOVRFYFILE -eq 0 ]; then
-					PKGNAME_ARCH=`${RPM_CMD} -qf ${FNAME} --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
+					PKGNAME_ARCH=`${RPM_CMD} -qf "${FNAME}" --queryformat '%{N}-%{V}-%{R}.%{ARCH}\n' 2>/dev/null`
 					ERRCODE=$?
 
 					if [ $ERRCODE -eq 0 ]; then
@@ -10368,6 +10441,9 @@ ${RKHLINE}"
 						# The package manager check does not verify all the items
 						# we check. So we still need to dig out the rest of the
 						# information about this file from the package manager database.
+						# Note that the filenames are displayed at the end of the rpm output.
+						# This means that any filename containing a colon will not cause
+						# a problem.
 						#
 
 						RPM_QUERY_RESULT=`${RPM_CMD} -q --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{FILELINKTOS}:%{FILENAMES}\n]' "${PKGNAME}" 2>/dev/null | grep ":${FNAMEGREP}\$"`
@@ -10416,7 +10492,7 @@ ${RKHLINE}"
 								fi
 
 								# This ensures the link target has things like '..' removed.
-								test $HAVE_READLINK -eq 1 && RKHLNK=`${READLINK_CMD} -f ${RKHLNK}`
+								test $HAVE_READLINK -eq 1 && RKHLNK=`${READLINK_CMD} -f "${RKHLNK}"`
 							fi
 
 							FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
@@ -10438,7 +10514,7 @@ ${RKHLINE}"
 						RKHTMPVAR=""
 
 						if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
-							RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+							RKHTMPVAR=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
 						fi
 
 						FDATA="${RKHTMPVAR}:${FDATA}"
@@ -10478,7 +10554,7 @@ ${RKHLINE}"
 						FILE_IS_PKGD=1
 						RKHHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f8`
 					else
-						RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+						RKHHASH=`echo "${RKHLINE}" | cut -d: -f$RKH_CC`
 					fi
 
 					RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
@@ -10489,13 +10565,14 @@ ${RKHLINE}"
 
 					RKHTMPVAR=""
 
-					test -n "${INODECMD}" && RKHTMPVAR=`eval ${INODECMD} ${FNAME} 2>/dev/null | tr -d ' '`
+					test -n "${INODECMD}" && RKHTMPVAR=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
 
 					#
-					# Finally, get the file name.
+					# Finally, get the file name. To do this we adjust RKH_CC back one field.
 					#
 
-					RKHTMPVAR2=`echo ${RKHLINE} | cut -d: -f1-2`
+					RKH_CC2=`expr $RKH_CC - 1`
+					RKHTMPVAR2=`echo "${RKHLINE}" | cut -d: -f1-$RKH_CC2`
 
 					#
 					# Now put it all together.
@@ -10526,22 +10603,22 @@ ${RKHLINE}"
 					if [ $NOVRFYFILE -eq 1 ]; then
 						PKGNAME=""
 					else
-						PKGNAME=`${DPKG_CMD} --search ${FNAME} 2>/dev/null | cut -d: -f1`
+						PKGNAME=`${DPKG_CMD} --search "${FNAME}" 2>/dev/null | cut -d: -f1`
 					fi
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
 						FNGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::'`
 
-						SYSHASH=`egrep "( |\./)${FNGREP}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums | cut -d' ' -f1`
+						SYSHASH=`egrep "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" | cut -d' ' -f1`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
-							RKHTMPVAR=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							RKHTMPVAR=`${PKGMGR_MD5_HASH} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 								PKGMGR_VERIFY_RESULT="5"
 
-								if [ -n "`${PKGMGR_MD5_HASH} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${PKGMGR_MD5_HASH} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 							fi
@@ -10556,7 +10633,7 @@ ${RKHLINE}"
 					if [ $NOVRFYFILE -eq 1 ]; then
 						PKGNAME=""
 					else
-						PKGNAME=`${PKG_CMD} -F -e ${FNAME} 2>/dev/null`
+						PKGNAME=`${PKG_CMD} -F -e "${FNAME}" 2>/dev/null`
 					fi
 
 					if [ -n "${PKGNAME}" ]; then
@@ -10567,16 +10644,16 @@ ${RKHLINE}"
 
 						FNGREP=`echo "${FNAMEGREP}" | sed -e 's:^/usr/pkg/::'`
 
-						SYSHASH=`${PKG_CMD} -v -L ${PKGNAME} 2>/dev/null | grep -A 1 "File: ${FNGREP}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
+						SYSHASH=`${PKG_CMD} -v -L "${PKGNAME}" 2>/dev/null | grep -A 1 "File: ${FNGREP}\$" | tail ${TAIL_OPT}1 | cut -d: -f3`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
-							RKHTMPVAR=`${PKGMGR_MD5_HASH} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							RKHTMPVAR=`${PKGMGR_MD5_HASH} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 								PKGMGR_VERIFY_RESULT="5"
 
-								if [ -n "`${PKGMGR_MD5_HASH} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${PKGMGR_MD5_HASH} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 							fi
@@ -10592,7 +10669,7 @@ ${RKHLINE}"
 					if [ $NOVRFYFILE -eq 0 -a $USE_SUNSUM -eq 1 ]; then
 						SYSHASH="${RKHHASH}"
 
-						RKHTMPVAR=`${SUM_CMD} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+						RKHTMPVAR=`${SUM_CMD} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 						if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 							PKGMGR_VERIFY_RESULT="5"
@@ -10606,7 +10683,7 @@ ${RKHLINE}"
 				# Now see if we need to work out the hash value or not.
 				#
 
-				RKHHASH=`echo ${RKHLINE} | cut -d: -f3`
+				RKHHASH=`echo "${RKHLINE}" | cut -d: -f$RKH_CC`
 
 				if [ $FILE_IS_PKGD -eq 1 ]; then
 					if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
@@ -10644,7 +10721,7 @@ ${RKHLINE}"
 							# Check the link target to see if it is whitelisted.
 
 							if [ -z "${SYSLNK}" ]; then
-								SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+								SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 							fi
 
 							FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -10666,10 +10743,10 @@ ${RKHLINE}"
 						if [ "${HASH_CMD}" = "NONE" ]; then
 							SYSHASH=""
 						else
-							SYSHASH=`${HASH_CMD} ${FNAME} 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+							SYSHASH=`${HASH_CMD} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 							if [ -z "${SYSHASH}" ]; then
-								if [ -n "`${HASH_CMD} ${FNAME} 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${HASH_CMD} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
 										SYSHASH="${RKHHASH}"
 										display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text ${FNAME}`"
@@ -10692,7 +10769,7 @@ ${RKHLINE}"
 									# Check the link target to see if it is whitelisted.
 
 									if [ -z "${SYSLNK}" ]; then
-										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+										SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 									fi
 
 									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -10751,7 +10828,7 @@ ${RKHLINE}"
 				fi
 
 				if [ -z "${FDATA}" ]; then
-					FDATA=`eval ${SCMD} ${FNAME} 2>/dev/null | tr ' ' ':'`
+					FDATA=`eval ${SCMD} "${FNAME}" 2>/dev/null | tr ' ' ':'`
 
 					# Ensure the file permissions consist of only 4 digits.
 					if [ -n "`echo ${FDATA} | grep '^[^:]*:0[0-9][0-9][0-9][0-9]:'`" ]; then
@@ -10767,7 +10844,9 @@ ${RKHLINE}"
 					if [ $FILE_IS_PKGD -eq 1 ]; then
 						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'M|(^.\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
 					else
-						RKHPERM=`echo ${RKHLINE} | cut -d: -f5`
+						RKH_CC2=`expr $RKH_CC + 2`
+
+						RKHPERM=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
 						SYSPERM=`echo ${FDATA} | cut -d: -f2`
 
 						if [ -n "${RKHPERM}" ]; then
@@ -10785,7 +10864,9 @@ ${RKHLINE}"
 					if [ $FILE_IS_PKGD -eq 1 ]; then
 						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'U|(^.....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
 					else
-						RKHUID=`echo ${RKHLINE} | cut -d: -f6`
+						RKH_CC2=`expr $RKH_CC + 3`
+
+						RKHUID=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
 						SYSUID=`echo ${FDATA} | cut -d: -f3`
 
 						if [ -n "${RKHUID}" ]; then
@@ -10803,7 +10884,9 @@ ${RKHLINE}"
 					if [ $FILE_IS_PKGD -eq 1 ]; then
 						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'G|(^......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
 					else
-						RKHGID=`echo ${RKHLINE} | cut -d: -f7`
+						RKH_CC2=`expr $RKH_CC + 4`
+
+						RKHGID=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
 						SYSGID=`echo ${FDATA} | cut -d: -f4`
 
 						if [ -n "${RKHGID}" ]; then
@@ -10819,7 +10902,9 @@ ${RKHLINE}"
 					#
 
 					if [ $PRELINKED -eq 0 ]; then
-						RKHINODE=`echo ${RKHLINE} | cut -d: -f4`
+						RKH_CC2=`expr $RKH_CC + 1`
+
+						RKHINODE=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
 						SYSINODE=`echo ${FDATA} | cut -d: -f1`
 
 						if [ -n "${RKHINODE}" ]; then
@@ -10841,7 +10926,9 @@ ${RKHLINE}"
 							TEST_RESULT="${TEST_RESULT} verify:sizechanged"
 						fi
 					elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
-						RKHSIZE=`echo ${RKHLINE} | cut -d: -f8`
+						RKH_CC2=`expr $RKH_CC + 5`
+
+						RKHSIZE=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
 						SYSSIZE=`echo ${FDATA} | cut -d: -f5`
 
 						if [ -n "${RKHSIZE}" ]; then
@@ -10863,7 +10950,9 @@ ${RKHLINE}"
 					if [ $FILE_IS_PKGD -eq 1 ]; then
 						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'T|(^.......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
 					elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
-						RKHDTM=`echo ${RKHLINE} | cut -d: -f9`
+						RKH_CC2=`expr $RKH_CC + 6`
+
+						RKHDTM=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
 						SYSDTM=`echo ${FDATA} | cut -d: -f6`
 
 						if [ -n "${RKHDTM}" ]; then
@@ -10885,7 +10974,7 @@ ${RKHLINE}"
 									# Check the link target to see if it is whitelisted.
 
 									if [ -z "${SYSLNK}" ]; then
-										SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+										SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 									fi
 
 									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -10903,10 +10992,16 @@ ${RKHLINE}"
 								fi
 							fi
 						else
-							RKHLNK=`echo ${RKHLINE} | cut -d: -f11`
+							RKH_CC2=`expr $RKH_CC + 8`
+							SYSLNK_CC=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
+
+							RKH_CC2=`expr $RKH_CC + 9`
+							SYSLNK_CC=`expr $RKH_CC2 + $SYSLNK_CC`
+
+							RKHLNK=`echo ${RKHLINE} | cut -d: -f${RKH_CC2}-${SYSLNK_CC}`
 
 							if [ $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" ]; then
-								SYSLNK=`${READLINK_CMD} -f ${FNAME}`
+								SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 							fi
 
 							if [ -n "${RKHLNK}" ]; then
@@ -10915,7 +11010,7 @@ ${RKHLINE}"
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
-											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
+											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR="${SYSLNK}"
 											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
 										fi
 									else
@@ -10978,8 +11073,16 @@ ${RKHLINE}"
 					done
 				fi
 
-				NEWRKHENTRIES="${NEWRKHENTRIES}
+				if [ $FMTVERSION -eq 0 ]; then
+					NEWRKHENTRIES="${NEWRKHENTRIES}
 File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::${SYSLNK}:"
+				else
+					RKH_CC=`echo "${FNAME}" | tr -c -d ':' | wc -c`
+					SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
+
+					NEWRKHENTRIES="${NEWRKHENTRIES}
+File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::${SYSLNK_CC}:${SYSLNK}:"
+				fi
 			fi
 		fi
 
@@ -11009,10 +11112,10 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 			if [ -z "${WL_FILE}" ]; then
 				if [ $BSDOS -eq 0 ]; then
 					if [ ! -h "${FNAME}" ]; then
-						RKHTMPVAR=`${LSATTR_CMD} ${FNAME} 2>&1 | cut -d' ' -f1 | grep 'i'`
+						RKHTMPVAR=`${LSATTR_CMD} "${FNAME}" 2>&1 | cut -d' ' -f1 | grep 'i'`
 					fi
 				else
-					RKHTMPVAR=`ls -lno ${FNAME} 2>&1 | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+					RKHTMPVAR=`ls -lno "${FNAME}" 2>&1 | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 				fi
 
 				#
@@ -11060,9 +11163,9 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 					if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
+						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
 					else
-						SYSSCRIPT=`${FILE_CMD} ${FNAME} 2>&1 | cat -v | egrep -i ' script( |,|$)'`
+						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i ' script( |,|$)'`
 					fi
 
 					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
@@ -11178,9 +11281,9 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 					if [ $RKHTMPVAR3 -eq 0 ]; then
 						RKHTMPVAR3=1
 						display --to LOG --type WARNING FILE_PROP_VRFY
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "${FNAME}"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text ${FNAME}`"
 
-						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "${FNAME}"
+						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text ${FNAME}`"
 					fi
 
 					case "${RKHTMPVAR}" in
@@ -11188,7 +11291,7 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
 
 						if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
-							display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "${FNAME}"
+							display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text ${FNAME}`"
 						fi
 						;;
 					verify:permchanged)
@@ -11258,7 +11361,7 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 					test -n "${BASENAME_CMD}" && RKHTMPVAR4=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR4=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 					if [ "${RKHTMPVAR4}" = "rkhunter" ]; then
-						display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "${FNAME}" "${SYSSCRIPT}"
+						display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "`name2text ${FNAME}`" "${SYSSCRIPT}"
 					else
 						display --to LOG --type WARNING FILE_PROP_SCRIPT "`name2text ${FNAME}`" "${SYSSCRIPT}"
 					fi
@@ -11300,7 +11403,16 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 	#
 
 	if [ $USE_DAT_FILE -eq 1 ]; then
-		for FNAME in `grep '^File:' "${RKHDAT_FILE}" | cut -d: -f2`; do
+		for RKHTMPVAR in `grep '^File:' "${RKHDAT_FILE}"`; do
+			if [ $FMTVERSION -eq 0 ]; then
+				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
+			else
+				RKH_CC=`echo "${RKHTMPVAR}" | cut -d: -f2`
+				RKH_CC2=`expr 3 + $RKH_CC`
+
+				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f3-$RKH_CC2`
+			fi
+
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`grep \"^${FNAMEGREP}$\" \"${RKH_FILEPROP_LIST}\"`" ]; then
@@ -11309,8 +11421,13 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 					# Remove the entry from the rkhunter.dat file.
 					#
 
-					OLDRKHENTRIES="${OLDRKHENTRIES}
+					if [ $FMTVERSION -eq 0 ]; then
+						OLDRKHENTRIES="${OLDRKHENTRIES}
 File:${FNAME}:.*"
+					else
+						OLDRKHENTRIES="${OLDRKHENTRIES}
+File:${RKH_CC}:${FNAME}:.*"
+					fi
 				elif [ ! -e "${FNAME}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 					PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
@@ -11441,7 +11558,7 @@ suspscan() {
 
 	get_temp_file "${RKHTMPDIR}/suspscan.tmp"
 	SUSPSCAN_TMPFILE=$TEMPFILE
-	touch ${SUSPSCAN_TMPFILE}
+	touch "${SUSPSCAN_TMPFILE}"
 
 
 	for DIR in ${SUSPSCAN_DIRS}; do
@@ -11469,7 +11586,7 @@ suspscan() {
 					if [ $HAVE_READLINK -eq 1 ]; then
 						RKHTMPVAR="${SUSPSCAN_ITEM}"
 
-						SUSPSCAN_ITEM=`${READLINK_CMD} -f ${RKHTMPVAR}`
+						SUSPSCAN_ITEM=`${READLINK_CMD} -f "${RKHTMPVAR}"`
 
 						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 							echo "6 SUSPSCAN_FILE_LINK_CHANGE "${RKHTMPVAR}" "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
@@ -11527,7 +11644,7 @@ suspscan() {
 
 					$STRINGS_CMD -n 4 "${SUSPSCAN_ITEM}" | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >${FILENAME} 2>&1
 
-					for SUSPSCAN_STRING in `grep -v "^Version" ${DB_PATH}/suspscan.dat | tail ${TAIL_OPT}1` ; do
+					for SUSPSCAN_STRING in `grep -v "^Version" "${DB_PATH}/suspscan.dat" | tail ${TAIL_OPT}1` ; do
 
 						#
 						# Break off if the score already exceeds the threshold.
@@ -11561,7 +11678,7 @@ suspscan() {
 								;;
 						esac
 
-						grep -i ${SUSPSCAN_TERM} ${FILENAME} >/dev/null 2>&1
+						grep -i ${SUSPSCAN_TERM} "${FILENAME}" >/dev/null 2>&1
 						ERRCODE=$?
 
 						if [ $ERRCODE -eq 0 ]; then
@@ -12357,7 +12474,7 @@ rootkit_file_dir_checks() {
 	FOUND=0
 
 	if [ -n "${KSYMS_FILE}" ]; then
-		egrep -i 'adore|sebek' ${KSYMS_FILE} >/dev/null 2>&1 && FOUND=1
+		egrep -i 'adore|sebek' "${KSYMS_FILE}" >/dev/null 2>&1 && FOUND=1
 	fi
 
 	if [ $FOUND -eq 0 ]; then
@@ -13142,9 +13259,9 @@ malware_checks() {
 						RKHTMPVAR=""
 
 						if [ $SOL_PROC -eq 1 ]; then
-							test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
+							test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/path/a.out"`
 						elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
-							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
+							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/exe"`
 						fi
 
 						test -n "${RKHTMPVAR}" && PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
@@ -13362,7 +13479,7 @@ ${RKHTMPVAR}:${FNAME}"
 
 			IFS=$RKHIFS
 
-			rm -f ${RKHLSOF_FILE} >/dev/null 2>&1
+			rm -f "${RKHLSOF_FILE}" >/dev/null 2>&1
 
 			if [ $FOUND -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
@@ -14574,9 +14691,9 @@ check_port_wl() {
 				RKHTMPVAR=""
 
 				if [ $SOL_PROC -eq 1 ]; then
-					test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/path/a.out`
+					test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/path/a.out"`
 				elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
-					test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f /proc/${PID}/exe`
+					test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/exe"`
 				fi
 
 				test -n "${RKHTMPVAR}" && FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
@@ -15112,7 +15229,7 @@ do_network_interface_checks() {
 	WHITEPROC=""
 	BLACKPROC=""
 
-	LIBPCAPRES=`egrep -v '(^sk | 888e )' /proc/net/packet | head ${HEAD_OPT}1`
+	LIBPCAPRES=`egrep -v '(^sk | 888e )' '/proc/net/packet' | head ${HEAD_OPT}1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
 		ALLOWPROCLISTENERS=""
@@ -15124,7 +15241,7 @@ do_network_interface_checks() {
 
 		INODE_LIST=""
 
-		for INODE in `egrep -v '(^sk | 888e )' /proc/net/packet | awk '{ print $9 }'`; do
+		for INODE in `egrep -v '(^sk | 888e )' '/proc/net/packet' | awk '{ print $9 }'`; do
 			INODE_LIST="${INODE_LIST}|$INODE"
 		done
 
@@ -15136,7 +15253,7 @@ do_network_interface_checks() {
 			NAME=""
 
 			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
-				NAME=`${READLINK_CMD} -f /proc/$PID/exe | cut -d' ' -f1`
+				NAME=`${READLINK_CMD} -f "/proc/$PID/exe" | cut -d' ' -f1`
 			elif [ -f "/proc/$PID/status" ]; then
 				NAME=`grep '^Name:.' /proc/$PID/status | sed -e 's/^Name:.//'`
 			fi
@@ -15609,7 +15726,7 @@ do_group_accounts_check() {
 
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' /etc/passwd | cut -d: -f1` ${RKHTMPVAR2}; do
+		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' '/etc/passwd' | cut -d: -f1` ${RKHTMPVAR2}; do
 			test -z "${RKHTMPVAR}" && continue
 			test "${RKHTMPVAR}" = "root" && continue
 
@@ -15825,12 +15942,12 @@ ${RKHTMPVAR}"
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD "diff"
 
-		cp -f -p /etc/passwd ${RKHTMPDIR}/passwd
+		cp -f -p "/etc/passwd" "${RKHTMPDIR}/passwd"
 	elif [ ! -f "${RKHTMPDIR}/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type WARNING PASSWD_CHANGES_NO_TMP
 
-		cp -f -p /etc/passwd ${RKHTMPDIR}/passwd
+		cp -f -p "/etc/passwd" "${RKHTMPDIR}/passwd"
 	else
 		DIFFS=`${DIFF_CMD} /etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep '^[<>]'`
 
@@ -15848,8 +15965,8 @@ ${RKHTMPVAR}"
 			# last changes were, even if RKH is run again.
 			#
 
-			mv -f ${RKHTMPDIR}/passwd ${RKHTMPDIR}/passwd.old >/dev/null 2>&1
-			cp -f -p /etc/passwd ${RKHTMPDIR}/passwd
+			mv -f "${RKHTMPDIR}/passwd" "${RKHTMPDIR}/passwd.old" >/dev/null 2>&1
+			cp -f -p "/etc/passwd" "${RKHTMPDIR}/passwd"
 		fi
 	fi
 
@@ -15876,12 +15993,12 @@ ${RKHTMPVAR}"
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD "diff"
 
-		cp -f -p /etc/group ${RKHTMPDIR}/group
+		cp -f -p "/etc/group" "${RKHTMPDIR}/group"
 	elif [ ! -f "${RKHTMPDIR}/group" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type WARNING GROUP_CHANGES_NO_TMP
 
-		cp -f -p /etc/group ${RKHTMPDIR}/group
+		cp -f -p "/etc/group" "${RKHTMPDIR}/group"
 	else
 		DIFFS=`${DIFF_CMD} /etc/group ${RKHTMPDIR}/group 2>/dev/null | grep '^[<>]'`
 
@@ -15899,8 +16016,8 @@ ${RKHTMPVAR}"
 			# last changes were, even if RKH is run again.
 			#
 
-			mv -f ${RKHTMPDIR}/group ${RKHTMPDIR}/group.old >/dev/null 2>&1
-			cp -f -p /etc/group ${RKHTMPDIR}/group
+			mv -f "${RKHTMPDIR}/group" "${RKHTMPDIR}/group.old" >/dev/null 2>&1
+			cp -f -p "/etc/group" "${RKHTMPDIR}/group"
 		fi
 	fi
 
@@ -17485,7 +17602,7 @@ set_file_prop_dirs_files() {
 		test ! -d "${DIR}" && continue
 
 		if [ -h "${DIR}" -a $HAVE_READLINK -eq 1 ]; then
-			LINKDIR=`${READLINK_CMD} -f ${DIR}`
+			LINKDIR=`${READLINK_CMD} -f "${DIR}"`
 		else
 			LINKDIR="${DIR}"
 		fi
@@ -17596,7 +17713,7 @@ ${USER_SIMPLE_FILE_LIST}"
 		for DIR in ${PROP_DIR_LIST}; do
 			for FNAME in ${PROP_FILE_LIST}; do
 				if [ -h "${DIR}/${FNAME}" ]; then
-					RKHTMPVAR=`${READLINK_CMD} -f ${DIR}/${FNAME}`
+					RKHTMPVAR=`${READLINK_CMD} -f "${DIR}/${FNAME}"`
 
 					test ! -f "${RKHTMPVAR}" && continue
 
@@ -17910,7 +18027,7 @@ get_lock() {
 	done
 
 	if [ $RKHTMPVAR -lt $LOCK_TIMEOUT -o ! -f "${RKHTMPDIR}/rkhunter.LCK" ]; then
-		touch ${RKHTMPDIR}/rkhunter.LCK
+		touch "${RKHTMPDIR}/rkhunter.LCK"
 
 		test $SHOW_LOCK_MSGS -eq 1 -a $RKHTMPVAR -gt 0 -a $NOTTY -eq 0 && echo ""
 
@@ -19139,23 +19256,23 @@ fi
 
 
 if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
-	if [ -e ${RKHDAT_FILE} ]; then
-		if [ -h ${RKHDAT_FILE} ]; then
+	if [ -e "${RKHDAT_FILE}" ]; then
+		if [ -h "${RKHDAT_FILE}" ]; then
 			echo "The rkhunter.dat file is a symbolic link: ${RKHDAT_FILE}"
 			echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
 			exit 1
-		elif [ ! -f ${RKHDAT_FILE} ]; then
+		elif [ ! -f "${RKHDAT_FILE}" ]; then
 			echo "The rkhunter.dat file is not a file: ${RKHDAT_FILE}"
 			exit 1
 		fi
 	fi
 
-	if [ -e ${RKH_FILEPROP_LIST} ]; then
-		if [ -h ${RKH_FILEPROP_LIST} ]; then
+	if [ -e "${RKH_FILEPROP_LIST}" ]; then
+		if [ -h "${RKH_FILEPROP_LIST}" ]; then
 			echo "The rkhunter_prop_list.dat file is a symbolic link: ${RKH_FILEPROP_LIST}"
 			echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
 			exit 1
-		elif [ ! -f ${RKH_FILEPROP_LIST} ]; then
+		elif [ ! -f "${RKH_FILEPROP_LIST}" ]; then
 			echo "The rkhunter_prop_list.dat file is not a file: ${RKH_FILEPROP_LIST}"
 			exit 1
 		fi
@@ -19170,23 +19287,31 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	#
 
 	if [ -n "${PROPUPD_OPT}" ]; then
-		if [ ! -f ${RKHDAT_FILE} ]; then
+		if [ ! -f "${RKHDAT_FILE}" ]; then
 			echo "The file properties file does not exist: ${RKHDAT_FILE}"
 			exit 1
 		fi
 
+		#
+		# We need the current 'rkhunter.dat' file format.
+		#
+
+		FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" | cut -d: -f2`
+
+		test -z "${FMTVERSION}" && FMTVERSION=0
+
+
 		LEAVE=0
 		RKHTMPVAR=""
 
-		PROPUPD_OPT=`echo "${PROPUPD_OPT}" | tr ',' ' ' | tr -s '	 ' '  '`
-		test "${PROPUPD_OPT}" = " " -o "${PROPUPD_OPT}" = "/" && PROPUPD_OPT=""
+		PROPUPD_OPT=`echo "${PROPUPD_OPT}" | tr ',' "\n" | sed -e '/^$/d'`
+
+		test "${PROPUPD_OPT}" = "/" && PROPUPD_OPT=""
+
+		IFS=$IFSNL
 
 		for FNAME in ${PROPUPD_OPT}; do
-			if [ -n "`echo \"${FNAME}\" | grep ':'`" ]; then
-				# Filename contains ':'
-				LEAVE=1
-				echo "Invalid file or package name specified: ${FNAME}"
-			elif [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
+			if [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
 				# Filename is relative
 				LEAVE=1
 				echo "Relative file or directory name specified: ${FNAME}"
@@ -19194,15 +19319,39 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				# Filename is absolute
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-				RKHTMPVAR2=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+				if [ $FMTVERSION -eq 0 ]; then
+					RKHTMPVAR2=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
+				else
+					COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c`
+
+					RKHTMPVAR2=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+					test -n "${RKHTMPVAR2}" && RKHTMPVAR2="${FNAME}"
+				fi
 
 				if [ -z "${RKHTMPVAR2}" ]; then
 					if [ -d "${FNAME}" ]; then
 						# Filename is a directory
-						RKHTMPVAR2=`grep "^File:${FNAMEGREP}/[^:]*:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+						if [ $FMTVERSION -eq 0 ]; then
+							RKHTMPVAR2=`grep "^File:${FNAMEGREP}/[^:]*:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
+						else
+							PATHS=""
+
+							for RKHLINE in `grep "^File:[0-9]*:${FNAMEGREP}/" "${RKHDAT_FILE}"`; do
+								COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
+								COLON_COUNT=`expr 3 + $COLON_COUNT`
+
+								PATHNAME=`echo "${RKHLINE}" | cut -d: -f3-$COLON_COUNT`
+
+								PATHS="${PATHS}
+${PATHNAME}"
+							done
+
+							RKHTMPVAR2=`echo "${PATHS}" | sed -e '/^$/d'`
+						fi
 
 						if [ -n "${RKHTMPVAR2}" ]; then
-							RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+							RKHTMPVAR="${RKHTMPVAR}
+${RKHTMPVAR2}"
 						else
 							LEAVE=1
 							echo "Directory is not in the \"rkhunter.dat\" file: ${FNAME}"
@@ -19212,37 +19361,73 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 						echo "Filename is not in the \"rkhunter.dat\" file: ${FNAME}"
 					fi
 				else
-					RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+					RKHTMPVAR="${RKHTMPVAR}
+${RKHTMPVAR2}"
 				fi
 			else
 				#
 				# Filename could be a package name.
-				# The package names are in field 10 in the rkhunter.dat file.
+				# The package names are currently in field 11 in the 'rkhunter.dat' file.
 				#
 
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-				RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+				if [ $FMTVERSION -eq 0 ]; then
+					RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
+				else
+					PATHS=""
+
+					for RKHLINE in `grep "^File:[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}"`; do
+						COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
+						COLON_COUNT=`expr 3 + $COLON_COUNT`
+
+						PATHNAME=`echo "${RKHLINE}" | cut -d: -f3-$COLON_COUNT`
+
+						PATHS="${PATHS}
+${PATHNAME}"
+					done
+
+					RKHTMPVAR2=`echo "${PATHS}" | sed -e '/^$/d'`
+				fi
 
 				if [ -z "${RKHTMPVAR2}" ]; then
 					# Filename is just a plain filename
-					RKHTMPVAR2=`grep "^File:[^:]*/${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2 | tr '\n' ' '`
+					if [ $FMTVERSION -eq 0 ]; then
+						RKHTMPVAR2=`grep "^File:[^:]*/${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
+					else
+						PATHS=""
+
+						for RKHLINE in `grep "^File:[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}"`; do
+							COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
+							COLON_COUNT=`expr 3 + $COLON_COUNT`
+
+							PATHNAME=`echo "${RKHLINE}" | cut -d: -f3-$COLON_COUNT`
+
+							PATHS="${PATHS}
+${PATHNAME}"
+						done
+
+						RKHTMPVAR2=`echo "${PATHS}" | sed -e '/^$/d'`
+					fi
 
 					if [ -n "${RKHTMPVAR2}" ]; then
-						RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+						RKHTMPVAR="${RKHTMPVAR}
+${RKHTMPVAR2}"
 					else
 						LEAVE=1
 						echo "File or package name is not in the \"rkhunter.dat\" file: ${FNAME}"
 					fi
 				else
-					RKHTMPVAR="${RKHTMPVAR} ${RKHTMPVAR2}"
+					RKHTMPVAR="${RKHTMPVAR}
+${RKHTMPVAR2}"
 				fi
 			fi
 		done
 
+		IFS=$RKHIFS
+
 		if [ $LEAVE -eq 0 ]; then
-			PROPUPD_OPT=""
-			test -n "${RKHTMPVAR}" && PROPUPD_OPT=" ${RKHTMPVAR} "
+			PROPUPD_OPT=`echo "${RKHTMPVAR}" | sed -e '/^$/d'`
 		else
 			exit 1
 		fi
@@ -19356,7 +19541,7 @@ fi
 #
 
 if [ $UNLOCK -eq 1 ]; then
-	rm -f ${RKHTMPDIR}/rkhunter.LCK >/dev/null 2>&1
+	rm -f "${RKHTMPDIR}/rkhunter.LCK" >/dev/null 2>&1
 
 	# If we are just unlocking the lock file, then exit.
 	test $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 -a $PROP_UPDATE -eq 0 && exit 0
@@ -19381,7 +19566,7 @@ test $CRONJOB -eq 1 -o $QUIET -eq 1 && NOTTY=1
 #
 IFS=$IFSNL
 
-for LINE in `egrep '^MSG_(TYPE|RESULT)_' ${DB_PATH}/i18n/en 2>/dev/null`; do
+for LINE in `egrep '^MSG_(TYPE|RESULT)_' "${DB_PATH}/i18n/en" 2>/dev/null`; do
 	TYPE=`echo "${LINE}" | cut -d: -f1`
 
 	if [ "${LANGUAGE}" != "en" ]; then
@@ -19412,7 +19597,7 @@ fi
 if [ $NOLOG -eq 0 ]; then
 	if [ $APPEND_LOG -eq 0 ]; then
 		if [ -f "${RKHLOGFILE}" ]; then
-			cp -f -p ${RKHLOGFILE} ${RKHLOGFILE}.old >/dev/null 2>&1
+			cp -f -p "${RKHLOGFILE}" "${RKHLOGFILE}.old" >/dev/null 2>&1
 
 			# Overwrite the log file with a null string.
 			if [ "${ECHON}" = "c" ]; then
@@ -19422,14 +19607,14 @@ if [ $NOLOG -eq 0 ]; then
 			fi
 		else
 			# Create a new log file.
-			touch ${RKHLOGFILE} >/dev/null 2>&1
-			chmod 600 ${RKHLOGFILE} >/dev/null 2>&1
+			touch "${RKHLOGFILE}" >/dev/null 2>&1
+			chmod 600 "${RKHLOGFILE}" >/dev/null 2>&1
 		fi
 	else
 		if [ ! -f "${RKHLOGFILE}" ]; then
 			# Create a new log file.
-			touch ${RKHLOGFILE} >/dev/null 2>&1
-			chmod 600 ${RKHLOGFILE} >/dev/null 2>&1
+			touch "${RKHLOGFILE}" >/dev/null 2>&1
+			chmod 600 "${RKHLOGFILE}" >/dev/null 2>&1
 		fi
 
 		echo "" >>${RKHLOGFILE}

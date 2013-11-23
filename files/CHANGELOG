@@ -108,6 +108,9 @@
    command. Previously the 'ifconfig' command had to be present.
  - If either of the APPEND_LOG or COPY_LOG_ON_ERROR configuration
    options is set, then this is now logged.
+ - It is now possible to include filenames containing a colon (:)
+   character in the file properties tests. The filename can be specified
+   in the configuration file using the USER_FILEPROP_FILES_DIRS option.
 
  Bugfixes:
  - Cater for the latest version of the 'unhide' command.
