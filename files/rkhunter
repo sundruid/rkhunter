@@ -9560,10 +9560,9 @@ strings_check() {
 
 	STRINGSFAILED=0
 
-#jh - add the '-a' option to the strings command. Check if it should be used elsewhere.
 	for STRING in ${STRINGS_INTEGRITY}; do
 		STRINGNAME=`echo "${STRING}" | sed -e 's/\./\\\./g'`
-		STRING_SEEN=`echo "${STRING}" | ${STRINGS_CMD} | grep "${STRINGNAME}" | tr -d ' '`
+		STRING_SEEN=`echo "${STRING}" | ${STRINGS_CMD} -a | grep "${STRINGNAME}" | tr -d ' '`
 
 		if [ -z "${STRING_SEEN}" ]; then
 			STRINGSFAILED=1
@@ -11642,9 +11641,9 @@ suspscan() {
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
 					SUSPSCAN_STRINGS=""
 
-					$STRINGS_CMD -n 4 "${SUSPSCAN_ITEM}" | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >${FILENAME} 2>&1
+					$STRINGS_CMD -n 4 -a "${SUSPSCAN_ITEM}" | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >${FILENAME} 2>&1
 
-					for SUSPSCAN_STRING in `grep -v "^Version" "${DB_PATH}/suspscan.dat" | tail ${TAIL_OPT}1` ; do
+					for SUSPSCAN_STRING in `grep -v '^Version' "${DB_PATH}/suspscan.dat" | tail ${TAIL_OPT}1` ; do
 
 						#
 						# Break off if the score already exceeds the threshold.
@@ -13069,7 +13068,7 @@ possible_rootkit_string_checks() {
 			FOUNDFILE=1
 
 			for FNAME in ${RC_PATHS}; do
-				FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep -v '^[ 	]*#' | grep "${STRINGGREP}"`
+				FOUNDSTRING=`${STRINGS_CMD} -n 3 -a "${FNAME}" | grep -v '^[ 	]*#' | grep "${STRINGGREP}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -13103,7 +13102,7 @@ ${FNAME}:${FILESTRING}:${INFO}"
 
 				if [ -f "${FNAME}" ]; then
 					FOUNDFILE=1
-					FOUNDSTRING=`${STRINGS_CMD} -n 3 ${FNAME} | grep "${STRINGGREP}"`
+					FOUNDSTRING=`${STRINGS_CMD} -n 3 -a "${FNAME}" | grep "${STRINGGREP}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
 						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`

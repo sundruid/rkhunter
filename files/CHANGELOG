@@ -159,6 +159,11 @@
  - Both the '--bindir' command-line option, and the BINDIR configuration
    option, are now checked more thoroughly to ensure that the
    directories are valid.
+ - AIX systems do not fully check files when using the 'strings'
+   command. As such several warnings are produced when the strings
+   command integrity test is executed. The strings command '-a' option
+   is now used so that the whole file is checked. This option seems to
+   be universal so should not be a problem for any other systems.
 
  -- 
 
