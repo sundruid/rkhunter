@@ -6675,7 +6675,7 @@ ${DIR}:1"
 						if [ $HAVE_READLINK -eq 1 ]; then
 							SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
 
-							RKHTMPVAR=" -> ${SYSLNK}"
+							RKHTMPVAR="${SYSLNK}"
 							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 						else
 							RKHTMPVAR=""
@@ -6684,7 +6684,7 @@ ${DIR}:1"
 						# Check the link target to see if it is whitelisted.
 						if [ $HAVE_READLINK -eq 1 -a -n "`echo \"${EXISTWHITELIST}\" | grep \"^${RKHTMPVAR2}$\"`" ]; then
 							if [ $VERBOSE_LOGGING -eq 1 ]; then
-								display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}${RKHTMPVAR}`"
+								display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
 							fi
 						else
 							# Treat a broken link simply as a file with no hash.
@@ -6692,7 +6692,9 @@ ${DIR}:1"
 
 							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "`name2text ${FNAME}`"
 
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_BL "`name2text ${FNAME}${RKHTMPVAR}`"
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_BL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
+#jh - is this display working??
+#jh - 2 broken links in /usr/local/bin, pointing to same target, but only one appears in 'propupd' output and rkhunter.dat.
 						fi
 					else
 						NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
@@ -10712,30 +10714,34 @@ ${RKHLINE}"
 					RKHTMPVAR=0
 
 					if [ -z "${RKHHASH}" ]; then
-						#
-						# Broken links may not give a hash value, so we must check to see if the link is whitelisted.
-						#
+						if [ "${HASH_CMD}" = "NONE" ]; then
+							:
+						else
+							#
+							# Broken links may not give a hash value, so we must check to see if the link is whitelisted.
+							#
 
-						if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-							# Check the link target to see if it is whitelisted.
+							if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+								# Check the link target to see if it is whitelisted.
 
-							if [ -z "${SYSLNK}" ]; then
-								SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
-							fi
+								if [ -z "${SYSLNK}" ]; then
+									SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+								fi
 
-							FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+								FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-							if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
-								RKHTMPVAR=1
+								if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
+									RKHTMPVAR=1
 
-								if [ ! -e "${FNAME}" -a $VERBOSE_LOGGING -eq 1 ]; then
-									# Only log this if it is a broken link.
-									display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}` -> `name2text ${SYSLNK}`"
+									if [ ! -e "${FNAME}" -a $VERBOSE_LOGGING -eq 1 ]; then
+										# Only log this if it is a broken link.
+										display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}`" "`name2text ${SYSLNK}`"
+									fi
 								fi
 							fi
-						fi
 
-						test $RKHTMPVAR -eq 0 && TEST_RESULT="${TEST_RESULT} norkhhash"
+							test $RKHTMPVAR -eq 0 && TEST_RESULT="${TEST_RESULT} norkhhash"
+						fi
 					fi
 
 					if [ $RKHTMPVAR -eq 0 -a -z "${TEST_RESULT}" ]; then
@@ -10775,7 +10781,7 @@ ${RKHLINE}"
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
-											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}` -> `name2text ${SYSLNK}`"
+											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}`" "`name2text ${SYSLNK}`"
 										fi
 									else
 										TEST_RESULT="${TEST_RESULT} hashchanged"
@@ -14200,6 +14206,7 @@ trojan_checks() {
 	#
 	# Next we check the xinetd.conf file.
 	#
+#jh - include fix for when 'disabled=yes' is missing.
 
 	FOUND=0
 	FOUNDFILES=""

@@ -164,6 +164,8 @@
    command integrity test is executed. The strings command '-a' option
    is now used so that the whole file is checked. This option seems to
    be universal so should not be a problem for any other systems.
+ - When using a hash command of 'NONE' the file properties test would
+   still report some files as having no hash value. This is now fixed.
 
  -- 
 
