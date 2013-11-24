@@ -3619,7 +3619,7 @@ get_port_options() {
 
 	#
 	# This function will get the various PORT configuration options, and
-	# build up PORT_WHITELIST as a newline-seperated list.
+	# build up PORT_WHITELIST as a newline-separated list.
 	#
 	# First get the PORT_WHITELIST option from the configuration file.
 	#
@@ -6326,11 +6326,16 @@ rkh_dat_set_file_properties() {
 	#
 	# Now loop through the pathnames looking for the files.
 	#
+	# We must set IFS around this loop, otherwise any names in the file
+	# properties list containing whitespace will be separated out.
+	# However, because IFS interacts with some commands, executed via
+	# backticks, we must then reset IFS for the duration of the loop
+	# and set it again at the end of the loop. It's messy, but it works.
+	#
 
-#jh - this line will cause spaces to be ignored! Must set IFS?
+	IFS=$IFSNL
+
 	for FNAME in `cat "${RKH_FILEPROP_LIST}"`; do
-#jh - in rkhunter.dat - z:z file has no data??
-
 		test ! -f "${FNAME}" -a ! -h "${FNAME}" && continue
 
 		FDATA=""
@@ -6344,6 +6349,8 @@ rkh_dat_set_file_properties() {
 		COLON_COUNT=0
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
+
+		IFS=$RKHIFS
 
 		PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
@@ -6380,6 +6387,7 @@ rkh_dat_set_file_properties() {
 
 					if [ -n "${RKHTMPVAR}" ]; then
 						echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
+						IFS=$IFSNL
 						continue
 					fi
 				fi
@@ -6508,7 +6516,7 @@ ${DIR}:1"
 						RKHTMPVAR2=""
 
 						if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
-							RKHTMPVAR2=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
+							RKHTMPVAR2=`eval ${INODECMD} "\"${FNAME}\"" 2>/dev/null | tr -d ' '`
 						fi
 
 						FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
@@ -6602,7 +6610,7 @@ ${DIR}:1"
 
 				RKHTMPVAR2=""
 
-				test -n "${INODECMD}" && RKHTMPVAR2=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
+				test -n "${INODECMD}" && RKHTMPVAR2=`eval ${INODECMD} "\"${FNAME}\"" 2>/dev/null | tr -d ' '`
 
 				FDATA="${RKHTMPVAR2}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
 			fi
@@ -6722,7 +6730,7 @@ ${DIR}:1"
 			FDATA=":::::"
 		else
 			if [ -z "${FDATA}" ]; then
-				FDATA=`eval ${SCMD} "${FNAME}" 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
+				FDATA=`eval ${SCMD} "\"${FNAME}\"" 2>/dev/null | tr ' ' ':' | sed -e 's/:$//'`
 
 				if [ -z "${FDATA}" ]; then
 					FDATA=":::::"
@@ -6737,7 +6745,11 @@ ${DIR}:1"
 		SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
 
 		echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>${RKHDAT_TMPFILE}
+
+		IFS=$IFSNL
 	done
+
+	IFS=$RKHIFS
 
 
 	#
@@ -6812,6 +6824,7 @@ create_rkh_file_prop_list() {
 	# used for the file properties check.
 	#
 
+#jh - should use a temp file here
 	rm -f "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
 
 	IFS=$IFSNL
@@ -10245,13 +10258,19 @@ file_properties_check() {
 
 
 	#
-	# Now loop through each of the files and
-	# perform the tests on each one.
+	# Now loop through each of the files and perform the tests on each one.
 	#
+	# We must set IFS around this loop, otherwise any names in the file
+	# properties list containing whitespace will be separated out.
+	# However, because IFS interacts with some commands, executed via
+	# backticks, we must then reset IFS for the duration of the loop
+	# and set it again at the end of the loop. It's messy, but it works.
+	#
+
+	IFS=$IFSNL
 
 	VERIFIED_PKG_LIST=""
 
-#jh - does this need to be changed to cater for files with spaces too?
 	for FNAME in `cat "${RKH_FILEPROP_LIST}"`; do
 		SYSLNK=""
 		FILENAME=""
@@ -10268,6 +10287,8 @@ file_properties_check() {
 		DEPENDENCY_ERR=0
 		HASH_TEST_PASSED=0
 		SIZE_TEST_PASSED=0
+
+		IFS=$RKHIFS
 
 
 		#
@@ -10337,12 +10358,15 @@ ${RKHLINE}"
 					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
 				fi
 
+				IFS=$IFSNL
+
 				continue
 			fi
 		elif [ $FILE_EXISTS -eq 1 ]; then
 			RKHLINE=""
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 		else
+			IFS=$IFSNL
 			continue
 		fi
 
@@ -10520,7 +10544,7 @@ ${RKHLINE}"
 						RKHTMPVAR=""
 
 						if [ $PRELINKED -eq 0 -a -n "${INODECMD}" ]; then
-							RKHTMPVAR=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
+							RKHTMPVAR=`eval ${INODECMD} "\"${FNAME}\"" 2>/dev/null | tr -d ' '`
 						fi
 
 						FDATA="${RKHTMPVAR}:${FDATA}"
@@ -10571,7 +10595,7 @@ ${RKHLINE}"
 
 					RKHTMPVAR=""
 
-					test -n "${INODECMD}" && RKHTMPVAR=`eval ${INODECMD} "${FNAME}" 2>/dev/null | tr -d ' '`
+					test -n "${INODECMD}" && RKHTMPVAR=`eval ${INODECMD} "\"${FNAME}\"" 2>/dev/null | tr -d ' '`
 
 					#
 					# Finally, get the file name. To do this we adjust RKH_CC back one field.
@@ -10838,7 +10862,7 @@ ${RKHLINE}"
 				fi
 
 				if [ -z "${FDATA}" ]; then
-					FDATA=`eval ${SCMD} "${FNAME}" 2>/dev/null | tr ' ' ':'`
+					FDATA=`eval ${SCMD} "\"${FNAME}\"" 2>/dev/null | tr ' ' ':'`
 
 					# Ensure the file permissions consist of only 4 digits.
 					if [ -n "`echo ${FDATA} | grep '^[^:]*:0[0-9][0-9][0-9][0-9]:'`" ]; then
@@ -11403,7 +11427,11 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" "${RKHTMPVAR}"
 			done
 		fi
+
+		IFS=$IFSNL
 	done
+
+	IFS=$RKHIFS
 
 
 	#
@@ -11413,6 +11441,8 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 	#
 
 	if [ $USE_DAT_FILE -eq 1 ]; then
+		IFS=$IFSNL
+
 		for RKHTMPVAR in `grep '^File:' "${RKHDAT_FILE}"`; do
 			if [ $FMTVERSION -eq 0 ]; then
 				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
@@ -11447,6 +11477,8 @@ File:${RKH_CC}:${FNAME}:.*"
 				fi
 			fi
 		done
+
+		IFS=$RKHIFS
 	fi
 
 
@@ -19347,6 +19379,8 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 						else
 							PATHS=""
 
+							IFS=$IFSNL
+
 							for RKHLINE in `grep "^File:[0-9]*:${FNAMEGREP}/" "${RKHDAT_FILE}"`; do
 								COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
 								COLON_COUNT=`expr 3 + $COLON_COUNT`
@@ -19356,6 +19390,8 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 								PATHS="${PATHS}
 ${PATHNAME}"
 							done
+
+							IFS=$RKHIFS
 
 							RKHTMPVAR2=`echo "${PATHS}" | sed -e '/^$/d'`
 						fi
@@ -19388,6 +19424,8 @@ ${RKHTMPVAR2}"
 				else
 					PATHS=""
 
+					IFS=$IFSNL
+
 					for RKHLINE in `grep "^File:[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}"`; do
 						COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
 						COLON_COUNT=`expr 3 + $COLON_COUNT`
@@ -19397,6 +19435,8 @@ ${RKHTMPVAR2}"
 						PATHS="${PATHS}
 ${PATHNAME}"
 					done
+
+					IFS=$RKHIFS
 
 					RKHTMPVAR2=`echo "${PATHS}" | sed -e '/^$/d'`
 				fi
@@ -19408,6 +19448,8 @@ ${PATHNAME}"
 					else
 						PATHS=""
 
+						IFS=$IFSNL
+
 						for RKHLINE in `grep "^File:[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}"`; do
 							COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
 							COLON_COUNT=`expr 3 + $COLON_COUNT`
@@ -19417,6 +19459,8 @@ ${PATHNAME}"
 							PATHS="${PATHS}
 ${PATHNAME}"
 						done
+
+						IFS=$RKHIFS
 
 						RKHTMPVAR2=`echo "${PATHS}" | sed -e '/^$/d'`
 					fi

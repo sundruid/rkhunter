@@ -1,4 +1,4 @@
-Version:2013112301
+Version:2013112401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -214,8 +214,8 @@ PROPUPD_ARCH_FOUND:Found system architecture: $1
 PROPUPD_REL_FILE:Found release file: $1
 PROPUPD_NO_REL_FILE:Unable to find a release file: LS output shows:
 PROPUPD_OSNAME_FOUND:Found O/S name: $1
-PROPUPD_ERROR:Error installing new rkhunter.dat file. Code $1
-PROPUPD_NEW_DAT_FILE:New rkhunter.dat file installed in '$1'
+PROPUPD_ERROR:Error installing new 'rkhunter.dat' file. Code $1
+PROPUPD_NEW_DAT_FILE:New 'rkhunter.dat' file installed in '$1'
 PROPUPD_WARN:WARNING! It is the users responsibility to ensure that when the '--propupd' option
 PROPUPD_WARN:is used, all the files on their system are known to be genuine, and installed from a
 PROPUPD_WARN:reliable source. The rkhunter '--check' option will compare the current file properties
@@ -273,13 +273,13 @@ FILE_PROP_OS_CHANGED:The local host configuration or operating system has change
 FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not exist, and should be created. To do this type in 'rkhunter --propupd'.
 FILE_PROP_DAT_EMPTY:The file of stored file properties (rkhunter.dat) is empty, and should be created. To do this type in 'rkhunter --propupd'.
 FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
-FILE_PROP_DAT_MISSING_INFO:The file properties check will still run as there are checks that can be performed without the rkhunter.dat file.
+FILE_PROP_DAT_MISSING_INFO:The file properties check will still run as there are checks that can be performed without the 'rkhunter.dat' file.
 
-FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the rkhunter.dat file.
+FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the 'rkhunter.dat' file.
 FILE_PROP_WL:Found file '$1': it is whitelisted for the '$2' check.
 FILE_PROP_WL_STR:Found file '$1' and string '$2': they are whitelisted for the '$3' check.
 FILE_PROP_WL_DIR:Found directory '$1': it is whitelisted for the '$2' check.
-FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the rkhunter.dat file.
+FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the 'rkhunter.dat' file.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
 FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
@@ -293,29 +293,29 @@ FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
 FILE_PROP_SYSHASH_UNAVAIL_BL:Current hash: Unavailable (possible broken link)
 FILE_PROP_SYSHASH:Current hash: $1
 FILE_PROP_RKHHASH:Stored hash : $1
-FILE_PROP_NO_RKHHASH:No hash value found for file '$1' in the rkhunter.dat file.
-FILE_PROP_NO_RKHPERM:No file permissions value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHHASH:No hash value found for file '$1' in the 'rkhunter.dat' file.
+FILE_PROP_NO_RKHPERM:No file permissions value found for file '$1' in the 'rkhunter.dat' file.
 FILE_PROP_PERM_UNAVAIL:Current permissions: Unavailable    Stored permissions: $1
 FILE_PROP_PERM:Current permissions: $1    Stored permissions: $2
 FILE_PROP_UID_UNAVAIL:Current uid: Unavailable    Stored uid: $1
 FILE_PROP_UID:Current uid: $1    Stored uid: $2
-FILE_PROP_NO_RKHUID:No user-id value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHUID:No user-id value found for file '$1' in the 'rkhunter.dat' file.
 FILE_PROP_GID_UNAVAIL:Current gid: Unavailable    Stored gid: $1
 FILE_PROP_GID:Current gid: $1    Stored gid: $2
-FILE_PROP_NO_RKHGID:No group-id value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHGID:No group-id value found for file '$1' in the 'rkhunter.dat' file.
 FILE_PROP_INODE_UNAVAIL:Current inode: Unavailable    Stored inode: $1
 FILE_PROP_INODE:Current inode: $1    Stored inode: $2
-FILE_PROP_NO_RKHINODE:No inode value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHINODE:No inode value found for file '$1' in the 'rkhunter.dat' file.
 FILE_PROP_SIZE_UNAVAIL:Current size: Unavailable    Stored size: $1
 FILE_PROP_SIZE:Current size: $1    Stored size: $2
-FILE_PROP_NO_RKHSIZE:No size value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHSIZE:No size value found for file '$1' in the 'rkhunter.dat' file.
 FILE_PROP_SYSDTM_UNAVAIL:Current file modification time: Unavailable
 FILE_PROP_SYSDTM:Current file modification time: $1
 FILE_PROP_RKHDTM:Stored file modification time : $1
-FILE_PROP_NO_RKHDTM:No file modification time value found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHDTM:No file modification time value found for file '$1' in the 'rkhunter.dat' file.
 FILE_PROP_SYSLNK:Current symbolic link target: '$1' -> '$2'
 FILE_PROP_RKHLNK:Stored symbolic link target : '$1' -> '$2'
-FILE_PROP_NO_RKHLNK:No symbolic link target found for file '$1' in the rkhunter.dat file.
+FILE_PROP_NO_RKHLNK:No symbolic link target found for file '$1' in the 'rkhunter.dat' file.
 FILE_PROP_LINK_WL:The symbolic link target has changed, but it is whitelisted: '$1' -> '$2'
 FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file '$1'
 FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
