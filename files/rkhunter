@@ -1051,7 +1051,7 @@ check_paths() {
 				if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					ERRCODE=1
 
-					echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: `name2text ${FNAME}`"
+					echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: `name2text \"${FNAME}\"`"
 				fi
 			fi
 		fi
@@ -1446,7 +1446,7 @@ scanrootkit() {
 				FILENAMES=`find / -xdev -name "${FNAME}"`
 
 				if [ -z "${FILENAMES}" ]; then
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text ${RKHTMPVAR}`"
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
 				else
 					FOUND=0
 
@@ -1465,7 +1465,7 @@ ${FNAME}"
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
 						test $FOUND -eq 0 && FOUND="NOT_FOUND" || FOUND="FOUND"
-						display --to LOG --type PLAIN --result ${FOUND} --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text ${RKHTMPVAR}`"
+						display --to LOG --type PLAIN --result ${FOUND} --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
 					fi
 				fi
 				;;
@@ -1480,16 +1480,16 @@ ${FNAME}"
 					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "`name2text ${RKHTMPVAR}`" known_rkts
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${RKHTMPVAR}\"`" known_rkts
 					else
 						SCAN_STATUS=1
 						FILE_FOUND="${FILE_FOUND}
 ${RKHTMPVAR}"
 					fi
 
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text ${RKHTMPVAR}`"
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text ${RKHTMPVAR}`"
+					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
 				fi
 				;;
 		esac
@@ -1515,16 +1515,16 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text ${RKHTMPVAR}`" known_rkts
+				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${RKHTMPVAR}\"`" known_rkts
 			else
 				SCAN_STATUS=1
 				DIR_FOUND="${DIR_FOUND}
 ${RKHTMPVAR}"
 			fi
 
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "`name2text ${RKHTMPVAR}`"
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "`name2text \"${RKHTMPVAR}\"`"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "`name2text ${RKHTMPVAR}`"
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "`name2text \"${RKHTMPVAR}\"`"
 		fi
 	done
 
@@ -1578,13 +1578,13 @@ ${KS}"
 		FILE_FOUND=`echo "${FILE_FOUND}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${FILE_FOUND}; do
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_FILE_FOUND "`name2text ${RKHTMPVAR}`"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_FILE_FOUND "`name2text \"${RKHTMPVAR}\"`"
 		done
 
 		DIR_FOUND=`echo "${DIR_FOUND}" | sed -e '/^$/d'`
 
 		for RKHTMPVAR in ${DIR_FOUND}; do
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "`name2text ${RKHTMPVAR}`"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "`name2text \"${RKHTMPVAR}\"`"
 		done
 
 		KSYM_FOUND=`echo "${KSYM_FOUND}" | sed -e '/^$/d'`
@@ -3645,7 +3645,7 @@ get_port_options() {
 
 					if [ $PORT -gt 65535 ]; then
 						LEAVE=1
-						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
+						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
 					fi
 
 					PORT_WHITELIST="${PORT_WHITELIST}
@@ -3659,7 +3659,7 @@ ${PROTO}:${PORT}"
 					fi
 				else
 					LEAVE=1
-					echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text ${RKHTMPVAR2}`"
+					echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
 				fi
 			done
 		fi
@@ -3699,7 +3699,7 @@ ${PROTO}:${PORT}"
 
 					if [ $PORT -gt 65535 ]; then
 						LEAVE=1
-						echo "Invalid PORT_PATH_WHITELIST configuration option - invalid port specified: `name2text ${RKHTMPVAR2}`"
+						echo "Invalid PORT_PATH_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
 					fi
 
 					PROTO=`echo ${PROTO} | tr '[:lower:]' '[:upper:]'`
@@ -3729,7 +3729,7 @@ ${FNAME}"
 				fi
 			else
 				LEAVE=1
-				echo "Invalid entry specified in PORT_PATH_WHITELIST configuration option: `name2text ${RKHTMPVAR2}`"
+				echo "Invalid entry specified in PORT_PATH_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
 			fi
 		done
 
@@ -6327,7 +6327,10 @@ rkh_dat_set_file_properties() {
 	# Now loop through the pathnames looking for the files.
 	#
 
+#jh - this line will cause spaces to be ignored! Must set IFS?
 	for FNAME in `cat "${RKH_FILEPROP_LIST}"`; do
+#jh - in rkhunter.dat - z:z file has no data??
+
 		test ! -f "${FNAME}" -a ! -h "${FNAME}" && continue
 
 		FDATA=""
@@ -6611,7 +6614,7 @@ ${DIR}:1"
 			if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				FILE_IS_PKGD=1
 				SYSHASH="ignore-prelink-dep-err"
-				display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text ${FNAME}`"
+				display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text \"${FNAME}\"`"
 			else
 				case "${PKGMGR}" in
 				RPM)
@@ -6669,7 +6672,7 @@ ${DIR}:1"
 				if [ -z "${SYSHASH}" ]; then
 					if [ "${HASH_CMD}" = "NONE" ]; then
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "`name2text ${FNAME}`"
+							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "`name2text \"${FNAME}\"`"
 						fi
 					elif [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
 						if [ $HAVE_READLINK -eq 1 ]; then
@@ -6684,27 +6687,25 @@ ${DIR}:1"
 						# Check the link target to see if it is whitelisted.
 						if [ $HAVE_READLINK -eq 1 -a -n "`echo \"${EXISTWHITELIST}\" | grep \"^${RKHTMPVAR2}$\"`" ]; then
 							if [ $VERBOSE_LOGGING -eq 1 ]; then
-								display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
+								display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR}\"`"
 							fi
 						else
 							# Treat a broken link simply as a file with no hash.
 							BROKEN_LINK_COUNT=`expr ${BROKEN_LINK_COUNT} + 1`
 
-							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "`name2text ${FNAME}`"
+							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "`name2text \"${FNAME}\"`"
 
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_BL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
-#jh - is this display working??
-#jh - 2 broken links in /usr/local/bin, pointing to same target, but only one appears in 'propupd' output and rkhunter.dat.
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_BL "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR}\"`"
 						fi
 					else
 						NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
 
-						display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "`name2text ${FNAME}`"
+						display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "`name2text \"${FNAME}\"`"
 
 						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_CMD "${RKHTMPVAR}"
 
 						if [ $DEPENDENCY_ERR -eq 1 ]; then
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text ${FNAME}`"
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text \"${FNAME}\"`"
 						fi
 					fi
 				fi
@@ -6844,6 +6845,7 @@ create_rkh_file_prop_list() {
 	fi
 
 	IFS=$RKHIFS
+
 
 	chmod 640 "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
 
@@ -9800,7 +9802,7 @@ updt_rkhdat() {
 			FILENAME=`echo "${FNAME}" | cut -d: -f3-$RKH_CC2`
 		fi
 
-		display --to LOG --type INFO RKHDAT_DEL_OLD_ENTRY "`name2text ${FILENAME}`"
+		display --to LOG --type INFO RKHDAT_DEL_OLD_ENTRY "`name2text \"${FILENAME}\"`"
 
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's:/:\\\/:g'`
 
@@ -9822,7 +9824,7 @@ updt_rkhdat() {
 			FILENAME=`echo "${FNAME}" | cut -d: -f3-$RKH_CC2`
 		fi
 
-		display --to LOG --type INFO RKHDAT_ADD_NEW_ENTRY "`name2text ${FILENAME}`"
+		display --to LOG --type INFO RKHDAT_ADD_NEW_ENTRY "`name2text \"${FILENAME}\"`"
 
 		echo "${FNAME}" >>${RKHDAT_TMPFILE}
 	done
@@ -10249,6 +10251,7 @@ file_properties_check() {
 
 	VERIFIED_PKG_LIST=""
 
+#jh - does this need to be changed to cater for files with spaces too?
 	for FNAME in `cat "${RKH_FILEPROP_LIST}"`; do
 		SYSLNK=""
 		FILENAME=""
@@ -10273,6 +10276,8 @@ file_properties_check() {
 		# file or not. This can indicate files that have
 		# appeared on or disappeared from the system.
 		#
+
+		FNAME=`echo "${FNAME}" | sed -e 's/^"\(.*\)"$/\1/'`
 
 		if [ -f "${FNAME}" -o -h "${FNAME}" ]; then
 			FILE_EXISTS=1
@@ -10328,8 +10333,8 @@ ${RKHLINE}"
 				elif [ -n "${RKHLINE}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text ${FNAME}`"
-					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text ${FNAME}`"
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
+					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
 				fi
 
 				continue
@@ -10691,7 +10696,7 @@ ${RKHLINE}"
 						if [ $DEPENDENCY_ERR -eq 1 ]; then
 							DEPENDENCY_ERR=0
 							PKGMGR_VERIFY_RESULT=""
-							display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text ${FNAME}`"
+							display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text \"${FNAME}\"`"
 						else
 							PKGMGR_VERIFY_RESULT="5"
 						fi
@@ -10735,7 +10740,7 @@ ${RKHLINE}"
 
 									if [ ! -e "${FNAME}" -a $VERBOSE_LOGGING -eq 1 ]; then
 										# Only log this if it is a broken link.
-										display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}`" "`name2text ${SYSLNK}`"
+										display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text \"${FNAME}\"`" "`name2text \"${SYSLNK}\"`"
 									fi
 								fi
 							fi
@@ -10754,7 +10759,7 @@ ${RKHLINE}"
 								if [ -n "`${HASH_CMD} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
 										SYSHASH="${RKHHASH}"
-										display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text ${FNAME}`"
+										display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text \"${FNAME}\"`"
 									else
 										DEPENDENCY_ERR=1
 									fi
@@ -10781,7 +10786,7 @@ ${RKHLINE}"
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
-											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text ${FNAME}`" "`name2text ${SYSLNK}`"
+											display --to LOG --type INFO FILE_PROP_BROKEN_LINK_WL_TGT "`name2text \"${FNAME}\"`" "`name2text \"${SYSLNK}\"`"
 										fi
 									else
 										TEST_RESULT="${TEST_RESULT} hashchanged"
@@ -10987,7 +10992,7 @@ ${RKHLINE}"
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR=${SYSLNK}
-											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
+											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR}\"`"
 										fi
 									else
 										TEST_RESULT="${TEST_RESULT} verify:linkchanged"
@@ -11016,7 +11021,7 @@ ${RKHLINE}"
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR="${SYSLNK}"
-											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text ${FNAME}`" "`name2text ${RKHTMPVAR}`"
+											display --to LOG --type INFO FILE_PROP_LINK_WL "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR}\"`"
 										fi
 									else
 										TEST_RESULT="${TEST_RESULT} linkchanged"
@@ -11184,9 +11189,9 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 		#
 
 		if [ -z "${TEST_RESULT}" ]; then
-			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result OK --color GREEN NAME "`name2text ${FNAME}`"
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result OK --color GREEN NAME "`name2text \"${FNAME}\"`"
 		else
-			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text ${FNAME}`"
+			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
 
 			PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
@@ -11198,7 +11203,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 					if [ $RKHTMPVAR2 -eq 0 ]; then
 						RKHTMPVAR2=1
 						display --to LOG --type WARNING FILE_PROP_CHANGED
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text ${FNAME}`"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
 					fi
 
 					case "${RKHTMPVAR}" in
@@ -11215,7 +11220,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 
 						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH "${RKHHASH}"
 
-						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text ${FNAME}`"
+						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text \"${FNAME}\"`"
 						;;
 					permchanged)
 						if [ -z "${SYSPERM}" ]; then
@@ -11277,8 +11282,8 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 						test -z "${RKHLNK}" && RKHLNK="Unavailable"
 						test -z "${SYSLNK}" && SYSLNK="Unavailable"
 
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSLNK "`name2text ${FNAME}`" "`name2text ${SYSLNK}`"
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHLNK "`name2text ${FNAME}`" "`name2text ${RKHLNK}`"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSLNK "`name2text \"${FNAME}\"`" "`name2text \"${SYSLNK}\"`"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHLNK "`name2text \"${FNAME}\"`" "`name2text \"${RKHLNK}\"`"
 						;;
 					esac
 					;;
@@ -11286,9 +11291,9 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 					if [ $RKHTMPVAR3 -eq 0 ]; then
 						RKHTMPVAR3=1
 						display --to LOG --type WARNING FILE_PROP_VRFY
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text ${FNAME}`"
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
 
-						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text ${FNAME}`"
+						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text \"${FNAME}\"`"
 					fi
 
 					case "${RKHTMPVAR}" in
@@ -11296,7 +11301,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
 
 						if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
-							display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text ${FNAME}`"
+							display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text \"${FNAME}\"`"
 						fi
 						;;
 					verify:permchanged)
@@ -11320,55 +11325,55 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 					esac
 					;;
 				norkhline)
-					display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "`name2text \"${FNAME}\"`"
 					;;
 				norkhhash)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHHASH "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHHASH "`name2text \"${FNAME}\"`"
 					;;
 				norkhperm)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHPERM "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHPERM "`name2text \"${FNAME}\"`"
 					;;
 				norkhuid)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHUID "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHUID "`name2text \"${FNAME}\"`"
 					;;
 				norkhgid)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHGID "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHGID "`name2text \"${FNAME}\"`"
 					;;
 				norkhinode)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHINODE "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHINODE "`name2text \"${FNAME}\"`"
 					;;
 				norkhsize)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHSIZE "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHSIZE "`name2text \"${FNAME}\"`"
 					;;
 				norkhdtm)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHDTM "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHDTM "`name2text \"${FNAME}\"`"
 					;;
 				norkhlnk)
-					display --to LOG --type WARNING FILE_PROP_NO_RKHLNK "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_RKHLNK "`name2text \"${FNAME}\"`"
 					;;
 				sysattrunavail)
-					display --to LOG --type WARNING FILE_PROP_NO_SYSATTR "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_NO_SYSATTR "`name2text \"${FNAME}\"`"
 					;;
 				write)
-					display --to LOG --type WARNING FILE_PROP_WRITE "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_WRITE "`name2text \"${FNAME}\"`"
 					;;
 				syspermunavail)
-					display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "`name2text ${FNAME}`"
+					display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "`name2text \"${FNAME}\"`"
 					;;
 				immutable)
 					if [ $IMMUTABLE_SET -eq 0 ]; then
-						display --to LOG --type WARNING FILE_PROP_IMMUT "`name2text ${FNAME}`"
+						display --to LOG --type WARNING FILE_PROP_IMMUT "`name2text \"${FNAME}\"`"
 					else
-						display --to LOG --type WARNING FILE_PROP_IMMUT_NOT_SET "`name2text ${FNAME}`"
+						display --to LOG --type WARNING FILE_PROP_IMMUT_NOT_SET "`name2text \"${FNAME}\"`"
 					fi
 					;;
 				script)
 					test -n "${BASENAME_CMD}" && RKHTMPVAR4=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR4=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 					if [ "${RKHTMPVAR4}" = "rkhunter" ]; then
-						display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "`name2text ${FNAME}`" "${SYSSCRIPT}"
+						display --to LOG --type WARNING FILE_PROP_SCRIPT_RKH "`name2text \"${FNAME}\"`" "${SYSSCRIPT}"
 					else
-						display --to LOG --type WARNING FILE_PROP_SCRIPT "`name2text ${FNAME}`" "${SYSSCRIPT}"
+						display --to LOG --type WARNING FILE_PROP_SCRIPT "`name2text \"${FNAME}\"`" "${SYSSCRIPT}"
 					fi
 					;;
 				esac
@@ -11395,7 +11400,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 					;;
 				esac
 
-				display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" "${RKHTMPVAR}"
+				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" "${RKHTMPVAR}"
 			done
 		fi
 	done
@@ -11437,8 +11442,8 @@ File:${RKH_CC}:${FNAME}:.*"
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 					PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
-					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text ${FNAME}`"
-					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text ${FNAME}`"
+					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
+					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
 				fi
 			fi
 		done
@@ -12857,19 +12862,19 @@ possible_rootkit_file_dir_checks() {
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text ${FNAME}`" possible_rkt_files
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text ${FNAME}`"
+					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" possible_rkt_files
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${FNAME}\"`"
 				else
 					FOUND=1
 					FOUNDDIRS="${FOUNDDIRS}
 ${FNAME}:${INFO}"
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text ${FNAME}`"
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${FNAME}\"`"
 					fi
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text ${FNAME}`"
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${FNAME}\"`"
 			fi
 			;;
 		file)
@@ -12877,19 +12882,19 @@ ${FNAME}:${INFO}"
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_files
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text ${FNAME}`"
+					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" possible_rkt_files
+					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 				else
 					FOUND=1
 					FOUNDFILES="${FOUNDFILES}
 ${FNAME}:${INFO}"
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text ${FNAME}`"
+						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 					fi
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text ${FNAME}`"
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 			fi
 			;;
 		*)
@@ -12921,7 +12926,7 @@ ${FNAME}:${INFO}"
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_FILE_FOUND "`name2text ${FILE}`" "${INFO}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_FILE_FOUND "`name2text \"${FILE}\"`" "${INFO}"
 		done
 
 		FOUNDDIRS=`echo "${FOUNDDIRS}" | sed -e '/^$/d'`
@@ -12933,7 +12938,7 @@ ${FNAME}:${INFO}"
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_DIR_FOUND "`name2text ${FILE}`" "${INFO}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_DIR_FOUND "`name2text \"${FILE}\"`" "${INFO}"
 		done
 
 		IFS=$RKHIFS
@@ -12973,7 +12978,7 @@ ${DIR}"
 			RKHTMPVAR2="${RKHTMPVAR2} ${DIR}"
 
 			if [ -n "${FIND_CMD}" ]; then
-				for FNAME in `${FIND_CMD} ${DIR} -type f -a ! -type l 2>/dev/null`; do
+				for FNAME in `${FIND_CMD} "${DIR}" -type f -a ! -type l 2>/dev/null`; do
 					RC_PATHS="${RC_PATHS}
 ${FNAME}"
 				done
@@ -13080,9 +13085,9 @@ possible_rootkit_string_checks() {
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${FILESTRING}" possible_rkt_strings
+						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" possible_rkt_strings
 					elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_strings
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" possible_rkt_strings
 					else
 						FOUND=1
 						STRINGFOUND=1
@@ -13114,9 +13119,9 @@ ${FNAME}:${FILESTRING}:${INFO}"
 						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${FILESTRING}" possible_rkt_strings
+							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" possible_rkt_strings
 						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" possible_rkt_strings
+							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" possible_rkt_strings
 						else
 							FOUND=1
 							STRINGFOUND=1
@@ -13174,7 +13179,7 @@ ${FNAME}:${FILESTRING}:${INFO}"
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "`name2text ${FNAME}`" "${INFO}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "`name2text \"${FNAME}\"`" "${INFO}"
 		done
 
 		IFS=$RKHIFS
@@ -13382,7 +13387,7 @@ ${PROC} ${PID} ${FNAME}"
 					PID=`echo "$LINE" | cut -d' ' -f2`
 					FNAME=`echo "$LINE" | cut -d' ' -f3-`
 
-					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_DELETED_FILES_FOUND_DATA "${PROC}" "${PID}" "`name2text ${FNAME}`"
+					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_DELETED_FILES_FOUND_DATA "${PROC}" "${PID}" "`name2text \"${FNAME}\"`"
 				done
 			fi
 
@@ -13393,7 +13398,7 @@ ${PROC} ${PID} ${FNAME}"
 					PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
 					FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f2-`
 
-					display --to LOG --type INFO ROOTKIT_MALWARE_DELETED_FILES_WL "${PROC}" "`name2text ${FNAME}`"
+					display --to LOG --type INFO ROOTKIT_MALWARE_DELETED_FILES_WL "${PROC}" "`name2text \"${FNAME}\"`"
 				else
 					display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${RKHTMPVAR}"
 				fi
@@ -13467,7 +13472,7 @@ ${PROC} ${PID} ${FNAME}"
 						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "`name2text ${FILENAME}`" running_procs
+							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FILENAME}\"`" running_procs
 						else
 							FOUND=1
 							SUSP_FILES="${SUSP_FILES}
@@ -13748,7 +13753,7 @@ ${RKHTMPVAR}"
 				IFS=$IFSNL
 
 				for RKHTMPVAR in ${HIDDEN_PROCS}; do
-					display --to LOG --type PLAIN --log-indent 9 NAME "`name2text ${RKHTMPVAR}`"
+					display --to LOG --type PLAIN --log-indent 9 NAME "`name2text \"${RKHTMPVAR}\"`"
 				done
 
 				IFS=$RKHIFS
@@ -13797,15 +13802,15 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" other_malware
+				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" other_malware
 			else
 				FOUND=1
 				FOUNDFILES="${FOUNDFILES} ${FNAME}"
 			fi
 
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text ${FNAME}`"
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text ${FNAME}`"
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
 		fi
 	done
 
@@ -13820,7 +13825,7 @@ ${RKHTMPVAR}"
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
 
 		for FNAME in ${FOUNDFILES}; do
-			display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "`name2text ${FNAME}`"
+			display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "`name2text \"${FNAME}\"`"
 		done
 	fi
 
@@ -13841,15 +13846,15 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text ${DIR}`" other_malware
+				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${DIR}\"`" other_malware
 			else
 				FOUND=1
 				FOUNDDIRS="${FOUNDDIRS} ${DIR}"
 			fi
 
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text ${DIR}`"
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text ${DIR}`"
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
 		fi
 	done
 
@@ -13864,7 +13869,7 @@ ${RKHTMPVAR}"
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
 
 		for DIR in ${FOUNDDIRS}; do
-			display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_DIR_FOUND "`name2text ${DIR}`"
+			display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_DIR_FOUND "`name2text \"${DIR}\"`"
 		done
 	fi
 
@@ -13908,15 +13913,15 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" other_malware
+				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" other_malware
 			else
 				FOUND=1
 				FOUNDFILES="${FOUNDFILES} ${FNAME}"
 			fi
 
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text ${FNAME}`"
+			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text ${FNAME}`"
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 		fi
 	done
 
@@ -13931,7 +13936,7 @@ ${RKHTMPVAR}"
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
 
 		for FNAME in ${FOUNDFILES}; do
-			display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text ${FNAME}`"
+			display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text \"${FNAME}\"`"
 		done
 	fi
 
@@ -14279,7 +14284,7 @@ trojan_checks() {
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_APACHE
 
 		for FILE in ${FOUNDFILES}; do
-			display --to LOG --type WARNING ROOTKIT_TROJAN_APACHE_FOUND "`name2text ${FILE}`"
+			display --to LOG --type WARNING ROOTKIT_TROJAN_APACHE_FOUND "`name2text \"${FILE}\"`"
 		done
 	fi
 
@@ -14903,11 +14908,11 @@ do_network_port_checks() {
 
 		case "${FOUND}" in
 		path_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text ${FNAME}`"
+			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
 			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		trusted_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text ${FNAME}`"
+			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
 			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		port_whitelisted)
@@ -14923,7 +14928,7 @@ do_network_port_checks() {
 
 			display --to LOG --type PLAIN --log-indent 4 --result FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 
-			test -n "${FNAME}" && FNAME=" by `name2text ${FNAME}`"
+			test -n "${FNAME}" && FNAME=" by `name2text \"${FNAME}\"`"
 
 			display --to LOG --type WARNING NETWORK_PORTS_BKDOOR_FOUND "${PROTO}" "${PORT}" "${FNAME}" "${DESCRIPTION}"
 			;;
@@ -15038,10 +15043,10 @@ do_network_hidden_port_checks() {
 
 				case "${FOUND}" in
 				path_whitelisted)
-					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text ${FNAME}`"
+					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
 					;;
 				trusted_whitelisted)
-					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text ${FNAME}`"
+					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
 					;;
 				port_whitelisted)
 					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
@@ -15072,7 +15077,7 @@ ${PROTO}:${PORT}:${FNAME}"
 				if [ -z "${FNAME}" ]; then
 					display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_CHK "${PROTO}" "${PORT}"
 				else
-					display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_CHK_NAME "${PROTO}" "${PORT}" "`name2text ${FNAME}`"
+					display --to LOG --type PLAIN --log-indent 9 NETWORK_HIDDEN_PORTS_CHK_NAME "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
 				fi
 			done
 
@@ -15301,7 +15306,7 @@ ${PID}:${NAME}"
 			PID=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			NAME=`echo "${RKHTMPVAR}" | cut -d: -f2-`
 
-			display --to LOG --type WARNING NETWORK_PACKET_CAP_FOUND "`name2text ${NAME}`" "${PID}"
+			display --to LOG --type WARNING NETWORK_PACKET_CAP_FOUND "`name2text \"${NAME}\"`" "${PID}"
 		done
 
 		IFS=$RKHIFS
@@ -15313,7 +15318,7 @@ ${PID}:${NAME}"
 	for NAME in ${WHITEPROC}; do
 		test -z "${NAME}" && continue
 
-		display --to LOG --type INFO NETWORK_PACKET_CAP_WL "`name2text ${NAME}`"
+		display --to LOG --type INFO NETWORK_PACKET_CAP_WL "`name2text \"${NAME}\"`"
 	done
 
 	IFS=$RKHIFS
@@ -15462,9 +15467,9 @@ ${STRING}:${INFO}"
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
 					STRING=`echo ${STRING} | sed -e 's/\\\//g'`
-					display --to LOG --type INFO FILE_PROP_WL_STR "`name2text ${FNAME}`" "${STRING}" startup_malware
+					display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${STRING}" startup_malware
 				elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text ${FNAME}`" startup_malware
+					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" startup_malware
 				else
 					FOUND=1
 
@@ -15502,7 +15507,7 @@ ${FNAME}:${STRING}:${INFO}"
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
-			display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "`name2text ${FNAME}`" "${INFO}"
+			display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "`name2text \"${FNAME}\"`" "${INFO}"
 		done
 
 		IFS=$RKHIFS
@@ -15867,7 +15872,7 @@ ${RKHTMPVAR}"
 	if [ -s "/etc/passwd" ]; then
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*::' /etc/passwd | cut -d: -f1`; do
+		for RKHTMPVAR in `grep '^[^:]*::' '/etc/passwd' | cut -d: -f1`; do
 			# Ignore any NIS/YP entries
 			test "${RKHTMPVAR}" = "+" && continue
 
@@ -16315,7 +16320,7 @@ do_system_config_files_check() {
 
 			FILEFOUND="${FILEFOUND} ${FTYPE} "
 
-			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" "${FTYPE}" "`name2text ${FNAME}`"
+			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" "${FTYPE}" "`name2text \"${FNAME}\"`"
 
 
 			# Next see if the configuration file allows remote logging.
@@ -16408,7 +16413,7 @@ do_dev_whitelist_check() {
 	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "`name2text ${RKHTMPVAR}`"
+		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "`name2text \"${RKHTMPVAR}\"`"
 	else
 		FOUNDFILES="${FOUNDFILES}
 ${RKHTMPVAR}: ${FTYPE}"
@@ -16528,7 +16533,7 @@ do_filesystem_check() {
 				FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
 				FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
 
-				display --to LOG --type PLAIN --log-indent 9 NAME "`name2text ${FNAME}`: ${FTYPE}"
+				display --to LOG --type PLAIN --log-indent 9 NAME "`name2text \"${FNAME}\"`: ${FTYPE}"
 			done
 
 			IFS=$RKHIFS
@@ -16617,14 +16622,14 @@ ${RKHTMPVAR}"
 
 		if [ -n "`echo \"${FTYPE}\" | grep 'directory'`" ]; then
 			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "`name2text ${FNAME}`"
+				display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "`name2text \"${FNAME}\"`"
 			else
 				FOUNDDIRS="${FOUNDDIRS}
 ${FNAME}: ${FTYPE}"
 			fi
 		else
 			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "`name2text ${FNAME}`"
+				display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "`name2text \"${FNAME}\"`"
 			else
 				FOUNDFILES="${FOUNDFILES}
 ${FNAME}: ${FTYPE}"
@@ -16654,9 +16659,9 @@ ${FNAME}: ${FTYPE}"
 			FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
 
 			if [ "${FTYPE}" = "directory" ]; then
-				display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "`name2text ${FNAME}`"
+				display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "`name2text \"${FNAME}\"`"
 			else
-				display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "`name2text ${FNAME}`: ${FTYPE}"
+				display --to LOG --type WARNING FILESYSTEM_HIDDEN_DIR_FOUND "`name2text \"${FNAME}\"`: ${FTYPE}"
 			fi
 		done
 
@@ -16664,7 +16669,7 @@ ${FNAME}: ${FTYPE}"
 			FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
 			FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
 
-			display --to LOG --type WARNING FILESYSTEM_HIDDEN_FILE_FOUND "`name2text ${FNAME}`: ${FTYPE}"
+			display --to LOG --type WARNING FILESYSTEM_HIDDEN_FILE_FOUND "`name2text \"${FNAME}\"`: ${FTYPE}"
 		done
 
 		IFS=$RKHIFS
@@ -16703,7 +16708,7 @@ ${FNAME}"
 			IFS=$IFSNL
 
 			for FNAME in ${MISSINGFILES}; do
-				display --to LOG --type WARNING FILESYSTEM_LOGFILE_MISSING_FOUND "`name2text ${FNAME}`"
+				display --to LOG --type WARNING FILESYSTEM_LOGFILE_MISSING_FOUND "`name2text \"${FNAME}\"`"
 			done
 
 			IFS=$RKHIFS
@@ -16753,11 +16758,11 @@ ${FNAME}"
 			IFS=$IFSNL
 
 			for FNAME in ${EMPTYFILES}; do
-				display --to LOG --type WARNING FILESYSTEM_LOGFILE_EMPTY_FOUND "`name2text ${FNAME}`"
+				display --to LOG --type WARNING FILESYSTEM_LOGFILE_EMPTY_FOUND "`name2text \"${FNAME}\"`"
 			done
 
 			for FNAME in ${MISSINGFILES}; do
-				display --to LOG --type WARNING FILESYSTEM_LOGFILE_MISSING_FOUND "`name2text ${FNAME}`"
+				display --to LOG --type WARNING FILESYSTEM_LOGFILE_MISSING_FOUND "`name2text \"${FNAME}\"`"
 			done
 
 			IFS=$RKHIFS
@@ -19933,7 +19938,7 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 		IFS=$IFSNL
 
 		for FNAME in ${USER_FILE_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 		done
 
 		IFS=$RKHIFS
@@ -19945,7 +19950,7 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 		IFS=$IFSNL
 
 		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 		done
 
 		IFS=$RKHIFS
@@ -19957,7 +19962,7 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 		IFS=$IFSNL
 
 		for FNAME in ${USER_DIR_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 		done
 
 		IFS=$RKHIFS
@@ -19969,7 +19974,7 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 		IFS=$IFSNL
 
 		for FNAME in ${USER_EXCLUDE_PROP}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text ${FNAME}`"
+			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 		done
 
 		IFS=$RKHIFS
