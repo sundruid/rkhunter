@@ -437,7 +437,7 @@ display() {
 	LANG_FILE="${DB_PATH}/i18n/${LANGUAGE}"
 
 	if [ -n "${MSG}" ]; then
-		LINE1=`grep "^${MSG}:" "${LANG_FILE}" 2>/dev/null | head ${HEAD_OPT}1 | cut -d: -f2-`
+		LINE1=`grep ${GREP_OPT} "^${MSG}:" "${LANG_FILE}" 2>/dev/null | head ${HEAD_OPT}1 | cut -d: -f2-`
 
 		if [ $RKHCHKLOCALE -eq 1 ]; then
 			LINE1=`echo "${LINE1}" | ${ICONV_CMD} -f UTF-8 -t ${RKHCHRMAP} 2>/dev/null`
@@ -446,7 +446,7 @@ display() {
 
 		if [ -z "${LINE1}" ]; then
 			LANG_FILE="${DB_PATH}/i18n/en"
-			LINE1=`grep "^${MSG}:" "${LANG_FILE}" 2>/dev/null | head ${HEAD_OPT}1 | cut -d: -f2-`
+			LINE1=`grep ${GREP_OPT} "^${MSG}:" "${LANG_FILE}" 2>/dev/null | head ${HEAD_OPT}1 | cut -d: -f2-`
 
 			if [ -z "${LINE1}" ]; then
 				echo "Error: Invalid display - keyword cannot be found: Display line: ${DISPLAY_LINE}"
@@ -470,7 +470,7 @@ display() {
 	if [ $WRITETOLOG -eq 1 ]; then
 		LOGLINE1=`date '+[%H:%M:%S]'`
 
-		test $NL -gt 0 -o $LOGNL -eq 1 && echo "${LOGLINE1}" >>${RKHLOGFILE}
+		test $NL -gt 0 -o $LOGNL -eq 1 && echo "${LOGLINE1}" >>"${RKHLOGFILE}"
 
 		if [ -n "${TYPE}" ]; then
 			LOGLINE1="${LOGLINE1} ${TYPE}: ${LINE1}"
@@ -544,7 +544,7 @@ display() {
 	fi
 
 	if [ $WRITETOLOG -eq 1 ]; then
-		echo $ECHOOPT "${LOGLINE1}" >>${RKHLOGFILE}
+		echo $ECHOOPT "${LOGLINE1}" >>"${RKHLOGFILE}"
 
 		if [ $WARN_MSG -eq 1 ]; then
 			test $SHOWWARNINGSONLY -eq 1 && echo $ECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
@@ -553,13 +553,13 @@ display() {
 			OLDIFS="${IFS}"
 			IFS=$IFSNL
 
-			for LOGLINE1 in `grep "^${MSG}:" "${LANG_FILE}" 2>/dev/null | cut -d: -f2-`; do
+			for LOGLINE1 in `grep ${GREP_OPT} "^${MSG}:" "${LANG_FILE}" 2>/dev/null | cut -d: -f2-`; do
 				if [ $LINE1 -eq 1 ]; then
 					LINE1=0
 					continue
 				else
 					test $SHOWWARNINGSONLY -eq 1 && echo $ECHOOPT "         ${LOGLINE1}"
-					echo $ECHOOPT "           ${LOGLINE1}" >>${RKHLOGFILE}
+					echo $ECHOOPT "           ${LOGLINE1}" >>"${RKHLOGFILE}"
 				fi
 			done
 
@@ -1175,11 +1175,12 @@ check_is_digit() {
 get_temp_file() {
 
 	#
-	# This function will create an empty, unique temporary file.
+	# This function will find a unique pathname which can be
+	# used as a temporary file.
 	#
 	# It takes one parameter which is the pathname for the file,
 	# excluding the suffix. The function will return the pathname
-	# in TEMPFILE.
+	# in TEMPFILE. The pathname itself is not created.
 	#
 
 	TEMPFILE=""
@@ -1188,7 +1189,7 @@ get_temp_file() {
 
 
 	if [ -n "${MKTEMP_CMD}" ]; then
-		TEMPFILE=`${MKTEMP_CMD} ${TEMPFILE_BASE}.XXXXXXXXXX`
+		TEMPFILE=`${MKTEMP_CMD} "${TEMPFILE_BASE}.XXXXXXXXXX"`
 	elif [ -n "$RANDOM" ]; then
 		TEMPFILE="${TEMPFILE_BASE}.$RANDOM"
 	elif [ $BSDOS -eq 1 ]; then
@@ -1443,7 +1444,7 @@ scanrootkit() {
 		THOROUGH) # Search the whole filesystem
 				test -n "${BASENAME_CMD}" && FNAME=`${BASENAME_CMD} "${RKHTMPVAR}"` || FNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
 
-				FILENAMES=`find / -xdev -name "${FNAME}"`
+				FILENAMES=`${FIND_CMD} / -xdev -name "${FNAME}"`
 
 				if [ -z "${FILENAMES}" ]; then
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
@@ -1540,7 +1541,7 @@ ${RKHTMPVAR}"
 			if [ -n "${KSYMS_FILE}" ]; then
 				FNAMEGREP=`echo "${KS}" | sed -e 's/\./\\\./g'`
 
-				if [ -n "`grep \"${FNAMEGREP}\" \"${KSYMS_FILE}\"`" ]; then
+				if [ -n "`grep ${GREP_OPT} \"${FNAMEGREP}\" \"${KSYMS_FILE}\"`" ]; then
 					SCAN_STATUS=1
 					KSYM_FOUND="${KSYM_FOUND}
 ${KS}"
@@ -1747,7 +1748,7 @@ check_commands() {
 	if [ -n "${PERL_CMD}" -a "${PERL_CMD}" != "DISABLED" ]; then
 		if [ -z "${STAT_CMD}" -o "${STAT_CMD}" = "BUILTIN" ]; then
 			if [ -r "${SCRIPT_PATH}/check_modules.pl" ]; then
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl File::stat Getopt::Long 2>/dev/null | grep 'NOT installed'`
+				MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" File::stat Getopt::Long 2>/dev/null | grep 'NOT installed'`
 			else
 				MOD_INSTALLED="module not found"
 			fi
@@ -1770,7 +1771,7 @@ check_commands() {
 
 	if [ -z "${READLINK_CMD}" -o "${READLINK_CMD}" = "BUILTIN" ]; then
 		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
-	elif [ -n "`${READLINK_CMD} -f ${SCRIPT_PATH}/readlink.sh 2>&1 >/dev/null`" ]; then
+	elif [ -n "`${READLINK_CMD} -f \"${SCRIPT_PATH}/readlink.sh\" 2>&1 >/dev/null`" ]; then
 		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
 	fi
 
@@ -2624,7 +2625,7 @@ get_mailonwarn_option() {
 						fi
 					else
 						LEAVE=1
-						echo "Invalid MAIL_CMD configuration option - command '${MCMD}' is non-existent or not executable."
+						echo "Invalid MAIL_CMD configuration option: command is non-existent or not executable: ${MCMD}"
 					fi
 				else
 					LEAVE=1
@@ -2700,7 +2701,7 @@ get_webcmd_option() {
 					test -n "${BASENAME_CMD}" && RKHWEBCMD_BASE=`${BASENAME_CMD} "${WC}"` || RKHWEBCMD_BASE=`echo "${WC}" | sed -e 's:^.*/::'`
 				else
 					LEAVE=1
-					echo "Invalid WEB_CMD configuration option - command '${WCMD}' is non-existent or not executable."
+					echo "Invalid WEB_CMD configuration option: command is non-existent or not executable: ${WCMD}"
 				fi
 			else
 				LEAVE=1
@@ -3853,7 +3854,7 @@ test_epoch_cmd() {
 	RKHTMPVAR=$1
 
 	if [ -n "`${RKHTMPVAR} --date '5 seconds ago' '+%s' 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
-		EPOCH_DATE_CMD=${RKHTMPVAR}
+		EPOCH_DATE_CMD="${RKHTMPVAR}"
 	fi
 
 	return
@@ -4439,9 +4440,9 @@ get_if_prelinked() {
 		fi
 
 		if [ -n "${LDD_CMD}" ]; then
-			if [ -f "/lib/libdl.so.?" ]; then
+			if [ -f /lib/libdl.so.? ]; then
 				LIBSAFE_TEST2=`${LDD_CMD} /lib/libdl.so.? | grep 'libsafe' 2>&1`
-			elif [ -f "/lib64/libdl.so.?" ]; then
+			elif [ -f /lib64/libdl.so.? ]; then
 				LIBSAFE_TEST2=`${LDD_CMD} /lib64/libdl.so.? | grep 'libsafe' 2>&1`
 			fi
 		fi
@@ -4490,7 +4491,7 @@ get_md5_hash_function() {
 		test -z "${HFUNC}" && HFUNC=`find_cmd md5`
 
 		if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::MD5 2>/dev/null | grep 'Digest::MD5 installed'`
+			MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::MD5 2>/dev/null | grep 'Digest::MD5 installed'`
 
 			test -n "${MOD_INSTALLED}" && echo "${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl Digest::MD5 0"
 		else
@@ -4615,32 +4616,32 @@ get_hash_function() {
 			MOD_INSTALLED=""
 
 			if [ $SHA_SIZE -eq 1 ]; then
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA1 Digest::SHA::PurePerl 2>/dev/null`
+				MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA1 Digest::SHA::PurePerl 2>/dev/null`
 			elif [ $SHA_SIZE -eq 224 ]; then
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA::PurePerl 2>/dev/null`
+				MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA::PurePerl 2>/dev/null`
 			else
-				MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::SHA Digest::SHA256 Digest::SHA::PurePerl 2>/dev/null`
+				MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA256 Digest::SHA::PurePerl 2>/dev/null`
 			fi
 
 			USE_MOD=`echo "${MOD_INSTALLED}" | grep -v 'NOT installed' | head ${HEAD_OPT}1 | cut -d' ' -f1`
 
 			if [ -n "${USE_MOD}" ]; then
-				HF="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl ${USE_MOD} $SHA_SIZE"
+				HF="${PERL_CMD} "${SCRIPT_PATH}/filehashsha.pl" ${USE_MOD} $SHA_SIZE"
 			fi
 		fi
 
 		HASH_FUNC="${HF}"
 	elif [ "${HASH_FUNC}" = "RIPEMD160" ]; then
-		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Crypt::RIPEMD160 2>/dev/null`
+		MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Crypt::RIPEMD160 2>/dev/null`
 
 		if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Crypt::RIPEMD160 installed'`" ]; then
-			HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl Crypt::RIPEMD160 0"
+			HASH_FUNC="${PERL_CMD} "${SCRIPT_PATH}/filehashsha.pl" Crypt::RIPEMD160 0"
 		fi
 	elif [ "${HASH_FUNC}" = "WHIRLPOOL" ]; then
-		MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Digest::Whirlpool 2>/dev/null`
+		MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::Whirlpool 2>/dev/null`
 
 		if [ -n "`echo \"${MOD_INSTALLED}\" | grep 'Digest::Whirlpool installed'`" ]; then
-			HASH_FUNC="${PERL_CMD} ${SCRIPT_PATH}/filehashsha.pl Digest::Whirlpool 0"
+			HASH_FUNC="${PERL_CMD} "${SCRIPT_PATH}/filehashsha.pl" Digest::Whirlpool 0"
 		fi
 	fi
 
@@ -4697,10 +4698,10 @@ get_hash_function() {
 			fi
 		elif [ $HASH_OPT -eq 1 ]; then
 			LEAVE=1
-			echo "Invalid '--hash' option: command '${HASH_CMD}' is non-existent or not executable."
+			echo "Invalid '--hash' option: command is non-existent or not executable: ${HASH_CMD}"
 		else
 			LEAVE=1
-			echo "Invalid HASH_FUNC configuration option: command '${HASH_CMD}' is non-existent or not executable."
+			echo "Invalid HASH_FUNC configuration option: command is non-existent or not executable: ${HASH_CMD}"
 		fi
 	elif [ $HASH_OPT -eq 1 ]; then
 		LEAVE=1
@@ -5468,12 +5469,12 @@ ${FNAME}"
 						if [ -z "${RKHTMPVAR}" ]; then
 							if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 								LEAVE=1
-								echo "Invalid ${WHICH_OPT} configuration option: Broken link found: ${FNAME}"
+								echo "Invalid ${WHICH_OPT} configuration option: Broken link found: `name2text \"${FNAME}\"`"
 								continue
 							fi
 						elif [ "${RKHTMPVAR}" = "/" ]; then
 							LEAVE=1
-							echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: ${FNAME} -> /"
+							echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: `name2text \"${FNAME}\"` -> /"
 							continue
 						fi
 
@@ -6025,6 +6026,8 @@ rkh_dat_set_version() {
 	# for the rkhunter.dat file. It looks for an old value, and adds
 	# one to it. If there is no value then simply start at zero.
 	#
+	# Note that the new temporary rkhunter.dat file is used.
+	#
 
 	TODAY=`date +%Y%m%d 2>/dev/null`
 
@@ -6044,7 +6047,7 @@ rkh_dat_set_version() {
 		NEWVER="00"
 	fi
 
-	echo "Version:${TODAY}${NEWVER}" >>${RKHDAT_TMPFILE}
+	echo "Version:${TODAY}${NEWVER}" >>"${RKHDAT_TMPFILE}"
 
 	return
 }
@@ -6386,7 +6389,7 @@ rkh_dat_set_file_properties() {
 					fi
 
 					if [ -n "${RKHTMPVAR}" ]; then
-						echo "${RKHTMPVAR}" >>${RKHDAT_TMPFILE}
+						echo "${RKHTMPVAR}" >>"${RKHDAT_TMPFILE}"
 						IFS=$IFSNL
 						continue
 					fi
@@ -6441,7 +6444,7 @@ ${DIR}:1"
 			#
 
 			if [ $NOVRFYFILE -eq 0 ]; then
-				RKHTMPVAR=`${RPM_CMD} -qf ${FNAME} --queryformat '%{NAME}\n' 2>/dev/null`
+				RKHTMPVAR=`${RPM_CMD} -qf "${FNAME}" --queryformat '%{NAME}\n' 2>/dev/null`
 				ERRCODE=$?
 
 				if [ $ERRCODE -eq 0 ]; then
@@ -6452,7 +6455,7 @@ ${DIR}:1"
 					FILE_IS_PKGD=1
 					PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1`
 
-					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' ${FNAME} 2>/dev/null | grep ":${FNAMEGREP}\$"`
+					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' "${FNAME}" 2>/dev/null | grep ":${FNAMEGREP}\$"`
 					ERRCODE=$?
 
 					#
@@ -6468,7 +6471,7 @@ ${DIR}:1"
 							RKHTMPVAR3="/usr${FNAMEGREP}"
 						fi
 
-						RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' ${FNAME} 2>/dev/null | grep ":${RKHTMPVAR3}\$"`
+						RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' "${FNAME}" 2>/dev/null | grep ":${RKHTMPVAR3}\$"`
 						ERRCODE=$?
 					fi
 
@@ -6637,7 +6640,7 @@ ${DIR}:1"
 					if [ -n "${PKGNAME}" ]; then
 						if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
 							FILNAM=`echo "${FNAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
-							SYSHASH=`egrep "( |\./)${FILNAM}\$" /var/lib/dpkg/info/${PKGNAME}.md5sums 2>/dev/null | cut -d' ' -f1`
+							SYSHASH=`egrep "( |\./)${FILNAM}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" 2>/dev/null | cut -d' ' -f1`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
 					fi
@@ -6744,7 +6747,7 @@ ${DIR}:1"
 		# Check if the symbolic link has any colon characters in it.
 		SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
 
-		echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>${RKHDAT_TMPFILE}
+		echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
 
 		IFS=$IFSNL
 	done
@@ -6824,14 +6827,14 @@ create_rkh_file_prop_list() {
 	# used for the file properties check.
 	#
 
-#jh - should use a temp file here
-	rm -f "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
+	get_temp_file "${RKHTMPDIR}/rkh_prop_list.new"
+	touch "${TEMPFILE}"
 
 	IFS=$IFSNL
 
 	for DIR in ${PROP_DIR_LIST}; do
 		for FNAME in ${PROP_FILE_LIST}; do
-			echo "${DIR}/${FNAME}" >>${RKH_FILEPROP_LIST}
+			echo "${DIR}/${FNAME}" >>"${TEMPFILE}"
 		done
 	done
 
@@ -6853,14 +6856,17 @@ create_rkh_file_prop_list() {
 				test -n "`echo \"${USER_EXCLUDE_PROP}\" | grep \"^${FNAMEGREP}$\"`" && continue
 			fi
 
-			test -z "`grep \"^${FNAMEGREP}$\" ${RKH_FILEPROP_LIST} 2>/dev/null`" && echo "${FNAME}" >>${RKH_FILEPROP_LIST}
+			test -z "`grep \"^${FNAMEGREP}$\" "${TEMPFILE}" 2>/dev/null`" && echo "${FNAME}" >>"${TEMPFILE}"
 		done
 	fi
 
 	IFS=$RKHIFS
 
 
+	cp -f "${TEMPFILE}" "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
 	chmod 640 "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
+
+	rm -f "${TEMPFILE}" >/dev/null 2>&1
 
 	return
 }
@@ -6903,7 +6909,8 @@ do_prop_update() {
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.dat"
-	RKHDAT_TMPFILE=$TEMPFILE
+	RKHDAT_TMPFILE="${TEMPFILE}"
+	touch "${RKHDAT_TMPFILE}"
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE}"
 
@@ -6920,10 +6927,10 @@ do_prop_update() {
 
 	rkh_dat_get_os_info
 
-	echo "Host:${HOST_NAME}" >>${RKHDAT_TMPFILE}
+	echo "Host:${HOST_NAME}" >>"${RKHDAT_TMPFILE}"
 
 	if [ -n "${ARCH}" ]; then
-		echo "Arch:${ARCH}" >>${RKHDAT_TMPFILE}
+		echo "Arch:${ARCH}" >>"${RKHDAT_TMPFILE}"
 		display --to LOG --type INFO PROPUPD_ARCH_FOUND "${ARCH}"
 	fi
 
@@ -6935,14 +6942,14 @@ do_prop_update() {
 	fi
 
 	if [ -n "${OSNAME}" ]; then
-		echo "OS:${OSNAME}" >>${RKHDAT_TMPFILE}
+		echo "OS:${OSNAME}" >>"${RKHDAT_TMPFILE}"
 		display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${OSNAME}"
 	fi
 
 	if [ $PRELINKED -eq 0 ]; then
-		echo "Prelinked:No" >>${RKHDAT_TMPFILE}
+		echo "Prelinked:No" >>"${RKHDAT_TMPFILE}"
 	else
-		echo "Prelinked:Yes" >>${RKHDAT_TMPFILE}
+		echo "Prelinked:Yes" >>"${RKHDAT_TMPFILE}"
 	fi
 
 	#
@@ -6953,24 +6960,24 @@ do_prop_update() {
 	#
 
 	if ! `check_test hashes` && test $ENDIS_OPT -eq 0; then
-		echo "Hash:Disabled" >>${RKHDAT_TMPFILE}
+		echo "Hash:Disabled" >>"${RKHDAT_TMPFILE}"
 	elif [ -n "${PRELINK_HASH}" ]; then
-		echo "Hash:${PRELINK_HASH}" >>${RKHDAT_TMPFILE}
+		echo "Hash:${PRELINK_HASH}" >>"${RKHDAT_TMPFILE}"
 	else
-		echo "Hash:${HASH_FUNC}" >>${RKHDAT_TMPFILE}
+		echo "Hash:${HASH_FUNC}" >>"${RKHDAT_TMPFILE}"
 	fi
 
-	echo "Pkgmgr:${PKGMGR}" >>${RKHDAT_TMPFILE}
+	echo "Pkgmgr:${PKGMGR}" >>"${RKHDAT_TMPFILE}"
 
 	if ! `check_test attributes` && test $ENDIS_OPT -eq 0; then
-		echo "Attributes:Disabled" >>${RKHDAT_TMPFILE}
+		echo "Attributes:Disabled" >>"${RKHDAT_TMPFILE}"
 	elif [ -z "${STAT_CMD}" ]; then
-		echo "Attributes:Nostatcmd" >>${RKHDAT_TMPFILE}
+		echo "Attributes:Nostatcmd" >>"${RKHDAT_TMPFILE}"
 	else
-		echo "Attributes:Stored" >>${RKHDAT_TMPFILE}
+		echo "Attributes:Stored" >>"${RKHDAT_TMPFILE}"
 	fi
 
-	echo "FormatVersion:1" >>${RKHDAT_TMPFILE}
+	echo "FormatVersion:1" >>"${RKHDAT_TMPFILE}"
 
 
 	#
@@ -7112,7 +7119,8 @@ get_next_mirror() {
 	#
 
 	get_temp_file "${RKHTMPDIR}/mirrors.dat"
-	MIRRORS_FILE=$TEMPFILE
+	MIRRORS_FILE="${TEMPFILE}"
+	touch "${MIRRORS_FILE}"
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${MIRRORS_FILE}"
 
@@ -7122,13 +7130,13 @@ get_next_mirror() {
 	# mirrors, and finally the mirror we are about to use.
 	#
 
-	echo "${MIRRORSVERSION}" >${MIRRORS_FILE}
+	echo "${MIRRORSVERSION}" >"${MIRRORS_FILE}"
 
 	for RKHM in ${OTHERMIRRORS}; do
-		echo "${RKHM}" >>${MIRRORS_FILE}
+		echo "${RKHM}" >>"${MIRRORS_FILE}"
 	done;
 
-	echo "${MIRROR}" >>${MIRRORS_FILE}
+	echo "${MIRROR}" >>"${MIRRORS_FILE}"
 
 	MIRROR=`echo "${MIRROR}" | cut -d= -f2-`
 
@@ -7137,7 +7145,7 @@ get_next_mirror() {
 	# Move the new file into place, and delete the temporary file.
 	#
 
-	cat "${MIRRORS_FILE}" >${DB_PATH}/mirrors.dat
+	cat "${MIRRORS_FILE}" >"${DB_PATH}/mirrors.dat"
 
 	rm -f "${MIRRORS_FILE}" >/dev/null 2>&1
 
@@ -7250,25 +7258,25 @@ download_file() {
 
 		case "${RKHWEBCMD_BASE}" in
 		wget)
-			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -q -O ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -q -O \"${OUTPUT_FILE}\" ${MIRROR}${URL} 2>/dev/null"
 			;;
 		curl)
-			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} --fail --output ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} --fail --output \"${OUTPUT_FILE}\" ${MIRROR}${URL} 2>/dev/null"
 			;;
 		bget)
-			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} --out ${OUTPUT_FILE} ${MIRROR}${URL} 2>/dev/null"
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} --out \"${OUTPUT_FILE}\" ${MIRROR}${URL} 2>/dev/null"
 			;;
 		links|elinks)
-			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -no-home 1 -source ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -no-home 1 -source ${MIRROR}${URL} >\"${OUTPUT_FILE}\" 2>/dev/null"
 			;;
 		lynx)
-			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -source ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} -source ${MIRROR}${URL} >\"${OUTPUT_FILE}\" 2>/dev/null"
 			;;
 		GET)
-			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} ${MIRROR}${URL} >\"${OUTPUT_FILE}\" 2>/dev/null"
 			;;
 		*)
-			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} ${MIRROR}${URL} >${OUTPUT_FILE} 2>/dev/null"
+			CMD="${RKHWEBCMD} ${RKHWEBCMD_OPTS} ${MIRROR}${URL} >\"${OUTPUT_FILE}\" 2>/dev/null"
 			;;
 		esac
 
@@ -7417,7 +7425,7 @@ do_i18n_update() {
 				if [ $ERRCODE -eq 0 ]; then
 					test $RET_CODE -eq 0 && RET_CODE=2
 
-					cat ${RKHUPD_FILE} >${DB_PATH}/i18n/${LANGFILE}
+					cat "${RKHUPD_FILE}" >"${DB_PATH}/i18n/${LANGFILE}"
 
 					display --to LOG --type INFO VERSIONCHECK_UPDT_AVAIL
 					display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result UPD UPDATE_CHECKING_FILE "i18n/${LANGFILE}"
@@ -7466,7 +7474,8 @@ do_update() {
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.upd"
-	RKHUPD_FILE=$TEMPFILE
+	RKHUPD_FILE="${TEMPFILE}"
+	touch "${RKHUPD_FILE}"
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHUPD_FILE}"
 
@@ -7558,7 +7567,7 @@ do_update() {
 
 				display --to LOG --type INFO VERSIONCHECK_UPDT_AVAIL
 
-				cat ${RKHUPD_FILE} >${DB_PATH}/${UPDFILE}
+				cat "${RKHUPD_FILE}" >"${DB_PATH}/${UPDFILE}"
 
 				display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color GREEN --result UPD UPDATE_CHECKING_FILE "${UPDFILE}"
 			else
@@ -7618,7 +7627,8 @@ do_versioncheck() {
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.vc"
-	RKHVC_FILE=$TEMPFILE
+	RKHVC_FILE="${TEMPFILE}"
+	touch "${RKHVC_FILE}"
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHVC_FILE}"
 
@@ -9570,7 +9580,7 @@ strings_check() {
 
 	if [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 STRINGS_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD "strings"
+		display --to LOG --type INFO NOT_FOUND_CMD 'strings'
 		return
 	fi
 
@@ -9772,7 +9782,7 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 --log-indent 2 SHARED_LIBS_PATH
-			display --to LOG --type INFO NOT_FOUND_CMD "ldd"
+			display --to LOG --type INFO NOT_FOUND_CMD 'ldd'
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs_path
@@ -9790,10 +9800,12 @@ updt_rkhdat() {
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.dat"
-	RKHDAT_TMPFILE=$TEMPFILE
+	RKHDAT_TMPFILE="${TEMPFILE}"
 
 	get_temp_file "${RKHTMPDIR}/rkhunter.dat2"
-	RKHDAT_TMPFILE2=$TEMPFILE
+	RKHDAT_TMPFILE2="${TEMPFILE}"
+
+	touch "${RKHDAT_TMPFILE}" "${RKHDAT_TMPFILE2}"
 
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE}"
 	display --to LOG --type INFO CREATED_TEMP_FILE "${RKHDAT_TMPFILE2}"
@@ -9819,7 +9831,7 @@ updt_rkhdat() {
 
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's:/:\\\/:g'`
 
-		sed -e "/^${FNAMEGREP}$/d" ${RKHDAT_TMPFILE} >${RKHDAT_TMPFILE2}
+		sed -e "/^${FNAMEGREP}$/d" "${RKHDAT_TMPFILE}" >"${RKHDAT_TMPFILE2}"
 
 		cp -f "${RKHDAT_TMPFILE2}" "${RKHDAT_TMPFILE}"
 	done
@@ -9839,7 +9851,7 @@ updt_rkhdat() {
 
 		display --to LOG --type INFO RKHDAT_ADD_NEW_ENTRY "`name2text \"${FILENAME}\"`"
 
-		echo "${FNAME}" >>${RKHDAT_TMPFILE}
+		echo "${FNAME}" >>"${RKHDAT_TMPFILE}"
 	done
 
 	IFS=$RKHIFS
@@ -10048,7 +10060,7 @@ file_properties_check() {
 					test -f "${FNAME}" -a ! -h "${FNAME}" && break
 				done
 
-				if [ -z "`${LSATTR_CMD} ${FNAME} 2>/dev/null`" ]; then
+				if [ -z "`${LSATTR_CMD} \"${FNAME}\" 2>/dev/null`" ]; then
 					SKIP_IMMUT=1
 					RKHTMPVAR="${RKHTMPVAR} immutable-cmd"
 				fi
@@ -10060,7 +10072,7 @@ file_properties_check() {
 		if [ -z "${FILE_CMD}" ]; then
 			SKIP_SCRIPT=1
 			RKHTMPVAR="${RKHTMPVAR} script"
-		elif [ -z "`${FILE_CMD} ${CONFIGFILE} 2>/dev/null`" ]; then
+		elif [ -z "`${FILE_CMD} \"${CONFIGFILE}\" 2>/dev/null`" ]; then
 			SKIP_SCRIPT=1
 			RKHTMPVAR="${RKHTMPVAR} script-cmd"
 		fi
@@ -11519,11 +11531,11 @@ suspscan() {
 
 	if [ -z "${FILE_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD "file"
+		display --to LOG --type INFO NOT_FOUND_CMD 'file'
 		return
 	elif [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD "strings"
+		display --to LOG --type INFO NOT_FOUND_CMD 'strings'
 		return
 	fi
 
@@ -11599,7 +11611,7 @@ suspscan() {
 	#
 
 	get_temp_file "${RKHTMPDIR}/suspscan.tmp"
-	SUSPSCAN_TMPFILE=$TEMPFILE
+	SUSPSCAN_TMPFILE="${TEMPFILE}"
 	touch "${SUSPSCAN_TMPFILE}"
 
 
@@ -11610,7 +11622,7 @@ suspscan() {
 			FOUND=0
 
 			if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-				echo "4 SUSPSCAN_DIR_CHECK "${SUSPSCAN_DIR}"" >> "${SUSPSCAN_TMPFILE}"
+				echo "4 SUSPSCAN_DIR_CHECK "${SUSPSCAN_DIR}"" >>"${SUSPSCAN_TMPFILE}"
 			fi
 
 			$FIND_CMD "${SUSPSCAN_DIR}" -type f -o -type l 2>/dev/null | while read SUSPSCAN_ITEM; do
@@ -11631,11 +11643,11 @@ suspscan() {
 						SUSPSCAN_ITEM=`${READLINK_CMD} -f "${RKHTMPVAR}"`
 
 						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-							echo "6 SUSPSCAN_FILE_LINK_CHANGE "${RKHTMPVAR}" "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
+							echo "6 SUSPSCAN_FILE_LINK_CHANGE "${RKHTMPVAR}" "${SUSPSCAN_ITEM}"" >>"${SUSPSCAN_TMPFILE}"
 						fi
 					else
 						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-							echo "6 SUSPSCAN_FILE_SKIPPED_LINK "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
+							echo "6 SUSPSCAN_FILE_SKIPPED_LINK "${SUSPSCAN_ITEM}"" >>"${SUSPSCAN_TMPFILE}"
 						fi
 
 						continue
@@ -11649,13 +11661,13 @@ suspscan() {
 
 				if [ ! -s "${SUSPSCAN_ITEM}" ]; then
 					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-						echo "6 SUSPSCAN_FILE_SKIPPED_EMPTY "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
+						echo "6 SUSPSCAN_FILE_SKIPPED_EMPTY "${SUSPSCAN_ITEM}"" >>"${SUSPSCAN_TMPFILE}"
 					fi
 
 					continue
 				elif [ -z "`${FIND_CMD} "${SUSPSCAN_ITEM}" -size -${SUSPSCAN_MAXSIZE}c 2>/dev/null`" ]; then
 					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-						echo "6 SUSPSCAN_FILE_SKIPPED_SIZE "${SUSPSCAN_ITEM}"" >> "${SUSPSCAN_TMPFILE}"
+						echo "6 SUSPSCAN_FILE_SKIPPED_SIZE "${SUSPSCAN_ITEM}"" >>"${SUSPSCAN_TMPFILE}"
 					fi
 
 					continue
@@ -11684,7 +11696,7 @@ suspscan() {
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
 					SUSPSCAN_STRINGS=""
 
-					$STRINGS_CMD -n 4 -a "${SUSPSCAN_ITEM}" | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >${FILENAME} 2>&1
+					$STRINGS_CMD -n 4 -a "${SUSPSCAN_ITEM}" | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >"${FILENAME}" 2>&1
 
 					for SUSPSCAN_STRING in `grep -v '^Version' "${DB_PATH}/suspscan.dat" | tail ${TAIL_OPT}1` ; do
 
@@ -11749,12 +11761,12 @@ suspscan() {
 					done
 
 					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-						echo "6 SUSPSCAN_FILE_CHECK_DEBUG "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE" "$SUSPSCAN_HITCOUNT" "${SUSPSCAN_STRINGS}"" >> "${SUSPSCAN_TMPFILE}"
+						echo "6 SUSPSCAN_FILE_CHECK_DEBUG "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE" "$SUSPSCAN_HITCOUNT" "${SUSPSCAN_STRINGS}"" >>"${SUSPSCAN_TMPFILE}"
 					fi
 
 					if [ $SUSPSCAN_SCORE -ge $SUSPSCAN_THRESH ]; then
-						echo "6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"" >> "${SUSPSCAN_TMPFILE}"
-						echo "SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"" >> "${SUSPSCAN_TMPFILE}"
+						echo "6 SUSPSCAN_FILE_CHECK "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"" >>"${SUSPSCAN_TMPFILE}"
+						echo "SUSPSCAN_INSPECT "${SUSPSCAN_ITEM}" "$SUSPSCAN_SCORE"" >>"${SUSPSCAN_TMPFILE}"
 					fi
 
 					unset SUSPSCAN_TERM
@@ -11765,7 +11777,7 @@ suspscan() {
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'corrupted section header size'`" ]; then
 					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-						echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible UPX-compressed or Dexter01s obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
+						echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible UPX-compressed or Dexter01s obfuscated binary"" >>"${SUSPSCAN_TMPFILE}"
 					fi
 
 				#
@@ -11774,15 +11786,15 @@ suspscan() {
 
 				elif [ -n "`echo \"${FTYPE}\" | grep 'invalid class invalid byte order'`" ]; then
 					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
-						echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible ELFuck obfuscated binary"" >> "${SUSPSCAN_TMPFILE}"
+						echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "Possible ELFuck obfuscated binary"" >>"${SUSPSCAN_TMPFILE}"
 					fi
 				elif [ $SUSPSCAN_DEBUG -eq 1 ]; then
-					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "${FTYPE}"" >> "${SUSPSCAN_TMPFILE}"
+					echo "6 SUSPSCAN_FILE_SKIPPED_TYPE "${SUSPSCAN_ITEM}" "${FTYPE}"" >>"${SUSPSCAN_TMPFILE}"
 				fi
 			done
 
 		else
-			echo "4 SUSPSCAN_DIR_NOT_EXIST "${SUSPSCAN_DIR}"" >> "${SUSPSCAN_TMPFILE}"
+			echo "4 SUSPSCAN_DIR_NOT_EXIST "${SUSPSCAN_DIR}"" >>"${SUSPSCAN_TMPFILE}"
 		fi
 	done
 
@@ -12338,7 +12350,7 @@ rootkit_file_dir_checks() {
 		fi
 
 		if [ $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
-			ROOTKIT_PHALANX2_DIRNAMES=`find /etc /usr -type d -iname "*.p2"`
+			ROOTKIT_PHALANX2_DIRNAMES=`${FIND_CMD} /etc /usr -type d -iname "*.p2"`
 		else
 			ROOTKIT_PHALANX2_DIRNAMES="/etc/khubd.p2 /etc/lolzz.p2 /usr/lib/zupzz.p2"
 		fi
@@ -12405,7 +12417,7 @@ rootkit_file_dir_checks() {
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_LINK_COUNT "/etc"
-				display --to LOG --type INFO NOT_FOUND_CMD "stat"
+				display --to LOG --type INFO NOT_FOUND_CMD 'stat'
 			fi
 		fi
 
@@ -12447,10 +12459,10 @@ rootkit_file_dir_checks() {
 			#else # This kernel does not run any 'ata/0' kthread child processes, no warning necessary.
 			fi
 
-		else # PGREP_CMD
+		else # PGREP_CMD not found
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
-				display --to LOG --type INFO NOT_FOUND_CMD "pgrep"
+				display --to LOG --type INFO NOT_FOUND_CMD 'pgrep'
 			fi
 		fi
 
@@ -12624,7 +12636,7 @@ rootkit_file_dir_checks() {
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type INFO NOT_FOUND_CMD "find"
+			display --to LOG --type INFO NOT_FOUND_CMD 'find'
 		fi
 	fi
 
@@ -13060,7 +13072,7 @@ possible_rootkit_string_checks() {
 
 	if [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 ROOTKIT_POSS_STRINGS
-		display --to LOG --type INFO NOT_FOUND_CMD "strings"
+		display --to LOG --type INFO NOT_FOUND_CMD 'strings'
 		return
 	elif [ "${STARTUP_PATHS}" = "NONE" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color GREEN --screen-indent 4 ROOTKIT_POSS_STRINGS
@@ -13439,7 +13451,7 @@ ${PROC} ${PID} ${FNAME}"
 			IFS=$RKHIFS
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
-			display --to LOG --type INFO NOT_FOUND_CMD "lsof"
+			display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST deleted_files
@@ -13460,9 +13472,10 @@ ${PROC} ${PID} ${FNAME}"
 			#
 
 			get_temp_file "${RKHTMPDIR}/lsofprocs.out"
-			RKHLSOF_FILE=$TEMPFILE
+			RKHLSOF_FILE="${TEMPFILE}"
+			touch "${RKHLSOF_FILE}"
 
-			${LSOF_CMD} -wnlP +c 0 2>&1 | egrep -v ' (FIFO|V?DIR|IPv[46]) ' | sort | uniq >${RKHLSOF_FILE}
+			${LSOF_CMD} -wnlP +c 0 2>&1 | egrep -v ' (FIFO|V?DIR|IPv[46]) ' | sort | uniq >"${RKHLSOF_FILE}"
 
 			#
 			# Now loop through the known suspicious filenames,
@@ -13554,7 +13567,7 @@ ${RKHTMPVAR}:${FNAME}"
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
-			display --to LOG --type INFO NOT_FOUND_CMD "lsof"
+			display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST running_procs
@@ -13724,7 +13737,7 @@ ${RKHTMPVAR}"
 				fi
 			fi
 		else
-			display --to LOG --type INFO NOT_FOUND_CMD "unhide.rb"
+			display --to LOG --type INFO NOT_FOUND_CMD 'unhide.rb'
 		fi
 
 
@@ -13915,7 +13928,7 @@ ${RKHTMPVAR}"
 	if [ -f "${TRIPWIREFILE}" ]; then
 		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
-		if [ -z "`grep 'Tripwire segment-faulted !' \"${TRIPWIREFILE}\"`" ]; then
+		if [ -z "`grep ${GREP_OPT} 'Tripwire segment-faulted !' \"${TRIPWIREFILE}\"`" ]; then
 			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
 		else
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
@@ -14361,8 +14374,8 @@ bsd_specific_checks() {
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 
-		test -z "${SOCKSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "sockstat"
-		test -z "${NETSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "netstat"
+		test -z "${SOCKSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'sockstat'
+		test -z "${NETSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'netstat'
 	fi
 
 	return
@@ -14410,7 +14423,7 @@ freebsd_specific_checks() {
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_KLD
 
-		display --to LOG --type INFO NOT_FOUND_CMD "kldstat"
+		display --to LOG --type INFO NOT_FOUND_CMD 'kldstat'
 	fi
 
 
@@ -14434,7 +14447,7 @@ freebsd_specific_checks() {
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 
-			display --to LOG --type INFO NOT_FOUND_CMD "pkg_admin"
+			display --to LOG --type INFO NOT_FOUND_CMD 'pkg_admin'
 		fi
 	else
 		PKGDB_CMD=`find_cmd pkgdb`
@@ -14452,7 +14465,7 @@ freebsd_specific_checks() {
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 
-			display --to LOG --type INFO NOT_FOUND_CMD "pkgdb"
+			display --to LOG --type INFO NOT_FOUND_CMD 'pkgdb'
 		fi
 	fi
 
@@ -14481,7 +14494,7 @@ linux_loaded_modules() {
 	elif [ -z "${LSMOD_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
-		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD "lsmod"
+		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'lsmod'
 	else
 		PROC_OUTPUT=`cat /proc/modules | cut -d' ' -f1 | sort`
 		LSMOD_OUTPUT=`${LSMOD_CMD} | grep -v 'Size *Used *by' | cut -d' ' -f1 | sort`
@@ -14562,13 +14575,13 @@ linux_avail_modules() {
 	elif [ -z "${FIND_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
-		display --to LOG --type INFO NOT_FOUND_CMD "find"
-	elif [ -z "`ls -1 ${LKM_PATH} 2>/dev/null`" ]; then
+		display --to LOG --type INFO NOT_FOUND_CMD 'find'
+	elif [ -z "`ls -1 \"${LKM_PATH}\" 2>/dev/null`" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
 	else
-		for FNAME in `${FIND_CMD} ${LKM_PATH} -type f -name "*.o" 2>/dev/null`; do
+		for FNAME in `${FIND_CMD} "${LKM_PATH}" -type f -name "*.o" 2>/dev/null`; do
 			for RKHTMPVAR in ${LKM_NAMES}; do
 				if [ -n "`echo ${FNAME} | grep \"/${RKHTMPVAR}$\"`" ]; then
 					FOUND=1
@@ -14910,7 +14923,7 @@ do_network_port_checks() {
 
 	IFS=$IFSNL
 
-	for LINE in `cat ${DB_PATH}/backdoorports.dat`; do
+	for LINE in `cat "${DB_PATH}/backdoorports.dat"`; do
 		if [ -z "`echo \"${LINE}\" | grep '^[0-9][0-9]*:'`" ]; then
 			continue
 		fi
@@ -15009,7 +15022,7 @@ do_network_hidden_port_checks() {
 		display --to LOG --type INFO FOUND_CMD 'unhide-tcp' "${UNHIDETCP_CMD} ${UNHIDETCP_OPTS}"
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
-		display --to LOG --type INFO NOT_FOUND_CMD "unhide-tcp"
+		display --to LOG --type INFO NOT_FOUND_CMD 'unhide-tcp'
 		return
 	fi
 
@@ -15272,7 +15285,7 @@ do_network_interface_checks() {
 	WHITEPROC=""
 	BLACKPROC=""
 
-	LIBPCAPRES=`egrep -v '(^sk | 888e )' '/proc/net/packet' | head ${HEAD_OPT}1`
+	LIBPCAPRES=`egrep -v '(^sk | 888e )' /proc/net/packet | head ${HEAD_OPT}1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
 		ALLOWPROCLISTENERS=""
@@ -15284,7 +15297,7 @@ do_network_interface_checks() {
 
 		INODE_LIST=""
 
-		for INODE in `egrep -v '(^sk | 888e )' '/proc/net/packet' | awk '{ print $9 }'`; do
+		for INODE in `egrep -v '(^sk | 888e )' /proc/net/packet | awk '{ print $9 }'`; do
 			INODE_LIST="${INODE_LIST}|$INODE"
 		done
 
@@ -15762,14 +15775,14 @@ do_group_accounts_check() {
 
 				RKHTMPVAR2=`${DSCL_CMD} . search /Users uid 0 | egrep '^[^ 	)]' | cut -d'	' -f1`
 			else
-				display --to LOG --type INFO NOT_FOUND_CMD "dscl"
+				display --to LOG --type INFO NOT_FOUND_CMD 'dscl'
 			fi
 		fi
 
 
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' '/etc/passwd' | cut -d: -f1` ${RKHTMPVAR2}; do
+		for RKHTMPVAR in `grep '^[^:]*:[^:]*:0:' /etc/passwd | cut -d: -f1` ${RKHTMPVAR2}; do
 			test -z "${RKHTMPVAR}" && continue
 			test "${RKHTMPVAR}" = "root" && continue
 
@@ -15904,7 +15917,7 @@ ${RKHTMPVAR}"
 	if [ -s "/etc/passwd" ]; then
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^[^:]*::' '/etc/passwd' | cut -d: -f1`; do
+		for RKHTMPVAR in `grep '^[^:]*::' /etc/passwd | cut -d: -f1`; do
 			# Ignore any NIS/YP entries
 			test "${RKHTMPVAR}" = "+" && continue
 
@@ -15983,16 +15996,16 @@ ${RKHTMPVAR}"
 		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "/etc/passwd"
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
-		display --to LOG --type INFO NOT_FOUND_CMD "diff"
+		display --to LOG --type INFO NOT_FOUND_CMD 'diff'
 
-		cp -f -p "/etc/passwd" "${RKHTMPDIR}/passwd"
+		cp -f -p /etc/passwd "${RKHTMPDIR}/passwd"
 	elif [ ! -f "${RKHTMPDIR}/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type WARNING PASSWD_CHANGES_NO_TMP
 
-		cp -f -p "/etc/passwd" "${RKHTMPDIR}/passwd"
+		cp -f -p /etc/passwd "${RKHTMPDIR}/passwd"
 	else
-		DIFFS=`${DIFF_CMD} /etc/passwd ${RKHTMPDIR}/passwd 2>/dev/null | grep '^[<>]'`
+		DIFFS=`${DIFF_CMD} /etc/passwd "${RKHTMPDIR}/passwd" 2>/dev/null | grep '^[<>]'`
 
 		if [ -z "${DIFFS}" ]; then
 			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 PASSWD_CHANGES
@@ -16009,7 +16022,7 @@ ${RKHTMPVAR}"
 			#
 
 			mv -f "${RKHTMPDIR}/passwd" "${RKHTMPDIR}/passwd.old" >/dev/null 2>&1
-			cp -f -p "/etc/passwd" "${RKHTMPDIR}/passwd"
+			cp -f -p /etc/passwd "${RKHTMPDIR}/passwd"
 		fi
 	fi
 
@@ -16034,16 +16047,16 @@ ${RKHTMPVAR}"
 		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE "/etc/group"
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
-		display --to LOG --type INFO NOT_FOUND_CMD "diff"
+		display --to LOG --type INFO NOT_FOUND_CMD 'diff'
 
-		cp -f -p "/etc/group" "${RKHTMPDIR}/group"
+		cp -f -p /etc/group "${RKHTMPDIR}/group"
 	elif [ ! -f "${RKHTMPDIR}/group" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type WARNING GROUP_CHANGES_NO_TMP
 
-		cp -f -p "/etc/group" "${RKHTMPDIR}/group"
+		cp -f -p /etc/group "${RKHTMPDIR}/group"
 	else
-		DIFFS=`${DIFF_CMD} /etc/group ${RKHTMPDIR}/group 2>/dev/null | grep '^[<>]'`
+		DIFFS=`${DIFF_CMD} /etc/group "${RKHTMPDIR}/group" 2>/dev/null | grep '^[<>]'`
 
 		if [ -z "${DIFFS}" ]; then
 			display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 GROUP_CHANGES
@@ -16060,7 +16073,7 @@ ${RKHTMPVAR}"
 			#
 
 			mv -f "${RKHTMPDIR}/group" "${RKHTMPDIR}/group.old" >/dev/null 2>&1
-			cp -f -p "/etc/group" "${RKHTMPDIR}/group"
+			cp -f -p /etc/group "${RKHTMPDIR}/group"
 		fi
 	fi
 
@@ -16312,7 +16325,7 @@ do_system_config_files_check() {
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-		display --to LOG --type INFO NOT_FOUND_CMD "ps"
+		display --to LOG --type INFO NOT_FOUND_CMD 'ps'
 	fi
 
 
@@ -16475,10 +16488,10 @@ do_filesystem_check() {
 		display --to LOG --type WARNING FILESYSTEM_DEV_CHECK_NO_DEV
 	elif [ -z "${FILE_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD "file"
+		display --to LOG --type INFO NOT_FOUND_CMD 'file'
 	elif [ "${SCAN_MODE_DEV}" = "THOROUGH" -a -z "${FIND_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD "find"
+		display --to LOG --type INFO NOT_FOUND_CMD 'find'
 	else
 		#
 		# Now we can run the check on /dev.
@@ -16516,7 +16529,7 @@ do_filesystem_check() {
 			if [ -n "${RKHTMPVAR}" ]; then
 				test -n "`${RKHTMPVAR} 2>/dev/null | egrep '^fdesc(fs)? .*type fdesc'`" && FDESCFS=1
 			else
-				display --to LOG --type INFO NOT_FOUND_CMD "mount"
+				display --to LOG --type INFO NOT_FOUND_CMD 'mount'
 			fi
 		fi
 
@@ -16586,7 +16599,7 @@ do_filesystem_check() {
 
 	if [ -z "${FILE_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_HIDDEN_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD "file"
+		display --to LOG --type INFO NOT_FOUND_CMD 'file'
 		return
 	fi
 
@@ -16605,7 +16618,7 @@ do_filesystem_check() {
 	fi
 
 	for DIR in ${SHORTSEARCHDIRS}; do
-		if [ -d ${DIR} ]; then
+		if [ -d "${DIR}" ]; then
 			RKHTMPVAR=`ls -1d ${DIR}/.* 2>/dev/null | egrep -v '/\.\.?$'`
 			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS}
 ${RKHTMPVAR}"
@@ -16613,8 +16626,8 @@ ${RKHTMPVAR}"
 	done
 
 	for DIR in ${LONGSEARCHDIRS}; do
-		if [ -d ${DIR} ]; then
-			RKHTMPVAR=`${FIND_CMD} ${DIR} -name ".*" 2>/dev/null`
+		if [ -d "${DIR}" ]; then
+			RKHTMPVAR=`${FIND_CMD} "${DIR}" -name ".*" 2>/dev/null`
 			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS}
 ${RKHTMPVAR}"
 		fi
@@ -17041,7 +17054,7 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 			if [ -n "`echo \"${APP_WHITELIST}\" | grep -i \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
 				APP_RESULTS="${APP_RESULTS}
 ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%-1"
-			elif [ -n "`egrep -i \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" ${DB_PATH}/programs_bad.dat 2>&1`" ]; then
+			elif [ -n "`egrep -i \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" \"${DB_PATH}/programs_bad.dat\" 2>&1`" ]; then
 				APPS_FAILED_COUNT=`expr ${APPS_FAILED_COUNT} + 1`
 
 				APP_RESULTS="${APP_RESULTS}
@@ -17969,7 +17982,7 @@ display_perl_modules() {
 
 			test -n "${PERL_CMD}" && MOD_INSTALLED="" || MOD_INSTALLED="NOT installed"
 		else
-			MOD_INSTALLED=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl ${MODNAME} 2>/dev/null | grep 'NOT installed'`
+			MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" ${MODNAME} 2>/dev/null | grep 'NOT installed'`
 		fi
 
 		MODLEN=`echo "${MODNAME}" | wc -c | tr -d ' '`
@@ -18007,7 +18020,7 @@ display_propfiles() {
 	create_rkh_file_prop_list
 
 	# Finally just dump out the list of file names.
-	awk -F'/' '{ print $NF }' ${RKH_FILEPROP_LIST} | sort | uniq
+	awk -F'/' '{ print $NF }' "${RKH_FILEPROP_LIST}" | sort | uniq
 
 	return
 }
@@ -18078,7 +18091,7 @@ get_lock() {
 		# We handle any subsequent exit conditions by setting a trap.
 		#
 
-		trap "rm -f ${RKHTMPDIR}/rkhunter.LCK >/dev/null 2>&1" 0 >/dev/null 2>&1
+		trap "rm -f \"${RKHTMPDIR}/rkhunter.LCK\" >/dev/null 2>&1" 0 >/dev/null 2>&1
 	else
 		#
 		# We need to be careful here. We do not want to display the message if the user
@@ -19052,7 +19065,7 @@ done
 #
 
 if [ $SUNOS -eq 1 ]; then
-	test -x "/usr/xpg4/bin/id" && ID_CMD="/usr/xpg4/bin/id"
+	test -x /usr/xpg4/bin/id && ID_CMD="/usr/xpg4/bin/id"
 fi
 
 RKHTMPVAR=`${ID_CMD} -u 2>/dev/null`
@@ -19547,13 +19560,13 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 			if [ "${CMD}" = "GET" ]; then
 				test -z "${PERL_CMD}" && continue
 
-				RKHTMPVAR=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl LWP URI HTTP::Status HTTP::Date Getopt::Long 2>&1 | grep 'NOT'`
+				RKHTMPVAR=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" LWP URI HTTP::Status HTTP::Date Getopt::Long 2>&1 | grep 'NOT'`
 
 				test -n "${RKHTMPVAR}" && continue
 			elif [ "${CMD}" = "bget" ]; then
 				test -z "${PERL_CMD}" && continue
 
-				RKHTMPVAR=`${PERL_CMD} ${SCRIPT_PATH}/check_modules.pl Socket Carp 2>&1 | grep 'NOT'`
+				RKHTMPVAR=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Socket Carp 2>&1 | grep 'NOT'`
 
 				test -n "${RKHTMPVAR}" && continue
 			fi
@@ -19625,7 +19638,7 @@ for LINE in `egrep '^MSG_(TYPE|RESULT)_' "${DB_PATH}/i18n/en" 2>/dev/null`; do
 	TYPE=`echo "${LINE}" | cut -d: -f1`
 
 	if [ "${LANGUAGE}" != "en" ]; then
-		RKHTMPVAR=`grep "^${TYPE}:" "${DB_PATH}/i18n/${LANGUAGE}" 2>/dev/null`
+		RKHTMPVAR=`grep ${GREP_OPT} "^${TYPE}:" "${DB_PATH}/i18n/${LANGUAGE}" 2>/dev/null`
 		test -n "${RKHTMPVAR}" && LINE=`echo "${RKHTMPVAR}" | sed -e 's/\`/\\\\\`/g'`
 	fi
 
@@ -19656,9 +19669,9 @@ if [ $NOLOG -eq 0 ]; then
 
 			# Overwrite the log file with a null string.
 			if [ "${ECHON}" = "c" ]; then
-				echo $ECHOOPT "\c" >${RKHLOGFILE}
+				echo $ECHOOPT "\c" >"${RKHLOGFILE}"
 			else
-				echo $ECHON $ECHOOPT "" >${RKHLOGFILE}
+				echo $ECHON $ECHOOPT "" >"${RKHLOGFILE}"
 			fi
 		else
 			# Create a new log file.
@@ -19672,8 +19685,8 @@ if [ $NOLOG -eq 0 ]; then
 			chmod 600 "${RKHLOGFILE}" >/dev/null 2>&1
 		fi
 
-		echo "" >>${RKHLOGFILE}
-		echo "" >>${RKHLOGFILE}
+		echo "" >>"${RKHLOGFILE}"
+		echo "" >>"${RKHLOGFILE}"
 	fi
 fi
 
@@ -19718,7 +19731,7 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
 
-	if [ -s ${RKHDAT_FILE} ]; then
+	if [ -s "${RKHDAT_FILE}" ]; then
 		RKHTMPVAR=`grep '^OS:' "${RKHDAT_FILE}" 2>/dev/null | sed -e 's/^OS://'`
 
 		if [ -n "${RKHTMPVAR}" ]; then
@@ -19849,7 +19862,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 	fi
 
-	if [ -s ${RKHDAT_FILE} ]; then
+	if [ -s "${RKHDAT_FILE}" ]; then
 		if [ "${OLD_HASH_FUNC}" = "Disabled" ]; then
 			display --to LOG --type INFO HASH_FUNC_OLD_DISABLED
 		else
@@ -19883,22 +19896,22 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 
 			case "${PKGMGR}" in
 			RPM)
-				display --to LOG --type INFO FOUND_CMD "rpm" "${RPM_CMD}"
+				display --to LOG --type INFO FOUND_CMD 'rpm' "${RPM_CMD}"
 				;;
 			DPKG)
 				if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
-					display --to LOG --type INFO FOUND_CMD "dpkg-query" "${DPKG_CMD}"
+					display --to LOG --type INFO FOUND_CMD 'dpkg-query' "${DPKG_CMD}"
 				else
-					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
+					display --to LOG --type INFO FOUND_CMD 'dpkg' "${DPKG_CMD}"
 				fi
 				;;
 			BSD)
-				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
+				display --to LOG --type INFO FOUND_CMD 'pkg-info' "${PKG_CMD}"
 				;;
 			SOLARIS)
 				if [ $USE_SUNSUM -eq 1 ]; then
 					display --to LOG --type INFO HASH_PKGMGR_SUM
-					display --to LOG --type INFO FOUND_CMD "sum" "${SUM_CMD}"
+					display --to LOG --type INFO FOUND_CMD 'sum' "${SUM_CMD}"
 				fi
 				;;
 			esac
@@ -19921,25 +19934,25 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 
 			case "${PKGMGR}" in
 			RPM)
-				display --to LOG --type INFO FOUND_CMD "rpm" "${RPM_CMD}"
+				display --to LOG --type INFO FOUND_CMD 'rpm' "${RPM_CMD}"
 				;;
 			DPKG)
 				if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
-					display --to LOG --type INFO FOUND_CMD "dpkg-query" "${DPKG_CMD}"
+					display --to LOG --type INFO FOUND_CMD 'dpkg-query' "${DPKG_CMD}"
 				else
-					display --to LOG --type INFO FOUND_CMD "dpkg" "${DPKG_CMD}"
+					display --to LOG --type INFO FOUND_CMD 'dpkg' "${DPKG_CMD}"
 				fi
 
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 				;;
 			BSD)
-				display --to LOG --type INFO FOUND_CMD "pkg-info" "${PKG_CMD}"
+				display --to LOG --type INFO FOUND_CMD 'pkg-info' "${PKG_CMD}"
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 				;;
 			SOLARIS)
 				if [ $USE_SUNSUM -eq 1 ]; then
 					display --to LOG --type INFO HASH_PKGMGR_SUM
-					display --to LOG --type INFO FOUND_CMD "sum" "${SUM_CMD}"
+					display --to LOG --type INFO FOUND_CMD 'sum' "${SUM_CMD}"
 				fi
 				;;
 			esac
@@ -20113,7 +20126,7 @@ if [ $CHECK -eq 1 ]; then
 	#
 
 	if `check_test properties`; then
-		if [ -s ${RKHDAT_FILE} ]; then
+		if [ -s "${RKHDAT_FILE}" ]; then
 			#
 			# We perform a simple check on some of the stored
 			# O/S information, and compare it to the current
@@ -20200,14 +20213,14 @@ display --to LOG --type INFO --nl RKH_ENDDATE "`date`"
 # Now actually copy the log file.
 #
 
-test -n "${COPIEDLOG}" && cp -p ${RKHLOGFILE} ${COPIEDLOG}
+test -n "${COPIEDLOG}" && cp -p "${RKHLOGFILE}" "${COPIEDLOG}"
 
 
 #
 # If the user asked to see the logfile, then show it.
 #
 
-test $CATLOGFILE -eq 1 && cat ${RKHLOGFILE}
+test $CATLOGFILE -eq 1 && cat "${RKHLOGFILE}"
 
 
 IFS=$ORIGIFS
