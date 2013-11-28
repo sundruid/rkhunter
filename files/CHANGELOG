@@ -166,6 +166,9 @@
    be universal so should not be a problem for any other systems.
  - When using a hash command of 'NONE' the file properties test would
    still report some files as having no hash value. This is now fixed.
+ - The xinetd check was too simple, and could miss services which were
+   enabled. The test now also checks for any 'defaults' section, and
+   checks the found service and 'id' names against the defaults.
 
  -- 
 

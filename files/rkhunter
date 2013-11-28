@@ -1250,15 +1250,15 @@ suckit_extra_checks() {
 
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			if [ $NLINKS -eq 0 ]; then
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT "/sbin/init"
+				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
 			elif [ $NLINKS -eq 1 ]; then
-				display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_LINK_COUNT "/sbin/init"
+				display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
 			else
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT "/sbin/init"
+				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
 			fi
 		fi
 	else
-		display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_LINK_COUNT "/sbin/init"
+		display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
 	fi
 
 
@@ -1375,7 +1375,7 @@ suckit_extra_checks() {
 		if [ $NLINKS -eq -1 ]; then
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_ADD_SUCKIT_LINK_NOCMD
 		elif [ $NLINKS -eq 0 ]; then
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" "/sbin/init"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" '/sbin/init'
 		elif [ $NLINKS -gt 1 ]; then
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_ADD_SUCKIT_LINK_FOUND "$NLINKS"
 		fi
@@ -1481,7 +1481,7 @@ ${FNAME}"
 					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${RKHTMPVAR}\"`" known_rkts
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${RKHTMPVAR}\"`" 'known_rkts'
 					else
 						SCAN_STATUS=1
 						FILE_FOUND="${FILE_FOUND}
@@ -1516,7 +1516,7 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${RKHTMPVAR}\"`" known_rkts
+				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${RKHTMPVAR}\"`" 'known_rkts'
 			else
 				SCAN_STATUS=1
 				DIR_FOUND="${DIR_FOUND}
@@ -1780,12 +1780,28 @@ check_commands() {
 
 	#
 	# For Solaris systems we should use the 'gstrings' command
-	# rather than 'strings', if it is available.
+	# rather than 'strings', if it is available. Similarly we
+	# should use 'gawk' or 'nawk' if it is available rather
+	# than 'awk'.
 	#
 
-	if [ $SUNOS -eq 1 -a "${STRINGS_CMD}" != "DISABLED" ]; then
-		RKHTMPVAR=`find_cmd gstrings`
-		test -n "${RKHTMPVAR}" && STRINGS_CMD="${RKHTMPVAR}"
+	if [ $SUNOS -eq 1 ]; then
+		if [ "${STRINGS_CMD}" != "DISABLED" ]; then
+			RKHTMPVAR=`find_cmd gstrings`
+			test -n "${RKHTMPVAR}" && STRINGS_CMD="${RKHTMPVAR}"
+		fi
+
+		AWK_CMD=`find_cmd gawk`
+
+		if [ -z "${AWK_CMD}" ]; then
+			AWK_CMD=`find_cmd nawk`
+
+			if [ -z "${AWK_CMD}" ]; then
+				AWK_CMD="awk"
+			fi
+		fi
+	else
+		AWK_CMD="awk"
 	fi
 
 
@@ -7367,7 +7383,7 @@ do_i18n_update() {
 			RET_CODE=1
 			UPD_ERROR=1
 
-			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n versions"
+			display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE 'i18n versions'
 
 			display --to LOG --type WARNING UPDATE_I18N_NO_VERS
 
@@ -7446,9 +7462,9 @@ do_i18n_update() {
 		RET_CODE=1
 		UPD_ERROR=1
 
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE "i18n versions"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color RED --result UPD_FAILED UPDATE_CHECKING_FILE 'i18n versions'
 
-		display --to LOG --type WARNING UPDATE_DOWNLOAD_FAIL "i18n.ver"
+		display --to LOG --type WARNING UPDATE_DOWNLOAD_FAIL 'i18n.ver'
 	fi
 
 
@@ -10174,10 +10190,10 @@ file_properties_check() {
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT
 				;;
 			immutable-bsd)
-				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD "ls -lno"
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD 'ls -lno'
 				;;
 			immutable-cmd)
-				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD "lsattr"
+				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD 'lsattr'
 				;;
 			script)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_SCRIPT
@@ -11910,7 +11926,7 @@ rootkit_file_dir_checks() {
 
 		if [ -z "${RKHTMPVAR}" ]; then
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "w0rm"
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
 			fi
 
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
@@ -11919,15 +11935,15 @@ rootkit_file_dir_checks() {
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR "w0rm"
+				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
 			fi
 
 			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND "w0rm" "/etc/passwd"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND 'w0rm' '/etc/passwd'
 		fi
 	else
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE "/etc/passwd"
+		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_NOFILE '/etc/passwd'
 	fi
 
 	# AjaKit Rootkit
@@ -12392,18 +12408,18 @@ rootkit_file_dir_checks() {
 
 				if [ $NLINKS1 -ne $NLINKS2 ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_LINK_COUNT "/etc"
+						display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_LINK_COUNT '/etc'
 
 						if [ $NLINKS1 -eq -1 ]; then
-							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" "/etc"
+							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" '/etc'
 						fi
 
 						if [ $NLINKS2 -eq -2 ]; then
-							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR "ls -ld" "/etc"
+							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR 'ls -ld' '/etc'
 						fi
 
 						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL "${STAT_CMD}" "$NLINKS1"
-						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL "ls -ld" "$NLINKS2"
+						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL 'ls -ld' "$NLINKS2"
 					fi
 
 					if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
@@ -12411,12 +12427,12 @@ rootkit_file_dir_checks() {
 						display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 					fi
 
-					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_PHALANX2_LINK_COUNT_FAIL "/etc"
+					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_PHALANX2_LINK_COUNT_FAIL '/etc'
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_LINK_COUNT "/etc"
+					display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_LINK_COUNT '/etc'
 				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_LINK_COUNT "/etc"
+				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_LINK_COUNT '/etc'
 				display --to LOG --type INFO NOT_FOUND_CMD 'stat'
 			fi
 		fi
@@ -12534,9 +12550,9 @@ rootkit_file_dir_checks() {
 	if [ $FOUND -eq 0 ]; then
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			if [ -n "${KSYMS_FILE}" ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "adore or sebek"
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM 'adore or sebek'
 			else
-				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "adore or sebek"
+				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_FILES_DIRS_KSYM 'adore or sebek'
 			fi
 		fi
 
@@ -12546,11 +12562,11 @@ rootkit_file_dir_checks() {
 		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "adore or sebek"
+			display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM 'adore or sebek'
 		fi
 
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_KSYM_FOUND "adore or sebek"
+		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_KSYM_FOUND 'adore or sebek'
 	fi
 
 	# Shutdown Rootkit
@@ -12906,7 +12922,7 @@ possible_rootkit_file_dir_checks() {
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" possible_rkt_files
+					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" 'possible_rkt_files'
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${FNAME}\"`"
 				else
 					FOUND=1
@@ -12926,7 +12942,7 @@ ${FNAME}:${INFO}"
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" possible_rkt_files
+					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_files'
 					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 				else
 					FOUND=1
@@ -13129,9 +13145,9 @@ possible_rootkit_string_checks() {
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" possible_rkt_strings
+						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" 'possible_rkt_strings'
 					elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" possible_rkt_strings
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_strings'
 					else
 						FOUND=1
 						STRINGFOUND=1
@@ -13163,9 +13179,9 @@ ${FNAME}:${FILESTRING}:${INFO}"
 						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" possible_rkt_strings
+							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" 'possible_rkt_strings'
 						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" possible_rkt_strings
+							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_strings'
 						else
 							FOUND=1
 							STRINGFOUND=1
@@ -13323,7 +13339,7 @@ malware_checks() {
 
 					if [ -z "${PROC}" ]; then
 						if [ $SUNOS -eq 1 ]; then
-							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
 						else
 							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 						fi
@@ -13517,7 +13533,7 @@ ${PROC} ${PID} ${FNAME}"
 						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FILENAME}\"`" running_procs
+							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FILENAME}\"`" 'running_procs'
 						else
 							FOUND=1
 							SUSP_FILES="${SUSP_FILES}
@@ -13847,7 +13863,7 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" other_malware
+				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'other_malware'
 			else
 				FOUND=1
 				FOUNDFILES="${FOUNDFILES} ${FNAME}"
@@ -13891,7 +13907,7 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${DIR}\"`" other_malware
+				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${DIR}\"`" 'other_malware'
 			else
 				FOUND=1
 				FOUNDDIRS="${FOUNDDIRS} ${DIR}"
@@ -13934,7 +13950,7 @@ ${RKHTMPVAR}"
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
-			display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND "${TRIPWIREFILE}" "Tripwire segment-faulted"
+			display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND "${TRIPWIREFILE}" 'Tripwire segment-faulted'
 		fi
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
@@ -13958,7 +13974,7 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" other_malware
+				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'other_malware'
 			else
 				FOUND=1
 				FOUNDFILES="${FOUNDFILES} ${FNAME}"
@@ -14001,44 +14017,144 @@ xinetd_include() {
 	# is ignored. Also absolute pathnames must be used.
 	#
 
-	test -z "$1" -o ! -f "$1" && return
-	test -z "`echo \"$1\" | grep '^/'`" && return
+	FILENAME=$1
 
-	test -n "`echo \"$1\" | grep '/[^/]*\.[^/]*$'`" -a "$1" != "${XINETD_CONF_PATH}" && return
-	test -n "`echo \"$1\" | grep '~$'`" && return
+	test -z "${FILENAME}" -o ! -f "${FILENAME}" && return
+	test -z "`echo \"${FILENAME}\" | grep '^/'`" && return
+
+	test -n "`echo \"${FILENAME}\" | grep '/[^/]*\.[^/]*$'`" -a "${FILENAME}" != "${XINETD_CONF_PATH}" && return
+	test -n "`echo \"${FILENAME}\" | grep '~$'`" && return
 
 
 	#
-	# First see if any services have been enabled.
+	# First see if any defaults have been seen. Only the first instance is used.
 	#
 
-	if [ -n "`grep '^[ 	]*disable[ 	]*=[ 	]*no' \"$1\"`" ]; then
+	SEEN=0
+
+	if [ $XINETD_DFLTS_SEEN -eq 0 ]; then
+		if [ -n "`grep '^defaults' \"${FILENAME}\"`" ]; then
+			XINETD_DFLTS_SEEN=1
+
+			IFS=$IFSNL
+
+			# Get the default enabled services.
+			for LINE in `egrep '^[ 	]*enabled[ 	]*\+?=' "${FILENAME}"`; do
+				SEEN=1
+
+				RKHTMPVAR=`echo "${LINE}" | sed -e 's/^.*=//' | tr -s '	' ' '`
+
+				XINETD_DFLTS_ENABLED="${XINETD_DFLTS_ENABLED} ${RKHTMPVAR}"
+			done
+
+			# We must ensure that the enabled default is
+			# either the null string or set to something.
+
+			if [ -n "${XINETD_DFLTS_ENABLED}" ]; then
+				XINETD_DFLTS_ENABLED=`echo ${XINETD_DFLTS_ENABLED}`
+				test -n "${XINETD_DFLTS_ENABLED}" && XINETD_DFLTS_ENABLED=" ${XINETD_DFLTS_ENABLED} "
+			fi
+
+
+			# Get the default disabled services.
+			for LINE in `egrep '^[ 	]*disabled[ 	]*\+?=' "${FILENAME}"`; do
+				RKHTMPVAR=`echo "${LINE}" | sed -e 's/^.*=//' | tr -s '	' ' '`
+
+				XINETD_DFLTS_DISABLED="${XINETD_DFLTS_DISABLED} ${RKHTMPVAR}"
+			done
+
+			# We must ensure that the disabled default is
+			# either the null string or set to something.
+
+			if [ -n "${XINETD_DFLTS_DISABLED}" ]; then
+				XINETD_DFLTS_DISABLED=`echo ${XINETD_DFLTS_DISABLED}`
+				test -n "${XINETD_DFLTS_DISABLED}" && XINETD_DFLTS_DISABLED=" ${XINETD_DFLTS_DISABLED} "
+			fi
+
+			IFS=$RKHIFS
+		fi
+	fi
+
+
+	#
+	# Now check to see if an actual service has been configured.
+	#
+
+	if [ -n "`grep '^service' \"${FILENAME}\"`" ]; then
+		IFS=$IFSNL
+
+		#
+		# We must dig out the service name and its 'id' for each service configured in the file.
+		#
+
+		for DATA in `awk '/^service/, /^[ 	]*\}/ { if ($0 ~ /^[ 	]*(#|$)/) next; printf "%s", $0; if ($0 ~ /\}/) print ""; }' "${FILENAME}"`; do
+			# Unfortunately we must jiggle with IFS again to ensure that subsequent commands work.
+			IFS=$RKHIFS
+
+			# We 'echo' the configured service to flatten out any whitespace.
+			RKHTMPVAR=`echo ${DATA} | cut -d' ' -f2 | sed -e 's/{$//'`
+			RKHTMPVAR2=`echo ${DATA} | sed -e 's/^.* id = \([^ ]*\).*$/\1/'`
+
+			if [ -z "${RKHTMPVAR2}" ]; then
+				SVCID=" ${RKHTMPVAR} "
+			else
+				SVCID=" (${RKHTMPVAR}|${RKHTMPVAR2}) "
+			fi
+
+			#
+			# We now check the service name and id against those listed in the defaults.
+			#
+
+			if [ -n "${XINETD_DFLTS_ENABLED}" ]; then
+				if [ -n "`echo \"${XINETD_DFLTS_ENABLED}\" | egrep \"${SVCID}\"`" ]; then
+					if [ -z "`echo \"${XINETD_DFLTS_DISABLED}\" | egrep \"${SVCID}\"`" ]; then
+						SEEN=1
+						IFS=$IFSNL
+						break
+					fi
+				fi
+			elif [ -n "`echo \"${XINETD_DFLTS_DISABLED}\" | egrep \"${SVCID}\"`" ]; then
+				:
+			elif [ -z "`echo $DATA | grep 'disable = yes'`" ]; then
+				SEEN=1
+				IFS=$IFSNL
+				break
+			fi
+
+			IFS=$IFSNL
+		done
+
+		IFS=$RKHIFS
+	fi
+
+
+	if [ $SEEN -eq 1 ]; then
 		#
 		# See if the file is whitelisted.
 		#
 
-		RKHTMPVAR=0
+		FOUNDWL=0
 
 		for FNAME in ${XINETDALLOWEDSVCS}; do
-			if [ "${FNAME}" = "$1" ]; then
-				RKHTMPVAR=1
+			if [ "${FNAME}" = "${FILENAME}" ]; then
+				FOUNDWL=1
 				break
 			fi
 		done
 
-		if [ $RKHTMPVAR -eq 0 ]; then
+		if [ $FOUNDWL -eq 0 ]; then
 			FOUND=1
-			FOUNDFILES="${FOUNDFILES} $1"
+			FOUNDFILES="${FOUNDFILES} ${FILENAME}"
 
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "$1"
+				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${FILENAME}"
 			fi
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "$1"
-			display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "$1" "xinetd"
+			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${FILENAME}"
+			display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${FILENAME}" 'xinetd'
 		fi
 	elif [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "$1"
+		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${FILENAME}"
 	fi
 
 
@@ -14046,7 +14162,7 @@ xinetd_include() {
 	# Next we look for any 'include' directives.
 	#
 
-	for FNAME in `grep '^[ 	]*include[ 	]' "$1" | awk '{ print $2 }'`; do
+	for FNAME in `grep '^[ 	]*include[ 	]' "${FILENAME}" | awk '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDE "${FNAME}"
 		fi
@@ -14059,7 +14175,7 @@ xinetd_include() {
 	# Finally we look for any 'includedir' directives.
 	#
 
-	for DIR in `grep '^[ 	]*includedir[ 	]' "$1" | awk '{ print $2 }'`; do
+	for DIR in `grep '^[ 	]*includedir[ 	]' "${FILENAME}" | awk '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDEDIR "${DIR}"
 		fi
@@ -14105,7 +14221,7 @@ sol10_inetd() {
 	FOUNDSTRING=`${INETADM_CMD} | grep '^enabled' | cut -d: -f2`
 
 	if [ -f "${INETD_CONF_PATH}" ]; then
-		STR=`grep -v '^#' "${INETD_CONF_PATH}" | awk '{ print $1 }'`
+		STR=`grep -v '^#' "${INETD_CONF_PATH}" | ${AWK_CMD} '{ print $1 }'`
 
 		#
 		# Remove any inetd services which we already know
@@ -14173,7 +14289,7 @@ trojan_checks() {
 
 	if [ -f "${INETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
 		if [ -z "${INETADM_CMD}" ]; then
-			display --to LOG --type INFO CONFIG_XINETD_PATH "inetd" "${INETD_CONF_PATH}"
+			display --to LOG --type INFO CONFIG_XINETD_PATH 'inetd' "${INETD_CONF_PATH}"
 
 			FOUNDSTRING=`grep -v '^#' "${INETD_CONF_PATH}" | awk '{ print $1 }'`
 		else
@@ -14192,7 +14308,7 @@ trojan_checks() {
 			for SVC in ${INETDALLOWEDSVCS}; do
 				if [ "${STR}" = "${SVC}" ]; then
 					FOUND=1
-					display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" "inetd"
+					display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" 'inetd'
 					break
 				fi
 			done
@@ -14221,7 +14337,7 @@ trojan_checks() {
 					for SVC in ${INETDALLOWEDSVCS}; do
 						if [ "${STR}" = "${SVC}" ]; then
 							FOUND=1
-							display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" "inetd"
+							display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" 'inetd'
 							break
 						fi
 					done
@@ -14256,7 +14372,6 @@ trojan_checks() {
 	#
 	# Next we check the xinetd.conf file.
 	#
-#jh - include fix for when 'disabled=yes' is missing.
 
 	FOUND=0
 	FOUNDFILES=""
@@ -14266,7 +14381,11 @@ trojan_checks() {
 	fi
 
 	if [ -f "${XINETD_CONF_PATH}" ]; then
-		display --to LOG --type INFO CONFIG_XINETD_PATH "xinetd" "${XINETD_CONF_PATH}"
+		XINETD_DFLTS_SEEN=0
+		XINETD_DFLTS_ENABLED=""
+		XINETD_DFLTS_DISABLED=""
+
+		display --to LOG --type INFO CONFIG_XINETD_PATH 'xinetd' "${XINETD_CONF_PATH}"
 
 		xinetd_include "${XINETD_CONF_PATH}"
 
@@ -14368,8 +14487,8 @@ bsd_specific_checks() {
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 
 			display --to LOG --type WARNING ROOTKIT_OS_BSD_SOCKNET_FOUND
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_BSD_SOCKNET_OUTPUT "Sockstat" "${SOCKSTAT_OUTPUT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_BSD_SOCKNET_OUTPUT "Netstat" "${NETSTAT_OUTPUT}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_BSD_SOCKNET_OUTPUT 'Sockstat' "${SOCKSTAT_OUTPUT}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_BSD_SOCKNET_OUTPUT 'Netstat' "${NETSTAT_OUTPUT}"
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
@@ -14490,7 +14609,7 @@ linux_loaded_modules() {
 	if [ ! -f "/proc/modules" ]; then
 		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
-		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING "/proc/modules"
+		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING '/proc/modules'
 	elif [ -z "${LSMOD_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
@@ -14507,15 +14626,15 @@ linux_loaded_modules() {
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_FOUND
-				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "/proc/modules" "${PROC_OUTPUT}"
-				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "lsmod" "${LSMOD_OUTPUT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT '/proc/modules' "${PROC_OUTPUT}"
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT 'lsmod' "${LSMOD_OUTPUT}"
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 			display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_EMPTY
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "/proc/modules" "${PROC_OUTPUT}"
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT "lsmod" "${LSMOD_OUTPUT}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT '/proc/modules' "${PROC_OUTPUT}"
+			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT 'lsmod' "${LSMOD_OUTPUT}"
 		fi
 	fi
 
@@ -14757,7 +14876,7 @@ check_port_wl() {
 
 			if [ -z "${FNAME}" ]; then
 				if [ $SUNOS -eq 1 ]; then
-					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | awk '{ print $NF }'`
+					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
 				else
 					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 				fi
@@ -14796,16 +14915,16 @@ check_port_wl() {
 			;;
 		SunOS)
 			if [ "${PROTO}" = "UDP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}$"`
+				FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^UDP: IPv4/, /^$/ { print $1 }' | grep "\.${PORT}$"`
 
 				if [ -z "${FOUND}" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}$"`
+					FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}$"`
 				fi
 			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}$"`
+				FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | ${AWK_CMD} '{ print $1 }' | grep "\.${PORT}$"`
 
 				if [ -z "${FOUND}" ]; then
-					FOUND=`${NETSTAT_CMD} -an | awk '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | awk '{ print $1 }' | grep "\.${PORT}$"`
+					FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | ${AWK_CMD} '{ print $1 }' | grep "\.${PORT}$"`
 				fi
 			fi
 			;;
@@ -14878,7 +14997,7 @@ do_network_port_checks() {
 
 	if [ -z "${LSOF_CMD}" -a -z "${NETSTAT_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --log-indent 2 --screen-indent 4 --color YELLOW --result SKIPPED NETWORK_PORTS_BACKDOOR
-		display --to LOG --type INFO TEST_SKIPPED_OS "network port checks" "lsof or netstat command required."
+		display --to LOG --type INFO TEST_SKIPPED_OS 'network port checks' 'lsof or netstat command required.'
 		return
 	fi
 
@@ -15027,25 +15146,13 @@ do_network_hidden_port_checks() {
 	fi
 
 	if [ $SUNOS -eq 1 ]; then
-		RKHTMPVAR="gawk"
-		AWK_CMD=`find_cmd gawk`
-
-		if [ -z "${AWK_CMD}" ]; then
-			RKHTMPVAR="nawk"
-			AWK_CMD=`find_cmd nawk`
+		if [ "${AWK_CMD}" = "awk" ]; then
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
+			display --to LOG --type INFO NOT_FOUND_CMD 'gawk or nawk'
+			return
+		else
+			display --to LOG --type INFO FOUND_CMD 'awk' "${AWK_CMD}"
 		fi
-	else
-		RKHTMPVAR="awk"
-		AWK_CMD=`find_cmd awk`
-	fi
-
-	if [ -n "${AWK_CMD}" ]; then
-		display --to LOG --type INFO FOUND_CMD "${RKHTMPVAR}" "${AWK_CMD}"
-	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
-		test $SUNOS -eq 1 && RKHTMPVAR="gawk or nawk" || RKHTMPVAR="awk"
-		display --to LOG --type INFO NOT_FOUND_CMD "${RKHTMPVAR}"
-		return
 	fi
 
 	#
@@ -15171,9 +15278,9 @@ do_network_interface_checks() {
 					;;
 				SunOS|IRIX*|AIX)
 					if [ -z "${IFWLIST}" ]; then
-						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '/PROMISC/ { print }'`
+						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | ${AWK_CMD} '/PROMISC/ { print }'`
 					else
-						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^('${IFWLIST}'):$/ && /PROMISC/ { print }'`
+						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | ${AWK_CMD} '$1 !~ /^('${IFWLIST}'):$/ && /PROMISC/ { print }'`
 					fi
 					;;
 				*)
@@ -15512,9 +15619,9 @@ ${STRING}:${INFO}"
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
 					STRING=`echo ${STRING} | sed -e 's/\\\//g'`
-					display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${STRING}" startup_malware
+					display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${STRING}" 'startup_malware'
 				elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" startup_malware
+					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'startup_malware'
 				else
 					FOUND=1
 
@@ -15751,10 +15858,10 @@ do_group_accounts_check() {
 
 	if [ -s "/etc/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
-		display --to LOG --type INFO ACCOUNTS_FOUND_PWD_FILE "/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_FOUND_PWD_FILE '/etc/passwd'
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
-		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE "/etc/passwd"
+		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE '/etc/passwd'
 	fi
 
 
@@ -15823,7 +15930,7 @@ ${RKHTMPVAR}"
 		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ACCOUNTS_UID0
-		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE '/etc/passwd'
 	fi
 
 
@@ -15849,7 +15956,7 @@ ${RKHTMPVAR}"
 		if [ -n "${SHADOW_FILE}" ]; then
 			display --to LOG --type INFO ACCOUNTS_SHADOW_FILE "${SHADOW_FILE}"
 		else
-			display --to LOG --type INFO ACCOUNTS_SHADOW_TCB "/etc/tcb"
+			display --to LOG --type INFO ACCOUNTS_SHADOW_TCB '/etc/tcb'
 		fi
 
 		#
@@ -15955,7 +16062,7 @@ ${RKHTMPVAR}"
 
 			for RKHTMPVAR in ${SHAD_PWDLESS_LIST}; do
 				test -z "${RKHTMPVAR}" && continue
-				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "shadow" "${RKHTMPVAR}"
+				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND 'shadow' "${RKHTMPVAR}"
 			done
 		fi
 
@@ -15967,7 +16074,7 @@ ${RKHTMPVAR}"
 
 		for RKHTMPVAR in ${PWD_PWDLESS_LIST}; do
 			test -z "${RKHTMPVAR}" && continue
-			display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND "passwd" "${RKHTMPVAR}"
+			display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND 'passwd' "${RKHTMPVAR}"
 		done
 
 		IFS=$RKHIFS
@@ -15993,7 +16100,7 @@ ${RKHTMPVAR}"
 		:
 	elif [ ! -f "/etc/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
-		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE "/etc/passwd"
+		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE '/etc/passwd'
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD 'diff'
@@ -16044,7 +16151,7 @@ ${RKHTMPVAR}"
 		:
 	elif [ ! -f "/etc/group" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
-		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE "/etc/group"
+		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE '/etc/group'
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
 		display --to LOG --type INFO NOT_FOUND_CMD 'diff'
@@ -16134,7 +16241,7 @@ ${RKHTMPVAR}"
 			SHELLNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			FILENAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
-			display --to LOG --type WARNING HISTORY_CHECK_FOUND "SHELLNAME" "FILENAME"
+			display --to LOG --type WARNING HISTORY_CHECK_FOUND "`name2text \"${SHELLNAME}\"`" "`name2text \"${FILENAME}\"`"
 		done
 	fi
 
@@ -16180,7 +16287,7 @@ do_system_config_files_check() {
 	if [ -n "${SSH_CONFIG_FILE}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 
-		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "an" "SSH" "${SSH_CONFIG_FILE}"
+		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND 'an' 'SSH' "${SSH_CONFIG_FILE}"
 
 		display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
 		display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
@@ -16276,11 +16383,11 @@ do_system_config_files_check() {
 			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
 
 			if [ -n "`echo \"${RKHTMPVAR}\" | grep 'rsyslog'`" ]; then
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "rsyslog"
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'rsyslog'
 			elif [ -n "`echo \"${RKHTMPVAR}\" | grep 'syslog-ng'`" ]; then
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "syslog-ng"
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog-ng'
 			else
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "syslog"
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog'
 			fi
 
 			TITLE_SHOWN=1
@@ -16292,7 +16399,7 @@ do_system_config_files_check() {
 			SYSTEMD_SEEN=1
 
 			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "systemd-journald"
+			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'systemd-journald'
 
 			TITLE_SHOWN=1
 		fi
@@ -16303,7 +16410,7 @@ do_system_config_files_check() {
 			METALOG_SEEN=1
 
 			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "metalog"
+			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'metalog'
 
 			TITLE_SHOWN=1
 		fi
@@ -16314,7 +16421,7 @@ do_system_config_files_check() {
 			SOCKLOG_SEEN=1
 
 			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON "socklog"
+			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'socklog'
 
 			TITLE_SHOWN=1
 		fi
@@ -16399,10 +16506,10 @@ do_system_config_files_check() {
 
 		if [ $SYSLOG_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE "syslog"
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE 'syslog'
 		elif [ $SYSTEMD_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | grep ' systemd '`" ]; then
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE "systemd-journald"
+			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE 'systemd-journald'
 		elif [ -n "${FILEFOUND}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
 		else
@@ -16570,7 +16677,7 @@ do_filesystem_check() {
 		else
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
 
-			display --to LOG --type WARNING FILESYSTEM_DEV_FILE_FOUND "/dev"
+			display --to LOG --type WARNING FILESYSTEM_DEV_FILE_FOUND '/dev'
 
 			IFS=$IFSNL
 
@@ -19720,7 +19827,7 @@ display --to SCREEN --type PLAIN VERSIONLINE "${PROGRAM_NAME}" "${PROGRAM_versio
 
 if [ $NOLOG -eq 0 ]; then
 	if [ -n "${HOST_NAME}" ]; then
-		display --to LOG --type PLAIN VERSIONLINE2 "${PROGRAM_NAME}" "${PROGRAM_version}" ${HOST_NAME}
+		display --to LOG --type PLAIN VERSIONLINE2 "${PROGRAM_NAME}" "${PROGRAM_version}" "${HOST_NAME}"
 	else
 		display --to LOG --type PLAIN VERSIONLINE3 "${PROGRAM_NAME}" "${PROGRAM_version}"
 	fi
@@ -19747,7 +19854,7 @@ if [ $NOLOG -eq 0 ]; then
 
 	test $DEBUG_OPT -eq 1 && display --to LOG --type INFO CONFIG_DEBUGFILE "${RKHDEBUGFILE}"
 
-	display --to LOG --type INFO CONFIG_ENVSHELL ${SHELL} ${MYSHELL}
+	display --to LOG --type INFO CONFIG_ENVSHELL "${SHELL}" "${MYSHELL}"
 
 	display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
 
@@ -20076,10 +20183,10 @@ if [ $CHECK -eq 1 ]; then
 	if [ -n "${KSYMS_FILE}" ]; then
 		display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"
 	elif [ -f "/proc/ksyms" ]; then
-		display --to LOG --type INFO KSYMS_FOUND "/proc/ksyms"
+		display --to LOG --type INFO KSYMS_FOUND '/proc/ksyms'
 		display --to LOG --type INFO KSYMS_UNAVAIL
 	elif [ -f "/proc/kallsyms" ]; then
-		display --to LOG --type INFO KSYMS_FOUND "/proc/kallsyms"
+		display --to LOG --type INFO KSYMS_FOUND '/proc/kallsyms'
 		display --to LOG --type INFO KSYMS_UNAVAIL
 	else
 		display --to LOG --type INFO KSYMS_MISSING
