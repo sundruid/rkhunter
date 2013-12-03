@@ -8331,9 +8331,12 @@ do_system_check_initialisation() {
 	JYNX_FILES="/xochikit/bc
 		    /xochikit/ld_poison.so
 		    /omgxochi/bc
-		    /omgxochi/ld_poison.so"
+		    /omgxochi/ld_poison.so
+		    /var/local/^^/bc
+		    /var/local/^^/ld_poison.so"
 	JYNX_DIRS="/xochikit
-		   /omgxochi"
+		   /omgxochi
+		   /var/local/^^"
 	JYNX_KSYMS=
 
 
