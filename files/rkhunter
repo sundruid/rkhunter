@@ -12375,9 +12375,7 @@ rootkit_file_dir_checks() {
 		fi
 
 		if [ -n "${ROOTKIT_PHALANX2_DIRNAMES}" ]; then
-
 			for ROOTKIT_PHALANX2_DIRNAME in ${ROOTKIT_PHALANX2_DIRNAMES}; do
-
 				if `cd ${ROOTKIT_PHALANX2_DIRNAME} >/dev/null 2>&1`; then
 					ROOTKIT_PHALANX2_TEST=1
 
@@ -12398,44 +12396,46 @@ rootkit_file_dir_checks() {
 
 		if `grep -q '^/dev/root .* ext[23] ' /proc/mounts 2>/dev/null`; then 
 			if [ -n "${STAT_CMD}" ]; then
-				if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
-					NLINKS1=`${STAT_CMD} --nlink /etc 2>/dev/null`
-				else
-					NLINKS1=`${STAT_CMD} -c %h /etc 2>/dev/null`
-				fi
-
-				NLINKS2=`ls -ld /etc 2>/dev/null | awk -F' ' '/^d/ {print $2}' | head ${HEAD_OPT}1`
-
-				test -z "${NLINKS1}" && NLINKS1=-1
-				test -z "${NLINKS2}" && NLINKS2=-2
-
-				if [ $NLINKS1 -ne $NLINKS2 ]; then
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_LINK_COUNT '/etc'
-
-						if [ $NLINKS1 -eq -1 ]; then
-							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" '/etc'
-						fi
-
-						if [ $NLINKS2 -eq -2 ]; then
-							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR 'ls -ld' '/etc'
-						fi
-
-						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL "${STAT_CMD}" "$NLINKS1"
-						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL 'ls -ld' "$NLINKS2"
+				for DIR_NAME in /etc /usr/share; do
+					if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
+						NLINKS1=`${STAT_CMD} --nlink ${DIR_NAME} 2>/dev/null`
+					else
+						NLINKS1=`${STAT_CMD} -c %h ${DIR_NAME} 2>/dev/null`
 					fi
 
-					if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
-						ROOTKIT_PHALANX2_TEST=1
-						display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-					fi
+					NLINKS2=`ls -ld ${DIR_NAME} 2>/dev/null | awk -F' ' '/^d/ {print $2}' | head ${HEAD_OPT}1`
 
-					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_PHALANX2_LINK_COUNT_FAIL '/etc'
-				elif [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_LINK_COUNT '/etc'
-				fi
+					test -z "${NLINKS1}" && NLINKS1=-1
+					test -z "${NLINKS2}" && NLINKS2=-2
+
+					if [ $NLINKS1 -ne $NLINKS2 ]; then
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_LINK_COUNT "${DIR_NAME}"
+
+							if [ $NLINKS1 -eq -1 ]; then
+								display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" "${DIR_NAME}"
+							fi
+
+							if [ $NLINKS2 -eq -2 ]; then
+								display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR 'ls -ld' "${DIR_NAME}"
+							fi
+
+							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL "${STAT_CMD}" "$NLINKS1"
+							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL 'ls -ld' "$NLINKS2"
+						fi
+
+						if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
+							ROOTKIT_PHALANX2_TEST=1
+							display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+						fi
+
+						display --to LOG --type PLAIN --log-indent 9 ROOTKIT_PHALANX2_LINK_COUNT_FAIL "${DIR_NAME}"
+					elif [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_LINK_COUNT "${DIR_NAME}"
+					fi
+				done
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_LINK_COUNT '/etc'
+				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_LINK_COUNT '/etc and /usr/share'
 				display --to LOG --type INFO NOT_FOUND_CMD 'stat'
 			fi
 		fi
