@@ -4451,14 +4451,18 @@ get_if_prelinked() {
 
 		if [ -f "/etc/ld.so.preload" ]; then
 			LIBSAFE_TEST1=`grep 'libsafe' /etc/ld.so.preload 2>&1`
-		else
+		fi
+
+		if [ -z "${LIBSAFE_TEST1}" ]; then
 			LIBSAFE_TEST1=`echo "$LD_PRELOAD" | grep 'libsafe' 2>&1`
 		fi
 
 		if [ -n "${LDD_CMD}" ]; then
 			if [ -f /lib/libdl.so.? ]; then
 				LIBSAFE_TEST2=`${LDD_CMD} /lib/libdl.so.? | grep 'libsafe' 2>&1`
-			elif [ -f /lib64/libdl.so.? ]; then
+			fi
+
+			if [ -z "${LIBSAFE_TEST2}" -a -f /lib64/libdl.so.? ]; then
 				LIBSAFE_TEST2=`${LDD_CMD} /lib64/libdl.so.? | grep 'libsafe' 2>&1`
 			fi
 		fi
