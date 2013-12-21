@@ -6383,7 +6383,7 @@ rkh_dat_set_file_properties() {
 		# need them later on.
 		#
 
-		COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c`
+		COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
@@ -6765,7 +6765,7 @@ ${DIR}:1"
 		fi
 
 		# Check if the symbolic link has any colon characters in it.
-		SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
+		SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
 
 		echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
 
@@ -10348,7 +10348,7 @@ file_properties_check() {
 			if [ $FMTVERSION -eq 0 ]; then
 				RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
 			else
-				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c`
+				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
 				RKHLINE=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}"`
 			fi
@@ -10369,7 +10369,7 @@ file_properties_check() {
 					if [ $FMTVERSION -eq 0 ]; then
 						RKHLINE="File:${FNAME}:1:1:1:1:1:1:1::${SYSLNK}:"
 					else
-						SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
+						SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
 
 						RKHLINE="File:${COLON_COUNT}:${FNAME}:1:1:1:1:1:1:1::${SYSLNK_CC}:${SYSLNK}:"
 					fi
@@ -11146,8 +11146,8 @@ ${RKHLINE}"
 					NEWRKHENTRIES="${NEWRKHENTRIES}
 File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::${SYSLNK}:"
 				else
-					RKH_CC=`echo "${FNAME}" | tr -c -d ':' | wc -c`
-					SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c`
+					RKH_CC=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
+					SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
 
 					NEWRKHENTRIES="${NEWRKHENTRIES}
 File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::${SYSLNK_CC}:${SYSLNK}:"
@@ -19492,7 +19492,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				if [ $FMTVERSION -eq 0 ]; then
 					RKHTMPVAR2=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
 				else
-					COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c`
+					COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
 					RKHTMPVAR2=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 					test -n "${RKHTMPVAR2}" && RKHTMPVAR2="${FNAME}"
