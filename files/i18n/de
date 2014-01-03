@@ -240,7 +240,7 @@ FILE_PROP_SKIP_HASH_PRELINK:'prelink'-Kommando wurde nicht gefunden.
 FILE_PROP_SKIP_HASH_SHA1:Dieses System benutzt prelinking, aber die das Kommando für die Hash-Funktion sieht nicht nach SHA1 oder MD5 aus.
 FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe wurde gefunden, dies kann Fehler verursachen. Deaktivieren Sie, sofern möglich, libsafe und starten das prelink-Kommando erneut. Abschließend die Hash-Werte erneuern mittels 'rkhunter --propupd'.
 FILE_PROP_SKIP_IMMUT:'lsattr'-Kommando wurde nicht gefunden - alle  immutable-bit Überprüfungen werden übersprungen.
-FILE_PROP_SKIP_SCRIPT:'file'-Kommando wurde nicht gefunden - Alle Skript-Ersetzungs-Überprüfungen werden übersprungen..
+FILE_PROP_SKIP_SCRIPT:'file'-Kommando wurde nicht gefunden - Alle Skript-Ersetzungs-Überprüfungen werden übersprungen.
 FILE_PROP_OS_CHANGED:Die lokale Host-Konfiguration oder das Betriebssystem hat sich geändert.
 FILE_PROP_DAT_MISSING:Die Datei mit den gespeicherten Dateieigenschaften (rkhunter.dat) existiert nicht und muss erstellt werden. Um dies zu veranlassen führen Sie 'rkhunter --propupd' aus.
 FILE_PROP_DAT_EMPTY:Die Datei mit den gespeicherten Dateieigenschaften (rkhunter.dat) ist leer und muss erstellt werden. Um dies zu veranlassen führen Sie 'rkhunter --propupd' aus.
@@ -444,8 +444,8 @@ SYSTEM_CONFIGS_SSH_PROTO:Überprüfung, ob das SSH-Protokoll Version 1 erlaubt i
 SYSTEM_CONFIGS_SSH_PROTO_FOUND:SSH-Protokoll Version 1 ist aktiviert in der SSH-Konfiguration ($1).
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:Die SSH-Konfigurationsvariable 'Protocol' wurde nicht gesetzt.
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:Der Standard-Wert kann '2,1' enthalten, um die Benutzung des Protokolls in Version 1 zu nutzen.
-SYSTEM_CONFIGS_SYSLOG:Überprüfung, ob der syslog-Daemon ausgeführt wird
-SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:Der syslog-Daemon wird nicht ausgeführt.
+SYSTEM_CONFIGS_SYSLOG:Überprüfung, ob der syslog-Daemon asugeführt wird
+SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:Der syslog-Daemon wird nicht ausgeführt nicht.
 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:Der syslog-Daemon wird nicht ausgeführt, aber ein Metalog-Daemon wurde gefunden.
 SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING:Der syslog-Daemon wird nicht ausgeführt, aer ein socklog-Daemon wurde gefunden.
 SYSTEM_CONFIGS_SYSLOG_NO_FILE:Der syslog-Daemon wird ausgeführt, aber es kann keine Konfigurations-Datei gefunden werden.
@@ -544,3 +544,95 @@ LIST_TESTS:Verfügbare Überprüfungen lauten:
 LIST_GROUPED_TESTS:Gruppierte Überprüfungen lauten:
 LIST_LANGS:Verfügbare Sprachen:
 LIST_RTKTS:Rootkits überprüft für:
+
+APPS_DAT_NOTAFILE:Die Datei der unsicheren Anwendungsversionen ist keine Datei: $1
+CONFIG_LOCALCONFIGFILE:Verwende lokale Konfigurationsdatei '$1'
+FILE_PROP_BROKEN_LINK_WL_TGT:Gebrochene Verknüpfung gefunden, aber die Existenz des Ziels ist mittels Whitelist freigegeben: '$1'
+FILE_PROP_DAT_MISSING_INFO:Die Dateieigenschaften-Prüfung wird ausgeführt da Prüfungen auch ohne die rkhunter.dat Datei ausgeführt werden können.
+FILE_PROP_EPOCH_DATE_CMD:Benutze '$1' um Epochen-Zeitstempel umzurechnen.
+FILE_PROP_IGNORE_PRELINK_DEP_ERR:Ignoriere Prelink-Abhängigkeit für Datei '$1'
+FILE_PROP_IMMUT_NOT_SET:Datei '$1' hat das immutable-bit nicht gesetzt.
+FILE_PROP_IMMUT_SET:Die immutable-bit Prüfung wird invertiert.
+FILE_PROP_NO_OS_WARNING:Warnungen über Betriebssystem-Änderungen wurden deaktiviert nach Anwenderwunsch.
+FILE_PROP_NO_SYSHASH_BL:Die Datei ist eine gebrochene Verknüpfung: $1
+FILE_PROP_SKIP_FILE_CMD:Keine Ausgabe vom 'file' Kommando - alle Skript-Ersetzungs-Überprüfungen werden übersprungen.
+FILE_PROP_SKIP_IMMUT_CMD:Keine Ausgabe vom '$1' Kommando - alle immutable-bit Überprüfungen werden übersprungen.
+FILE_PROP_SYSHASH_UNAVAIL_BL:derzeitiger Hash-Wert: nicht verfügbar (mögliche gebrochene Verknüpfung)
+FILE_PROP_WL_STR:Datei '$1' und Zeichenkette '$2' gefunden: sie sind mittels Whitelist freigegeben für '$3' Überprüfung.
+GROUP_CHANGES_FOUND:Änderungen gefunden in ger group-Datei für Gruppe '$1':
+GROUP_CHANGES_GID:Die Gruppen-Nummer wurde geändert von '$1' nach '$2'
+GROUP_CHANGES_GRPADD:Benutzer '$1' wurde der Gruppe hinzugefügt
+GROUP_CHANGES_GRPREM:Benutzer '$1' wurde aus der Gruppe entfernt
+GROUP_CHANGES_IDADD:Gruppe '$1' wurde der group-Datei hinzugefügt.
+GROUP_CHANGES_IDREM:Gruppe '$1' wurde aus der group-Datei entfernt.
+GROUP_CHANGES_PWD:Der Gruppen-Name wurde geändert von '$1' nach '$2'
+HASH_FUNC_PERL_SHA:Benutze das perl-Modul $1 (mit $2) für die Datei-Hash Prüfungen
+HASH_PKGMGR_SUM:Benutze die gespeicherten 16-bit Prüfsummen für die Paketverifikation
+KSYMS_UNAVAIL:Alle ksyms und kallsyms Prüfungen werden übersprüngen - die Datei ist nicht lesbar.
+LIST_PERL:Perl Modul Installations Status:
+LOCK_FAIL:Unfähig die Sperrdatei zu sperren: rkhunter ist nicht gelaufen!
+LOCK_UNUSED:Sperrungen werden nicht verwendet
+LOCK_USED:Sperren wird verwendet: timeout beträgt $1 Sekunden
+LOCK_WAIT:Warte auf Sperrdatei
+MSG_RESULT_WHITELISTED:durch Whitelisting erlaubt
+NETWORK_HIDDEN_PORTS_CHK_NAME:Tor Nummer: $1:$2 wird benutzt von $3
+NETWORK_HIDDEN_PORTS_CHK:Tor Nummer: $1:$2
+NETWORK_HIDDEN_PORTS_FOUND:Versteckte Tore gefunden:
+NETWORK_HIDDEN_PORTS_PATH_WHITELIST:Verstecktes $1 port $2 wird benutzt von $3: der Pfadname ist mittels Whitelist erlaubt.
+NETWORK_HIDDEN_PORTS_PORT_WHITELIST:Verstecktes $1 port $2 gefunden: das Tor ist mittels Whitelist erlaubt.
+NETWORK_HIDDEN_PORTS:Prüfe auf versteckte ports
+NETWORK_HIDDEN_PORTS_TRUSTED_WHITELIST:Verstecktes $1 Tor $2 wird benutzt von $3: der Pfadname ist vertrauenswürdig.
+NETWORK_PORTS_BACKDOOR_CHK:Prüfe auf $1 Tor $2
+NETWORK_PORTS_BACKDOOR_LOG:Führe Prüfung auf Hintertüren-ports aus
+NETWORK_PORTS_BACKDOOR:Prüfe auf Hintertüren-ports
+NETWORK_PORTS_BKDOOR_FOUND:Netzwerk $1 Tor $2 wird benutzt${3}. Mögliches Rootkit: $4
+NETWORK_PORTS_BKDOOR_FOUND:Nutzen Sie das 'lsof -i' oder 'netstat -an' Kommando um dies zu prüfen.
+NETWORK_PORTS_FILE_NOTAFILE:Die Datei der bekannten Hintertüren-ports ist keine Datei: $1
+NETWORK_PROMISC_WLIST:Netzwerk-Schnittstellen, die im promiscuous-Modus betrieben werden dürfen: $1
+OSINFO_DO_UPDT:Die Dateieigenschaften-Datei wird automatisch auf den neuesten Stand gebracht.
+PWD_CHANGES_COMM:Der Konto-Kommentar wurde von '$1' nach '$2' geändert.
+PWD_CHANGES_FOUND:Änderungen gefunden in der passwd Datei für Benutzer '$1':
+PWD_CHANGES_GID:Die GID wurde geändert von '$1' nach '$2'
+PWD_CHANGES_HOME:Das Heimatverzeichnis wurde geändert von '$1' nach '$2'
+PWD_CHANGES_IDADD:Benutzer '$1' wurde der passwd-Datei hinzugefügt.
+PWD_CHANGES_IDREM:Benutzer '$1' wurde aus der passwd-Datei entfernt.
+PWD_CHANGES_PWD:Das Passwort wurde geändert von '$1' nach '$2'
+PWD_CHANGES_SHL:Die login shell wurde geändert von '$1' nach '$2'
+PWD_CHANGES_UID:Die UID wurde geändert von '$1' nach '$2'
+PWDGRP_CHANGES_UNK:Unbekanntes Feld gefunden in der $1 Datei: altes Feld: '$2', neues Feld: '$3'
+RKHDAT_ADD_NEW_ENTRY:Füge neuen Dateieintrag zur 'rkhunter.dat' Datei hinzu: $1
+RKHDAT_DEL_OLD_ENTRY:Lösche nicht existierenden Dateieintrag aus der 'rkhunter.dat' Datei: $1
+ROOTKIT_MALWARE_HIDDEN_PROCS_NOUNHIDE:Die Nutzung von '$1' wurde unterdrückt auf Benutzerwunsch.
+ROOTKIT_MALWARE_HIDDEN_PROCS_RUBY_ERR:Das 'unhide.rb' Kommand ergab einen Fehler:
+ROOTKIT_MALWARE_HIDDEN_PROCS_UNH_ERR:'unhide' nicht ausgeführt: ungültiger konfigurierter Testname: $1
+ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD:Benutze Kommando '$1'
+ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_VERS:Gefundene 'unhide' Kommando-Version: $1
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_CMD:Kommando: $1
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_PATH:Pfadname: $1
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_RTKT:Mögliches Rootkit: $1
+ROOTKIT_MALWARE_SUSP_FILES_FOUND_UID:UID: $1    PID: $2
+ROOTKIT_OS_DFLY_PKGDB_NOTOK:Die Paketdatenbank scheint inkonsistent zu sein.
+ROOTKIT_OS_DFLY_PKGDB_NOTOK:Dies mag kein Sicherheitsproblem sein, aber 'pkg_admin check' auszuführen könnte helfen, das Problem zu diagnostizieren.
+ROOTKIT_PHALANX2_PROC_FOUND:Laufenden Prozess 'ata/0' gefunden
+ROOTKIT_PHALANX2_PROC_PPID:Erwarte 'kthread' Eltern-PID '$1', fand Eltern-PID '$2'
+ROOTKIT_PHALANX2_PROC:Prüfe Prozessliste auf Prozess 'ata/0'
+ROOTKIT_PHALANX2_PROC_PS_ERR:Ausführung von 'ps' ergab unerwartete Ergebnisse: möglicherweise nicht unterstützte Kommandozeilen-Argumente.
+SET_FILE_PROP_FILE_COUNT_BL:Datei $1: suchte nach $2 Dateien, fand $3, gebrochene Verknüpfungen $4
+SET_FILE_PROP_FILE_COUNT_NOHASH_BL:Datei $1: suchte nach $2 Dateien, fand $3, fehlende Hashwerte $4, gebrochene Verknüpfungen $5
+SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT_BL:Datei $1: suchte nach $2 Dateien, fand $3 von $4, fehlende Hashwerte $5, gebrochene Verknüpfungen $6
+SET_FILE_PROP_FILE_COUNT_PROPOPT_BL:Datei $1: suchte nach $2 Dateien, fand $3 von $4, gebrochene Verknüpfungen $5
+SHARED_LIBS_PRELOAD_LIB_FOUND:Fand vorabgeladene geteilte Bibliothek: $1
+SHARED_LIBS_PRELOAD_LIB_WLIST:Fand vorabgeladene geteilte Bibliothek '$1': sie ist mittels Whitelist erlaubt.
+SUMMARY_LOGFILE_COPIED:Logdatei kopiert nach $1
+SUSPSCAN_DAT_MISSING:Die Datendatei der verdächtigen Inhalte fehlt oder ist leer: $1
+SUSPSCAN_DAT_MISSING:Führen Sie 'rkhunter --update' aus, um die Vorgabe-Datei wieder herzustellen.
+SUSPSCAN_DAT_NOTAFILE:Die Datendatei der verdächtigen Inhalte ist keine Datei: $1
+SYSTEM_CONFIGS_SSH_PROTO_DIFF1:SSH Konfigurations-Option 'Protocol': $1
+SYSTEM_CONFIGS_SSH_PROTO_DIFF2:Rkhunter Konfigurations-Option 'ALLOW_SSH_PROT_V1': $1
+SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG:Konfigurationsdatei erlaubt Logging über das Netzwerk: $1
+UPDATE_SKIPPED:Sprachdateien-Update übersprungen auf Benutzerwunsch.
+USER_CMD_LIST:Schliesse Benutzer-Kommandos für Dateieigenschaften-Prüfung ein:
+USER_DIR_LIST:Schliesse Benutzer-Verzeichnisse für Dateieigenschaften-Prüfung ein:
+USER_EXCLUDE_PROP:Schliesse von Dateieigenschaften-Prüfung aus:
+USER_FILE_LIST:Schliesse Benutzer-Dateien für Dateieigenschaften-Prüfung ein:
+
