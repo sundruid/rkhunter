@@ -1,4 +1,4 @@
-Version:2010111401
+Version:2014010301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -444,8 +444,8 @@ SYSTEM_CONFIGS_SSH_PROTO:Überprüfung, ob das SSH-Protokoll Version 1 erlaubt i
 SYSTEM_CONFIGS_SSH_PROTO_FOUND:SSH-Protokoll Version 1 ist aktiviert in der SSH-Konfiguration ($1).
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:Die SSH-Konfigurationsvariable 'Protocol' wurde nicht gesetzt.
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:Der Standard-Wert kann '2,1' enthalten, um die Benutzung des Protokolls in Version 1 zu nutzen.
-SYSTEM_CONFIGS_SYSLOG:Überprüfung, ob der syslog-Daemon asugeführt wird
-SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:Der syslog-Daemon wird nicht ausgeführt nicht.
+SYSTEM_CONFIGS_SYSLOG:Überprüfung, ob der syslog-Daemon ausgeführt wird
+SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:Der syslog-Daemon wird nicht ausgeführt.
 SYSTEM_CONFIGS_SYSLOG_METALOG_RUNNING:Der syslog-Daemon wird nicht ausgeführt, aber ein Metalog-Daemon wurde gefunden.
 SYSTEM_CONFIGS_SYSLOG_SOCKLOG_RUNNING:Der syslog-Daemon wird nicht ausgeführt, aer ein socklog-Daemon wurde gefunden.
 SYSTEM_CONFIGS_SYSLOG_NO_FILE:Der syslog-Daemon wird ausgeführt, aber es kann keine Konfigurations-Datei gefunden werden.
