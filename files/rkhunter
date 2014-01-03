@@ -3,7 +3,7 @@
 #
 # rkhunter -- Scan the system for rootkits and other known security issues.
 #
-# Copyright (c) 2003-2013, Michael Boelen ( michael AT rootkit DOT nl )
+# Copyright (c) 2003-2014, Michael Boelen ( michael AT rootkit DOT nl )
 #
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -18342,7 +18342,7 @@ trap - 13 >/dev/null 2>&1
 PROGRAM_NAME="Rootkit Hunter"
 PROGRAM_version="1.4.1"
 PROGRAM_copyright_owner="Michael Boelen"
-PROGRAM_copyright="Copyright (c) 2003-2013, ${PROGRAM_copyright_owner}"
+PROGRAM_copyright="Copyright (c) 2003-2014, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
 Currently under active development by the ${PROGRAM_NAME} project team.
 Please review your rkhunter.conf before using.
