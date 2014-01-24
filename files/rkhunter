@@ -696,9 +696,7 @@ get_option() {
 
 			OPTVAR=`echo "${OPTVAR} " | tr -d '" 	' | tr -d "'"`
 
-			if [ -n "`echo \"${OPTVAR} \" | grep '^-'`" ]; then
-				OPTVAR="${OPTVAR} "
-			fi
+			test -n "`echo \"${OPTVAR} \" | grep '^-'`" && OPTVAR="${OPTVAR} "
 			;;
 		*)
 			OPTVAR=`echo "${OPTVAR}" | tr -d '" 	' | tr -d "'"`
@@ -722,18 +720,13 @@ get_option() {
 		OPTVAR=`echo "${RKHTMPVAR2}" | sed -e "s/${OPTNAME}=//"`
 
 		#
-		# If a pathname begins with a hyphen, then this will cause problems
-		# for the 'echo' command. Actually this is only true if there is only
-		# one pathname. However, we are not going to check the number of
-		# pathnames, so to prevent the problem we simply add a space to
-		# the option value. This option will be rejected later when the
-		# pathnames are checked.
+		# If an option begins with a hyphen, then this will cause problems
+		# for the 'echo' command. So to prevent the problem we simply add
+		# a space to the option value. We must repeat this though if the
+		# variable is set again.
 		# 
 
-		if [ -n "`echo \"${OPTVAR} \" | grep '^-'`" ]; then
-			OPTVAR="${OPTVAR} "
-		fi
-
+		test -n "`echo \"${OPTVAR} \" | grep '^-'`" && OPTVAR="${OPTVAR} "
 
 		#
 		# Newline-separated list can contain virtually any character, so
@@ -745,16 +738,17 @@ get_option() {
 			OPTVAR=`echo "${OPTVAR}" | tr -s ' 	' '  '`
 
 			OPTVAR=`echo "${OPTVAR}" | sed -e 's/^ *"* *//; s/ *"* *$//' | sed -e "s/^ *'* *//; s/ *'* *$//"`
+			test -n "`echo \"${OPTVAR} \" | grep '^-'`" && OPTVAR="${OPTVAR} "
 
 			#
-			# For 'space-list' options, which are allowed to be on
-			# more than one line, we join the lines together and
-			# remove any leading or trailing spaces. We only use
-			# the options given after the last blank line (if any).
+			# We only use the options given after the last blank line (if any).
 			#
 
 			if [ -n "${OPTVAR}" ]; then
-				OPTVAR=`echo "${OPTVAR} " | awk 'BEGIN { RS="" }; END { print }'`
+#jh				OPTVAR=`echo "${OPTVAR}" | awk 'BEGIN { RS="" }; END { print }'`
+				RKHLINES=`echo "${OPTVAR}" | wc -l | tr -d ' '`
+				OPTVAR=`echo "${OPTVAR}" | awk -v l=\`echo ${RKHLINES}\` '/./ { if (a) { a = a "\n" $0 } else a = $0 }; /^$/ { a = "" }; NR == l { print a }'`
+				test -n "`echo \"${OPTVAR} \" | grep '^-'`" && OPTVAR="${OPTVAR} "
 			fi
 		else
 			#
@@ -1797,7 +1791,11 @@ check_commands() {
 			AWK_CMD=`find_cmd nawk`
 
 			if [ -z "${AWK_CMD}" ]; then
-				AWK_CMD="awk"
+				AWK_CMD=`find_cmd /usr/xpg4/bin/awk`
+
+				if [ -z "${AWK_CMD}" ]; then
+					AWK_CMD="awk"
+				fi
 			fi
 		fi
 	else
