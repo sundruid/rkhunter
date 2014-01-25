@@ -745,7 +745,7 @@ get_option() {
 			#
 
 			if [ -n "${OPTVAR}" ]; then
-#jh				OPTVAR=`echo "${OPTVAR}" | awk 'BEGIN { RS="" }; END { print }'`
+#JH				OPTVAR=`echo "${OPTVAR}" | awk 'BEGIN { RS="" }; END { print }'`
 				RKHLINES=`echo "${OPTVAR}" | wc -l | tr -d ' '`
 				OPTVAR=`echo "${OPTVAR}" | awk -v l=\`echo ${RKHLINES}\` '/./ { if (a) { a = a "\n" $0 } else a = $0 }; /^$/ { a = "" }; NR == l { print a }'`
 				test -n "`echo \"${OPTVAR} \" | grep '^-'`" && OPTVAR="${OPTVAR} "

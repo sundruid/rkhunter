@@ -18,7 +18,7 @@
 
  -- 
 
- * 1.4.1 (xx/xx/xxxx)
+ * 1.4.1 (xx/xx/2014)
 
  New:
  - The 'ssh', 'sshd' and 'telnet' commands are now checked as part of
@@ -29,11 +29,12 @@
    ending in '.conf' will be treated as configuration files, all other
    files will be ignored. The configuration options found in the files
    will be merged with the options found in the main configuration file
-   and the local configuration file, if present. They will only override
-   a previously specified option if the option can only be specified
-   once (but also see the change below regarding the null string). The
-   installer will automatically include any configuration files to the
-   file properties test.
+   and the local configuration file, if present. Both the local
+   configuration file, and the 'rkhunter.d' configuration files, will
+   only override a previously specified option if the option can only
+   be specified once, or, for list options, if the null string is given.
+   The installer will automatically include any configuration files to
+   the file properties test.
  - A new configuration file option, 'SHOW_SUMMARY_WARNINGS_NUMBER',
    can be set so that the summary will display the actual number of
    warnings found, rather than the default message which simply states
@@ -61,7 +62,7 @@
  - Added the PORT_PATH_WHITELIST configuration option to be used when
    specifying a pathname. Other port whitelisting types use the
    PORT_WHITELIST option as before.
- - Added Turkish translation file.
+ - Added a Turkish translation file.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly
@@ -71,14 +72,15 @@
    and DISABLE_TESTS options may now be specified more than once.
  - It is no longer required that the MAIL-ON-WARNING option exists in
    the configuration file.
- - Some configuration options can be specified more than once, and it is
-   now possible to set these options to the null string (""). Previously
-   use of the null string was ignored. Some options may assume a default
-   value if the option is set to null.
-   (This change was made in order that configuraton files in the
-   'rkhunter.d' directory can reset an option to null, and, if required,
-   provide new values simply by specifying the option once as null and
-   then with a value.)
+ - Some configuration options, typically lists, can be specified more
+   than once, and it is now possible to set these options to the null
+   string ("") so as to delete any previous value. Previously use of the
+   null string was ignored. Some options may assume a default value if
+   the option is set to null.
+   (This change was made so that configuration files in the 'rkhunter.d'
+   directory, and the local configuration file, can reset an option to
+   null, and, if required, provide new values simply by specifying the
+   option once as null and then with a value.)
  - The file properties test will now state if the target of a symbolic
    link has changed. Previously this would have been detected, but
    reported as a change of hash value, inode, file size etc.
