@@ -13819,7 +13819,7 @@ ${RKHTMPVAR}"
 				IFS=$IFSNL
 
 				for RKHTMPVAR in ${HIDDEN_PROCS}; do
-					display --to LOG --type PLAIN --log-indent 9 NAME "`name2text \"${RKHTMPVAR}\"`"
+					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR}"
 				done
 
 				IFS=$RKHIFS
