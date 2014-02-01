@@ -62,7 +62,7 @@
  - Added the PORT_PATH_WHITELIST configuration option to be used when
    specifying a pathname. Other port whitelisting types use the
    PORT_WHITELIST option as before.
- - Added a Turkish translation file.
+ - Added Turkish translation files.
 
  Changes:
  - The test 'possible_rkts' has been removed because this is exactly
