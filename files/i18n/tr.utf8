@@ -1,4 +1,4 @@
-Version:2013092101
+Version:2014021201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -32,7 +32,7 @@ MSG_RESULT_NONE_MISSING:Eksik yok
 MSG_RESULT_UPD:Güncellendi
 MSG_RESULT_NO_UPD:Güncelleme yok
 MSG_RESULT_UPD_FAILED:Güncelleme hatası
-MSG_RESULT_VCHK_FAILED:sürüm kontrol hatası
+MSG_RESULT_VCHK_FAILED:Sürüm kontrol hatası
 
 
 #
@@ -45,8 +45,8 @@ VERSIONLINE3:$1 $2 sürümü çalışıyor
 RKH_STARTDATE:Başlama tarihi $1
 RKH_ENDDATE:Bitiş tarihi $1
 
-OPSYS:'$1' işletim sistemi tespit edildi
-UNAME:Uname çıktısı '$1'
+OPSYS:Tespit edilen işletim sistemi: '$1'
+UNAME:Uname çıktısı: '$1'
 
 CONFIG_CHECK_START:Yapılandırma dosyası ve komut-satırı seçenekleri kontrol ediliyor...
 CONFIG_CMDLINE:Komut satırı: $1
@@ -63,7 +63,7 @@ CONFIG_BINDIR:Komut dizinleri olarak '$1' kullanılıyor
 CONFIG_TMPDIR:Geçici dizin olarak '$1' kullanılıyor
 CONFIG_NO_MAIL_ON_WARN:Uyarılarda postalama adresi yapılandırılmadı
 CONFIG_MOW_DISABLED:Uyarılarda postalama, kullanıcı isteği üzerine devre dışı bırakılıyor
-CONFIG_MAIL_ON_WARN:Uyarılar, komutuyla '$2', '$1' adresine postalanıyor
+CONFIG_MAIL_ON_WARN:Uyarılar, '$2' komutuyla, '$1' adresine postalanıyor
 CONFIG_SSH_ROOT:Rkhunter yapılandırmasındaki ALLOW_SSH_ROOT_USER seçeneğini '$1' olarak ayarlayın.
 CONFIG_SSH_PROTV1:Rkhunter yapılandırmasındaki ALLOW_SSH_PROT_V1 seçeneğini '$1' olarak ayarlayın.
 CONFIG_X_AUTO:X otomatik olarak algılanacaktır
@@ -75,8 +75,8 @@ CONFIG_NO_VL:Ayrıntılı günlük, kullanıcı isteği üzerine devre dışı b
 CONFIG_APPEND_LOG:Geçerli günlük, günlük/kayıt dosyasına eklenecek
 CONFIG_COPY_LOG:Herhangi bir hata varsa günlük dosyası kopyalanacak
 CONFIG_XINETD_PATH:$1 yapılandırma dosyası olarak '$2' kullanılıyor
-CONFIG_SOL10_INETD:Solaris 10 ve üstü bir mekanizması kullanılıyor
-CONFIG_STARTUP_PATHS:Sistem başlangıç yolları kullanılıyor: $1
+CONFIG_SOL10_INETD:Solaris 10 veya üstü bir inetd mekanizması kullanılıyor
+CONFIG_STARTUP_PATHS:Sistem başlangıç yolu olarak şunlar kullanılıyor: $1
 CONFIG_ROTATE_MIRRORS:Yansı dosyası döndürülecek
 CONFIG_NO_ROTATE_MIRRORS:Yansı dosyası döndürülmeyecek
 CONFIG_UPDATE_MIRRORS:Yansı dosyası güncellenecek
@@ -95,13 +95,13 @@ SYS_SELINUX:SELinux etkin
 SYS_NO_SELINUX:SELinux devredışı
 
 HASH_FUNC_PRELINK:Dosya sağlama kontrolü için prelinking komutu ($1 ile) kullanılıyor
-HASH_FUNC_PERL:Dosya sağlama kontrolü için perl ($1) modülü kullanılıyor
-HASH_FUNC_PERL_SHA:Dosya sağlama kontrolü için perl ($1) modülü ($1 ile) kullanılıyor
+HASH_FUNC_PERL:Dosya sağlama kontrolü için perl $1 modülü kullanılıyor
+HASH_FUNC_PERL_SHA:Dosya sağlama kontrolü için perl $1 modülü ($1 ile) kullanılıyor
 HASH_FUNC:Dosya sağlama kontrolü için '$1' komutu kullanılıyor
 HASH_FUNC_NONE:Dosya sağlama kontrolü devredışı: NONE belirtilmiş
 HASH_FUNC_NONE_PKGMGR:Dosya sağlama kontrolü NONE belirtilmiş: yalnızca paket yöneticisi kullanılacak
 HASH_FUNC_DISABLED:Sağlama fonksiyonu 'NONE' olarak ayarlandı: dosya sağlama kontrolü otomatikman devredışı
-HASH_FUNC_OLD:Depolan doğrulama verileri, '$1' doğrulama fonksiyonunu kullandı
+HASH_FUNC_OLD:Depolanan sağlama verileri, '$1' sağlama fonksiyonunu kullandı
 HASH_FUNC_OLD_DISABLED:Önceki sağlama fonksiyonu devredışı bırakılmış: depolanan sağlama verisi yok
 HASH_PKGMGR_OLD:Depolan doğrulama verileri, '$1' paket yöneticisini kullandı
 HASH_PKGMGR_OLD_UNSET:Depolan doğrulama verileri, bir paket yöneticisi kullanmadı
@@ -112,7 +112,7 @@ HASH_PKGMGR_SUM:Paket doğrulaması için depolanan 16-bit sağlama kullanılıy
 HASH_PKGMGR_NOT_SPEC:Paket yöneticisi belirtilmedi: '$1' sağlama fonksiyonu kullanılıyor
 HASH_PKGMGR_NOT_SPEC_PRELINKED:Paket yöneticisi belirtilmedi: '$1' ile prelink komutu kullanılıyor
 
-HASH_FIELD_INDEX:Sağlama fonksiyonu bölge içeriği, $1 olarak ayarlandı
+HASH_FIELD_INDEX:Sağlama fonksiyonu kısım içeriği, $1 olarak ayarlandı
 
 HASHUPD_DISABLED:Sağlama kontrolü devredışı: geçerli dosya sağlama verileri depolanmayacak
 HASHUPD_PKGMGR:Dosya sağlama değerlerini güncellemek için, '$1' paket yöneticisi kullanılıyor
@@ -149,11 +149,11 @@ SUMMARY_RKT_COUNT:Rootkitler kontrol edildi : $1
 SUMMARY_RKT_FAILED:Olası rootkitler: $1
 SUMMARY_RKT_NAMES:Rootkit isimleri    : $1
 SUMMARY_APPS_SCAN:Uygulama kontrolü...
-SUMMARY_APPS_COUNT:Uygulamalar kontrol edildi: $1
+SUMMARY_APPS_COUNT:Kontrol edilen uygulamalar: $1
 SUMMARY_APPS_FAILED:Şüpheli uygulamalar: $1
 SUMMARY_SCAN_TIME:Sistem kontrolleri alındı: $1
 SUMMARY_NO_SCAN_TIME:Sistem kontrolü alındı: Saat zamanı belirlenemiyor
-SUMMARY_LOGFILE:Tüm sonuçlar günlük/kayıt dosyasına yazılmıştır ($1)
+SUMMARY_LOGFILE:Tüm sonuçlar günlük/kayıt dosyasına yazılmıştır: $1
 SUMMARY_NO_LOGFILE:Oluşturulmuş kayıt dosyası yok.
 SUMMARY_LOGFILE_COPIED:Günlük/kayıt dosyası $1 şeklinde kopyalandı
 
@@ -171,7 +171,7 @@ DOWNLOAD_FAIL:İndirme başarısız - $1 mirror(s) left.
 VERSIONCHECK_START:Rkhunter sürümü kontrol ediliyor...
 VERSIONCHECK_FAIL_ALL:İndirme başarısız: Programın son sürüm numarası belirlenemiyor.
 VERSIONCHECK_CURRENT:Bu sürüm  : $1
-VERSIONCHECK_LATEST:son sürüm: $1
+VERSIONCHECK_LATEST:Son sürüm: $1
 VERSIONCHECK_LATEST_FAIL:Son sürüm: İndirme başarısız
 VERSIONCHECK_UPDT_AVAIL:Güncelleme mevcut
 VERSIONCHECK_CONV_FAIL:Sürüm numaraları karşılaştırılamıyor: Program: '$1'    Son: '$2'
@@ -263,7 +263,7 @@ FILE_PROP_SKIP_HASH:Tüm dosya sağlama kontrolleri atlanacak, çünkü:
 FILE_PROP_SKIP_HASH_FUNC:Geçerli sağlama fonksiyonu ($1) ya da ($2) paket yöneticisi sağlama fonksiyonu, değerleri saklamak için kullanılan ($3) sağlama fonksiyonu veya ($4) paket yöneticisi ile uyumsuz.
 FILE_PROP_SKIP_HASH_PRELINK:'prelink' komutu bulunamıyor.
 FILE_PROP_SKIP_HASH_SHA1:Bu sistem prelinking kullanıyor, fakat sağlama fonksiyonu komutu SHA1 yada MD5 gibi görünmüyor.
-FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe bulundu, bu durum hatalara neden olabilir. Mümkünse, libsafei devre dışı bırakın ve sonra prelink komutunu çalıştırın. Son olarak, 'rkhunter --propupd' komutunu kullanarak sağlama değerlerini tekrar oluşturun.
+FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe bulundu, bu durum hatalara neden olabilir. Mümkünse, libsafe'i devre dışı bırakın ve sonra prelink komutunu çalıştırın. Son olarak, 'rkhunter --propupd' komutunu kullanarak sağlama değerlerini tekrar oluşturun.
 FILE_PROP_SKIP_IMMUT:'lsattr' komutu bulunamıyor - tüm dosya immutable-bit kontrolleri atlanacak.
 FILE_PROP_SKIP_IMMUT_CMD:'$1' komutu sonrası bir çıktı yok - tüm dosya immutable-bit kontrolleri atlanacak.
 FILE_PROP_SKIP_SCRIPT:'file' komutu bulunamıyor - Tüm komut dosyası yedek kontrolleri atlanacak.
@@ -275,11 +275,11 @@ FILE_PROP_DAT_EMPTY:Depolanan dosya özellikleri dosyası (rkhunter.dat) boş ve
 FILE_PROP_SKIP_ALL:Tüm dosya özellikleri kontrolleri atlanıyor.
 FILE_PROP_DAT_MISSING_INFO:Dosya özellik kontrolleri, rkhunter.dat dosyası olmadan da yapılabilen kontrolleri yerine getirmek üzere yine de çalışacaktır.
 
-FILE_PROP_FILE_NOT_EXIST:'$1' dosyası sistem üzerinde bulunamadı, ancak rkhunter.dat dosyasında mevcut.
+FILE_PROP_FILE_NOT_EXIST:'$1' dosyası sistem üzerinde bulunamadı, ancak 'rkhunter.dat' dosyasında mevcut.
 FILE_PROP_WL:'$1' dosyası bulundu: Bu dosya '$2' kontrolü için beyaz listede.
 FILE_PROP_WL_STR:'$1' dosyası ve '$2' dizisi bulundu: Bunlar '$3' kontrolü için beyaz listedeler.
 FILE_PROP_WL_DIR:'$1' dizini bulundu: Bu dizin '$2' kontrolü için beyaz listede.
-FILE_PROP_NO_RKH_REC:'$1' dosyası sistemde mevcut, fakat rkhunter.dat dosyasında mevcut değil.
+FILE_PROP_NO_RKH_REC:'$1' dosyası sistemde mevcut, fakat 'rkhunter.dat' dosyasında mevcut değil.
 FILE_PROP_CHANGED:Dosya özellikleri değişti:
 FILE_PROP_CHANGED2:Dosya: $1
 FILE_PROP_NO_PKGMGR_FILE:'$1' dosyası sağlama değeri atlandı: dosya bir pakete ait değil
@@ -293,32 +293,32 @@ FILE_PROP_SYSHASH_UNAVAIL:Geçerli sağlama: Mevcut değil
 FILE_PROP_SYSHASH_UNAVAIL_BL:Geçerli sağlama: Mevcut değil (muhtemelen kırık link)
 FILE_PROP_SYSHASH:Geçerli sağlama: $1
 FILE_PROP_RKHHASH:Depolanan sağlama: $1
-FILE_PROP_NO_RKHHASH:rkhunter.dat dosyasında '$1' dosyası için sağlama değeri yok.
-FILE_PROP_NO_RKHPERM:rkhunter.dat dosyasında '$1' dosyası için dosya izni değeri yok.
+FILE_PROP_NO_RKHHASH:'rkhunter.dat' dosyasında '$1' dosyası için sağlama değeri yok.
+FILE_PROP_NO_RKHPERM:'rkhunter.dat' dosyasında '$1' dosyası için dosya izni değeri yok.
 FILE_PROP_PERM_UNAVAIL:Geçerli dosya izni: Mevcut değil    Depolanan dosya izni: $1
 FILE_PROP_PERM:Geçerli dosya izni: $1    Depolanan dosya izni: $2
 FILE_PROP_UID_UNAVAIL:Geçerli UID: Mevcut değil    Depolanan UID: $1
 FILE_PROP_UID:Geçerli UID: $1    Depolanan UID: $2
-FILE_PROP_NO_RKHUID:rkhunter.dat dosyasında '$1' dosyası için UID değeri yok.
+FILE_PROP_NO_RKHUID:'rkhunter.dat' dosyasında '$1' dosyası için UID değeri yok.
 FILE_PROP_GID_UNAVAIL:Geçerli GID: Mevcut değil    Depolanan GID: $1
 FILE_PROP_GID:Geçerli GID: $1    Depolanan UID: $2
-FILE_PROP_NO_RKHGID:rkhunter.dat dosyasında '$1' dosyası için GID değeri yok.
+FILE_PROP_NO_RKHGID:'rkhunter.dat' dosyasında '$1' dosyası için GID değeri yok.
 FILE_PROP_INODE_UNAVAIL:Geçerli inode: Mevcut değil    Depolanan inode: $1
 FILE_PROP_INODE:Geçerli inode: $1    Depolanan inode: $2
-FILE_PROP_NO_RKHINODE:rkhunter.dat dosyasında '$1' dosyası için inode değeri yok.
+FILE_PROP_NO_RKHINODE:'rkhunter.dat' dosyasında '$1' dosyası için inode değeri yok.
 FILE_PROP_SIZE_UNAVAIL:Geçerli boyut: Mevcut değil    Depolanan boyut: $1
 FILE_PROP_SIZE:Geçerli boyut: $1    Depolanan boyut: $2
-FILE_PROP_NO_RKHSIZE:rkhunter.dat dosyasında '$1' dosyası için boyut değeri yok.
+FILE_PROP_NO_RKHSIZE:'rkhunter.dat' dosyasında '$1' dosyası için boyut değeri yok.
 FILE_PROP_SYSDTM_UNAVAIL:Geçerli dosya değişiklik zamanı: Mevcut değil
 FILE_PROP_SYSDTM:Geçerli dosya değişiklik zamanı: $1
 FILE_PROP_RKHDTM:Depolanan dosya değişiklik zamanı: $1
-FILE_PROP_NO_RKHDTM:rkhunter.dat dosyasında '$1' dosyası için dosya değişiklik zamanı değeri yok.
+FILE_PROP_NO_RKHDTM:'rkhunter.dat' dosyasında '$1' dosyası için dosya değişiklik zamanı değeri yok.
 FILE_PROP_SYSLNK:Geçerli sembolik link hedefi: '$1' -> '$2'
 FILE_PROP_RKHLNK:Depolanan sembolik link hedefi : '$1' -> '$2'
 FILE_PROP_NO_RKHLNK:'$1' dosyası için 'rkhunter.dat' dosyasında sembolik link hedefi bulunamadı.
 FILE_PROP_LINK_WL:Sembolik link hedefi değişmiş, fakat beyaz listede: '$1' -> '$2'
 FILE_PROP_NO_SYSATTR:'$1' dosyasının geçerli dosya özellikleri elde edilemiyor
-FILE_PROP_WRITE:'$1' dosyasının yazma tüm kullanıcılar için ayarlandı.
+FILE_PROP_WRITE:'$1' dosyasının yazma izni tüm kullanıcılar için ayarlandı.
 FILE_PROP_SYSPERM_UNAVAIL:'$1' dosyasının geçerli yazma izni elde edilemiyor
 FILE_PROP_IMMUT:'$1' dosyası immutable-bit ayarına sahip.
 FILE_PROP_IMMUT_NOT_SET:'$1' dosyası immutable-bit ayarına sahip değil.
@@ -503,7 +503,7 @@ HISTORY_CHECK_FOUND:Root hesabı komut geçmişi dosyası '$1', '$2' konumuna se
 
 SYSTEM_CONFIGS_START:Sistem yapılandırma dosyalarının kontrolü çalıştırılıyor
 SYSTEM_CONFIGS_FILE:$1 yapılandırma dosyası kontrol ediliyor
-SYSTEM_CONFIGS_FILE_SSH:1 SSH yapılandırma dosyası kontrol ediliyor
+SYSTEM_CONFIGS_FILE_SSH:Bir SSH yapılandırma dosyası kontrol ediliyor
 SYSTEM_CONFIGS_FILE_FOUND:$1 '$2' yapılandırma dosyası bulundu: $3
 SYSTEM_CONFIGS_SSH_ROOT:SSH root erişim durumu kontrol ediliyor
 SYSTEM_CONFIGS_SSH_ROOT_FOUND:SSH ve rkhunter yapılandırma aşağıdaki gibi olmalıdır:
