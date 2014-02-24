@@ -18,7 +18,7 @@
 
  -- 
 
- * 1.4.1 (24/02/2014)
+ * 1.4.2 (24/02/2014)
 
  New:
  - The 'ssh', 'sshd' and 'telnet' commands are now checked as part of
