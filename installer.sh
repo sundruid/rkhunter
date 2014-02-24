@@ -415,12 +415,14 @@ selectTemplate() { # Take input from the "--install parameter"
 	fi
 
 	RKHINST_LANG_DIR="${RKHINST_DB_DIR}/i18n"
+	RKHINST_SIG_DIR="${RKHINST_DB_DIR}/signatures"
 
 	RKHINST_ETC_FILE="${APPNAME}.conf"
 	RKHINST_BIN_FILES="${APPNAME}"
 
 	RKHINST_SCRIPT_FILES="check_modules.pl filehashsha.pl stat.pl readlink.sh"
 	RKHINST_DB_FILES="backdoorports.dat mirrors.dat programs_bad.dat suspscan.dat"
+	RKHINST_SIG_FILES="RKH_dso.ldb RKH_Glubteba.ldb RKH_jynx.ldb RKH_kbeast.ldb RKH_libkeyutils1.ldb RKH_libkeyutils.ldb RKH_libncom.ldb RKH_pamunixtrojan.ldb RKH_shv.ldb RKH_sniffer.ldb RKH_sshd.ldb RKH_turtle.ldb RKH_xsyslog.ldb"
 
 	if [ "${RKHINST_LAYOUT}" = "DEB" ]; then
 		RKHINST_DOC_FILES="ACKNOWLEDGMENTS FAQ README"
@@ -497,6 +499,10 @@ showTemplate() { # Take input from the "--install parameter"
 		RKHTMPVAR="${RKHINST_DB_DIR}"
 		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}     ${NOTPRESENT}"
 		echo "Databases:          ${RKHTMPVAR}"
+
+		RKHTMPVAR="${RKHINST_SIG_DIR}"
+		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}     ${NOTPRESENT}"
+		echo "Signatures:         ${RKHTMPVAR}"
 
 		RKHTMPVAR="${RKHINST_TMP_DIR}"
 		test ! -d "${RKHTMPVAR}" && RKHTMPVAR="${RKHTMPVAR}    ${NOTPRESENT}"
@@ -615,7 +621,7 @@ doInstall()  {
 	# Perl will be found in rkhunter itself.
 
 	RKHINST_DIRS="$RKHINST_DOC_DIR $RKHINST_MAN_DIR $RKHINST_ETC_DIR $RKHINST_BIN_DIR"
-	RKHINST_DIRS_EXCEP="$RKHINST_SCRIPT_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
+	RKHINST_DIRS_EXCEP="$RKHINST_SCRIPT_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR $RKHINST_SIG_DIR"
 
 	if [ -f "${RKHINST_ETC_DIR}/rkhunter.conf" ]; then
 		echo "Starting update:"
@@ -844,6 +850,23 @@ doInstall()  {
 	fi
 
 
+	# ClamAV signatures
+	ERRCODE=0
+
+	for FILE in `find ./files/signatures -type f`; do
+		cp "${FILE}" "${RKHINST_SIG_DIR}" >/dev/null 2>&1
+		ERRCODE=$?
+
+		test $ERRCODE -ne 0 && break
+	done
+
+	if [ $ERRCODE -eq 0 ];then
+		echo " Installing ClamAV signatures: OK"
+	else
+		echo " Installing ClamAV signatures: FAILED: Code $ERRCODE"
+		exit 1
+	fi
+
 	# Application
 	for FILE in ${RKHINST_BIN_FILES}; do
 		case "${RKHINST_LAYOUT}" in
@@ -1022,7 +1045,7 @@ doInstall()  {
 
 
 doRemove()  {
-	RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR"
+	RKHINST_DIRS="$RKHINST_ETC_DIR $RKHINST_BIN_DIR $RKHINST_SCRIPT_DIR $RKHINST_DOC_DIR $RKHINST_DB_DIR $RKHINST_TMP_DIR $RKHINST_LANG_DIR $RKHINST_SIG_DIR"
 
 	echo "Starting uninstallation"
 	echo ""

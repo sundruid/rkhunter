@@ -412,6 +412,8 @@ ROOTKIT_MALWARE_SFW_INTRUSION_SKIP:Check skipped - tripwire not installed
 ROOTKIT_MALWARE_SNIFFER:Checking for sniffer log files
 ROOTKIT_MALWARE_SNIFFER_LOG:Performing check for sniffer log files
 ROOTKIT_MALWARE_SNIFFER_FOUND:Found possible sniffer log file: $1
+ROOTKIT_MALWARE_IPCS:Suspicious Shared Memory segments
+ROOTKIT_MALWARE_IPCS_DETAILS:Process: $1    PID: $2    Owner: $3
 
 ROOTKIT_TROJAN_START:Performing trojan specific checks
 ROOTKIT_TROJAN_INETD:Checking for enabled inetd services

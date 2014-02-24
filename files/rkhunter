@@ -12357,6 +12357,7 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${PHALANX2_KSYMS}
 	scanrootkit
 
+
 	# Phalanx2 Rootkit (extended tests)
 
 	if [ $LINUXOS -eq 1 ]; then
@@ -13722,52 +13723,10 @@ ${FOUND_PROCS}"
 
 
 		#
-		# Next we test for the 'unhide.rb' Ruby program.
-		#
-
-		ERRCODE=0
-		RKHTMPVAR=""
-
-		UNHIDE_CMD=`find_cmd unhide.rb`
-
-		if [ -n "${UNHIDE_CMD}" ]; then
-			FOUND=1
-
-			display --to LOG --type INFO FOUND_CMD 'unhide.rb' "${UNHIDE_CMD}"
-
-			if [ $NOUNHIDE -eq 2 ]; then
-				display --to LOG --type INFO ROOTKIT_MALWARE_HIDDEN_PROCS_NOUNHIDE 'unhide.rb'
-			else
-				RKHTMPVAR=`${UNHIDE_CMD} 2>&1`
-				ERRCODE=$?
-
-				if [ $ERRCODE -eq 0 ]; then
-					# Nothing found.
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD 'unhide.rb'
-					fi
-				elif [ $ERRCODE -eq 1 ]; then
-					# An error occurred. This is handled in the results section below.
-					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD 'unhide.rb'
-				elif [ $ERRCODE -eq 2 ]; then
-					# Something found.
-					HIDDEN_PROCS="${HIDDEN_PROCS}
-${RKHTMPVAR}"
-
-					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD 'unhide.rb'
-				fi
-			fi
-		else
-			display --to LOG --type INFO NOT_FOUND_CMD 'unhide.rb'
-		fi
-
-
-		#
 		# Now display the results.
 		#
 		# At this point if SEEN is 0, then a problem occurred with the 'unhide' program.
-		# If ERRCODE is 1, then a problem occurred with the 'unhide.rb' program. In both
-		# cases we treat these as warnings so that the user is aware that something went
+		# We treat these as warnings so that the user is aware that something went
 		# wrong.
 		#
 
@@ -13779,30 +13738,14 @@ ${RKHTMPVAR}"
 			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 		else
 			#
-			# At this point we have either found a hidden PID, or an error occurred with the 'unhide.rb' program,
+			# At this point we have either found a hidden PID, or an error occurred with the 'unhide' program,
 			# or both. We need to warn the user in either case. We also need to display all the information.
 			#
 
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 
 			#
-			# First see if an 'unhide.rb' error occurred.
-			#
-
-			if [ $ERRCODE -eq 1 ]; then
-				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_HIDDEN_PROCS_RUBY_ERR
-
-				IFS=$IFSNL
-
-				for RKHTMPVAR2 in ${RKHTMPVAR}; do
-					display --to LOG --type PLAIN --log-indent 9 NAME "${RKHTMPVAR2}"
-				done
-
-				IFS=$RKHIFS
-			fi
-
-			#
-			# Next see if there was a problem executing the 'unhide' commands.
+			# Lets see if there was a problem executing the 'unhide' commands.
 			#
 
 			if [ $SEEN -eq 0 ]; then
@@ -13857,7 +13800,7 @@ ${RKHTMPVAR}"
 
 
 	#
-	# Next we check for login backdoors.
+	# Nex we check for login backdoors.
 	#
 
 	FOUND=0
@@ -14005,6 +13948,53 @@ ${RKHTMPVAR}"
 			display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text \"${FNAME}\"`"
 		done
 	fi
+
+        #
+        # Next we check System V Shared Memory (Linux only for now).
+        #
+
+        if [ $LINUXOS -eq 1 ]; then
+                if [ $VERBOSE_LOGGING -eq 1 ]; then
+                        display --to LOG --type PLAIN --nl ROOTKIT_MALWARE_IPCS
+                fi
+
+                if [ -n "${IPCS_CMD}" ]; then
+                        get_temp_file "${RKHTMPDIR}/ipcs.tmp"
+                        IPCS_TMPFILE="${TEMPFILE}"
+                        touch "${IPCS_TMPFILE}"
+                        FOUND=0; echo $FOUND > "${IPCS_TMPFILE}"
+
+                        if [ `${IPCS_CMD} -u 2>/dev/null | awk -F' ' '/segments allocated/ {print $3}'` -ne 0 ]; then
+                                ${IPCS_CMD} -m | grep "^0x" | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
+                                        if [ $RKH_SHM_PERMS -eq 666 -a $RKH_SHM_BYTES -ge 1000000 ]; then
+                                                FOUND=1; echo $FOUND > "${IPCS_TMPFILE}"
+                                                ${IPCS_CMD} -p | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
+                                                        RKH_SHM_PATH=`${READLINK_CMD} -f /proc/${RKH_SHM_CPID}/exe`
+                                                        if [ $VERBOSE_LOGGING -eq 1 ]; then
+                                                                display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_MALWARE_IPCS_DETAILS "${RKH_SHM_PATH}" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
+                                                        fi
+                                                done
+                                        fi
+                                done
+
+                        fi
+                elif [ $VERBOSE_LOGGING -eq 1 ]; then
+                        display --to LOG --type INFO NOT_FOUND_CMD 'ipcs'
+                fi
+
+
+                #
+                # Now display the results.
+                #
+
+                if [ `cat "${IPCS_TMPFILE}"` -eq 1 ]; then
+                        display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_IPCS
+                else
+                        display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_IPCS
+                fi
+                rm -f "${IPCS_TMPFILE}"
+
+        fi
 
 	return
 }
@@ -17811,17 +17801,17 @@ ${LINKDIR}"
 				gegrep genv gfile gfind ggrep ggroups ghead gid glocate
 				gls gmd5sum gmv gpwd gsed gsize gsort gstrings gsum
 				gtail gtest gtouch guname guniq gusers gwc gwho gwhoami
-				inetadm nawk truss unhide unhide-posix unhide-tcp unhide.rb"
+				inetadm nawk truss unhide unhide-posix unhide-tcp"
 		;;
 	FreeBSD|DragonFly)
 		PROP_FILE_LIST="${PROP_FILE_LIST} fstat kldload kldstat kldunload procstat
-				unhide unhide-posix unhide-tcp unhide.rb"
+				unhide unhide-posix unhide-tcp"
 		;;
 	*BSD)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-posix unhide-tcp unhide.rb"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-posix unhide-tcp"
 		;;
 	Linux)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp unhide.rb"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp"
 
 		if [ -n "`uname -r | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
@@ -18555,7 +18545,7 @@ RKHROOTPATH=`echo ${PATH} | tr ':' ' '`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="basename diff dirname file find ifconfig ip ldd lsattr lsmod lsof mktemp netstat perl pgrep ps pwd readlink stat strings"
+CMDLIST="basename diff dirname file find ifconfig ip ipcs ldd lsattr lsmod lsof mktemp netstat perl pgrep ps pwd readlink stat strings"
 
 # Commands that are required to exist for RKH to run. The absolutely
 # required commands are tested early on using just the root PATH. Then
