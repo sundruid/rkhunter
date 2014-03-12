@@ -1,4 +1,4 @@
-Version:2014021201
+Version:2014030201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -412,6 +412,8 @@ ROOTKIT_MALWARE_SFW_INTRUSION_SKIP:Kontrol atlandý - tripwire yüklü deðil
 ROOTKIT_MALWARE_SNIFFER:Algýlayýcý günlük/kayýt dosyalarý kontrol ediliyor
 ROOTKIT_MALWARE_SNIFFER_LOG:Algýlayýcý günlük/kayýt dosyalarýnýn kontrolü çalýþtýrýlýyor
 ROOTKIT_MALWARE_SNIFFER_FOUND:Algýlayýcý günlük/kayýt dosyasý bulundu: $1
+ROOTKIT_MALWARE_IPCS:Þüpheli Paylaþýlan Bellek segmentleri
+ROOTKIT_MALWARE_IPCS_DETAILS:Ýþlem: $1    PID: $2    Sahibi: $3
 
 ROOTKIT_TROJAN_START:Spesifik trojan kontrolleri çalýþtýrýlýyor
 ROOTKIT_TROJAN_INETD:Etkin inetd servisleri kontrol ediliyor

@@ -5754,7 +5754,7 @@ get_network_options() {
 
 	LEAVE=0
 
-	IFWLIST=`get_option space_list ALLOWPROMISCIF` || exit 1
+	IFWLIST=`get_option space-list ALLOWPROMISCIF` || exit 1
 
 	test $ERRCODE -eq 1 && LEAVE=1
 
