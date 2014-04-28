@@ -7253,7 +7253,7 @@ download_file() {
 			#
 
 			if [ "${MIRROR}" = "http://rkhunter.sourceforge.net" ]; then
-				MIRROR="${MIRROR}/1.3"
+				MIRROR="${MIRROR}/${RKH_VER_MAJ}.${RKH_VER_MIN}"
 			fi
 		fi
 
@@ -18353,9 +18353,11 @@ trap - 13 >/dev/null 2>&1
 #
 # Initialise the variables used throughout the program.
 #
+RKH_VER_MAJ="1"
+RKH_VER_MIN="4"
 
 PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="1.4.2"
+PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.2"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2014, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
