@@ -9461,6 +9461,20 @@ do_system_check_initialisation() {
 		  file:/delallmykkk:malware component
 		  file:/usr/.IptabLes:malware component
 		  file:/usr/IptabLes:malware component
+		  file:/boot/pro:BillGates botnet component
+		  file:/boot/proh:BillGates botnet component
+		  file:/etc/sfewfesfsh:BillGates botnet component
+		  file:/usr/bin/pojie:BillGates botnet component
+		  file:/etc/atddd:BillGates botnet component
+		  file:/etc/ksapdd:BillGates botnet component
+		  file:/etc/kysapdd:BillGates botnet component
+		  file:/etc/sksapdd:BillGates botnet component
+		  file:/etc/skysapdd:BillGates botnet component
+		  file:/etc/ferwfrre:BillGates botnet component
+		  file:/etc/gfhddsfew:BillGates botnet component
+		  file:/etc/gfhjrtfyhuf:BillGates botnet component
+		  file:/etc/rewgtf3er4t:BillGates botnet component
+		  file:/etc/sdmfdsfhjfe:BillGates botnet component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
