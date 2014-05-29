@@ -9452,12 +9452,6 @@ do_system_check_initialisation() {
 		  file:/etc/rc.d/rc5.d/S55IptabLex:malware component
 		  file:/etc/rc.d/rc6.d/S55IptabLex:malware component
 		  file:/var/lib/update-rc.d/IptabLex:malware component
-		  file:/var/lib/update-rc.d/IptabLex:malware component
-		  file:/var/lib/update-rc.d/IptabLex:malware component
-		  file:/var/lib/update-rc.d/IptabLex:malware component
-		  file:/var/lib/update-rc.d/IptabLex:malware component
-		  file:/var/lib/update-rc.d/IptabLex:malware component
-		  file:/var/lib/update-rc.d/IptabLex:malware component
 		  file:/delallmykkk:malware component
 		  file:/usr/.IptabLes:malware component
 		  file:/usr/IptabLes:malware component
