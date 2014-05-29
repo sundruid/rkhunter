@@ -9455,6 +9455,17 @@ do_system_check_initialisation() {
 		  file:/delallmykkk:malware component
 		  file:/usr/.IptabLes:malware component
 		  file:/usr/IptabLes:malware component
+		  file:/tmp/.flush:malware component
+		  file:/var/log/.flush:malware component
+		  file:/usr/.flush:malware component
+		  file:/etc/init.d/bluetoothdaemon:malware component
+		  file:/usr/bin/btdaemon:malware component
+		  file:/etc/rc1.d/S90bluetooth:malware component
+		  file:/etc/rc2.d/S90bluetooth:malware component
+		  file:/etc/rc3.d/S90bluetooth:malware component
+		  file:/etc/rc4.d/S90bluetooth:malware component
+		  file:/etc/rc5.d/S90bluetooth:malware component
+		  file:/etc/rc6.d/S90bluetooth:malware component
 		  file:/boot/pro:BillGates botnet component
 		  file:/boot/proh:BillGates botnet component
 		  file:/etc/sfewfesfsh:BillGates botnet component
@@ -9585,7 +9596,12 @@ do_system_check_initialisation() {
 			 ssh-scan:Port scanner
 			 atac:Port scanner component
 			 \[pdflush\]:IRC bot
-			 libkeyutils.so.1.9:Spam tool component"
+			 libkeyutils.so.1.9:Spam tool component
+			 .IptabLex:malware component
+			 .IptabLes:malware component
+			 .flush:malware component
+			 \[bluetooth\]:malware component
+			 \[flush:malware component"
 
 
 	# System startup file pathnames
