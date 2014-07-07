@@ -9419,6 +9419,9 @@ do_system_check_initialisation() {
 		  file:/usr/share/pci.r:Trojaned Syslog daemon
 		  file:/etc/cron.daily/dnsquery:Sniffer
 		  file:/usr/lib/libutil1.2.1.2.so:Trojaned SSH daemon component (hwclock binary)
+		  file:/usr/lib/libppopen.so:Trojaned SSH daemon component
+		  file:/usr/include/libutil2.1.h:Trojaned SSH daemon component
+		  file:/usr/bin/munchhausen:Trojaned SSH daemon component
 		  file:/bin/ceva:Trojaned SSH daemon (client binary)
 		  file:/sbin/syslogd%:Trojaned SSH daemon (sebd)
 		  file:/usr/include/shup.h:Trojaned SSH daemon (client binary)
