@@ -22,6 +22,12 @@
 
  New:
 
+ Changes:
+
+ Bugfixes:
+ - Ensure that lsof errors are not displayed.
+ - Ensure that ipcs errors and locale are handled correctly.
+
  -- 
 
  * 1.4.2 (24/02/2014)
