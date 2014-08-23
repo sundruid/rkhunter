@@ -13378,14 +13378,14 @@ malware_checks() {
 			WHITEPROC=""
 			BLACKPROC=""
 
-			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele' | head ${HEAD_OPT}1`
+			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele' | head ${HEAD_OPT}1`
 
 			if [ -n "${DELE_FILES}" ]; then
 				PIDLIST=" "
 
 				IFS=$IFSNL
 
-				for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} | grep '(dele'`; do
+				for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele'`; do
 					PROC=""
 
 					PID=`echo "${LINE}" | awk '{ print $2 }'`
@@ -13416,9 +13416,9 @@ malware_checks() {
 
 					if [ -z "${PROC}" ]; then
 						if [ $SUNOS -eq 1 ]; then
-							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
 						else
-							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 						fi
 
 						test -z "${PROC}" && PROC=`echo "${LINE}" | awk '{ print $1 }'`
@@ -14903,7 +14903,7 @@ check_port_wl() {
 	if [ -n "${LSOF_CMD}" ]; then
 		IFS=$IFSNL
 
-		for LSOFLINE in `${LSOF_CMD} -wnlP -i ${PROTO}:${PORT}`; do
+		for LSOFLINE in `${LSOF_CMD} -wnlP -i ${PROTO}:${PORT} 2>/dev/null`; do
 			#
 			# We must only look at connections using the port on the local host.
 			#
@@ -14942,9 +14942,9 @@ check_port_wl() {
 
 			if [ -z "${FNAME}" ]; then
 				if [ $SUNOS -eq 1 ]; then
-					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
+					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
 				else
-					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
 				fi
 			fi
 
@@ -15478,7 +15478,7 @@ do_network_interface_checks() {
 		test -z "${INODE_LIST}" && INODE_LIST="RKHunterPktCapture"
 
 
-		for PID in `${LSOF_CMD} -lMnPw -d 1-20 | egrep "[ 	](pack[ 	]+(${INODE_LIST})|sock[ 	]+[^ 	]+[ 	]+[^ 	]+[ 	]+(${INODE_LIST}))[ 	]" | awk '{ print $2 }'`; do
+		for PID in `${LSOF_CMD} -lMnPw -d 1-20 2>/dev/null | egrep "[ 	](pack[ 	]+(${INODE_LIST})|sock[ 	]+[^ 	]+[ 	]+[^ 	]+[ 	]+(${INODE_LIST}))[ 	]" | awk '{ print $2 }'`; do
 			NAME=""
 
 			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
