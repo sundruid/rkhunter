@@ -4153,7 +4153,7 @@ get_unhide_options() {
 
 	#
 	# This function processes the configuration options used
-	# by the unhide commands in the 'hidden_procs' test.
+	# by the unhide command in the 'hidden_procs' test.
 	#
 
 	LEAVE=0
@@ -4198,21 +4198,6 @@ get_unhide_options() {
 
 			# Add a space to avoid the 'echo' problem with options.
 			UNHIDETCP_OPTS=`echo "${UNHIDETCP_OPTS} " | sed -e 's/^ *//'`
-		fi
-	else
-		LEAVE=1
-	fi
-
-
-	NOUNHIDE=`get_option single DISABLE_UNHIDE` || exit 1
-
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${NOUNHIDE}" ]; then
-			check_is_digit NOUNHIDE DISABLE_UNHIDE 2
-
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			NOUNHIDE=0
 		fi
 	else
 		LEAVE=1
@@ -7726,7 +7711,7 @@ do_config_file_check() {
 
 	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
 		   ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING APPEND_LOG
-		   AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR DISABLE_UNHIDE EPOCH_DATE_CMD
+		   AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR EPOCH_DATE_CMD
 		   HASH_FLD_IDX HASH_FUNC HASH_CMD IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
 		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
 		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
@@ -13708,79 +13693,74 @@ ${RKHTMPVAR}:${FNAME}"
 
 			display --to LOG --type INFO FOUND_CMD "${RKHTMPVAR}" "${UNHIDE_CMD}"
 
-			if [ $NOUNHIDE -eq 1 ]; then
-				SEEN=1
-				display --to LOG --type INFO ROOTKIT_MALWARE_HIDDEN_PROCS_NOUNHIDE 'unhide'
+			#
+			# Dig out the version number for use later on.
+			#
+
+			UNHIDE_VERS=`${UNHIDE_CMD} -V 2>/dev/null | head ${HEAD_OPT}1`
+
+			if [ -n "`echo ${UNHIDE_VERS} | grep '^Unhide [2-9][0-9]*$'`" ]; then
+				UNHIDE_VERS=`echo ${UNHIDE_VERS} | cut -d' ' -f2`
 			else
-				#
-				# Dig out the version number for use later on.
-				#
+				UNHIDE_VERS=0
+			fi
 
-				UNHIDE_VERS=`${UNHIDE_CMD} -V 2>/dev/null | head ${HEAD_OPT}1`
-
-				if [ -n "`echo ${UNHIDE_VERS} | grep '^Unhide [2-9][0-9]*$'`" ]; then
-					UNHIDE_VERS=`echo ${UNHIDE_VERS} | cut -d' ' -f2`
-				else
-					UNHIDE_VERS=0
-				fi
-
-				if [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type INFO ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_VERS "${UNHIDE_VERS}"
-				fi
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_VERS "${UNHIDE_VERS}"
+			fi
 
 
-				#
-				# Now run each of the configured tests.
-				#
+			#
+			# Now run each of the configured tests.
+			#
 
-				UNHIDE_OPTS=""
-				FOUND_PROCS=""
+			UNHIDE_OPTS=""
+			FOUND_PROCS=""
 
-				for RKHTMPVAR in ${UNHIDE_TESTS}; do
-					if [ -n "`echo \"${RKHTMPVAR} \" | grep '^-'`" ]; then
-						# Only newer versions have command-line options.
-						if [ $UNHIDE_VERS -ge 20100919 ]; then
-							# Ignore obvious invalid options.
-							test "${RKHTMPVAR}" = "-V" -o "${RKHTMPVAR}" = "-h" && continue
+			for RKHTMPVAR in ${UNHIDE_TESTS}; do
+				if [ -n "`echo \"${RKHTMPVAR} \" | grep '^-'`" ]; then
+					# Only newer versions have command-line options.
+					if [ $UNHIDE_VERS -ge 20100919 ]; then
+						# Ignore obvious invalid options.
+						test "${RKHTMPVAR}" = "-V" -o "${RKHTMPVAR}" = "-h" && continue
 
-							UNHIDE_OPTS="${UNHIDE_OPTS} ${RKHTMPVAR}"
-						fi
-
-						continue
-					elif [ $UNHIDE_VERS -lt 20100819 ]; then
-						# Ignore unknown tests for earlier versions.
-						test "${RKHTMPVAR}" != "sys" -a "${RKHTMPVAR}" != "proc" -a "${RKHTMPVAR}" != "brute" && continue
+						UNHIDE_OPTS="${UNHIDE_OPTS} ${RKHTMPVAR}"
 					fi
 
-					SEEN=1
-					FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
+					continue
+				elif [ $UNHIDE_VERS -lt 20100819 ]; then
+					# Ignore unknown tests for earlier versions.
+					test "${RKHTMPVAR}" != "sys" -a "${RKHTMPVAR}" != "proc" -a "${RKHTMPVAR}" != "brute" && continue
+				fi
 
-					if [ -z "${FOUND_PROCS}" ]; then
-						# Nothing found.
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
-						fi
-					else
-						# For newer versions we can sort the messages.
-						if [ $UNHIDE_VERS -ge 20100919 ]; then
-							FOUND_PROCS=`echo "${FOUND_PROCS}" | sort | uniq`
-						fi
+				SEEN=1
+				FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
 
-						HIDDEN_PROCS="${HIDDEN_PROCS}
+				if [ -z "${FOUND_PROCS}" ]; then
+					# Nothing found.
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
+					fi
+				else
+					# For newer versions we can sort the messages.
+					if [ $UNHIDE_VERS -ge 20100919 ]; then
+						FOUND_PROCS=`echo "${FOUND_PROCS}" | sort | uniq`
+					fi
+
+					HIDDEN_PROCS="${HIDDEN_PROCS}
 ${FOUND_PROCS}"
 
-						display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
-					fi
-				done
-
-
-				#
-				# Mark the test as skipped if we have not executed any command because of invalid test names.
-				#
-
-				if [ $SEEN -eq 0 ]; then
-					display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
+					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 				fi
+			done
+
+
+			#
+			# Mark the test as skipped if we have not executed any command because of invalid test names.
+			#
+
+			if [ $SEEN -eq 0 ]; then
+				display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 			fi
 		else
 			SEEN=1

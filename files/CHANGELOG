@@ -23,6 +23,9 @@
  New:
 
  Changes:
+ - The DISABLE_UNHIDE option has been removed from the configuration
+   file. It is no longer required as disabling the 'hidden_procs' or
+   'hidden_ports' tests has the same effect.
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.

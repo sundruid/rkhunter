@@ -51,9 +51,6 @@ Please note that RKH has some requirements:
    - Unhide and unhide-tcp (C versions)
        Finds hidden ports and processes.
        http://unhide.sourceforge.net
-   - Unhide (Ruby version)
-       Finds hidden processes.
-       https://launchpad.net/unhide.rb
    If the relevant tool is not found, then the test is skipped.
 
 
