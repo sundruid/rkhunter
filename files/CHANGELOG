@@ -27,6 +27,7 @@
  Bugfixes:
  - Ensure that lsof errors are not displayed.
  - Ensure that ipcs errors and locale are handled correctly.
+ - Correct broken pipe errors in some commands.
 
  -- 
 
