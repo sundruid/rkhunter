@@ -6138,7 +6138,7 @@ rkh_dat_get_os_info() {
 				OSNAME="Zenwalk `cat \"${RELEASE}\"`"
 				;;
 			*)
-				OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" | head ${HEAD_OPT}1`
+				OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" 2>/dev/null | head ${HEAD_OPT}1`
 				;;
 			esac
 
@@ -6158,7 +6158,7 @@ rkh_dat_get_os_info() {
 			#
 
 			if [ $RKH_IN_LSB -eq 0 -a -z "${OSNAME}" ]; then
-				OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" | head ${HEAD_OPT}1`
+				OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" 2>/dev/null | head ${HEAD_OPT}1`
 				OSNAME=`echo ${OSNAME}`
 			fi
 
@@ -6221,19 +6221,19 @@ rkh_dat_get_os_info() {
 
 	if [ -z "${OSNAME}" ]; then
 		if [ -f "/etc/issue" ]; then
-			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue | head ${HEAD_OPT}1`
+			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue 2>/dev/null | head ${HEAD_OPT}1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/issue"
 		fi
 
 		if [ $RKH_LSB_SEEN -eq 1 -a -z "${OSNAME}" ]; then
-			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release | head ${HEAD_OPT}1`
+			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release 2>/dev/null | head ${HEAD_OPT}1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/lsb-release"
 		fi
 	elif [ -n "`echo \"${OSNAME}\" | grep '^[0-9.][0-9.]*$'`" ]; then
 		if [ -f "/etc/issue" ]; then
-			RKHTMPVAR=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue | head ${HEAD_OPT}1`
+			RKHTMPVAR=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue 2>/dev/null | head ${HEAD_OPT}1`
 
 			test -n "${RKHTMPVAR}" && OSNAME="${RKHTMPVAR} ${OSNAME}"
 		fi
@@ -11772,7 +11772,7 @@ suspscan() {
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
 					SUSPSCAN_STRINGS=""
 
-					$STRINGS_CMD -n 4 -a "${SUSPSCAN_ITEM}" | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >"${FILENAME}" 2>&1
+					$STRINGS_CMD -n 4 -a "${SUSPSCAN_ITEM}" 2>/dev/null | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >"${FILENAME}" 2>&1
 
 					for SUSPSCAN_STRING in `grep -v '^Version' "${DB_PATH}/suspscan.dat" 2>/dev/null | tail ${TAIL_OPT}1` ; do
 
@@ -12461,7 +12461,7 @@ rootkit_file_dir_checks() {
 						NLINKS1=`${STAT_CMD} -c %h ${DIR_NAME} 2>/dev/null`
 					fi
 
-					NLINKS2=`ls -ld ${DIR_NAME} 2>/dev/null | ${AWK_CMD} -F' ' '/^d/ {print $2}' | head ${HEAD_OPT}1`
+					NLINKS2=`ls -ld ${DIR_NAME} 2>/dev/null | ${AWK_CMD} -F' ' '/^d/ {print $2}' 2>/dev/null | head ${HEAD_OPT}1`
 
 					test -z "${NLINKS1}" && NLINKS1=-1
 					test -z "${NLINKS2}" && NLINKS2=-2
