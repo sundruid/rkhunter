@@ -745,9 +745,8 @@ get_option() {
 			#
 
 			if [ -n "${OPTVAR}" ]; then
-#JH				OPTVAR=`echo "${OPTVAR}" | awk 'BEGIN { RS="" }; END { print }'`
 				RKHLINES=`echo "${OPTVAR}" | wc -l | tr -d ' '`
-				OPTVAR=`echo "${OPTVAR}" | awk -v l=\`echo ${RKHLINES}\` '/./ { if (a) { a = a "\n" $0 } else a = $0 }; /^$/ { a = "" }; NR == l { print a }'`
+				OPTVAR=`echo "${OPTVAR}" | ${AWK_CMD} -v l=\`echo ${RKHLINES}\` '/./ { if (a) { a = a "\n" $0 } else a = $0 }; /^$/ { a = "" }; NR == l { print a }'`
 				test -n "`echo \"${OPTVAR} \" | grep '^-'`" && OPTVAR="${OPTVAR} "
 			fi
 		else
@@ -1320,7 +1319,7 @@ suckit_extra_checks() {
 
 		SKDET=0
 		SKDETOPT=""
-		SKDETVER=`${SKDET_CMD} -v 2>&1 | grep '^skdet.v' | awk -F'.' '{ print $1 }'`
+		SKDETVER=`${SKDET_CMD} -v 2>&1 | grep '^skdet.v' | ${AWK_CMD} -F'.' '{ print $1 }'`
 
 		case "${SKDETVER}" in
 		*v0)
@@ -1794,12 +1793,12 @@ check_commands() {
 				AWK_CMD=`find_cmd /usr/xpg4/bin/awk`
 
 				if [ -z "${AWK_CMD}" ]; then
-					AWK_CMD="awk"
+					AWK_CMD='awk'
 				fi
 			fi
 		fi
 	else
-		AWK_CMD="awk"
+		AWK_CMD='awk'
 	fi
 
 
@@ -6154,7 +6153,7 @@ rkh_dat_get_os_info() {
 				OSNAME="Zenwalk `cat \"${RELEASE}\"`"
 				;;
 			*)
-				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" | head ${HEAD_OPT}1`
+				OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" | head ${HEAD_OPT}1`
 				;;
 			esac
 
@@ -6174,7 +6173,7 @@ rkh_dat_get_os_info() {
 			#
 
 			if [ $RKH_IN_LSB -eq 0 -a -z "${OSNAME}" ]; then
-				OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" | head ${HEAD_OPT}1`
+				OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' "${RELEASE}" | head ${HEAD_OPT}1`
 				OSNAME=`echo ${OSNAME}`
 			fi
 
@@ -6237,19 +6236,19 @@ rkh_dat_get_os_info() {
 
 	if [ -z "${OSNAME}" ]; then
 		if [ -f "/etc/issue" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue | head ${HEAD_OPT}1`
+			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue | head ${HEAD_OPT}1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/issue"
 		fi
 
 		if [ $RKH_LSB_SEEN -eq 1 -a -z "${OSNAME}" ]; then
-			OSNAME=`awk '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release | head ${HEAD_OPT}1`
+			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release | head ${HEAD_OPT}1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/lsb-release"
 		fi
 	elif [ -n "`echo \"${OSNAME}\" | grep '^[0-9.][0-9.]*$'`" ]; then
 		if [ -f "/etc/issue" ]; then
-			RKHTMPVAR=`awk '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue | head ${HEAD_OPT}1`
+			RKHTMPVAR=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue | head ${HEAD_OPT}1`
 
 			test -n "${RKHTMPVAR}" && OSNAME="${RKHTMPVAR} ${OSNAME}"
 		fi
@@ -11253,7 +11252,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 						RKHTMPVAR=`${LSATTR_CMD} "${FNAME}" 2>&1 | cut -d' ' -f1 | grep 'i'`
 					fi
 				else
-					RKHTMPVAR=`ls -lno "${FNAME}" 2>&1 | awk '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+					RKHTMPVAR=`ls -lno "${FNAME}" 2>&1 | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 				fi
 
 				#
@@ -11770,7 +11769,7 @@ suspscan() {
 				# Finally, test the file type.
 				#
 
-				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | awk -F':' '{ print $NF }' | cut -c2-`
+				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 
 				#
 				# We need to check errors from the file command, but not
@@ -12477,7 +12476,7 @@ rootkit_file_dir_checks() {
 						NLINKS1=`${STAT_CMD} -c %h ${DIR_NAME} 2>/dev/null`
 					fi
 
-					NLINKS2=`ls -ld ${DIR_NAME} 2>/dev/null | awk -F' ' '/^d/ {print $2}' | head ${HEAD_OPT}1`
+					NLINKS2=`ls -ld ${DIR_NAME} 2>/dev/null | ${AWK_CMD} -F' ' '/^d/ {print $2}' | head ${HEAD_OPT}1`
 
 					test -z "${NLINKS1}" && NLINKS1=-1
 					test -z "${NLINKS2}" && NLINKS2=-2
@@ -13388,9 +13387,9 @@ malware_checks() {
 				for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele'`; do
 					PROC=""
 
-					PID=`echo "${LINE}" | awk '{ print $2 }'`
-					NODE=`echo "${LINE}" | awk '{ print $8 }'`
-					FNAME=`echo "${LINE}" | awk '{ print $9 }'`
+					PID=`echo "${LINE}" | ${AWK_CMD} '{ print $2 }'`
+					NODE=`echo "${LINE}" | ${AWK_CMD} '{ print $8 }'`
+					FNAME=`echo "${LINE}" | ${AWK_CMD} '{ print $9 }'`
 
 					#
 					# Skip any PID's we have already seen.
@@ -13418,10 +13417,10 @@ malware_checks() {
 						if [ $SUNOS -eq 1 ]; then
 							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' 2>/dev/null | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
 						else
-							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | ${AWK_CMD} '{ print $NF }'`
 						fi
 
-						test -z "${PROC}" && PROC=`echo "${LINE}" | awk '{ print $1 }'`
+						test -z "${PROC}" && PROC=`echo "${LINE}" | ${AWK_CMD} '{ print $1 }'`
 					fi
 
 					#
@@ -13450,13 +13449,13 @@ malware_checks() {
 					PROCDELFILES_GIVEN=0
 
 					for RKHTMPVAR in ${ALLOWPROCDELFILES}; do
-						RKHTMPVAR2=`echo "${RKHTMPVAR}" | awk -F ':/' '{ print $1 }'`
+						RKHTMPVAR2=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F ':/' '{ print $1 }'`
 
 						test "${RKHTMPVAR}" = "${RKHTMPVAR2}" && PROCDELFILES_GIVEN=0 || PROCDELFILES_GIVEN=1
 
 						if [ "${PROC}" = "${RKHTMPVAR2}" ]; then
 							if [ $PROCDELFILES_GIVEN -eq 1 ]; then
-								RKHTMPVAR3=`echo "${RKHTMPVAR}" | awk -F ':/' '{ for (i = 2; i <= NF; i++) { a[i] = $i } } END { for (i in a) { print "/" a[i] } }'`
+								RKHTMPVAR3=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F ':/' '{ for (i = 2; i <= NF; i++) { a[i] = $i } } END { for (i in a) { print "/" a[i] } }'`
 
 								# Now expand the deleted file pathnames.
 								RKHTMPVAR3=`expand_paths RKHTMPVAR3`
@@ -13643,14 +13642,14 @@ ${RKHTMPVAR}:${FNAME}"
 					INFO=`echo ${FILENAME} | cut -d: -f2`
 					RKHTMPVAR=`echo ${FILENAME} | cut -d: -f3-`
 
-					FOUNDINFO=`echo "${RKHTMPVAR}" | awk '{ print $1 }'`
+					FOUNDINFO=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $1 }'`
 					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_SUSP_FILES_FOUND_CMD "${FOUNDINFO}"
 
-					FOUNDINFO=`echo "${RKHTMPVAR}" | awk '{ print $3 }'`
-					RKHTMPVAR2=`echo "${RKHTMPVAR}" | awk '{ print $2 }'`
+					FOUNDINFO=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $3 }'`
+					RKHTMPVAR2=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $2 }'`
 					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_UID "${FOUNDINFO}" "${RKHTMPVAR2}"
 
-					FOUNDINFO=`echo "${RKHTMPVAR}" | awk '{ print $9 }'`
+					FOUNDINFO=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $9 }'`
 					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_PATH "${FOUNDINFO}"
 
 					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_RTKT "${INFO}"
@@ -14033,7 +14032,7 @@ ${FOUND_PROCS}"
 
 			echo 0 > "${IPCS_TMPFILE}"
 
-			RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | awk -F' ' '/segments allocated/ {print $3}'`
+			RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $3}'`
 			test -z "${RKHTMPVAR}" && RKHTMPVAR=0
 
 			if [ $RKHTMPVAR -ne 0 ]; then
@@ -14044,13 +14043,14 @@ ${FOUND_PROCS}"
 
 							# We must log the overall result before any found entry.
 							display --to LOG --type PLAIN --result WARNING --color RED --log-nl --log-indent 2 ROOTKIT_MALWARE_IPCS
+							display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
 						fi
 
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
 							LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
 								RKH_SHM_PATH=`${READLINK_CMD} -f /proc/${RKH_SHM_CPID}/exe`
 
-								display --to LOG --type PLAIN --log-indent 4 ROOTKIT_MALWARE_IPCS_DETAILS "${RKH_SHM_PATH}" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
+								display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "${RKH_SHM_PATH}" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
 							done
 						fi
 					fi
@@ -14163,7 +14163,7 @@ xinetd_include() {
 		# We must dig out the service name and its 'id' for each service configured in the file.
 		#
 
-		for DATA in `awk '/^service/, /^[ 	]*\}/ { if ($0 ~ /^[ 	]*(#|$)/) next; printf "%s", $0; if ($0 ~ /\}/) print ""; }' "${FILENAME}"`; do
+		for DATA in `${AWK_CMD} '/^service/, /^[ 	]*\}/ { if ($0 ~ /^[ 	]*(#|$)/) next; printf "%s", $0; if ($0 ~ /\}/) print ""; }' "${FILENAME}"`; do
 			# Unfortunately we must jiggle with IFS again to ensure that subsequent commands work.
 			IFS=$RKHIFS
 
@@ -14238,7 +14238,7 @@ xinetd_include() {
 	# Next we look for any 'include' directives.
 	#
 
-	for FNAME in `grep '^[ 	]*include[ 	]' "${FILENAME}" | awk '{ print $2 }'`; do
+	for FNAME in `grep '^[ 	]*include[ 	]' "${FILENAME}" | ${AWK_CMD} '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDE "${FNAME}"
 		fi
@@ -14251,7 +14251,7 @@ xinetd_include() {
 	# Finally we look for any 'includedir' directives.
 	#
 
-	for DIR in `grep '^[ 	]*includedir[ 	]' "${FILENAME}" | awk '{ print $2 }'`; do
+	for DIR in `grep '^[ 	]*includedir[ 	]' "${FILENAME}" | ${AWK_CMD} '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDEDIR "${DIR}"
 		fi
@@ -14367,7 +14367,7 @@ trojan_checks() {
 		if [ -z "${INETADM_CMD}" ]; then
 			display --to LOG --type INFO CONFIG_XINETD_PATH 'inetd' "${INETD_CONF_PATH}"
 
-			FOUNDSTRING=`grep -v '^#' "${INETD_CONF_PATH}" | awk '{ print $1 }'`
+			FOUNDSTRING=`grep -v '^#' "${INETD_CONF_PATH}" | ${AWK_CMD} '{ print $1 }'`
 		else
 			display --to LOG --type INFO CONFIG_SOL10_INETD
 		fi
@@ -14399,7 +14399,7 @@ trojan_checks() {
 				#
 
 				if [ -n "`echo \"${STR}\" | grep '^[0-9/_-]*$'`" ]; then
-					EXECNAME=`grep "^${STR}" "${INETD_CONF_PATH}" | awk '{ print $6 }'`
+					EXECNAME=`grep "^${STR}" "${INETD_CONF_PATH}" | ${AWK_CMD} '{ print $6 }'`
 
 					test -z "${EXECNAME}" -o "${EXECNAME}" = "internal" && EXECNAME="${STR}"
 
@@ -14548,11 +14548,11 @@ bsd_specific_checks() {
 	if [ -n "${SOCKSTAT_CMD}" -a -n "${NETSTAT_CMD}" ]; then
 		test "${OPERATING_SYSTEM}" = "NetBSD" && RKHTMPVAR="-n" || RKHTMPVAR=""
 
-		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | awk '$5 ~ /^(tcp|udp)/ { if ($6 == 6) print $7; else print $6 }'`
+		SOCKSTAT_OUTPUT=`${SOCKSTAT_CMD} ${RKHTMPVAR} | ${AWK_CMD} '$5 ~ /^(tcp|udp)/ { if ($6 == 6) print $7; else print $6 }'`
 
 		SOCKSTAT_OUTPUT=`echo "${SOCKSTAT_OUTPUT}" | grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
 
-		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an | awk '$1 ~ /^(tcp|udp)/ { print $4 }' | grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
+		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an | ${AWK_CMD} '$1 ~ /^(tcp|udp)/ { print $4 }' | grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
 
 		if [ "${SOCKSTAT_OUTPUT}" = "${NETSTAT_OUTPUT}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
@@ -14920,13 +14920,13 @@ check_port_wl() {
 
 			if [ -n "`echo \"${LSOFLINE}\" | grep \" ${PROTO} \*:${PORT} \"`" ]; then
 				# Process listening for connections from anywhere.
-				PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+				PID=`echo "${LSOFLINE}" | ${AWK_CMD} '{ print $2 }'`
 			elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:${PORT}[ -]\"`" ]; then
 				# Established or listening process using IPv4 address.
-				PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+				PID=`echo "${LSOFLINE}" | ${AWK_CMD} '{ print $2 }'`
 			elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} \[[:0-9a-fA-F]+\]:${PORT}[ -]\"`" ]; then
 				# Established or listening process using IPv6 address.
-				PID=`echo "${LSOFLINE}" | awk '{ print $2 }'`
+				PID=`echo "${LSOFLINE}" | ${AWK_CMD} '{ print $2 }'`
 			else
 				# Ignore anything else.
 				continue
@@ -14954,7 +14954,7 @@ check_port_wl() {
 				if [ $SUNOS -eq 1 ]; then
 					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' 2>/dev/null | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
 				else
-					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | awk '{ print $NF }'`
+					FNAME=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | ${AWK_CMD} '{ print $NF }'`
 				fi
 			fi
 
@@ -14977,16 +14977,16 @@ check_port_wl() {
 	else
 		case "${OPERATING_SYSTEM}" in
 		Linux)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | awk '{ print $4 }' | grep ":${PORT}$"`
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*:${PORT} " | ${AWK_CMD} '{ print $4 }' | grep ":${PORT}$"`
 			;;
 		*BSD|Darwin|IRIX*|DragonFly)
-			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}$"`
+			FOUND=`${NETSTAT_CMD} -an | grep -i "^${PROTO}.*\.${PORT} " | ${AWK_CMD} '{ print $4 }' | grep "\.${PORT}$"`
 			;;
 		AIX)
 			if [ "${PROTO}" = "UDP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | awk '{ print $4 }' | grep "\.${PORT}$"`
+				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | ${AWK_CMD} '{ print $4 }' | grep "\.${PORT}$"`
 			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | awk '{ print $4 }' | grep "\.${PORT}$"`
+				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | ${AWK_CMD} '{ print $4 }' | grep "\.${PORT}$"`
 			fi
 			;;
 		SunOS)
@@ -15347,9 +15347,9 @@ do_network_interface_checks() {
 				case "${OPERATING_SYSTEM}" in
 				*BSD|DragonFly)
 					if [ -z "${IFWLIST}" ]; then
-						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^pflog/ && /PROMISC/ { print }'`
+						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | ${AWK_CMD} '$1 !~ /^pflog/ && /PROMISC/ { print }'`
 					else
-						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | awk '$1 !~ /^pflog/ && $1 !~ /^('${IFWLIST}'):$/ && /PROMISC/ { print }'`
+						PROMISCSCAN1=`${IFCONFIG_CMD} -a 2>&1 | ${AWK_CMD} '$1 !~ /^pflog/ && $1 !~ /^('${IFWLIST}'):$/ && /PROMISC/ { print }'`
 					fi
 					;;
 				SunOS|IRIX*|AIX)
@@ -15361,9 +15361,9 @@ do_network_interface_checks() {
 					;;
 				*)
 					if [ -z "${IFWLIST}" ]; then
-						PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; /PROMISC/ { print }'`
+						PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | ${AWK_CMD} 'BEGIN { RS="" }; /PROMISC/ { print }'`
 					else
-						PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | awk 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}'):?$/ && /PROMISC/ { print }'`
+						PROMISCSCAN1=`${IFCONFIG_CMD} 2>&1 | ${AWK_CMD} 'BEGIN { RS="" }; $1 !~ /^('${IFWLIST}'):?$/ && /PROMISC/ { print }'`
 					fi
 					;;
 				esac
@@ -15395,7 +15395,7 @@ do_network_interface_checks() {
 				if [ -n "${PROMISCSCAN1}" ]; then
 					display --to LOG --type PLAIN --log-indent 9 NETWORK_PROMISC_IF_1
 
-					PROMISCSCAN1=`echo "${PROMISCSCAN1}" | awk '$0 !~ /^ / || /PROMISC/ { print }'`
+					PROMISCSCAN1=`echo "${PROMISCSCAN1}" | ${AWK_CMD} '$0 !~ /^ / || /PROMISC/ { print }'`
 
 					IFS=$IFSNL
 
@@ -15480,7 +15480,7 @@ do_network_interface_checks() {
 
 		INODE_LIST=""
 
-		for INODE in `egrep -v '(^sk | 888e )' /proc/net/packet | awk '{ print $9 }'`; do
+		for INODE in `egrep -v '(^sk | 888e )' /proc/net/packet | ${AWK_CMD} '{ print $9 }'`; do
 			INODE_LIST="${INODE_LIST}|$INODE"
 		done
 
@@ -15488,7 +15488,7 @@ do_network_interface_checks() {
 		test -z "${INODE_LIST}" && INODE_LIST="RKHunterPktCapture"
 
 
-		for PID in `${LSOF_CMD} -lMnPw -d 1-20 2>/dev/null | egrep "[ 	](pack[ 	]+(${INODE_LIST})|sock[ 	]+[^ 	]+[ 	]+[^ 	]+[ 	]+(${INODE_LIST}))[ 	]" | awk '{ print $2 }'`; do
+		for PID in `${LSOF_CMD} -lMnPw -d 1-20 2>/dev/null | egrep "[ 	](pack[ 	]+(${INODE_LIST})|sock[ 	]+[^ 	]+[ 	]+[^ 	]+[ 	]+(${INODE_LIST}))[ 	]" | ${AWK_CMD} '{ print $2 }'`; do
 			NAME=""
 
 			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
@@ -16564,7 +16564,7 @@ do_system_config_files_check() {
 					# block which uses TCP or UDP.
 					#
 
-					RKHTMPVAR=`awk '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' "${FNAME}" | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
+					RKHTMPVAR=`${AWK_CMD} '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' "${FNAME}" | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
 				fi
 
 				if [ -n "${RKHTMPVAR}" ]; then
@@ -16623,7 +16623,7 @@ do_dev_whitelist_check() {
 	#
 
 
-	FTYPE=`${FILE_CMD} "${RKHTMPVAR}" 2>&1 | awk -F':' '{ print $NF }' | cut -c2-`
+	FTYPE=`${FILE_CMD} "${RKHTMPVAR}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 
 	if [ $MACOSX -eq 1 -a -n "`echo \"${FTYPE}\" | grep 'universal binary'`" ]; then
 		FTYPE=`echo "${FTYPE}" | tail ${TAIL_OPT}1`
@@ -16758,7 +16758,7 @@ do_filesystem_check() {
 			IFS=$IFSNL
 
 			for RKHTMPVAR in ${FOUNDFILES}; do
-				FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
+				FTYPE=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 				FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
 
 				display --to LOG --type PLAIN --log-indent 9 NAME "`name2text \"${FNAME}\"`: ${FTYPE}"
@@ -16842,7 +16842,7 @@ ${RKHTMPVAR}"
 			test -n "`echo \"${FNAME}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
 		fi
 
-		FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | awk -F':' '{ print $NF }' | cut -c2-`
+		FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 
 		test -n "`echo \"${FTYPE}\" | egrep 'character special|block special|empty'`" && continue
 
@@ -16883,7 +16883,7 @@ ${FNAME}: ${FTYPE}"
 		IFS=$IFSNL
 
 		for RKHTMPVAR in ${FOUNDDIRS}; do
-			FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
+			FTYPE=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 			FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
 
 			if [ "${FTYPE}" = "directory" ]; then
@@ -16894,7 +16894,7 @@ ${FNAME}: ${FTYPE}"
 		done
 
 		for RKHTMPVAR in ${FOUNDFILES}; do
-			FTYPE=`echo "${RKHTMPVAR}" | awk -F':' '{ print $NF }' | cut -c2-`
+			FTYPE=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 			FNAME=`echo "${RKHTMPVAR}" | sed -e 's/: [^:]*$//'`
 
 			display --to LOG --type WARNING FILESYSTEM_HIDDEN_FILE_FOUND "`name2text \"${FNAME}\"`: ${FTYPE}"
@@ -17161,11 +17161,11 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 			case "${APPLICATION}" in
 			exim)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -bV 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep '^Exim version [0-9]' | awk '{ print $3 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^Exim version [0-9]' | ${AWK_CMD} '{ print $3 }'`
 				;;
 			gpg)
 				WHOLE_VERSION=`${APP_CMD_FOUND} --version --homedir / 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep 'GnuPG' | awk '{ print $3 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep 'GnuPG' | ${AWK_CMD} '{ print $3 }'`
 				;;
 			httpd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
@@ -17173,7 +17173,7 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				;;
 			named)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | egrep '^(named|BIND)[ 	][ 	]*[0-9]' | grep -v '/' | awk '{ print $2 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | egrep '^(named|BIND)[ 	][ 	]*[0-9]' | grep -v '/' | ${AWK_CMD} '{ print $2 }'`
 
 				if [ -n "`echo \"${VERSION}\" | grep '^[^-]*\.[0-9][0-9]*-P[^-]*-'`" ]; then
 					VERSION=`echo "${VERSION}" | cut -d'-' -f1-2`
@@ -17182,7 +17182,7 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				fi
 
 				if [ -z "${VERSION}" ]; then
-					VERSION=`${APP_CMD_FOUND} -v | awk '{ print $2 }'`
+					VERSION=`${APP_CMD_FOUND} -v | ${AWK_CMD} '{ print $2 }'`
 				fi
 				;;
 			openssl)
@@ -17195,15 +17195,15 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				;;
 			php)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep '^PHP[ 	][ 	]*[0-9]' | awk '{ print $2 }' | cut -d'-' -f1`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^PHP[ 	][ 	]*[0-9]' | ${AWK_CMD} '{ print $2 }' | cut -d'-' -f1`
 				;;
 			procmail)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-				VERSION=`echo "${WHOLE_VERSION}" | grep '^procmail[ 	][ 	]*v[0-9]' | awk '{ print $2 }' | sed -e 's/^v//'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^procmail[ 	][ 	]*v[0-9]' | ${AWK_CMD} '{ print $2 }' | sed -e 's/^v//'`
 				;;
 			proftpd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>&1`
-				VERSION=`echo "${WHOLE_VERSION}" | sed -e 's/^.*\(ProFTPD.*\)$/\1/' | grep '^ProFTPD[ 	][ 	]*Version[ 	][ 	]*[0-9]' | awk '{ print $3 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | sed -e 's/^.*\(ProFTPD.*\)$/\1/' | grep '^ProFTPD[ 	][ 	]*Version[ 	][ 	]*[0-9]' | ${AWK_CMD} '{ print $3 }'`
 				;;
 			sshd)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -t -d 2>&1`
@@ -18203,7 +18203,7 @@ display_propfiles() {
 	create_rkh_file_prop_list
 
 	# Finally just dump out the list of file names.
-	awk -F'/' '{ print $NF }' "${RKH_FILEPROP_LIST}" | sort | uniq
+	${AWK_CMD} -F'/' '{ print $NF }' "${RKH_FILEPROP_LIST}" | sort | uniq
 
 	return
 }
@@ -18544,8 +18544,9 @@ BINDIR_OPT=0
 # This will be set if any of the command directories is a symbolic link.
 BINISLINK=0
 
-# Default 'id' command. Solaris may reset this.
-ID_CMD="id"
+# Default 'id' and 'awk' commands. Solaris may reset these.
+ID_CMD='id'
+AWK_CMD='awk'
 
 # Set if we don't want to wait for a keypress after each test.
 SKIP_KEY_PRESS=0
@@ -19251,6 +19252,24 @@ done
 
 if [ $SUNOS -eq 1 ]; then
 	test -x /usr/xpg4/bin/id && ID_CMD="/usr/xpg4/bin/id"
+
+	#
+	# Unfortunately we need the AWK_CMD set this early on so
+	# that the option processing works. As such this is a bit
+	# of a hack. AWK_CMD will be set properly later on.
+	#
+
+	RKHTMPVAR=`which gawk 2>/dev/null | grep -v ' '`
+	if [ -n "${RKHTMPVAR}" ]; then
+		AWK_CMD="${RKHTMPVAR}"
+	else
+		RKHTMPVAR=`which nawk 2>/dev/null | grep -v ' '`
+		if [ -n "${RKHTMPVAR}" ]; then
+			AWK_CMD="${RKHTMPVAR}"
+		elif [ -x "/usr/xpg4/bin/awk" ]; then
+				AWK_CMD="/usr/xpg4/bin/awk"
+		fi
+	fi
 fi
 
 RKHTMPVAR=`${ID_CMD} -u 2>/dev/null`

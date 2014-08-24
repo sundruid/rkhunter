@@ -25,9 +25,11 @@
  Changes:
 
  Bugfixes:
- - Ensure that lsof errors are not displayed.
- - Ensure that ipcs errors and locale are handled correctly.
+ - Ensure that 'lsof' errors are not displayed.
+ - Ensure that 'ipcs' errors and the locale are handled correctly.
  - Correct broken pipe errors in some commands.
+ - For Solaris users set the 'awk' command very early on so that
+   option processing works correctly.
 
  -- 
 
