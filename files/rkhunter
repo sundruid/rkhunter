@@ -13447,10 +13447,16 @@ malware_checks() {
 
 								# We must reset the IFS because 'expand_paths' sets it to the default.
 								IFS=$IFSNL
+								FNAMEGREP=""
 
-								FNAMEGREP=`echo "${RKHTMPVAR3}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+								for FN in ${RKHTMPVAR3}; do
+									FNGREP=`echo "${FN}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNAMEGREP="${FNAMEGREP}|${FNGREP}"
+								done
 
-								if [ -n "`echo \"${FNAME}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+								FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's/^|//;'`
+
+								if [ -n "`echo \"${FNAME}\" | egrep \"^(${FNAMEGREP})$\"`" ]; then
 									PROCWHITELISTED=1
 								fi
 							else
