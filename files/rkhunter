@@ -3146,6 +3146,47 @@ get_locking_options() {
 }
 
 
+get_scanmode_option() {
+
+	#
+	# This function gets the SCANROOTKITMODE configuration option.
+	#
+
+	LEAVE=0
+
+	SCANROOTKITMODE=`get_option single SCANROOTKITMODE` || exit 1
+
+	if [ $ERRCODE -eq 0 ]; then
+		if [ -n "${SCANROOTKITMODE}" ]; then
+			SCANROOTKITMODE=`echo "${SCANROOTKITMODE}" | tr '[:lower:]' '[:upper:]'`
+
+			if [ "${SCANROOTKITMODE}" != "THOROUGH" ]; then
+				ERRCODE=1
+
+				echo "Invalid SCANROOTKITMODE configuration option: ${SCANROOTKITMODE}"
+			fi
+
+			test $ERRCODE -eq 1 && LEAVE=1
+		else
+			SCANROOTKITMODE=""
+		fi
+	else
+		LEAVE=1
+	fi
+
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
 sort_test_lists() {
 
 	#
@@ -5877,6 +5918,8 @@ get_configfile_options() {
 
 	get_locking_options
 
+	get_scanmode_option
+
 
 	#
 	# Some options are only required when checking the system.
@@ -7715,7 +7758,7 @@ do_config_file_check() {
 		   HASH_FLD_IDX HASH_FUNC HASH_CMD IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
 		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
 		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
-		   SCAN_MODE_DEV SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_TIME SHOW_SUMMARY_WARNINGS_NUMBER
+		   SCAN_MODE_DEV SCANROOTKITMODE SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_TIME SHOW_SUMMARY_WARNINGS_NUMBER
 		   SSH_CONFIG_DIR SUSPSCAN_DEBUG SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP
 		   SUSPSCAN_THRESH TMPDIR UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM USE_LOCKING
 		   USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD WEB_CMD WHITELISTED_IS_WHITE

@@ -35,6 +35,8 @@
    option processing works correctly.
  - The ALLOWPROCDELFILE option was not handling multiple pathnames
    correctly. This has now been fixed.
+ - The SCANROOTKITMODE configuration option was never actually read
+   as a configuration option. This has now been fixed.
 
  -- 
 
