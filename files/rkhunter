@@ -645,8 +645,6 @@ get_option() {
 	OPTMULTI="$1"
 	OPTNAME="$2"
 
-	ERRCODE=0
-
 	if [ -z "${OPTMULTI}" -o -z "${OPTNAME}" ]; then
 		echo "Error: Missing arguments in get_option function: $*" >&2
 		return 1
@@ -816,6 +814,8 @@ check_paths() {
 
 	ERRCODE=0
 
+#jh - we should do this next test after checking EXIST
+#jh - because if the file/dir must exist then a '' value should return false.
 	test -z "${OPT_VALUE}" && return
 
 	MUSTEXIST=0
@@ -1660,6 +1660,7 @@ check_commands() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	for CMD in ${CMDLIST}; do
 		CMDNAME=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
@@ -1671,41 +1672,37 @@ check_commands() {
 		# the configuration file.
 		#
 
-		CFG_CMD=`get_option single "${CMDNAME}"` || exit 1
+		CFG_CMD=`get_option single "${CMDNAME}"` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${CFG_CMD}" ]; then
-				if [ "${CFG_CMD}" = "DISABLED" -o "${CFG_CMD}" = "BUILTIN" ]; then
+		if [ -n "${CFG_CMD}" ]; then
+			if [ "${CFG_CMD}" = "DISABLED" -o "${CFG_CMD}" = "BUILTIN" ]; then
+				eval ${CMDNAME}=\"${CFG_CMD}\"
+			else
+				MCMD=`echo "${CFG_CMD}" | cut -d' ' -f1`
+
+				#
+				# We must first check that the command name is valid.
+				# The user may have included globbing characters, or
+				# used multiple dots, and we do not allow that.
+				#
+
+				check_paths MCMD "${CMDNAME}" "EXIST NOWILD NOBROKENLINK"
+
+				if [ $ERRCODE -eq 1 ]; then
+					LEAVE=1
+					continue
+				fi
+
+				#
+				# Check that the command is executable.
+				#
+
+				if [ -n "`find_cmd ${MCMD}`" ]; then
 					eval ${CMDNAME}=\"${CFG_CMD}\"
 				else
-					MCMD=`echo "${CFG_CMD}" | cut -d' ' -f1`
-
-					#
-					# We must first check that the command name is valid.
-					# The user may have included globbing characters, or
-					# used multiple dots, and we do not allow that.
-					#
-
-					check_paths MCMD "${CMDNAME}" "EXIST NOWILD NOBROKENLINK"
-
-					if [ $ERRCODE -eq 1 ]; then
-						LEAVE=1
-						continue
-					fi
-
-					#
-					# Check that the command is executable.
-					#
-
-					if [ -n "`find_cmd ${MCMD}`" ]; then
-						eval ${CMDNAME}=\"${CFG_CMD}\"
-					else
-						CFG_CMD=""
-					fi
+					CFG_CMD=""
 				fi
 			fi
-		else
-			LEAVE=1
 		fi
 
 
@@ -1826,22 +1823,19 @@ get_installdir_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	RKHINSTALLDIR=`get_option single INSTALLDIR` || exit 1
+	RKHINSTALLDIR=`get_option single INSTALLDIR` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -z "${RKHINSTALLDIR}" ]; then
-			LEAVE=1
-			echo "Invalid INSTALLDIR configuration option - no installation directory specified."
-		elif [ ! -d "${RKHINSTALLDIR}" ]; then
-			LEAVE=1
-			echo "Installation directory does not exist: ${RKHINSTALLDIR}"
-		elif [ ! -r "${RKHINSTALLDIR}" ]; then
-			LEAVE=1
-			echo "Installation directory is not readable: ${RKHINSTALLDIR}"
-		fi
-	else
+	if [ -z "${RKHINSTALLDIR}" ]; then
 		LEAVE=1
+		echo "Invalid INSTALLDIR configuration option - no installation directory specified."
+	elif [ ! -d "${RKHINSTALLDIR}" ]; then
+		LEAVE=1
+		echo "Installation directory does not exist: ${RKHINSTALLDIR}"
+	elif [ ! -r "${RKHINSTALLDIR}" ]; then
+		LEAVE=1
+		echo "Installation directory is not readable: ${RKHINSTALLDIR}"
 	fi
 
 
@@ -1866,6 +1860,7 @@ get_language_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ -n "${LANGUAGE}" ]; then
 		LANGUAGE=`echo "${LANGUAGE}" | tr -d '" 	' | tr -d "'"`
@@ -1875,9 +1870,7 @@ get_language_option() {
 			echo "Invalid '--language' option - no language given."
 		fi
 	else
-		LANGUAGE=`get_option single LANGUAGE` || exit 1
-
-		test $ERRCODE -eq 1 && LEAVE=1
+		LANGUAGE=`get_option single LANGUAGE` || exit $?
 	fi
 
 	#
@@ -1943,20 +1936,16 @@ get_language_option() {
 	#
 
 	if [ $UPDATE -eq 1 ]; then
-		UPDATE_LANG=`get_option space-list UPDATE_LANG` || exit 1
+		UPDATE_LANG=`get_option space-list UPDATE_LANG` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${UPDATE_LANG}" ]; then
-				if [ -z "`echo \" ${UPDATE_LANG} \" | grep \" ${LANGUAGE} \"`" ]; then
-					UPDATE_LANG="${UPDATE_LANG} ${LANGUAGE}"
-				fi
-
-				if [ -z "`echo \" ${UPDATE_LANG} \" | grep ' en '`" ]; then
-					UPDATE_LANG="${UPDATE_LANG} en"
-				fi
+		if [ -n "${UPDATE_LANG}" ]; then
+			if [ -z "`echo \" ${UPDATE_LANG} \" | grep \" ${LANGUAGE} \"`" ]; then
+				UPDATE_LANG="${UPDATE_LANG} ${LANGUAGE}"
 			fi
-		else
-			LEAVE=1
+
+			if [ -z "`echo \" ${UPDATE_LANG} \" | grep ' en '`" ]; then
+				UPDATE_LANG="${UPDATE_LANG} en"
+			fi
 		fi
 	fi
 
@@ -1982,6 +1971,7 @@ get_logfile_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ -n "${RKHLOGFILE}" ]; then
 		RKHLOGFILE=`echo "${RKHLOGFILE}" | tr -d '" 	' | tr -d "'"`
@@ -1991,19 +1981,15 @@ get_logfile_option() {
 			echo "Invalid '--logfile' option - no logfile name given."
 		fi
 	else
-		RKHLOGFILE=`get_option single LOGFILE` || exit 1
+		RKHLOGFILE=`get_option single LOGFILE` || exit $?
+
+		check_paths RKHLOGFILE LOGFILE "NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
-			check_paths RKHLOGFILE LOGFILE "NOWILD NOBROKENLINK"
-
-			if [ $ERRCODE -eq 0 ]; then
-				if [ -z "${RKHLOGFILE}" ]; then
-					RET_CODE=1
-					RKHLOGFILE="${DFLT_LOGFILE}"
-					echo "The default logfile will be used: ${RKHLOGFILE}"
-				fi
-			else
-				LEAVE=1
+			if [ -z "${RKHLOGFILE}" ]; then
+				RET_CODE=1
+				RKHLOGFILE="${DFLT_LOGFILE}"
+				echo "The default logfile will be used: ${RKHLOGFILE}"
 			fi
 		else
 			LEAVE=1
@@ -2058,18 +2044,16 @@ get_logfile_option() {
 	#
 
 	if [ $APPEND_OPT -eq 0 ]; then
-		APPEND_LOG=`get_option single APPEND_LOG` || exit 1
+		ERRCODE=0
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${APPEND_LOG}" ]; then
-				check_is_digit APPEND_LOG
+		APPEND_LOG=`get_option single APPEND_LOG` || exit $?
 
-				test $ERRCODE -eq 1 && LEAVE=1
-			else
-				APPEND_LOG=0
-			fi
+		if [ -n "${APPEND_LOG}" ]; then
+			check_is_digit APPEND_LOG
+
+			test $ERRCODE -eq 1 && LEAVE=1
 		else
-			LEAVE=1
+			APPEND_LOG=0
 		fi
 	fi
 
@@ -2080,22 +2064,20 @@ get_logfile_option() {
 	# copy is done if no logfile is used.
 	#
 
-	RKHTMPVAR=`get_option single COPY_LOG_ON_ERROR` || exit 1
+	ERRCODE=0
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${RKHTMPVAR}" ]; then
-			check_is_digit RKHTMPVAR COPY_LOG_ON_ERROR
+	RKHTMPVAR=`get_option single COPY_LOG_ON_ERROR` || exit $?
 
-			if [ $ERRCODE -eq 0 ]; then
-				COPY_LOG_ON_ERROR=$RKHTMPVAR
-			else
-				LEAVE=1
-			fi
+	if [ -n "${RKHTMPVAR}" ]; then
+		check_is_digit RKHTMPVAR COPY_LOG_ON_ERROR
+
+		if [ $ERRCODE -eq 0 ]; then
+			COPY_LOG_ON_ERROR=$RKHTMPVAR
 		else
-			COPY_LOG_ON_ERROR=0
+			LEAVE=1
 		fi
 	else
-		LEAVE=1
+		COPY_LOG_ON_ERROR=0
 	fi
 
 
@@ -2120,6 +2102,7 @@ get_tmpdir_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ -n "${RKHTMPDIR}" ]; then
 		RKHTMPDIR=`echo "${RKHTMPDIR}" | tr -d '" 	' | tr -d "'"`
@@ -2129,19 +2112,15 @@ get_tmpdir_option() {
 			echo "Invalid '--tmpdir' option - no directory name given."
 		fi
 	else
-		RKHTMPDIR=`get_option single TMPDIR` || exit 1
+		RKHTMPDIR=`get_option single TMPDIR` || exit $?
+
+		check_paths RKHTMPDIR TMPDIR "NOWILD NOBROKENLINK EXIST"
 
 		if [ $ERRCODE -eq 0 ]; then
-			check_paths RKHTMPDIR TMPDIR "NOWILD NOBROKENLINK EXIST"
-
-			if [ $ERRCODE -eq 0 ]; then
-				if [ -z "${RKHTMPDIR}" ]; then
-					RET_CODE=1
-					RKHTMPDIR="${RKHINSTALLDIR}/lib/rkhunter/tmp"
-					echo "The default temporary directory will be used: ${RKHTMPDIR}"
-				fi
-			else
-				LEAVE=1
+			if [ -z "${RKHTMPDIR}" ]; then
+				RET_CODE=1
+				RKHTMPDIR="${RKHINSTALLDIR}/lib/rkhunter/tmp"
+				echo "The default temporary directory will be used: ${RKHTMPDIR}"
 			fi
 		else
 			LEAVE=1
@@ -2198,6 +2177,7 @@ get_dbdir_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ -n "${DB_PATH}" ]; then
 		DB_PATH=`echo "${DB_PATH}" | tr -d '" 	' | tr -d "'"`
@@ -2207,19 +2187,15 @@ get_dbdir_option() {
 			echo "Invalid '--dbdir' option - no directory name given."
 		fi
 	else
-		DB_PATH=`get_option single DBDIR` || exit 1
+		DB_PATH=`get_option single DBDIR` || exit $?
+
+		check_paths DB_PATH DBDIR "NOWILD EXIST NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
-			check_paths DB_PATH DBDIR "NOWILD EXIST NOBROKENLINK"
-
-			if [ $ERRCODE -eq 0 ]; then
-				if [ -z "${DB_PATH}" ]; then
-					RET_CODE=1
-					DB_PATH="${RKHINSTALLDIR}/lib/rkhunter/db"
-					echo "The default database directory will be used: ${DB_PATH}"
-				fi
-			else
-				LEAVE=1
+			if [ -z "${DB_PATH}" ]; then
+				RET_CODE=1
+				DB_PATH="${RKHINSTALLDIR}/lib/rkhunter/db"
+				echo "The default database directory will be used: ${DB_PATH}"
 			fi
 		else
 			LEAVE=1
@@ -2341,6 +2317,7 @@ get_bindir_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ $BINDIR_OPT -eq 1 ]; then
 		BINPATHS=`echo "${BINPATHS}" | tr -d '"' | tr -d "'" | tr -s '	 ' '  '`
@@ -2350,35 +2327,30 @@ get_bindir_option() {
 			echo "Invalid '--bindir' option - no directory names given."
 		fi
 	else
-		BINPATHS=`get_option space-list BINDIR` || exit 1
+		BINPATHS=`get_option space-list BINDIR` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -z "${BINPATHS}" ]; then
-				BINPATHS="${DFLT_BINPATHS}"
+		if [ -z "${BINPATHS}" ]; then
+			BINPATHS="${DFLT_BINPATHS}"
 
+			#
+			# Under some OS's /bin is a link to /usr/bin, so
+			# there is no need to look in it.
+			#
 
-				#
-				# Under some OS's /bin is a link to /usr/bin, so
-				# there is no need to look in it.
-				#
+			if [ $SUNOS -eq 1 -o $IRIXOS -eq 1 -o "${OPERATING_SYSTEM}" = "AIX" ]; then
+				if [ -h "/bin" ]; then
+					RKHTMPVAR=""
 
-				if [ $SUNOS -eq 1 -o $IRIXOS -eq 1 -o "${OPERATING_SYSTEM}" = "AIX" ]; then
-					if [ -h "/bin" ]; then
-						RKHTMPVAR=""
+					for DIR in ${BINPATHS}; do
+						test "${DIR}" != "/bin" && RKHTMPVAR="${RKHTMPVAR} ${DIR}"
+					done
 
-						for DIR in ${BINPATHS}; do
-							test "${DIR}" != "/bin" && RKHTMPVAR="${RKHTMPVAR} ${DIR}"
-						done
-
-						BINPATHS=`echo ${RKHTMPVAR}`
-					fi
+					BINPATHS=`echo ${RKHTMPVAR}`
 				fi
-
-				add_extra_dirs
-				BINPATHS="${BINPATHS}${EXTRA_DIRS}"
 			fi
-		else
-			LEAVE=1
+
+			add_extra_dirs
+			BINPATHS="${BINPATHS}${EXTRA_DIRS}"
 		fi
 	fi
 
@@ -2470,19 +2442,16 @@ get_scriptdir_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	SCRIPT_PATH=`get_option single SCRIPTDIR` || exit 1
+	SCRIPT_PATH=`get_option single SCRIPTDIR` || exit $?
+
+	check_paths SCRIPT_PATH SCRIPTDIR "NOWILD EXIST NOBROKENLINK"
 
 	if [ $ERRCODE -eq 0 ]; then
-		check_paths SCRIPT_PATH SCRIPTDIR "NOWILD EXIST NOBROKENLINK"
-
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -z "${SCRIPT_PATH}" ]; then
-				LEAVE=1
-				echo "The SCRIPTDIR configuration option has not been set by the installer."
-			fi
-		else
+		if [ -z "${SCRIPT_PATH}" ]; then
 			LEAVE=1
+			echo "The SCRIPTDIR configuration option has not been set by the installer."
 		fi
 	else
 		LEAVE=1
@@ -2544,7 +2513,7 @@ find_cmd() {
 
 get_rootdir_option() {
 
-	RKHTMPVAR=`get_option single ROOTDIR` || exit 1
+	RKHTMPVAR=`get_option single ROOTDIR` || exit $?
 
 	if [ -n "${RKHTMPVAR}" ]; then
 		echo "The ROOTDIR configuration option is now deprecated."
@@ -2567,19 +2536,16 @@ get_existwl_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	EXISTWL_OPT=`get_option newline-list EXISTWHITELIST` || exit 1
+	EXISTWL_OPT=`get_option newline-list EXISTWHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${EXISTWL_OPT}" ]; then
-			EXISTWHITELIST=`expand_paths EXISTWL_OPT`
+	if [ -n "${EXISTWL_OPT}" ]; then
+		EXISTWHITELIST=`expand_paths EXISTWL_OPT`
 
-			check_paths EXISTWHITELIST EXISTWHITELIST
+		check_paths EXISTWHITELIST EXISTWHITELIST
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -2603,52 +2569,45 @@ get_mailonwarn_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	MAILONWARNING=`get_option space-list MAIL-ON-WARNING` || exit 1
+	MAILONWARNING=`get_option space-list MAIL-ON-WARNING` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${MAILONWARNING}" ]; then
-			MAIL_CMD=`get_option single MAIL_CMD` || exit 1
+	if [ -n "${MAILONWARNING}" ]; then
+		MAIL_CMD=`get_option single MAIL_CMD` || exit $?
 
-			if [ $ERRCODE -eq 0 ]; then
-				test -z "${MAIL_CMD}" && MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
+		test -z "${MAIL_CMD}" && MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
 
-				MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f1`
+		MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f1`
 
-				check_paths MCMD MAIL_CMD "NOWILD EXIST NOBROKENLINK"
+		check_paths MCMD MAIL_CMD "NOWILD EXIST NOBROKENLINK"
 
-				if [ $ERRCODE -eq 0 ]; then
-					#
-					# Check that the mail command is executable.
-					#
+		if [ $ERRCODE -eq 0 ]; then
+			#
+			# Check that the mail command is executable.
+			#
 
-					MC=`find_cmd ${MCMD}`
+			MC=`find_cmd ${MCMD}`
 
-					if [ -n "${MC}" ]; then
-						#
-						# We rebuild the command to use the full pathname.
-						#
+			if [ -n "${MC}" ]; then
+				#
+				# We rebuild the command to use the full pathname.
+				#
 
-						MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f2-`
+				MCMD=`echo "${MAIL_CMD}" | cut -d' ' -f2-`
 
-						if [ -z "${MCMD}" -o "${MCMD}" = "${MAIL_CMD}" ]; then
-							MAIL_CMD=$MC
-						else
-							MAIL_CMD="${MC} ${MCMD}"
-						fi
-					else
-						LEAVE=1
-						echo "Invalid MAIL_CMD configuration option: command is non-existent or not executable: ${MCMD}"
-					fi
+				if [ -z "${MCMD}" -o "${MCMD}" = "${MAIL_CMD}" ]; then
+					MAIL_CMD=$MC
 				else
-					LEAVE=1
+					MAIL_CMD="${MC} ${MCMD}"
 				fi
 			else
 				LEAVE=1
+				echo "Invalid MAIL_CMD configuration option: command is non-existent or not executable: ${MCMD}"
 			fi
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -2674,51 +2633,44 @@ get_webcmd_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	RKHWEBCMD=`get_option single WEB_CMD` || exit 1
+	RKHWEBCMD=`get_option single WEB_CMD` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -z "${RKHWEBCMD}" ]; then
-			RKHWEBCMD=`get_option single WEBCMD` || exit 1
-
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+	if [ -z "${RKHWEBCMD}" ]; then
+		RKHWEBCMD=`get_option single WEBCMD` || exit $?
 	fi
 
-	if [ $LEAVE -eq 0 ]; then
-		if [ -n "${RKHWEBCMD}" ]; then
-			WCMD=`echo "${RKHWEBCMD}" | cut -d' ' -f1`
+	if [ -n "${RKHWEBCMD}" ]; then
+		WCMD=`echo "${RKHWEBCMD}" | cut -d' ' -f1`
 
-			check_paths WCMD WEB_CMD "EXIST NOWILD NOBROKENLINK"
+		check_paths WCMD WEB_CMD "EXIST NOWILD NOBROKENLINK"
 
-			if [ $ERRCODE -eq 0 ]; then
+		if [ $ERRCODE -eq 0 ]; then
+			#
+			# Check that the command is executable.
+			#
+
+			WC=`find_cmd ${WCMD}`
+
+			if [ -n "${WC}" ]; then
 				#
-				# Check that the command is executable.
+				# We find if there any command options, and set
+				# the command to use the full pathname.
 				#
 
-				WC=`find_cmd ${WCMD}`
+				RKHWEBCMD_OPTS=`echo "${RKHWEBCMD}" | cut -d' ' -f2-`
 
-				if [ -n "${WC}" ]; then
-					#
-					# We find if there any command options, and set
-					# the command to use the full pathname.
-					#
+				test "${RKHWEBCMD_OPTS}" = "${RKHWEBCMD}" && RKHWEBCMD_OPTS=""
 
-					RKHWEBCMD_OPTS=`echo "${RKHWEBCMD}" | cut -d' ' -f2-`
-
-					test "${RKHWEBCMD_OPTS}" = "${RKHWEBCMD}" && RKHWEBCMD_OPTS=""
-
-					RKHWEBCMD="${WC}"
-					test -n "${BASENAME_CMD}" && RKHWEBCMD_BASE=`${BASENAME_CMD} "${WC}"` || RKHWEBCMD_BASE=`echo "${WC}" | sed -e 's:^.*/::'`
-				else
-					LEAVE=1
-					echo "Invalid WEB_CMD configuration option: command is non-existent or not executable: ${WCMD}"
-				fi
+				RKHWEBCMD="${WC}"
+				test -n "${BASENAME_CMD}" && RKHWEBCMD_BASE=`${BASENAME_CMD} "${WC}"` || RKHWEBCMD_BASE=`echo "${WC}" | sed -e 's:^.*/::'`
 			else
 				LEAVE=1
+				echo "Invalid WEB_CMD configuration option: command is non-existent or not executable: ${WCMD}"
 			fi
+		else
+			LEAVE=1
 		fi
 	fi
 
@@ -2743,6 +2695,7 @@ get_syslog_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ -n "${USE_SYSLOG}" ]; then
 		USE_SYSLOG=`echo "${USE_SYSLOG}" | tr -d '" 	' | tr -d "'"`
@@ -2752,9 +2705,7 @@ get_syslog_option() {
 			echo "Invalid '--syslog' option - no facility/priority names given."
 		fi
 	else
-		USE_SYSLOG=`get_option single USE_SYSLOG` || exit 1
-
-		test $ERRCODE -eq 1 && LEAVE=1
+		USE_SYSLOG=`get_option single USE_SYSLOG` || exit $?
 	fi
 
 
@@ -2838,23 +2789,20 @@ get_ssh_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	ALLOW_SSH_ROOT_USER=`get_option single ALLOW_SSH_ROOT_USER` || exit 1
+	ALLOW_SSH_ROOT_USER=`get_option single ALLOW_SSH_ROOT_USER` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
-			ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[:upper:]' '[:lower:]'`
-		else
-			#
-			# By default SSH tends to allow root access. However, we
-			# do not. By setting this option to 'no', the user will
-			# receive a warning unless they set the options the same.
-			#
-
-			ALLOW_SSH_ROOT_USER="no"
-		fi
+	if [ -n "${ALLOW_SSH_ROOT_USER}" ]; then
+		ALLOW_SSH_ROOT_USER=`echo "${ALLOW_SSH_ROOT_USER}" | tr '[:upper:]' '[:lower:]'`
 	else
-		LEAVE=1
+		#
+		# By default SSH tends to allow root access. However, we
+		# do not. By setting this option to 'no', the user will
+		# receive a warning unless they set the options the same.
+		#
+
+		ALLOW_SSH_ROOT_USER="no"
 	fi
 
 
@@ -2863,18 +2811,14 @@ get_ssh_options() {
 	# configuration file.
 	#
 
-	ALLOW_SSH_PROT_V1=`get_option single ALLOW_SSH_PROT_V1` || exit 1
+	ALLOW_SSH_PROT_V1=`get_option single ALLOW_SSH_PROT_V1` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ALLOW_SSH_PROT_V1}" ]; then
-			check_is_digit ALLOW_SSH_PROT_V1 ALLOW_SSH_PROT_V1 2
+	if [ -n "${ALLOW_SSH_PROT_V1}" ]; then
+		check_is_digit ALLOW_SSH_PROT_V1 ALLOW_SSH_PROT_V1 2
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			ALLOW_SSH_PROT_V1=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		ALLOW_SSH_PROT_V1=0
 	fi
 
 
@@ -2882,23 +2826,19 @@ get_ssh_options() {
 	# See if the directory of the SSH configuration file has been set.
 	#
 
-	SSH_CONFIG_DIR=`get_option single SSH_CONFIG_DIR` || exit 1
+	SSH_CONFIG_DIR=`get_option single SSH_CONFIG_DIR` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SSH_CONFIG_DIR}" ]; then
-			check_paths SSH_CONFIG_DIR SSH_CONFIG_DIR "EXIST NOWILD NOBROKENLINK"
+	if [ -n "${SSH_CONFIG_DIR}" ]; then
+		check_paths SSH_CONFIG_DIR SSH_CONFIG_DIR "EXIST NOWILD NOBROKENLINK"
 
-			if [ $ERRCODE -eq 0 ]; then
-				if [ ! -r "${SSH_CONFIG_DIR}" ]; then
-					LEAVE=1
-					echo "The SSH configuration file directory is not readable: ${SSH_CONFIG_DIR}"
-				fi
-			else
+		if [ $ERRCODE -eq 0 ]; then
+			if [ ! -r "${SSH_CONFIG_DIR}" ]; then
 				LEAVE=1
+				echo "The SSH configuration file directory is not readable: ${SSH_CONFIG_DIR}"
 			fi
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -2927,19 +2867,16 @@ get_syslog_config_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	ALLOW_SYSLOG_REMOTE_LOGGING=`get_option single ALLOW_SYSLOG_REMOTE_LOGGING` || exit 1
+	ALLOW_SYSLOG_REMOTE_LOGGING=`get_option single ALLOW_SYSLOG_REMOTE_LOGGING` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ALLOW_SYSLOG_REMOTE_LOGGING}" ]; then
-			check_is_digit ALLOW_SYSLOG_REMOTE_LOGGING
+	if [ -n "${ALLOW_SYSLOG_REMOTE_LOGGING}" ]; then
+		check_is_digit ALLOW_SYSLOG_REMOTE_LOGGING
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			ALLOW_SYSLOG_REMOTE_LOGGING=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		ALLOW_SYSLOG_REMOTE_LOGGING=0
 	fi
 
 
@@ -2947,20 +2884,16 @@ get_syslog_config_options() {
 	# See if the pathname to the syslog configuration file has been set.
 	#
 
-	SYSLOG_CONFIG_FILE=`get_option space-list SYSLOG_CONFIG_FILE` || exit 1
+	SYSLOG_CONFIG_FILE=`get_option space-list SYSLOG_CONFIG_FILE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
-			if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep -i '^none$'`" ]; then
-				SYSLOG_CONFIG_FILE="NONE"
-			else
-				check_paths SYSLOG_CONFIG_FILE SYSLOG_CONFIG_FILE "EXIST NOWILD NOBROKENLINK"
+	if [ -n "${SYSLOG_CONFIG_FILE}" ]; then
+		if [ -n "`echo \"${SYSLOG_CONFIG_FILE}\" | grep -i '^none$'`" ]; then
+			SYSLOG_CONFIG_FILE="NONE"
+		else
+			check_paths SYSLOG_CONFIG_FILE SYSLOG_CONFIG_FILE "EXIST NOWILD NOBROKENLINK"
 
-				test $ERRCODE -eq 1 && LEAVE=1
-			fi
+			test $ERRCODE -eq 1 && LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -2987,20 +2920,17 @@ get_auto_x_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ $AUTO_X_OPT -eq 0 ]; then
-		AUTO_X_DTCT=`get_option single AUTO_X_DETECT` || exit 1
+		AUTO_X_DTCT=`get_option single AUTO_X_DETECT` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${AUTO_X_DTCT}" ]; then
-				check_is_digit AUTO_X_DTCT AUTO_X_DETECT
+		if [ -n "${AUTO_X_DTCT}" ]; then
+			check_is_digit AUTO_X_DTCT AUTO_X_DETECT
 
-				test $ERRCODE -eq 1 && LEAVE=1
-			else
-				AUTO_X_DTCT=0
-			fi
+			test $ERRCODE -eq 1 && LEAVE=1
 		else
-			LEAVE=1
+			AUTO_X_DTCT=0
 		fi
 	fi
 
@@ -3011,18 +2941,14 @@ get_auto_x_option() {
 
 
 	if [ $CLRSET2 -eq 0 ]; then
-		CLRSET2=`get_option single COLOR_SET2` || exit 1
+		CLRSET2=`get_option single COLOR_SET2` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${CLRSET2}" ]; then
-				check_is_digit CLRSET2 COLOR_SET2
+		if [ -n "${CLRSET2}" ]; then
+			check_is_digit CLRSET2 COLOR_SET2
 
-				test $ERRCODE -eq 1 && LEAVE=1
-			else
-				CLRSET2=0
-			fi
+			test $ERRCODE -eq 1 && LEAVE=1
 		else
-			LEAVE=1
+			CLRSET2=0
 		fi
 	fi
 
@@ -3032,18 +2958,14 @@ get_auto_x_option() {
 	# results are to be shown as white rather than green.
 	#
 
-	WLIST_IS_WHITE=`get_option single WHITELISTED_IS_WHITE` || exit 1
+	WLIST_IS_WHITE=`get_option single WHITELISTED_IS_WHITE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${WLIST_IS_WHITE}" ]; then
-			check_is_digit WLIST_IS_WHITE WHITELISTED_IS_WHITE
+	if [ -n "${WLIST_IS_WHITE}" ]; then
+		check_is_digit WLIST_IS_WHITE WHITELISTED_IS_WHITE
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			WLIST_IS_WHITE=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		WLIST_IS_WHITE=0
 	fi
 
 
@@ -3071,19 +2993,16 @@ get_locking_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	USE_LOCKING=`get_option single USE_LOCKING` || exit 1
+	USE_LOCKING=`get_option single USE_LOCKING` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${USE_LOCKING}" ]; then
-			check_is_digit USE_LOCKING
+	if [ -n "${USE_LOCKING}" ]; then
+		check_is_digit USE_LOCKING
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			USE_LOCKING=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		USE_LOCKING=0
 	fi
 
 
@@ -3092,18 +3011,14 @@ get_locking_options() {
 	# The default value is 300 seconds (5 minutes).
 	#
 
-	LOCK_TIMEOUT=`get_option single LOCK_TIMEOUT` || exit 1
+	LOCK_TIMEOUT=`get_option single LOCK_TIMEOUT` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${LOCK_TIMEOUT}" ]; then
-			check_is_digit LOCK_TIMEOUT LOCK_TIMEOUT ANY1
+	if [ -n "${LOCK_TIMEOUT}" ]; then
+		check_is_digit LOCK_TIMEOUT LOCK_TIMEOUT ANY1
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			LOCK_TIMEOUT=300
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		LOCK_TIMEOUT=300
 	fi
 
 
@@ -3116,18 +3031,14 @@ get_locking_options() {
 	#
 
 	if [ $QUIET -eq 0 ]; then
-		SHOW_LOCK_MSGS=`get_option single SHOW_LOCK_MSGS` || exit 1
+		SHOW_LOCK_MSGS=`get_option single SHOW_LOCK_MSGS` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${SHOW_LOCK_MSGS}" ]; then
-				check_is_digit SHOW_LOCK_MSGS
+		if [ -n "${SHOW_LOCK_MSGS}" ]; then
+			check_is_digit SHOW_LOCK_MSGS
 
-				test $ERRCODE -eq 1 && LEAVE=1
-			else
-				SHOW_LOCK_MSGS=1
-			fi
+			test $ERRCODE -eq 1 && LEAVE=1
 		else
-			LEAVE=1
+			SHOW_LOCK_MSGS=1
 		fi
 	else
 		SHOW_LOCK_MSGS=0
@@ -3153,25 +3064,20 @@ get_scanmode_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	SCANROOTKITMODE=`get_option single SCANROOTKITMODE` || exit 1
+	SCANROOTKITMODE=`get_option single SCANROOTKITMODE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SCANROOTKITMODE}" ]; then
-			SCANROOTKITMODE=`echo "${SCANROOTKITMODE}" | tr '[:lower:]' '[:upper:]'`
+	if [ -n "${SCANROOTKITMODE}" ]; then
+		SCANROOTKITMODE=`echo "${SCANROOTKITMODE}" | tr '[:lower:]' '[:upper:]'`
 
-			if [ "${SCANROOTKITMODE}" != "THOROUGH" ]; then
-				ERRCODE=1
+		if [ "${SCANROOTKITMODE}" != "THOROUGH" ]; then
+			LEAVE=1
 
-				echo "Invalid SCANROOTKITMODE configuration option: ${SCANROOTKITMODE}"
-			fi
-
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			SCANROOTKITMODE=""
+			echo "Invalid SCANROOTKITMODE configuration option: ${SCANROOTKITMODE}"
 		fi
 	else
-		LEAVE=1
+		SCANROOTKITMODE=""
 	fi
 
 
@@ -3484,6 +3390,7 @@ get_enable_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ $ENABLE_OPT -eq 1 ]; then
 		ENABLE_TESTS=`echo "${CL_ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' '`
@@ -3512,16 +3419,12 @@ get_enable_option() {
 		# We get the configuration file entries by default.
 		#
 
-		ENABLE_TESTS=`get_option space-list ENABLE_TESTS` || exit 1
+		ENABLE_TESTS=`get_option space-list ENABLE_TESTS` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
+		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 
-			# The system default.
-			test -z "${ENABLE_TESTS}" && ENABLE_TESTS="all"
-		else
-			LEAVE=1
-		fi
+		# The system default.
+		test -z "${ENABLE_TESTS}" && ENABLE_TESTS="all"
 	fi
 
 
@@ -3574,9 +3477,7 @@ get_disable_option() {
 	#
 
 	if [ $USECF -eq 1 ]; then
-		CONFIG_DISABLE_TESTS=`get_option space-list DISABLE_TESTS` || exit 1
-
-		test $ERRCODE -eq 1 && LEAVE=1
+		CONFIG_DISABLE_TESTS=`get_option space-list DISABLE_TESTS` || exit $?
 	fi
 
 
@@ -3611,51 +3512,40 @@ get_xinetd_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	FNAME=`get_option single INETD_CONF_PATH` || exit 1
+	FNAME=`get_option single INETD_CONF_PATH` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${FNAME}" ]; then
-			check_paths FNAME INETD_CONF_PATH "NOWILD EXIST NOBROKENLINK"
+	if [ -n "${FNAME}" ]; then
+		check_paths FNAME INETD_CONF_PATH "NOWILD EXIST NOBROKENLINK"
 
-			if [ $ERRCODE -eq 0 ]; then
-				INETD_CONF_PATH="${FNAME}"
-			else
-				LEAVE=1
-			fi
+		if [ $ERRCODE -eq 0 ]; then
+			INETD_CONF_PATH="${FNAME}"
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
-	INETDALLOWEDSVCS=`get_option space-list INETD_ALLOWED_SVC` || exit 1
-
-	test $ERRCODE -eq 1 && LEAVE=1
+	INETDALLOWEDSVCS=`get_option space-list INETD_ALLOWED_SVC` || exit $?
 
 
 	#
 	# Now do the same for xinetd.
 	#
 
-	FNAME=`get_option single XINETD_CONF_PATH` || exit 1
+	FNAME=`get_option single XINETD_CONF_PATH` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${FNAME}" ]; then
-			check_paths FNAME XINETD_CONF_PATH "EXIST NOWILD NOBROKENLINK"
+	if [ -n "${FNAME}" ]; then
+		check_paths FNAME XINETD_CONF_PATH "EXIST NOWILD NOBROKENLINK"
 
-			if [ $ERRCODE -eq 0 ]; then
-				XINETD_CONF_PATH="${FNAME}"
-			else
-				LEAVE=1
-			fi
+		if [ $ERRCODE -eq 0 ]; then
+			XINETD_CONF_PATH="${FNAME}"
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
-	XINETDALLOWEDSVCS=`get_option space-list XINETD_ALLOWED_SVC` || exit 1
-
-	test $ERRCODE -eq 1 && LEAVE=1
+	XINETDALLOWEDSVCS=`get_option space-list XINETD_ALLOWED_SVC` || exit $?
 
 
 	if [ $LEAVE -eq 1 ]; then
@@ -3680,44 +3570,41 @@ get_port_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	PORT_WHITELIST=""
 
-	RKHTMPVAR=`get_option space-list PORT_WHITELIST` || exit 1
+	RKHTMPVAR=`get_option space-list PORT_WHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 1 ]; then
-		LEAVE=1
-	else
-		if [ -n "${RKHTMPVAR}" ]; then
-			#
-			# Loop through the list checking that it all looks okay.
-			#
+	if [ -n "${RKHTMPVAR}" ]; then
+		#
+		# Loop through the list checking that it all looks okay.
+		#
 
-			for RKHTMPVAR2 in ${RKHTMPVAR}; do
-				if [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
-					PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
-					PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
+		for RKHTMPVAR2 in ${RKHTMPVAR}; do
+			if [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
+				PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
+				PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
 
-					if [ $PORT -gt 65535 ]; then
-						LEAVE=1
-						echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
-					fi
+				if [ $PORT -gt 65535 ]; then
+					LEAVE=1
+					echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
+				fi
 
-					PORT_WHITELIST="${PORT_WHITELIST}
+				PORT_WHITELIST="${PORT_WHITELIST}
 ${PROTO}:${PORT}"
-				elif [ "${RKHTMPVAR2}" = "*" ]; then
-					if [ -n "${LSOF_CMD}" ]; then
-						PORT_WHITELIST_ALL_TRUSTED=1
-					else
-						LEAVE=1
-						echo "Invalid PORT_WHITELIST configuration option - '*' requires the 'lsof' command."
-					fi
+			elif [ "${RKHTMPVAR2}" = "*" ]; then
+				if [ -n "${LSOF_CMD}" ]; then
+					PORT_WHITELIST_ALL_TRUSTED=1
 				else
 					LEAVE=1
-					echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
+					echo "Invalid PORT_WHITELIST configuration option - '*' requires the 'lsof' command."
 				fi
-			done
-		fi
+			else
+				LEAVE=1
+				echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
+			fi
+		done
 	fi
 
 
@@ -3725,11 +3612,9 @@ ${PROTO}:${PORT}"
 	# Now get the PORT_PATH_WHITELIST option from the configuration file.
 	#
 
-	RKHTMPVAR=`get_option newline-list PORT_PATH_WHITELIST` || exit 1
+	RKHTMPVAR=`get_option newline-list PORT_PATH_WHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 1 ]; then
-		LEAVE=1
-	elif [ -z "${LSOF_CMD}" ]; then
+	if [ -z "${LSOF_CMD}" ]; then
 		if [ -n "${RKHTMPVAR}" ]; then
 			LEAVE=1
 			echo "Invalid PORT_PATH_WHITELIST configuration option - the 'lsof' command is required."
@@ -3818,10 +3703,9 @@ get_groups_accounts_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	SHADOW_FILE=`get_option single PASSWORD_FILE` || exit 1
-
-	test $ERRCODE -eq 1 && LEAVE=1
+	SHADOW_FILE=`get_option single PASSWORD_FILE` || exit $?
 
 	if [ -n "${SHADOW_FILE}" ]; then
 		check_paths SHADOW_FILE PASSWORD_FILE "EXIST NOWILD NOBROKENLINK"
@@ -3860,27 +3744,19 @@ get_groups_accounts_options() {
 	# Now get the passwordless account whitelist option.
 	#
 
-	PWD_WHITELIST=`get_option space-list PWDLESS_ACCOUNTS` || exit 1
+	PWD_WHITELIST=`get_option space-list PWDLESS_ACCOUNTS` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		test -n "${PWD_WHITELIST}" && PWD_WHITELIST=" ${PWD_WHITELIST} "
-	else
-		LEAVE=1
-	fi
+	test -n "${PWD_WHITELIST}" && PWD_WHITELIST=" ${PWD_WHITELIST} "
 
 
 	#
 	# Next get any root-equivalent whitelisted account names.
 	#
 
-	UID0_WHITELIST=`get_option space-list UID0_ACCOUNTS` || exit 1
+	UID0_WHITELIST=`get_option space-list UID0_ACCOUNTS` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		# By default we allow the root account.
-		UID0_WHITELIST=" root ${UID0_WHITELIST} "
-	else
-		LEAVE=1
-	fi
+	# By default we allow the root account.
+	UID0_WHITELIST=" root ${UID0_WHITELIST} "
 
 
 	if [ $LEAVE -eq 1 ]; then
@@ -3923,52 +3799,49 @@ get_epoch_date_cmd_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	EPOCH_DATE_CMD=`get_option single EPOCH_DATE_CMD` || exit 1
+	EPOCH_DATE_CMD=`get_option single EPOCH_DATE_CMD` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
+	#
+	# Check the type of config file option we have. They user may have
+	# specified a command to use or 'NONE', in which case we return.
+	# If they specified 'PERL' then check we have a 'perl' command,
+	# and then return.
+	#
+
+	if [ "${EPOCH_DATE_CMD}" = "PERL" ]; then
+		EPOCH_DATE_CMD=""
+		test -z "${PERL_CMD}" && EPOCH_DATE_CMD="NONE"
+		return
+	elif [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
+		return
+	elif [ -n "${EPOCH_DATE_CMD}" ]; then
+		RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
+
+		check_paths RKHTMPVAR EPOCH_DATE_CMD "EXIST NOWILD NOBROKENLINK"
+
 		#
-		# Check the type of config file option we have. They user may have
-		# specified a command to use or 'NONE', in which case we return.
-		# If they specified 'PERL' then check we have a 'perl' command,
-		# and then return.
+		# Check that the command exists and is executable.
 		#
 
-		if [ "${EPOCH_DATE_CMD}" = "PERL" ]; then
-			EPOCH_DATE_CMD=""
-			test -z "${PERL_CMD}" && EPOCH_DATE_CMD="NONE"
-			return
-		elif [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
-			return
-		elif [ -n "${EPOCH_DATE_CMD}" ]; then
-			RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
+		if [ $ERRCODE -eq 0 ]; then
+			FNAME=`find_cmd ${RKHTMPVAR}`
 
-			check_paths RKHTMPVAR EPOCH_DATE_CMD "EXIST NOWILD NOBROKENLINK"
+			if [ -n "${FNAME}" ]; then
+				RKHTMPVAR2=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f2-`
 
-			#
-			# Check that the command exists and is executable.
-			#
-
-			if [ $ERRCODE -eq 0 ]; then
-				FNAME=`find_cmd ${RKHTMPVAR}`
-
-				if [ -n "${FNAME}" ]; then
-					RKHTMPVAR2=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f2-`
-
-					if [ -z "${RKHTMPVAR2}" -o "${RKHTMPVAR2}" = "${EPOCH_DATE_CMD}" ]; then
-						EPOCH_DATE_CMD="${FNAME}"
-					else
-						EPOCH_DATE_CMD="${FNAME} ${RKHTMPVAR2}"
-					fi
+				if [ -z "${RKHTMPVAR2}" -o "${RKHTMPVAR2}" = "${EPOCH_DATE_CMD}" ]; then
+					EPOCH_DATE_CMD="${FNAME}"
 				else
-					EPOCH_DATE_CMD="NONE"
+					EPOCH_DATE_CMD="${FNAME} ${RKHTMPVAR2}"
 				fi
 			else
-				LEAVE=1
+				EPOCH_DATE_CMD="NONE"
 			fi
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -4015,19 +3888,16 @@ get_phalanx2_option() {
 	test $LINUXOS -eq 0 && return
 
 	LEAVE=0
+	ERRCODE=0
 
-	ROOTKIT_PHALANX2_DIRTESTVAL=`get_option single PHALANX2_DIRTEST` || exit 1
+	ROOTKIT_PHALANX2_DIRTESTVAL=`get_option single PHALANX2_DIRTEST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ROOTKIT_PHALANX2_DIRTESTVAL}" ]; then
-			check_is_digit ROOTKIT_PHALANX2_DIRTESTVAL
+	if [ -n "${ROOTKIT_PHALANX2_DIRTESTVAL}" ]; then
+		check_is_digit ROOTKIT_PHALANX2_DIRTESTVAL
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			ROOTKIT_PHALANX2_DIRTESTVAL=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		ROOTKIT_PHALANX2_DIRTESTVAL=0
 	fi
 
 
@@ -4051,23 +3921,21 @@ get_dev_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
+
 	ALLOWDEVFILES=""
 
-	ALLOWDEVFILE_OPT=`get_option newline-list ALLOWDEVFILE` || exit 1
+	ALLOWDEVFILE_OPT=`get_option newline-list ALLOWDEVFILE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ALLOWDEVFILE_OPT}" ]; then
-			# Note that we do not get the expanded list of pathnames at
-			# this point. That will be done when the test actually runs.
+	if [ -n "${ALLOWDEVFILE_OPT}" ]; then
+		# Note that we do not get the expanded list of pathnames at
+		# this point. That will be done when the test actually runs.
 
-			ALLOWDEVFILES=${ALLOWDEVFILE_OPT}
+		ALLOWDEVFILES=${ALLOWDEVFILE_OPT}
 
-			check_paths ALLOWDEVFILES ALLOWDEVFILE
+		check_paths ALLOWDEVFILES ALLOWDEVFILE
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -4091,40 +3959,34 @@ get_hidden_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
+
 	ALLOWHIDDENFILES=""
 
-	ALLOWHIDDENFILE_OPT=`get_option newline-list ALLOWHIDDENFILE` || exit 1
+	ALLOWHIDDENFILE_OPT=`get_option newline-list ALLOWHIDDENFILE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ALLOWHIDDENFILE_OPT}" ]; then
-			# Note that we do not get the expanded list of pathnames at
-			# this point. That will be done when the test actually runs.
+	if [ -n "${ALLOWHIDDENFILE_OPT}" ]; then
+		# Note that we do not get the expanded list of pathnames at
+		# this point. That will be done when the test actually runs.
 
-			ALLOWHIDDENFILES=${ALLOWHIDDENFILE_OPT}
+		ALLOWHIDDENFILES=${ALLOWHIDDENFILE_OPT}
 
-			check_paths ALLOWHIDDENFILES ALLOWHIDDENFILE
+		check_paths ALLOWHIDDENFILES ALLOWHIDDENFILE
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
 	ALLOWHIDDENDIRS=""
 
-	ALLOWHIDDENDIR_OPT=`get_option newline-list ALLOWHIDDENDIR` || exit 1
+	ALLOWHIDDENDIR_OPT=`get_option newline-list ALLOWHIDDENDIR` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ALLOWHIDDENDIR_OPT}" ]; then
-			ALLOWHIDDENDIRS=${ALLOWHIDDENDIR_OPT}
+	if [ -n "${ALLOWHIDDENDIR_OPT}" ]; then
+		ALLOWHIDDENDIRS=${ALLOWHIDDENDIR_OPT}
 
-			check_paths ALLOWHIDDENDIRS ALLOWHIDDENDIR
+		check_paths ALLOWHIDDENDIRS ALLOWHIDDENDIR
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -4151,30 +4013,23 @@ get_missing_file_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	LOGFILE_MISSING=`get_option space-list MISSING_LOGFILES` || exit 1
+	LOGFILE_MISSING=`get_option space-list MISSING_LOGFILES` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${LOGFILE_MISSING}" ]; then
-			check_paths LOGFILE_MISSING MISSING_LOGFILES "NOWILD"
+	if [ -n "${LOGFILE_MISSING}" ]; then
+		check_paths LOGFILE_MISSING MISSING_LOGFILES "NOWILD"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
-	LOGFILE_EMPTY=`get_option space-list EMPTY_LOGFILES` || exit 1
+	LOGFILE_EMPTY=`get_option space-list EMPTY_LOGFILES` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${LOGFILE_EMPTY}" ]; then
-			check_paths LOGFILE_EMPTY EMPTY_LOGFILES "NOWILD"
+	if [ -n "${LOGFILE_EMPTY}" ]; then
+		check_paths LOGFILE_EMPTY EMPTY_LOGFILES "NOWILD"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -4198,50 +4053,43 @@ get_unhide_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	UNHIDE_TESTS=`get_option space-list UNHIDE_TESTS` || exit 1
+	UNHIDE_TESTS=`get_option space-list UNHIDE_TESTS` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -z "${UNHIDE_TESTS}" ]; then
-			UNHIDE_TESTS="sys"
-		elif [ -z "`echo \" ${UNHIDE_TESTS}\" | grep ' [a-zA-Z]'`" ]; then
-			LEAVE=1
-			echo "Invalid UNHIDE_TESTS configuration option - no tests specified: ${UNHIDE_TESTS}"
-		fi
-	else
+	if [ -z "${UNHIDE_TESTS}" ]; then
+		UNHIDE_TESTS="sys"
+	elif [ -z "`echo \" ${UNHIDE_TESTS}\" | grep ' [a-zA-Z]'`" ]; then
 		LEAVE=1
+		echo "Invalid UNHIDE_TESTS configuration option - no tests specified: ${UNHIDE_TESTS}"
 	fi
 
 
 	UNHIDETCP_OPTS=""
 
-	RKHTMPVAR=`get_option space-list UNHIDETCP_OPTS` || exit 1
+	RKHTMPVAR=`get_option space-list UNHIDETCP_OPTS` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${RKHTMPVAR}" ]; then
-			for RKHTMPVAR2 in ${RKHTMPVAR}; do
-				#
-				# For options we need to add a space to the variable
-				# to avoid problems with the 'echo' command.
-				#
+	if [ -n "${RKHTMPVAR}" ]; then
+		for RKHTMPVAR2 in ${RKHTMPVAR}; do
+			#
+			# For options we need to add a space to the variable
+			# to avoid problems with the 'echo' command.
+			#
 
-				if [ -z "`echo \"${RKHTMPVAR2} \" | grep '^-'`" ]; then
-					# Options must begin with a '-'.
-					LEAVE=1
-					echo "Invalid UNHIDETCP_OPTS configuration option - not a valid option: ${RKHTMPVAR}"
-				elif [ "${RKHTMPVAR2}" = "-V" -o "${RKHTMPVAR2}" = "-h" ]; then
-					# Ignore obvious invalid options.
-					continue
-				else
-					UNHIDETCP_OPTS="${UNHIDETCP_OPTS} ${RKHTMPVAR2}"
-				fi
-			done
+			if [ -z "`echo \"${RKHTMPVAR2} \" | grep '^-'`" ]; then
+				# Options must begin with a '-'.
+				LEAVE=1
+				echo "Invalid UNHIDETCP_OPTS configuration option - not a valid option: ${RKHTMPVAR}"
+			elif [ "${RKHTMPVAR2}" = "-V" -o "${RKHTMPVAR2}" = "-h" ]; then
+				# Ignore obvious invalid options.
+				continue
+			else
+				UNHIDETCP_OPTS="${UNHIDETCP_OPTS} ${RKHTMPVAR2}"
+			fi
+		done
 
-			# Add a space to avoid the 'echo' problem with options.
-			UNHIDETCP_OPTS=`echo "${UNHIDETCP_OPTS} " | sed -e 's/^ *//'`
-		fi
-	else
-		LEAVE=1
+		# Add a space to avoid the 'echo' problem with options.
+		UNHIDETCP_OPTS=`echo "${UNHIDETCP_OPTS} " | sed -e 's/^ *//'`
 	fi
 
 
@@ -4270,10 +4118,9 @@ get_process_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	ALLOWPROCDELFILES=`get_option newline-list ALLOWPROCDELFILE` || exit 1
-
-	test $ERRCODE -eq 1 && LEAVE=1
+	ALLOWPROCDELFILES=`get_option newline-list ALLOWPROCDELFILE` || exit $?
 
 
 	if [ $LEAVE -eq 1 ]; then
@@ -4296,6 +4143,7 @@ get_suspscan_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	SUSPSCAN_DFLT_TMP=0
 	SUSPSCAN_DFLT_DIRS=0
@@ -4306,19 +4154,15 @@ get_suspscan_options() {
 	# Get the directories to scan.
 	#
 
-	SUSPSCAN_DIRS=`get_option space-list SUSPSCAN_DIRS` || exit 1
+	SUSPSCAN_DIRS=`get_option space-list SUSPSCAN_DIRS` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SUSPSCAN_DIRS}" ]; then
-			check_paths SUSPSCAN_DIRS SUSPSCAN_DIRS "EXIST NOBROKENLINK NOWILD"
+	if [ -n "${SUSPSCAN_DIRS}" ]; then
+		check_paths SUSPSCAN_DIRS SUSPSCAN_DIRS "EXIST NOBROKENLINK NOWILD"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			SUSPSCAN_DFLT_DIRS=1
-			SUSPSCAN_DIRS="/tmp /var/tmp"
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		SUSPSCAN_DFLT_DIRS=1
+		SUSPSCAN_DIRS="/tmp /var/tmp"
 	fi
 
 
@@ -4326,23 +4170,19 @@ get_suspscan_options() {
 	# Get the tempdir to use. It should be a /dev/shm type.
 	#
 
-	SUSPSCAN_TEMP=`get_option single SUSPSCAN_TEMP` || exit 1
+	SUSPSCAN_TEMP=`get_option single SUSPSCAN_TEMP` || exit $?
+
+	if [ -z "${SUSPSCAN_TEMP}" ]; then
+		SUSPSCAN_DFLT_TMP=1
+		SUSPSCAN_TEMP="/dev/shm"
+	fi
+
+	check_paths SUSPSCAN_TEMP SUSPSCAN_TEMP "EXIST NOBROKENLINK NOWILD"
 
 	if [ $ERRCODE -eq 0 ]; then
-		if [ -z "${SUSPSCAN_TEMP}" ]; then
-			SUSPSCAN_DFLT_TMP=1
-			SUSPSCAN_TEMP="/dev/shm"
-		fi
-
-		check_paths SUSPSCAN_TEMP SUSPSCAN_TEMP "EXIST NOBROKENLINK NOWILD"
-
-		if [ $ERRCODE -eq 0 ]; then
-			if [ ! -w "${SUSPSCAN_TEMP}" ]; then
-				LEAVE=1
-				echo "The suspscan temporary directory is not writable: ${SUSPSCAN_TEMP}"
-			fi
-		else
+		if [ ! -w "${SUSPSCAN_TEMP}" ]; then
 			LEAVE=1
+			echo "The suspscan temporary directory is not writable: ${SUSPSCAN_TEMP}"
 		fi
 	else
 		LEAVE=1
@@ -4353,19 +4193,15 @@ get_suspscan_options() {
 	# Get the maximum file size to handle, for example 1024000.
 	#
 
-	SUSPSCAN_MAXSIZE=`get_option single SUSPSCAN_MAXSIZE` || exit 1
+	SUSPSCAN_MAXSIZE=`get_option single SUSPSCAN_MAXSIZE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SUSPSCAN_MAXSIZE}" ]; then
-			check_is_digit SUSPSCAN_MAXSIZE SUSPSCAN_MAXSIZE ANY1
+	if [ -n "${SUSPSCAN_MAXSIZE}" ]; then
+		check_is_digit SUSPSCAN_MAXSIZE SUSPSCAN_MAXSIZE ANY1
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			SUSPSCAN_DFLT_MAXSIZE=1
-			SUSPSCAN_MAXSIZE=1024000
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		SUSPSCAN_DFLT_MAXSIZE=1
+		SUSPSCAN_MAXSIZE=1024000
 	fi
 
 
@@ -4373,19 +4209,15 @@ get_suspscan_options() {
 	# Get the score threshold, 200 seems sensible.
 	#
 
-	SUSPSCAN_THRESH=`get_option single SUSPSCAN_THRESH` || exit 1
+	SUSPSCAN_THRESH=`get_option single SUSPSCAN_THRESH` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SUSPSCAN_THRESH}" ]; then
-			check_is_digit SUSPSCAN_THRESH SUSPSCAN_THRESH ANY1
+	if [ -n "${SUSPSCAN_THRESH}" ]; then
+		check_is_digit SUSPSCAN_THRESH SUSPSCAN_THRESH ANY1
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			SUSPSCAN_THRESH=200
-			SUSPSCAN_DFLT_THRESH=1
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		SUSPSCAN_THRESH=200
+		SUSPSCAN_DFLT_THRESH=1
 	fi
 
 
@@ -4395,18 +4227,14 @@ get_suspscan_options() {
 	# Note this configuration option will remain unlisted in both the documentation and configuration file.
 	#
 
-	SUSPSCAN_LINETHRESH=`get_option single SUSPSCAN_LINETHRESH` || exit 1
+	SUSPSCAN_LINETHRESH=`get_option single SUSPSCAN_LINETHRESH` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SUSPSCAN_LINETHRESH}" ]; then
-			check_is_digit SUSPSCAN_LINETHRESH SUSPSCAN_LINETHRESH ANY1
+	if [ -n "${SUSPSCAN_LINETHRESH}" ]; then
+		check_is_digit SUSPSCAN_LINETHRESH SUSPSCAN_LINETHRESH ANY1
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			SUSPSCAN_LINETHRESH=3000
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		SUSPSCAN_LINETHRESH=3000
 	fi
 
 
@@ -4416,18 +4244,14 @@ get_suspscan_options() {
 	# that you know what you are doing and that you don't need help "fixing" things afterwards.
 	#
 
-	SUSPSCAN_DEBUG=`get_option single SUSPSCAN_DEBUG` || exit 1
+	SUSPSCAN_DEBUG=`get_option single SUSPSCAN_DEBUG` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SUSPSCAN_DEBUG}" ]; then
-			check_is_digit SUSPSCAN_DEBUG
+	if [ -n "${SUSPSCAN_DEBUG}" ]; then
+		check_is_digit SUSPSCAN_DEBUG
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			SUSPSCAN_DEBUG=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		SUSPSCAN_DEBUG=0
 	fi
 
 
@@ -4554,6 +4378,7 @@ get_hash_function() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ $HASH_OPT -eq 1 ]; then
 		HASH_FUNC=`echo "${HASH_FUNC}" | tr -d '"' | tr -d "'" | tr -s '	 ' '  '`
@@ -4575,16 +4400,10 @@ get_hash_function() {
 			echo "Invalid '--hash' option: no hash function given."
 		fi
 	else
-		HASH_FUNC=`get_option single HASH_CMD` || exit 1
+		HASH_FUNC=`get_option single HASH_CMD` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -z "${HASH_FUNC}" ]; then
-				HASH_FUNC=`get_option single HASH_FUNC` || exit 1
-
-				test $ERRCODE -eq 1 && LEAVE=1
-			fi
-		else
-			LEAVE=1
+		if [ -z "${HASH_FUNC}" ]; then
+			HASH_FUNC=`get_option single HASH_FUNC` || exit $?
 		fi
 	fi
 
@@ -4764,20 +4583,16 @@ get_hash_function() {
 	# the user to specify the hash function to use.
 	#
 
-	RKHTMPVAR=`get_option single HASH_FLD_IDX` || exit 1
+	RKHTMPVAR=`get_option single HASH_FLD_IDX` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${RKHTMPVAR}" ]; then
-			check_is_digit RKHTMPVAR HASH_FLD_IDX ANY1
+	if [ -n "${RKHTMPVAR}" ]; then
+		check_is_digit RKHTMPVAR HASH_FLD_IDX ANY1
 
-			if [ $ERRCODE -eq 0 ]; then
-				HASH_FLD_IDX=${RKHTMPVAR}
-			else
-				LEAVE=1
-			fi
+		if [ $ERRCODE -eq 0 ]; then
+			HASH_FLD_IDX=${RKHTMPVAR}
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -4796,9 +4611,7 @@ get_hash_function() {
 			echo "Invalid '--pkgmgr' option: no package manager given."
 		fi
 	else
-		PKGMGR=`get_option single PKGMGR` || exit 1
-
-		test $ERRCODE -eq 1 && LEAVE=1
+		PKGMGR=`get_option single PKGMGR` || exit $?
 	fi
 
 	PKGMGR=`echo "${PKGMGR}" | tr '[:lower:]' '[:upper:]'`
@@ -4869,32 +4682,28 @@ get_hash_function() {
 		# to use the stored 16-bit checksum or not.
 		#
 
-		USE_SUNSUM=`get_option single USE_SUNSUM` || exit 1
+		USE_SUNSUM=`get_option single USE_SUNSUM` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${USE_SUNSUM}" ]; then
-				check_is_digit USE_SUNSUM
+		if [ -n "${USE_SUNSUM}" ]; then
+			check_is_digit USE_SUNSUM
 
-				if [ $ERRCODE -eq 0 ]; then
-					SUM_CMD=`find_cmd sum`
+			if [ $ERRCODE -eq 0 ]; then
+				SUM_CMD=`find_cmd sum`
 
-					if [ -z "${SUM_CMD}" ]; then
-						LEAVE=1
-						echo "Unable to find 'sum' command for package manager 'SOLARIS'."
-					fi
-				else
+				if [ -z "${SUM_CMD}" ]; then
 					LEAVE=1
+					echo "Unable to find 'sum' command for package manager 'SOLARIS'."
 				fi
 			else
-				USE_SUNSUM=0
-			fi
-
-			if [ ! -f "/var/sadm/install/contents" ]; then
 				LEAVE=1
-				echo "Unable to find package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
 			fi
 		else
+			USE_SUNSUM=0
+		fi
+
+		if [ ! -f "/var/sadm/install/contents" ]; then
 			LEAVE=1
+			echo "Unable to find package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
 		fi
 		;;
 	*)
@@ -4911,16 +4720,12 @@ get_hash_function() {
 	# be tested.
 	#
 
-	PKGMGRNOVRFY=`get_option newline-list PKGMGR_NO_VRFY` || exit 1
+	PKGMGRNOVRFY=`get_option newline-list PKGMGR_NO_VRFY` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${PKGMGRNOVRFY}" ]; then
-			check_paths PKGMGRNOVRFY PKGMGR_NO_VRFY "EXIST NOWILD NOBROKENLINK"
+	if [ -n "${PKGMGRNOVRFY}" ]; then
+		check_paths PKGMGRNOVRFY PKGMGR_NO_VRFY "EXIST NOWILD NOBROKENLINK"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -4950,28 +4755,25 @@ get_scan_mode_dev_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	SCAN_MODE_DEV=`get_option single SCAN_MODE_DEV` || exit 1
+	SCAN_MODE_DEV=`get_option single SCAN_MODE_DEV` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SCAN_MODE_DEV}" ]; then
-			SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | tr '[:lower:]' '[:upper:]'`
+	if [ -n "${SCAN_MODE_DEV}" ]; then
+		SCAN_MODE_DEV=`echo "${SCAN_MODE_DEV}" | tr '[:lower:]' '[:upper:]'`
 
-			case "${SCAN_MODE_DEV}" in
-			THOROUGH|LAZY)
-				;;
-			*)	# Don't make this fatal.
-				echo "Invalid SCAN_MODE_DEV configuration option: ${SCAN_MODE_DEV}"
-				echo "Defaulting to THOROUGH mode."
+		case "${SCAN_MODE_DEV}" in
+		THOROUGH|LAZY)
+			;;
+		*)	# Don't make this fatal.
+			echo "Invalid SCAN_MODE_DEV configuration option: ${SCAN_MODE_DEV}"
+			echo "Defaulting to THOROUGH mode."
 
-				SCAN_MODE_DEV="THOROUGH"
-				;;
-			esac
-		else
 			SCAN_MODE_DEV="THOROUGH"
-		fi
+			;;
+		esac
 	else
-		LEAVE=1
+		SCAN_MODE_DEV="THOROUGH"
 	fi
 
 
@@ -4995,46 +4797,43 @@ get_startup_paths_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	STARTUP_PATHS=`get_option space-list STARTUP_PATHS` || exit 1
+	STARTUP_PATHS=`get_option space-list STARTUP_PATHS` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${STARTUP_PATHS}" ]; then
+	if [ -n "${STARTUP_PATHS}" ]; then
+		#
+		# First see if we have any startup files or not.
+		#
+
+		if [ -n "`echo \"${STARTUP_PATHS}\" | grep -i '^none$'`" ]; then
+			STARTUP_PATHS="NONE"
+		else
 			#
-			# First see if we have any startup files or not.
+			# Check that the given files and directories are usable.
 			#
 
-			if [ -n "`echo \"${STARTUP_PATHS}\" | grep -i '^none$'`" ]; then
-				STARTUP_PATHS="NONE"
+			check_paths STARTUP_PATHS STARTUP_PATHS "EXIST"
+
+			if [ $ERRCODE -eq 0 ]; then
+				for FNAME in ${STARTUP_PATHS}; do
+					test -f "${FNAME}" && RKHTMPVAR="file" || RKHTMPVAR="directory"
+
+					if [ -h "${FNAME}" ]; then
+						LEAVE=1
+						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is a link: ${FNAME}"
+					elif [ ! -r "${FNAME}" ]; then
+						LEAVE=1
+						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is not readable: ${FNAME}"
+					elif [ ! -s "${FNAME}" ]; then
+						LEAVE=1
+						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is empty: ${FNAME}"
+					fi
+				done
 			else
-				#
-				# Check that the given files and directories are usable.
-				#
-
-				check_paths STARTUP_PATHS STARTUP_PATHS "EXIST"
-
-				if [ $ERRCODE -eq 0 ]; then
-					for FNAME in ${STARTUP_PATHS}; do
-						test -f "${FNAME}" && RKHTMPVAR="file" || RKHTMPVAR="directory"
-
-						if [ -h "${FNAME}" ]; then
-							LEAVE=1
-							echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is a link: ${FNAME}"
-						elif [ ! -r "${FNAME}" ]; then
-							LEAVE=1
-							echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is not readable: ${FNAME}"
-						elif [ ! -s "${FNAME}" ]; then
-							LEAVE=1
-							echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is empty: ${FNAME}"
-						fi
-					done
-				else
-					LEAVE=1
-				fi
+				LEAVE=1
 			fi
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -5059,54 +4858,47 @@ get_rtkt_whitelist_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	RTKT_FILE_WHITELIST=`get_option newline-list RTKT_FILE_WHITELIST` || exit 1
+	RTKT_FILE_WHITELIST=`get_option newline-list RTKT_FILE_WHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${RTKT_FILE_WHITELIST}" ]; then
-			#
-			# Check that the given files are usable. But we must
-			# first strip off any trailing text from the end if
-			# it is present.
-			#
+	if [ -n "${RTKT_FILE_WHITELIST}" ]; then
+		#
+		# Check that the given files are usable. But we must
+		# first strip off any trailing text from the end if
+		# it is present.
+		#
 
-			IFS=$IFSNL
-			RKHTMPVAR=""
+		IFS=$IFSNL
+		RKHTMPVAR=""
 
-			for RKHTMPVAR2 in ${RTKT_FILE_WHITELIST}; do
-				FNAME=`echo "${RKHTMPVAR2}" | sed -e 's/^\(.*\):[^:]*$/\1/'`
+		for RKHTMPVAR2 in ${RTKT_FILE_WHITELIST}; do
+			FNAME=`echo "${RKHTMPVAR2}" | sed -e 's/^\(.*\):[^:]*$/\1/'`
 
-				RKHTMPVAR="${RKHTMPVAR}
+			RKHTMPVAR="${RKHTMPVAR}
 ${FNAME}"
-			done
+		done
 
-			IFS=$RKHIFS
+		IFS=$RKHIFS
 
-			RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e '/^$/d'`
+		RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e '/^$/d'`
 
-			check_paths RKHTMPVAR RTKT_FILE_WHITELIST "EXIST NOWILD NOBROKENLINK"
+		check_paths RKHTMPVAR RTKT_FILE_WHITELIST "EXIST NOWILD NOBROKENLINK"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
-	RTKT_DIR_WHITELIST=`get_option newline-list RTKT_DIR_WHITELIST` || exit 1
+	RTKT_DIR_WHITELIST=`get_option newline-list RTKT_DIR_WHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${RTKT_DIR_WHITELIST}" ]; then
-			#
-			# Check that the given directories are usable.
-			#
+	if [ -n "${RTKT_DIR_WHITELIST}" ]; then
+		#
+		# Check that the given directories are usable.
+		#
 
-			check_paths RTKT_DIR_WHITELIST RTKT_DIR_WHITELIST "EXIST NOWILD NOBROKENLINK"
+		check_paths RTKT_DIR_WHITELIST RTKT_DIR_WHITELIST "EXIST NOWILD NOBROKENLINK"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -5130,21 +4922,18 @@ get_shared_lib_whitelist_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	SHARED_LIB_WHITELIST=`get_option space-list SHARED_LIB_WHITELIST` || exit 1
+	SHARED_LIB_WHITELIST=`get_option space-list SHARED_LIB_WHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SHARED_LIB_WHITELIST}" ]; then
-			check_paths SHARED_LIB_WHITELIST SHARED_LIB_WHITELIST "EXIST NOWILD NOBROKENLINK"
+	if [ -n "${SHARED_LIB_WHITELIST}" ]; then
+		check_paths SHARED_LIB_WHITELIST SHARED_LIB_WHITELIST "EXIST NOWILD NOBROKENLINK"
 
-			if [ $ERRCODE -eq 0 ]; then
-				SHARED_LIB_WHITELIST=" ${SHARED_LIB_WHITELIST} "
-			else
-				LEAVE=1
-			fi
+		if [ $ERRCODE -eq 0 ]; then
+			SHARED_LIB_WHITELIST=" ${SHARED_LIB_WHITELIST} "
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -5172,50 +4961,47 @@ get_mirror_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	ROTATE_MIRRORS=`get_option single ROTATE_MIRRORS` || exit 1
+	ROTATE_MIRRORS=`get_option single ROTATE_MIRRORS` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ROTATE_MIRRORS}" ]; then
-			check_is_digit ROTATE_MIRRORS
+	if [ -n "${ROTATE_MIRRORS}" ]; then
+		check_is_digit ROTATE_MIRRORS
 
-			test $ERRCODE -eq 1 && LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
+	else
+		ROTATE_MIRRORS=1
+	fi
+
+	#
+	# Now check that the mirrors file is usable.
+	#
+
+	if [ -e "${DB_PATH}/mirrors.dat" -a \( ! -f "${DB_PATH}/mirrors.dat" -o -h "${DB_PATH}/mirrors.dat" \) ]; then
+		LEAVE=1
+		echo "The mirrors file is not a file: ${DB_PATH}/mirrors.dat"
+	fi
+
+	if [ $LEAVE -eq 0 -a $VERSIONCHECK -eq 1 ]; then
+		if [ $ROTATE_MIRRORS -eq 0 ]; then
+			# The mirrors file only needs to be readable.
+			if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
+				LEAVE=1
+				echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
+				echo "Run 'rkhunter --update'" to restore the default mirrors file.
+				echo "The default mirror will be used."
+			fi
 		else
-			ROTATE_MIRRORS=1
-		fi
-
-		#
-		# Now check that the mirrors file is usable.
-		#
-
-		if [ -e "${DB_PATH}/mirrors.dat" -a \( ! -f "${DB_PATH}/mirrors.dat" -o -h "${DB_PATH}/mirrors.dat" \) ]; then
-			LEAVE=1
-			echo "The mirrors file is not a file: ${DB_PATH}/mirrors.dat"
-		fi
-
-		if [ $LEAVE -eq 0 -a $VERSIONCHECK -eq 1 ]; then
-			if [ $ROTATE_MIRRORS -eq 0 ]; then
-				# The mirrors file only needs to be readable.
-				if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
-					LEAVE=1
-					echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
-					echo "Run 'rkhunter --update'" to restore the default mirrors file.
-					echo "The default mirror will be used."
-				fi
-			else
-				# The mirrors file needs to be writable.
-				if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
-					LEAVE=1
-					echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
-					echo "Run 'rkhunter --update'" to restore the default mirrors file.
-				elif [ ! -w "${DB_PATH}/mirrors.dat" ]; then
-					LEAVE=1
-					echo "The mirrors file is not writable: ${DB_PATH}/mirrors.dat"
-				fi
+			# The mirrors file needs to be writable.
+			if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
+				LEAVE=1
+				echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
+				echo "Run 'rkhunter --update'" to restore the default mirrors file.
+			elif [ ! -w "${DB_PATH}/mirrors.dat" ]; then
+				LEAVE=1
+				echo "The mirrors file is not writable: ${DB_PATH}/mirrors.dat"
 			fi
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -5225,18 +5011,14 @@ get_mirror_options() {
 	#
 
 	if [ $UPDATE -eq 1 ]; then
-		UPDATE_MIRRORS=`get_option single UPDATE_MIRRORS` || exit 1
+		UPDATE_MIRRORS=`get_option single UPDATE_MIRRORS` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -n "${UPDATE_MIRRORS}" ]; then
-				check_is_digit UPDATE_MIRRORS
+		if [ -n "${UPDATE_MIRRORS}" ]; then
+			check_is_digit UPDATE_MIRRORS
 
-				test $ERRCODE -eq 1 && LEAVE=1
-			else
-				UPDATE_MIRRORS=1
-			fi
+			test $ERRCODE -eq 1 && LEAVE=1
 		else
-			LEAVE=1
+			UPDATE_MIRRORS=1
 		fi
 	fi
 
@@ -5245,18 +5027,14 @@ get_mirror_options() {
 	# Finally, we see which mirrors are to be used.
 	#
 
-	MIRRORS_MODE=`get_option single MIRRORS_MODE` || exit 1
+	MIRRORS_MODE=`get_option single MIRRORS_MODE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${MIRRORS_MODE}" ]; then
-			check_is_digit MIRRORS_MODE MIRRORS_MODE 2
+	if [ -n "${MIRRORS_MODE}" ]; then
+		check_is_digit MIRRORS_MODE MIRRORS_MODE 2
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			MIRRORS_MODE=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		MIRRORS_MODE=0
 	fi
 
 
@@ -5283,31 +5061,28 @@ get_os_info_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	OS_VERSION_FILE=`get_option single OS_VERSION_FILE` || exit 1
+	OS_VERSION_FILE=`get_option single OS_VERSION_FILE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${OS_VERSION_FILE}" ]; then
-			#
-			# Check that the given file is usable.
-			#
+	if [ -n "${OS_VERSION_FILE}" ]; then
+		#
+		# Check that the given file is usable.
+		#
 
-			check_paths OS_VERSION_FILE OS_VERSION_FILE "EXIST NOWILD NOBROKENLINK"
+		check_paths OS_VERSION_FILE OS_VERSION_FILE "EXIST NOWILD NOBROKENLINK"
 
-			if [ $ERRCODE -eq 0 ]; then
-				if [ ! -r "${OS_VERSION_FILE}" ]; then
-					LEAVE=1
-					echo "Invalid OS_VERSION_FILE configuration option: File is not readable: ${OS_VERSION_FILE}"
-				elif [ ! -s "${OS_VERSION_FILE}" ]; then
-					LEAVE=1
-					echo "Invalid OS_VERSION_FILE configuration option: File is empty: ${OS_VERSION_FILE}"
-				fi
-			else
+		if [ $ERRCODE -eq 0 ]; then
+			if [ ! -r "${OS_VERSION_FILE}" ]; then
 				LEAVE=1
+				echo "Invalid OS_VERSION_FILE configuration option: File is not readable: ${OS_VERSION_FILE}"
+			elif [ ! -s "${OS_VERSION_FILE}" ]; then
+				LEAVE=1
+				echo "Invalid OS_VERSION_FILE configuration option: File is empty: ${OS_VERSION_FILE}"
 			fi
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -5316,18 +5091,14 @@ get_os_info_options() {
 	# issue a warning when the O/S info changes or not.
 	#
 
-	WARN_ON_OS_CHANGE=`get_option single WARN_ON_OS_CHANGE` || exit 1
+	WARN_ON_OS_CHANGE=`get_option single WARN_ON_OS_CHANGE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${WARN_ON_OS_CHANGE}" ]; then
-			check_is_digit WARN_ON_OS_CHANGE
+	if [ -n "${WARN_ON_OS_CHANGE}" ]; then
+		check_is_digit WARN_ON_OS_CHANGE
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			WARN_ON_OS_CHANGE=1
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		WARN_ON_OS_CHANGE=1
 	fi
 
 
@@ -5336,18 +5107,14 @@ get_os_info_options() {
 	# a properties update ('--propupd') if the O/S has changed.
 	#
 
-	UPDT_ON_OS_CHANGE=`get_option single UPDT_ON_OS_CHANGE` || exit 1
+	UPDT_ON_OS_CHANGE=`get_option single UPDT_ON_OS_CHANGE` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${UPDT_ON_OS_CHANGE}" ]; then
-			check_is_digit UPDT_ON_OS_CHANGE
+	if [ -n "${UPDT_ON_OS_CHANGE}" ]; then
+		check_is_digit UPDT_ON_OS_CHANGE
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			UPDT_ON_OS_CHANGE=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		UPDT_ON_OS_CHANGE=0
 	fi
 
 
@@ -5392,14 +5159,10 @@ get_user_fileprop_list() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	for WHICH_OPT in USER_FILEPROP_FILES_DIRS EXCLUDE_USER_FILEPROP_FILES_DIRS; do
-		FILENAMES=`get_option newline-list ${WHICH_OPT}` || exit 1
-
-		if [ $ERRCODE -eq 1 ]; then
-			LEAVE=1
-			continue
-		fi
+		FILENAMES=`get_option newline-list ${WHICH_OPT}` || exit $?
 
 		test -z "${FILENAMES}" && continue
 
@@ -5569,87 +5332,68 @@ get_properties_options() {
 
 
 	LEAVE=0
+	ERRCODE=0
 
 	ATTRWHITELIST=""
 
-	ATTRWL_OPT=`get_option newline-list ATTRWHITELIST` || exit 1
+	ATTRWL_OPT=`get_option newline-list ATTRWHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${ATTRWL_OPT}" ]; then
-			ATTRWHITELIST=`expand_paths ATTRWL_OPT`
+	if [ -n "${ATTRWL_OPT}" ]; then
+		ATTRWHITELIST=`expand_paths ATTRWL_OPT`
 
-			check_paths ATTRWHITELIST ATTRWHITELIST "EXIST"
+		check_paths ATTRWHITELIST ATTRWHITELIST "EXIST"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
 	WRITEWHITELIST=""
 
-	WRITEWL_OPT=`get_option newline-list WRITEWHITELIST` || exit 1
+	WRITEWL_OPT=`get_option newline-list WRITEWHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${WRITEWL_OPT}" ]; then
-			WRITEWHITELIST=`expand_paths WRITEWL_OPT`
+	if [ -n "${WRITEWL_OPT}" ]; then
+		WRITEWHITELIST=`expand_paths WRITEWL_OPT`
 
-			check_paths WRITEWHITELIST WRITEWHITELIST "EXIST"
+		check_paths WRITEWHITELIST WRITEWHITELIST "EXIST"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
 	IMMUTWHITELIST=""
 
-	IMMUTWL_OPT=`get_option newline-list IMMUTWHITELIST` || exit 1
+	IMMUTWL_OPT=`get_option newline-list IMMUTWHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${IMMUTWL_OPT}" ]; then
-			IMMUTWHITELIST=`expand_paths IMMUTWL_OPT`
+	if [ -n "${IMMUTWL_OPT}" ]; then
+		IMMUTWHITELIST=`expand_paths IMMUTWL_OPT`
 
-			check_paths IMMUTWHITELIST IMMUTWHITELIST "EXIST"
+		check_paths IMMUTWHITELIST IMMUTWHITELIST "EXIST"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
-	IMMUTABLE_SET=`get_option single IMMUTABLE_SET` || exit 1
+	IMMUTABLE_SET=`get_option single IMMUTABLE_SET` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${IMMUTABLE_SET}" ]; then
-			check_is_digit IMMUTABLE_SET
+	if [ -n "${IMMUTABLE_SET}" ]; then
+		check_is_digit IMMUTABLE_SET
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			IMMUTABLE_SET=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		IMMUTABLE_SET=0
 	fi
 
 
 	SCRIPTWHITELIST=""
 
-	SCRIPTWL_OPT=`get_option newline-list SCRIPTWHITELIST` || exit 1
+	SCRIPTWL_OPT=`get_option newline-list SCRIPTWHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SCRIPTWL_OPT}" ]; then
-			SCRIPTWHITELIST=`expand_paths SCRIPTWL_OPT`
+	if [ -n "${SCRIPTWL_OPT}" ]; then
+		SCRIPTWHITELIST=`expand_paths SCRIPTWL_OPT`
 
-			check_paths SCRIPTWHITELIST SCRIPTWHITELIST "EXIST"
+		check_paths SCRIPTWHITELIST SCRIPTWHITELIST "EXIST"
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		fi
-	else
-		LEAVE=1
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -5674,21 +5418,18 @@ get_prelink_dep_option() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	RKHTMPVAR=`get_option space-list IGNORE_PRELINK_DEP_ERR` || exit 1
+	RKHTMPVAR=`get_option space-list IGNORE_PRELINK_DEP_ERR` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${RKHTMPVAR}" ]; then
-			check_paths RKHTMPVAR IGNORE_PRELINK_DEP_ERR "EXIST NOWILD NOBROKENLINK"
+	if [ -n "${RKHTMPVAR}" ]; then
+		check_paths RKHTMPVAR IGNORE_PRELINK_DEP_ERR "EXIST NOWILD NOBROKENLINK"
 
-			if [ $ERRCODE -eq 0 ]; then
-				PRELINK_DEP_ERR_CMDS=" ${RKHTMPVAR} "
-			else
-				LEAVE=1
-			fi
+		if [ $ERRCODE -eq 0 ]; then
+			PRELINK_DEP_ERR_CMDS=" ${RKHTMPVAR} "
+		else
+			LEAVE=1
 		fi
-	else
-		LEAVE=1
 	fi
 
 
@@ -5716,19 +5457,16 @@ get_summary_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	SHOW_SUMMARY_WARNINGS_NUMBER=`get_option single SHOW_SUMMARY_WARNINGS_NUMBER` || exit 1
+	SHOW_SUMMARY_WARNINGS_NUMBER=`get_option single SHOW_SUMMARY_WARNINGS_NUMBER` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SHOW_SUMMARY_WARNINGS_NUMBER}" ]; then
-			check_is_digit SHOW_SUMMARY_WARNINGS_NUMBER
+	if [ -n "${SHOW_SUMMARY_WARNINGS_NUMBER}" ]; then
+		check_is_digit SHOW_SUMMARY_WARNINGS_NUMBER
 
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			SHOW_SUMMARY_WARNINGS_NUMBER=0
-		fi
+		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		LEAVE=1
+		SHOW_SUMMARY_WARNINGS_NUMBER=0
 	fi
 
 
@@ -5737,25 +5475,21 @@ get_summary_options() {
 	# we are to show the summary scan time.
 	#
 
-	SHOW_SUMMARY_TIME=`get_option single SHOW_SUMMARY_TIME` || exit 1
+	SHOW_SUMMARY_TIME=`get_option single SHOW_SUMMARY_TIME` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${SHOW_SUMMARY_TIME}" ]; then
-			check_is_digit SHOW_SUMMARY_TIME SHOW_SUMMARY_TIME ANY
+	if [ -n "${SHOW_SUMMARY_TIME}" ]; then
+		check_is_digit SHOW_SUMMARY_TIME SHOW_SUMMARY_TIME ANY
 
-			if [ $ERRCODE -eq 0 ]; then
-				if [ $SHOW_SUMMARY_TIME -gt 3 ]; then
-					LEAVE=1
-					echo "Invalid SHOW_SUMMARY_TIME configuration option: not a valid number: ${SHOW_SUMMARY_TIME}"
-				fi
-			else
+		if [ $ERRCODE -eq 0 ]; then
+			if [ $SHOW_SUMMARY_TIME -gt 3 ]; then
 				LEAVE=1
+				echo "Invalid SHOW_SUMMARY_TIME configuration option: not a valid number: ${SHOW_SUMMARY_TIME}"
 			fi
 		else
-			SHOW_SUMMARY_TIME=3
+			LEAVE=1
 		fi
 	else
-		LEAVE=1
+		SHOW_SUMMARY_TIME=3
 	fi
 
 
@@ -5778,15 +5512,11 @@ get_network_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
-	IFWLIST=`get_option space-list ALLOWPROMISCIF` || exit 1
+	IFWLIST=`get_option space-list ALLOWPROMISCIF` || exit $?
 
-	test $ERRCODE -eq 1 && LEAVE=1
-
-
-	ALLOWPROCLIST_OPT=`get_option newline-list ALLOWPROCLISTEN` || exit 1
-
-	test $ERRCODE -eq 1 && LEAVE=1
+	ALLOWPROCLIST_OPT=`get_option newline-list ALLOWPROCLISTEN` || exit $?
 
 
 	if [ $LEAVE -eq 1 ]; then
@@ -5808,22 +5538,19 @@ get_os_specific_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	if [ $LINUXOS -eq 1 ]; then
-		LKM_PATH=`get_option single MODULES_DIR` || exit 1
+		LKM_PATH=`get_option single MODULES_DIR` || exit $?
 
-		if [ $ERRCODE -eq 0 ]; then
-			if [ -z "${LKM_PATH}" ]; then
-				LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
-				test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
-			fi
-
-			check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
-
-			test $ERRCODE -eq 1 && LEAVE=1
-		else
-			LEAVE=1
+		if [ -z "${LKM_PATH}" ]; then
+			LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
+			test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
 		fi
+
+		check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
+
+		test $ERRCODE -eq 1 && LEAVE=1
 	fi
 
 
@@ -5846,17 +5573,14 @@ get_app_options() {
 	#
 
 	LEAVE=0
+	ERRCODE=0
 
 	APP_WHITELIST=""
 
-	RKHTMPVAR=`get_option space-list APP_WHITELIST` || exit 1
+	RKHTMPVAR=`get_option space-list APP_WHITELIST` || exit $?
 
-	if [ $ERRCODE -eq 0 ]; then
-		if [ -n "${RKHTMPVAR}" ]; then
-			APP_WHITELIST=`echo " ${RKHTMPVAR} " | tr '[:upper:]' '[:lower:]'`
-		fi
-	else
-		LEAVE=1
+	if [ -n "${RKHTMPVAR}" ]; then
+		APP_WHITELIST=`echo " ${RKHTMPVAR} " | tr '[:upper:]' '[:lower:]'`
 	fi
 
 
