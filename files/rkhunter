@@ -813,11 +813,6 @@ check_paths() {
 	OPT_VALUE=`eval echo \"\\$${OPT_VALUE_OPT}\"`
 
 	ERRCODE=0
-
-#jh - we should do this next test after checking EXIST
-#jh - because if the file/dir must exist then a '' value should return false.
-	test -z "${OPT_VALUE}" && return
-
 	MUSTEXIST=0
 	NOWILD=0
 	NOLINK=0
@@ -838,6 +833,23 @@ check_paths() {
 			;;
 		esac
 	done
+
+
+	#
+	# If no option value was given then just return (generally this situation
+	# should never happen). However, if the file was required to exist, then
+	# return with an error.
+	#
+
+	if [ -z "${OPT_VALUE}" ]; then
+		if [ $MUSTEXIST -eq 1 ]; then
+			ERRCODE=1
+
+			echo "Invalid ${OPT_NAME} configuration option: No filename given, but it must exist."
+		fi
+
+		return
+	fi
 
 
 	#
