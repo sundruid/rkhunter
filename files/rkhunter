@@ -16183,7 +16183,7 @@ do_system_config_files_check() {
 
 			if [ -z "${RKHTMPVAR3}" -a $ALLOW_SSH_PROT_V1 -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
-			elif [ -n "${RKHTMPVAR3}" -a $ALLOW_SSH_PROT_V1 -eq 1 ]; then
+			elif [ -n "${RKHTMPVAR3}" -a \( $ALLOW_SSH_PROT_V1 -eq 1 -o $ALLOW_SSH_PROT_V1 -eq 2 \) ]; then
 				display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
 			else
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO

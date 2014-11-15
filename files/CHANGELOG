@@ -39,6 +39,8 @@
    as a configuration option.
  - The '--config-check'/'-C' option could produce incorrect error
    messages in certain circumstances.
+ - Setting the ALLOW_SSH_PROT_V1 option to '2' could cause warning
+   messages when SSH protocol 1 was allowed.
 
  -- 
 
