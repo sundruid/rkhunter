@@ -18329,6 +18329,7 @@ LINUXOS=0
 case "${OPERATING_SYSTEM}" in
 Linux)
 	LINUXOS=1
+	GREP_OPT="-a"
 	;;
 *BSD|DragonFly)
 	BSDOS=1

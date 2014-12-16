@@ -41,6 +41,7 @@
    messages in certain circumstances.
  - Setting the ALLOW_SSH_PROT_V1 option to '2' could cause warning
    messages when SSH protocol 1 was allowed.
+ - Allow Linux 'grep' to work correctly with binary (i18n) files.
 
  -- 
 
