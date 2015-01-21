@@ -3768,7 +3768,7 @@ get_groups_accounts_options() {
 	UID0_WHITELIST=`get_option space-list UID0_ACCOUNTS` || exit $?
 
 	# By default we allow the root account.
-	UID0_WHITELIST=" root ${UID0_WHITELIST} "
+	UID0_WHITELIST=" root `echo ${UID0_WHITELIST}` "
 
 
 	if [ $LEAVE -eq 1 ]; then
