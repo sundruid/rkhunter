@@ -3758,7 +3758,7 @@ get_groups_accounts_options() {
 
 	PWD_WHITELIST=`get_option space-list PWDLESS_ACCOUNTS` || exit $?
 
-	test -n "${PWD_WHITELIST}" && PWD_WHITELIST=" ${PWD_WHITELIST} "
+	test -n "${PWD_WHITELIST}" && PWD_WHITELIST=" `echo ${PWD_WHITELIST}` "
 
 
 	#
