@@ -1108,9 +1108,9 @@ make_space_list() {
 	#
 
 	if [ "${ECHON}" = "c" ]; then
-		echo $ECHOOPT "${1}\c" | tr '\n' ' '
+		echo $ECHOOPT "${1}\c" | tr '\n' ' ' | tr -s '	 ' '  '
 	else
-		echo $ECHON $ECHOOPT "${1}" | tr '\n' ' '
+		echo $ECHON $ECHOOPT "${1}" | tr '\n' ' ' | tr -s '	 ' '  '
 	fi
 
 	return
@@ -3406,13 +3406,15 @@ get_enable_option() {
 
 	if [ $ENABLE_OPT -eq 1 ]; then
 		ENABLE_TESTS=`echo "${CL_ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' '`
+
+		ENABLE_TESTS=`make_space_list "${ENABLE_TESTS}"`
 		ENABLE_TESTS=`echo ${ENABLE_TESTS}`
 
-		if [ -z "${ENABLE_TESTS}" ]; then
+		if [ -n "${ENABLE_TESTS}" ]; then
+			ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr '[:upper:]' '[:lower:]'`
+		else
 			LEAVE=1
 			echo "Invalid '--enable' option - no test names given."
-		else
-			ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 		fi
 
 
@@ -3433,10 +3435,20 @@ get_enable_option() {
 
 		ENABLE_TESTS=`get_option space-list ENABLE_TESTS` || exit $?
 
-		ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
+		if [ -n "${ENABLE_TESTS}" ]; then
+			ENABLE_TESTS=`make_space_list "${ENABLE_TESTS}"`
+			ENABLE_TESTS=`echo ${ENABLE_TESTS}`
 
-		# The system default.
-		test -z "${ENABLE_TESTS}" && ENABLE_TESTS="all"
+			if [ -n "${ENABLE_TESTS}" ]; then
+				ENABLE_TESTS=`echo "${ENABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
+			else
+				# The system default.
+				ENABLE_TESTS="all"
+			fi
+		else
+			# The system default.
+			ENABLE_TESTS="all"
+		fi
 	fi
 
 
@@ -3475,9 +3487,13 @@ get_disable_option() {
 
 	if [ -n "${CL_DISABLE_TESTS}" ]; then
 		CL_DISABLE_TESTS=`echo "${CL_DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' '`
+
+		CL_DISABLE_TESTS=`make_space_list "${CL_DISABLE_TESTS}"`
 		CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
 
-		if [ -z "${CL_DISABLE_TESTS}" ]; then
+		if [ -n "${CL_DISABLE_TESTS}" ]; then
+			CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS} | tr '[:upper:]' '[:lower:]'`
+		else
 			LEAVE=1
 			echo "Invalid '--disable' option - no test names given."
 		fi
@@ -3490,6 +3506,15 @@ get_disable_option() {
 
 	if [ $USECF -eq 1 ]; then
 		CONFIG_DISABLE_TESTS=`get_option space-list DISABLE_TESTS` || exit $?
+
+		if [ -n "${CONFIG_DISABLE_TESTS}" ]; then
+			CONFIG_DISABLE_TESTS=`make_space_list "${CONFIG_DISABLE_TESTS}"`
+			CONFIG_DISABLE_TESTS=`echo ${CONFIG_DISABLE_TESTS}`
+
+			if [ -n "${CONFIG_DISABLE_TESTS}" ]; then
+				CONFIG_DISABLE_TESTS=`echo ${CONFIG_DISABLE_TESTS} | tr '[:upper:]' '[:lower:]'`
+			fi
+		fi
 	fi
 
 
@@ -3500,8 +3525,6 @@ get_disable_option() {
 		if [ -z "${DISABLE_TESTS}" ]; then
 			# The system default.
 			DISABLE_TESTS="none"
-		else
-			DISABLE_TESTS=`echo "${DISABLE_TESTS}" | tr '[:upper:]' '[:lower:]'`
 		fi
 	else
 		if [ $CONFIG_CHECK -eq 0 ]; then

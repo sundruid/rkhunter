@@ -44,6 +44,7 @@
  - Allow Linux 'grep' to work correctly with binary (i18n) files.
  - Multiple UID0_ACCOUNTS and PWDLESS_ACCOUNTS options were not being
    handled correctly.
+ - Uppercase test names were not being handled correctly.
 
  -- 
 
