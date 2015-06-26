@@ -9108,8 +9108,8 @@ do_system_check_initialisation() {
 		    rcfile:/etc/.xsyslog:Flooder (Linux/Bckdr-RKC) component
 		    rcfile:/lib/.ssyslog:Flooder (Linux/Bckdr-RKC) component
 		    rcfile:/tmp/.sendmail:Flooder (Linux/Bckdr-RKC) component
-		    rcfile:IptabLex: malware component
-		    rcfile:IptabLes: malware component
+		    rcfile:IptabLex:malware component
+		    rcfile:IptabLes:malware component
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:T0rn Rootkit
@@ -9286,6 +9286,19 @@ do_system_check_initialisation() {
 		  file:/tmp/notify.file:BillGates botnet component
 		  file:/usr/lib/libamplify.so:BillGates botnet component
 		  file:/etc/rc.d/init.d/DbSecuritySpt:BillGates botnet component
+		  file:/proc/rs_dev:xorddos component
+		  file:/var/run/sftp.pid:xorddos component
+		  file:/var/run/udev.pid:xorddos component
+		  file:/var/run/mount.pid:xorddos component
+		  file:/etc/cron.hourly/cron.sh:xorddos component
+		  file:/etc/cron.hourly/udev.sh:xorddos component
+		  file:/etc/cron.hourly/udev.sh:xorddos component
+		  file:/lib/libgcc.so:xorddos component
+		  file:/lib/libgcc.so.bak:xorddos component
+		  file:/lib/libgcc4.so:xorddos component
+		  file:/lib/libgcc4.4.so:xorddos component
+		  file:/lib/udev/udev:xorddos component
+		  file:/lib/udev/debug:xorddos component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
