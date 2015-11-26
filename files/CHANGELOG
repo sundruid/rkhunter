@@ -45,6 +45,8 @@
  - Multiple UID0_ACCOUNTS and PWDLESS_ACCOUNTS options were not being
    handled correctly.
  - Uppercase test names were not being handled correctly.
+ - Changed the 'logger' command tag from 'Rootkit Hunter' to 'rkhunter'
+   to avoid problems with spaces.
 
  -- 
 

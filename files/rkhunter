@@ -17298,7 +17298,7 @@ do_system_check() {
 	#
 
 	if [ -n "${USE_SYSLOG}" ]; then
-		${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Rootkit hunter check started (version ${PROGRAM_version})"
+		${LOGGER_CMD} -t "${LOGGER_TAG}" -p ${USE_SYSLOG} "Rootkit hunter check started (version ${PROGRAM_version})"
 	fi
 
 
@@ -17433,7 +17433,7 @@ do_system_check() {
 	#
 
 	if [ -n "${USE_SYSLOG}" ]; then
-		${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Scanning took ${TOTAL_SCANTIME}"
+		${LOGGER_CMD} -t "${LOGGER_TAG}" -p ${USE_SYSLOG} "Scanning took ${TOTAL_SCANTIME}"
 	fi
 
 
@@ -17476,7 +17476,7 @@ do_system_check() {
 
 
 		if [ -n "${USE_SYSLOG}" ]; then
-			${LOGGER_CMD} -t "${PROGRAM_NAME}" -p ${USE_SYSLOG} "Please inspect this machine, because it may be infected."
+			${LOGGER_CMD} -t "${LOGGER_TAG}" -p ${USE_SYSLOG} "Please inspect this machine, because it may be infected."
 		fi
 
 
@@ -18233,6 +18233,8 @@ PROGRAM_license="
 ${PROGRAM_NAME} ${PROGRAM_version}, ${PROGRAM_copyright}
 ${PROGRAM_blurb}
 "
+
+LOGGER_TAG="rkhunter"
 
 LEAVE=0
 ERRCODE=0
