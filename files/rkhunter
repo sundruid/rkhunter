@@ -16511,7 +16511,7 @@ do_filesystem_check() {
 			RKHTMPVAR=`find_cmd mount`
 
 			if [ -n "${RKHTMPVAR}" ]; then
-				test -n "`${RKHTMPVAR} 2>/dev/null | egrep '^fdesc(fs)? .*type fdesc'`" && FDESCFS=1
+				test -n "`${RKHTMPVAR} 2>/dev/null | egrep '^fdesc(fs)? .*(type fdesc|\(fdescfs\))'`" && FDESCFS=1
 			else
 				display --to LOG --type INFO NOT_FOUND_CMD 'mount'
 			fi
@@ -16523,7 +16523,7 @@ do_filesystem_check() {
 				test -d "${RKHTMPVAR}" -o -h "${RKHTMPVAR}" && continue
 
 				if [ $FDESCFS -eq 1 ]; then
-					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
+					test -n "`echo \"${RKHTMPVAR}/\" | grep '^/dev/fd/[0-9][0-9]*'`" && continue
 				fi
 
 				do_dev_whitelist_check
@@ -16533,7 +16533,7 @@ do_filesystem_check() {
 
 			for RKHTMPVAR in `${FIND_CMD} /dev ! -type d -a ! -type l 2>/dev/null`; do
 				if [ $FDESCFS -eq 1 ]; then
-					test -n "`echo \"${RKHTMPVAR}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
+					test -n "`echo \"${RKHTMPVAR}/\" | grep '^/dev/fd/[0-9][0-9]*'`" && continue
 				fi
 
 				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.[^/]*$'`" && do_dev_whitelist_check
@@ -16640,7 +16640,7 @@ ${RKHTMPVAR}"
 
 	for FNAME in ${LOOKINDIRS}; do
 		if [ $FDESCFS -eq 1 ]; then
-			test -n "`echo \"${FNAME}/\" | grep \"^/dev/fd/[0-9][0-9]*/\"`" && continue
+			test -n "`echo \"${FNAME}/\" | grep '^/dev/fd/[0-9][0-9]*'`" && continue
 		fi
 
 		FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
