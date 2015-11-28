@@ -9413,7 +9413,8 @@ do_system_check_initialisation() {
 		     /usr/local/etc/rc.local
 		     /etc/conf.d/local.start
 		     /etc/init.d
-		     /etc/inittab"
+		     /etc/inittab
+		     /etc/systemd/system"
 
 
 	# Integrity tests
@@ -12896,6 +12897,21 @@ get_rc_paths() {
 	RC_PATHS=""
 	RKHTMPVAR2=""
 
+	#
+	# For systemd systems we should follow symbolic links, but
+	# for init systems we do not. Additionally, older UNIX
+	# systems do not recognise the 'find' command '-L' option.
+	# (The '-follow' option is now deprecated.) So we need to
+	# check that '-L' is valid, and only use it if the systemd
+	# startup directory is being used.
+	#
+
+	FINDFOLLOW=0
+
+	if [ -n "${FIND_CMD}" ]; then
+		test -z "`${FIND_CMD} -L ${DB_PATH} 2>&1 >/dev/null`" && FINDFOLLOW=1
+	fi
+
 	if [ -n "${STARTUP_PATHS}" ]; then
 		RKHTMPVAR="${STARTUP_PATHS}"
 	else
@@ -12914,10 +12930,16 @@ ${DIR}"
 			RKHTMPVAR2="${RKHTMPVAR2} ${DIR}"
 
 			if [ -n "${FIND_CMD}" ]; then
-				for FNAME in `${FIND_CMD} "${DIR}" -type f -a ! -type l 2>/dev/null`; do
+				if [ $FINDFOLLOW -eq 1 -a -n "`echo \"${DIR}\" | grep '^/etc/systemd/'`" ]; then
+					RKHTMPVAR3=`${FIND_CMD} -L "${DIR}" -type f 2>/dev/null`
+				else
+					RKHTMPVAR3=`${FIND_CMD} "${DIR}" -type f -a ! -type l 2>/dev/null`
+				fi
+
+				if [ -n "${RKHTMPVAR3}" ]; then
 					RC_PATHS="${RC_PATHS}
-${FNAME}"
-				done
+${RKHTMPVAR3}"
+				fi
 			else
 				for FNAME in ${DIR}/*; do
 					test -f "${FNAME}" -a ! -h "${FNAME}" && RC_PATHS="${RC_PATHS}
