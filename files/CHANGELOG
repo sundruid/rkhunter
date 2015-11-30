@@ -51,6 +51,9 @@
  - Changed the 'logger' command tag from 'Rootkit Hunter' to 'rkhunter'
    to avoid problems with spaces.
  - Ensure that fdescfs filesystems are correctly detected.
+ - To try and avoid colour escape sequences being logged, both of
+   the variables CLICOLOR and CLICOLOR_FORCE are unset for *BSD and
+   SunOS systems.
 
  -- 
 

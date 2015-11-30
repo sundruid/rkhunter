@@ -38,9 +38,11 @@ OPERATING_SYSTEM=`uname 2>/dev/null`
 case "${OPERATING_SYSTEM}" in
 *BSD|DragonFly)
 	BSDOS=1
+	unset CLICOLOR CLICOLOR_FORCE
 	;;
 SunOS)
 	SUNOS=1
+	unset CLICOLOR CLICOLOR_FORCE
 	;;
 esac
 
