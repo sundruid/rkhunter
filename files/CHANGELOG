@@ -26,9 +26,6 @@
  - The DISABLE_UNHIDE option has been removed from the configuration
    file. It is no longer required as disabling the 'hidden_procs' or
    'hidden_ports' tests has the same effect.
- - The 'startup_malware' and 'possible_rkt_strings' checks will now
-   check systemd startup scripts if they are located in the 
-   '/etc/systemd/system' directory.
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.
@@ -50,10 +47,13 @@
  - Uppercase test names were not being handled correctly.
  - Changed the 'logger' command tag from 'Rootkit Hunter' to 'rkhunter'
    to avoid problems with spaces.
- - Ensure that fdescfs filesystems are correctly detected.
+ - Ensure that 'fdescfs' filesystems are correctly detected.
  - To try and avoid colour escape sequences being logged, both of
    the variables CLICOLOR and CLICOLOR_FORCE are unset for *BSD and
    SunOS systems.
+ - The 'startup_malware' and 'possible_rkt_strings' checks will now
+   check systemd startup scripts if they are located in the 
+   '/etc/systemd/system' directory.
 
  -- 
 
