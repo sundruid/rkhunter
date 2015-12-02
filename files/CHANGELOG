@@ -54,6 +54,9 @@
  - The 'startup_malware' and 'possible_rkt_strings' checks will now
    check systemd startup scripts if they are located in the 
    '/etc/systemd/system' directory.
+ - The 'sockstat' command output on BSD systems can become corrupted
+   if a username is very long. This is now detected, and processed
+   correctly.
 
  -- 
 
