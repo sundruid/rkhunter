@@ -13274,7 +13274,7 @@ malware_checks() {
 
 					#
 					# For this test we do not want to use globbing because it may match with
-					# files that atcually exist. This could then lead to a false-positive for
+					# files that actually exist. This could then lead to a false-positive for
 					# what should have been a whitelisted pathname. Instead we disable globbing,
 					# and then change the glob characters to regular expression ones. We also
 					# escape typical grep regex characters (e.g. '.'). The resulting regular
@@ -13292,15 +13292,10 @@ malware_checks() {
 							if [ $PROCDELFILES_GIVEN -eq 1 ]; then
 								RKHTMPVAR3=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F ':/' '{ for (i = 2; i <= NF; i++) { a[i] = $i } } END { for (i in a) { print "/" a[i] } }'`
 
-								# We must reset the IFS because 'expand_paths' sets it to the default.
-								IFS=$IFSNL
 								FNAMEGREP=""
 
-#jhjh - check other greps to see if checking of brackets is required.
-#jhjh - this fngrep needs to be checked to ensure that any preceeding '\' does not afect the following character
-#jhjh - that is, '\*' should not be changed to '\.*'.
 								for FN in ${RKHTMPVAR3}; do
-									FNGREP=`echo "${FN}" | tr -s '*?' | sed -e 's/\([.$\\]\)/\\\\\1/g; s/\*/.*/g; s/\?/./g;'`
+									FNGREP=`echo "${FN}" | sed -e 's/\([.$]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
 									FNAMEGREP="${FNAMEGREP}|${FNGREP}"
 								done
 

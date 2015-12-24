@@ -34,7 +34,10 @@
  - For Solaris users set the 'awk' command very early on so that
    option processing works correctly.
  - The ALLOWPROCDELFILE option was not handling multiple pathnames
-   correctly.
+   or wildcards correctly. It was also not handling the option
+   pathnames correctly.
+ - The ALLOWPROCDELFILE option was not handling wildcards correctly,
+   and not handling the configuration option correctly.
  - The SCANROOTKITMODE configuration option was never actually read
    as a configuration option.
  - The '--config-check'/'-C' option could produce incorrect error
