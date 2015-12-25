@@ -13295,7 +13295,7 @@ malware_checks() {
 								FNAMEGREP=""
 
 								for FN in ${RKHTMPVAR3}; do
-									FNGREP=`echo "${FN}" | sed -e 's/\([.$]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
+									FNGREP=`echo "${FN}" | sed -e 's/\([.^+]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
 									FNAMEGREP="${FNAMEGREP}|${FNGREP}"
 								done
 
