@@ -923,6 +923,8 @@ check_paths() {
 #jh				FNAME=`echo "${FNAME}" | cut -c2-`
 #jh			fi
 #jh		fi
+#jh - cp no '-a' in sunos, aix but is in irix. On OSX do not use '-a' - extended attrs are already copied.
+#jh - do not use in bsd (same reason as osx).
 
 
 		#
@@ -16039,9 +16041,10 @@ ${RKHTMPVAR}"
 
 			mv -f "${RKHTMPDIR}/passwd" "${RKHTMPDIR}/passwd.old" >/dev/null 2>&1
 			cp -f -p /etc/passwd "${RKHTMPDIR}/passwd"
-			chmod 600 "${RKHTMPDIR}/passwd"
 		fi
 	fi
+
+	test -f "${RKHTMPDIR}/passwd" && chmod 600 "${RKHTMPDIR}/passwd"
 
 
 	#
@@ -16091,9 +16094,10 @@ ${RKHTMPVAR}"
 
 			mv -f "${RKHTMPDIR}/group" "${RKHTMPDIR}/group.old" >/dev/null 2>&1
 			cp -f -p /etc/group "${RKHTMPDIR}/group"
-			chmod 600 "${RKHTMPDIR}/group"
 		fi
 	fi
+
+	test -f "${RKHTMPDIR}/group" && chmod 600 "${RKHTMPDIR}/group"
 
 
 	#
@@ -18398,6 +18402,7 @@ IRIXOS=0
 MACOSX=0
 LINUXOS=0
 
+#jhjh
 case "${OPERATING_SYSTEM}" in
 Linux)
 	LINUXOS=1
