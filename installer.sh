@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.17"
+INSTALLER_VERSION="1.2.18"
 INSTALLER_COPYRIGHT="Copyright 2003-2015, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -26,8 +26,8 @@ of the GNU General Public License. See LICENSE for details.
 APPNAME="rkhunter"
 APPVERSION="1.4.3"
 RKHINST_OWNER="0:0"
-RKHINST_MODE_EX="0750"
-RKHINST_MODE_RW="0640"
+RKHINST_MODE_EX="0700"
+RKHINST_MODE_RW="0600"
 RKHINST_MODE_RWR="0644"
 RKHINST_LAYOUT="default"
 RKHINST_ACTION=""
@@ -731,8 +731,8 @@ doInstall()  {
 			fi
 		fi
 	done
-	umask 027
 
+	umask 077
 	for DIR in ${RKHINST_DIRS_EXCEP}; do
 		if [ -d "${DIR}" ]; then
 			if [ -w "${DIR}" ]; then
@@ -759,6 +759,7 @@ doInstall()  {
 			;;
 		esac
 	done
+	umask 027
 
 
 	#
@@ -839,7 +840,12 @@ doInstall()  {
 		cp "${FILE}" "${RKHINST_LANG_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
 
-		test $ERRCODE -ne 0 && break
+		if [ $ERRCODE -eq 0 ]; then
+			chmod "${RKHINST_MODE_RW}" "${RKHINST_LANG_DIR}/${FILE}"
+		else
+			echo " Installing ${FILE}: FAILED: Code $ERRCODE"
+			break
+		fi
 	done
 
 	if [ $ERRCODE -eq 0 ];then
@@ -857,7 +863,12 @@ doInstall()  {
 		cp "${FILE}" "${RKHINST_SIG_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
 
-		test $ERRCODE -ne 0 && break
+		if [ $ERRCODE -eq 0 ]; then
+			chmod "${RKHINST_MODE_RW}" "${RKHINST_SIG_DIR}/${FILE}"
+		else
+			echo " Installing ${FILE}: FAILED: Code $ERRCODE"
+			break
+		fi
 	done
 
 	if [ $ERRCODE -eq 0 ];then
@@ -940,7 +951,11 @@ doInstall()  {
 
 			if [ "$FILE" = "rkhunter.conf" ]; then
 				echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
-				test -f "${RKHINST_ETC_DIR}/${FILE}.local" && echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}.local" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
+
+				if [ -f "${RKHINST_ETC_DIR}/${FILE}.local" ]; then
+					echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}.local" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
+					chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${FILE}.local"
+				fi
 			fi
 
 			case "${RKHINST_LAYOUT}" in
@@ -961,6 +976,10 @@ doInstall()  {
 			if [ $ERRCODE -eq 0 ]; then
 				echo " Installing ${FILE}: OK"
 				chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${FILE}"
+
+				if [ -f "${RKHINST_ETC_DIR}/${FILE}.local" ]; then
+					chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${FILE}.local"
+				fi
 			else
 				echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 				exit 1
@@ -1132,6 +1151,12 @@ doRemove()  {
 		echo ""
 		echo "Please remove any ${RKHINST_ETC_DIR}/${FILE}.* files manually."
 		echo ""
+
+		if [ -d "${RKHINST_ETC_DIR}/${FILE}.d" ]; then
+			echo ""
+			echo "Please remove any ${RKHINST_ETC_DIR}/${FILE}.d directory manually."
+			echo ""
+		fi
 	done
 
 

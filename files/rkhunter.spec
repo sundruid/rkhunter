@@ -6,7 +6,7 @@
 #%%dump
 
 %define name rkhunter
-%define ver 1.4.1
+%define ver 1.4.2
 %define rel 1
 %define epoch 0
 
@@ -69,7 +69,7 @@ sh ./installer.sh --layout RPM --install
 ( %{_bindir}/rkhunter --cronjob --update --rwo && echo "" ) | /bin/mail -s "Rkhunter daily run on `uname -n`" root
 exit 0
 EOF
-%{__chmod} a+rwx,g-w,o-rwx ${RPM_BUILD_ROOT}%{_sysconfdir}/cron.daily/rkhunter
+%{__chmod} u+rwx,g-rwx,o-rwx ${RPM_BUILD_ROOT}%{_sysconfdir}/cron.daily/rkhunter
 
 
 %post
@@ -100,25 +100,31 @@ fi
 %define docdir %{_prefix}/share/doc/%{name}-%{version}
 %files
 %defattr(-,root,root)
-%attr(640,root,root) %config(noreplace) %{_sysconfdir}/%{name}.conf
-%attr(750,root,root) %{_prefix}/bin/%{name}
-%attr(750,root,root) %dir %{_libdir}/%{name}
-%attr(750,root,root) %dir %{_libdir}/%{name}/scripts
-%attr(750,root,root) %{_libdir}/%{name}/scripts/*.pl
-%attr(750,root,root) %{_libdir}/%{name}/scripts/*.sh
+%attr(600,root,root) %config(noreplace) %{_sysconfdir}/%{name}.conf
+%attr(700,root,root) %{_prefix}/bin/%{name}
+%attr(700,root,root) %dir %{_libdir}/%{name}
+%attr(700,root,root) %dir %{_libdir}/%{name}/scripts
+%attr(700,root,root) %{_libdir}/%{name}/scripts/*.pl
+%attr(700,root,root) %{_libdir}/%{name}/scripts/*.sh
 %attr(644,root,root) %doc %{_prefix}/share/man/man8/%{name}.8
 %attr(755,root,root) %dir %{docdir}
 %attr(644,root,root) %doc %{docdir}/*
-%attr(750,root,root) %dir %{_var}/lib/%{name}
-%attr(750,root,root) %dir %{_var}/lib/%{name}/db
-%attr(640,root,root) %verify(not md5 size mtime) %{_var}/lib/%{name}/db/*.dat
-%attr(750,root,root) %dir %{_var}/lib/%{name}/db/i18n
-%attr(640,root,root) %verify(not md5 size mtime) %{_var}/lib/%{name}/db/i18n/*
-%attr(750,root,root) %dir %{_var}/lib/%{name}/tmp
+%attr(700,root,root) %dir %{_var}/lib/%{name}
+%attr(700,root,root) %dir %{_var}/lib/%{name}/db
+%attr(600,root,root) %verify(not md5 size mtime) %{_var}/lib/%{name}/db/*.dat
+%attr(700,root,root) %dir %{_var}/lib/%{name}/db/i18n
+%attr(600,root,root) %verify(not md5 size mtime) %{_var}/lib/%{name}/db/i18n/*
+%attr(700,root,root) %dir %{_var}/lib/%{name}/tmp
 %{_sysconfdir}/cron.daily/rkhunter
 
 
 %changelog
+* Sun Dec 27 2015 jhorne - 1.4.2
+- Changed file permissions mode to 700 for executables, and 600
+  for others. Directories are now set to mode 700. The man page
+  is left at 644. The documentation directory is left at 755 and
+  644 for the files within it.
+
 * Tue May 01 2012 unSpawn - 1.4.0
 - Spec sync, see CHANGELOG.
  

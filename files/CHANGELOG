@@ -26,6 +26,12 @@
  - The DISABLE_UNHIDE option has been removed from the configuration
    file. It is no longer required as disabling the 'hidden_procs' or
    'hidden_ports' tests has the same effect.
+ - The installer now installs directories and executable files with
+   mode 700, other files are set as mode 600. The man page is left
+   at mode 644. The documentation directory is mode 755, and the
+   files within it are mode 644. The 'rkhunter' program itself will
+   set the mode of copied files to 600 (for example log files, and
+   the passwd/group files).
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.

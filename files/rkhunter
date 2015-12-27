@@ -6670,7 +6670,7 @@ create_rkh_file_prop_list() {
 
 
 	cp -f "${TEMPFILE}" "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
-	chmod 640 "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
+	chmod 600 "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
 
 	rm -f "${TEMPFILE}" >/dev/null 2>&1
 
@@ -6825,7 +6825,7 @@ do_prop_update() {
 		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
 
-	chmod 640 "${RKHDAT_FILE}" >/dev/null 2>&1
+	chmod 600 "${RKHDAT_FILE}" >/dev/null 2>&1
 
 	rm -f "${RKHDAT_TMPFILE}" >/dev/null 2>&1
 
@@ -7214,7 +7214,7 @@ do_i18n_update() {
 				PROG_VERS=0
 
 				touch "${DB_PATH}/i18n/${LANGFILE}" >/dev/null 2>&1
-				chmod 640 "${DB_PATH}/i18n/${LANGFILE}" >/dev/null 2>&1
+				chmod 600 "${DB_PATH}/i18n/${LANGFILE}" >/dev/null 2>&1
 
 				display --to LOG --type INFO UPDATE_FILE_MISSING "${DB_PATH}/i18n/${LANGFILE}"
 			fi
@@ -7323,7 +7323,7 @@ do_update() {
 			PROG_VERS=0
 
 			touch "${DB_PATH}/${UPDFILE}" >/dev/null 2>&1
-			chmod 640 "${DB_PATH}/${UPDFILE}" >/dev/null 2>&1
+			chmod 600 "${DB_PATH}/${UPDFILE}" >/dev/null 2>&1
 
 			display --to LOG --type INFO UPDATE_FILE_MISSING "${UPDFILE}"
 		fi
@@ -9767,7 +9767,7 @@ updt_rkhdat() {
 		display --to LOG --type INFO PROPUPD_NEW_DAT_FILE "${DB_PATH}"
 	fi
 
-	chmod 640 "${RKHDAT_FILE}" >/dev/null 2>&1
+	chmod 600 "${RKHDAT_FILE}" >/dev/null 2>&1
 
 	rm -f "${RKHDAT_TMPFILE}" "${RKHDAT_TMPFILE2}" >/dev/null 2>&1
 
@@ -16039,6 +16039,7 @@ ${RKHTMPVAR}"
 
 			mv -f "${RKHTMPDIR}/passwd" "${RKHTMPDIR}/passwd.old" >/dev/null 2>&1
 			cp -f -p /etc/passwd "${RKHTMPDIR}/passwd"
+			chmod 600 "${RKHTMPDIR}/passwd"
 		fi
 	fi
 
@@ -16090,6 +16091,7 @@ ${RKHTMPVAR}"
 
 			mv -f "${RKHTMPDIR}/group" "${RKHTMPDIR}/group.old" >/dev/null 2>&1
 			cp -f -p /etc/group "${RKHTMPDIR}/group"
+			chmod 600 "${RKHTMPDIR}/group"
 		fi
 	fi
 
