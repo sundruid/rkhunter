@@ -42,8 +42,6 @@
  - The ALLOWPROCDELFILE option was not handling multiple pathnames
    or wildcards correctly. It was also not handling the option
    pathnames correctly.
- - The ALLOWPROCDELFILE option was not handling wildcards correctly,
-   and not handling the configuration option correctly.
  - The SCANROOTKITMODE configuration option was never actually read
    as a configuration option.
  - The '--config-check'/'-C' option could produce incorrect error
