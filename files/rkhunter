@@ -923,8 +923,6 @@ check_paths() {
 #jh				FNAME=`echo "${FNAME}" | cut -c2-`
 #jh			fi
 #jh		fi
-#jh - cp no '-a' in sunos, aix but is in irix. On OSX do not use '-a' - extended attrs are already copied.
-#jh - do not use in bsd (same reason as osx).
 
 
 		#
@@ -18402,7 +18400,6 @@ IRIXOS=0
 MACOSX=0
 LINUXOS=0
 
-#jhjh
 case "${OPERATING_SYSTEM}" in
 Linux)
 	LINUXOS=1
