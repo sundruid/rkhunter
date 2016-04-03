@@ -9580,6 +9580,7 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 	# Next check for a preload file.
 	#
 
+	FOUND=0
 	RKHTMPVAR="/etc/ld.so.preload"
 
 	if [ -s "${RKHTMPVAR}" ]; then
@@ -9587,7 +9588,9 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 
 		display --to LOG --type INFO SHARED_LIBS_PRELOAD_FILE_FOUND "${RKHTMPVAR}"
 
-		for FNAME in `cat "${RKHTMPVAR}"`; do
+		for FNAME in `grep -v '^#' "${RKHTMPVAR}"`; do
+			FOUND=1
+
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
@@ -9603,6 +9606,8 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 			for FNAME in ${RKHLIBLIST}; do
 				display --to LOG --type WARNING SHARED_LIBS_PRELOAD_LIB_FOUND "${FNAME}"
 			done
+		elif [ $FOUND -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_FILE
 		else
 			display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_FILE
 		fi

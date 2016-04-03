@@ -64,6 +64,7 @@
  - The 'sockstat' command output on BSD systems can become corrupted
    if a username is very long. This is now detected, and processed
    correctly.
+ - The 'shared_libs' test now recognises comments in the preload file.
 
  -- 
 
