@@ -15177,9 +15177,11 @@ do_network_interface_checks() {
 
 			if [ -n "${IFCONFIG_CMD}" ]; then
 				if [ -n "${IFWLIST}" ]; then
+					IFWLIST=`echo ${IFWLIST}`
+
 					display --to LOG --type INFO NETWORK_PROMISC_WLIST "${IFWLIST}"
 
-					IFWLIST=`echo "${IFWLIST}" | tr ' ' '|'`
+					IFWLIST=`echo ${IFWLIST} | tr ' ' '|'`
 				fi
 
 				case "${OPERATING_SYSTEM}" in

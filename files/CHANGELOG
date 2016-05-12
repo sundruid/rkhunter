@@ -65,6 +65,8 @@
    if a username is very long. This is now detected, and processed
    correctly.
  - The 'shared_libs' test now recognises comments in the preload file.
+ - The ALLOWPROMISCIF configuration option was not handling multiple
+   occurrences correctly. This has now been corrected.
 
  -- 
 
