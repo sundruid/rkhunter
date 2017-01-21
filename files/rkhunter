@@ -3107,6 +3107,54 @@ get_scanmode_option() {
 }
 
 
+get_shell_options() {
+
+	#
+	# This function gets any specific shell configuration options.
+	#
+
+	LEAVE=0
+	ERRCODE=0
+
+	#
+	# This option will set the shell's globstar option.
+	#
+
+	GLOBSTAR=`get_option single GLOBSTAR` || exit $?
+
+	if [ -n "${GLOBSTAR}" ]; then
+		check_is_digit GLOBSTAR
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	else
+		GLOBSTAR=0
+	fi
+
+	#
+	# To ensure that any further options which may include wildcarded paths
+	# are handled correctly, we need to set the 'globstar' option immediately.
+	#
+
+	if [ $GLOBSTAR -eq 1 ]; then
+		if [ "${MYSHELL}" = "ksh" ]; then
+			set -o globstar
+		else
+			shopt -s globstar
+		fi
+	fi
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
 sort_test_lists() {
 
 	#
@@ -5681,6 +5729,8 @@ get_configfile_options() {
 
 	get_scanmode_option
 
+	get_shell_options
+
 
 	#
 	# Some options are only required when checking the system.
@@ -7515,7 +7565,7 @@ do_config_file_check() {
 
 	VALIDOPTS="${SPACE_LIST_OPTS} ${NEWLINE_LIST_OPTS}
 		   ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING APPEND_LOG
-		   AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR EPOCH_DATE_CMD
+		   AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR EPOCH_DATE_CMD GLOBSTAR
 		   HASH_FLD_IDX HASH_FUNC HASH_CMD IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
 		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
 		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
@@ -18706,6 +18756,9 @@ IFWLIST=""
 
 # This will be set to any allowed processes listening on the network.
 ALLOWPROCLIST_OPT=""
+
+# This option will be set if the shell globstar option is to be set.
+GLOBSTAR=0
 
 
 ######################################################################

@@ -21,6 +21,9 @@
  * 1.4.3 (??/??/2017)
 
  New:
+ - Added the GLOBSTAR configuration file option. This will set the
+   shells globstar option to allow recursive checks of directories.
+   By default this option is disabled.
 
  Changes:
  - The DISABLE_UNHIDE option has been removed from the configuration
