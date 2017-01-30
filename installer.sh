@@ -840,8 +840,10 @@ doInstall()  {
 		cp "${FILE}" "${RKHINST_LANG_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
 
+		FNAME=`echo ${FILE} | sed 's|^./files/i18n/||'`
+
 		if [ $ERRCODE -eq 0 ]; then
-			chmod "${RKHINST_MODE_RW}" "${RKHINST_LANG_DIR}/${FILE}"
+			chmod "${RKHINST_MODE_RW}" "${RKHINST_LANG_DIR}/${FNAME}"
 		else
 			echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 			break
@@ -863,8 +865,10 @@ doInstall()  {
 		cp "${FILE}" "${RKHINST_SIG_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
 
+		FNAME=`echo ${FILE} | sed 's|^./files/signatures/||'`
+
 		if [ $ERRCODE -eq 0 ]; then
-			chmod "${RKHINST_MODE_RW}" "${RKHINST_SIG_DIR}/${FILE}"
+			chmod "${RKHINST_MODE_RW}" "${RKHINST_SIG_DIR}/${FNAME}"
 		else
 			echo " Installing ${FILE}: FAILED: Code $ERRCODE"
 			break
