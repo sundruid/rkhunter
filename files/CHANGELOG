@@ -36,6 +36,7 @@
    files within it are mode 644. The 'rkhunter' program itself will
    set the mode of copied files to 600 (for example log files, and
    the passwd/group files).
+ - By default the 'apps' test is now disabled.
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.
@@ -71,6 +72,8 @@
  - The 'shared_libs' test now recognises comments in the preload file.
  - The ALLOWPROMISCIF configuration option was not handling multiple
    occurrences correctly. This has now been corrected.
+ - Tighten up the input verification check on the mirror file to
+   ensure that only URL's are used as a mirror. (CVE-2017-7480)
 
  -- 
 

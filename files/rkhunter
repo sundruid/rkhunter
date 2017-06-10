@@ -6908,13 +6908,13 @@ get_next_mirror() {
 
 	case $MIRRORS_MODE in
 	0)
-		MIRROR=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
+		MIRROR=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
 		;;
 	1)
-		MIRROR=`grep -i '^local=' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
+		MIRROR=`egrep -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
 		;;
 	2)
-		MIRROR=`grep -i '^remote=' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
+		MIRROR=`egrep -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
 		;;
 	esac
 
@@ -6934,13 +6934,13 @@ get_next_mirror() {
 
 		case $MIRRORS_MODE in
 		0)
-			MIRROR=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		1)
-			MIRROR=`grep -i '^local=' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`egrep -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		2)
-			MIRROR=`grep -i '^remote=' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`egrep -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		esac
 
@@ -6967,7 +6967,7 @@ get_next_mirror() {
 	# Next get the remaining mirrors.
 	#
 
-	OTHERMIRRORS=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" | grep -v "^${MIRROR}\$"`
+	OTHERMIRRORS=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | grep -v "^${MIRROR}\$"`
 
 
 	#
@@ -7050,13 +7050,13 @@ download_file() {
 
 		case $MIRRORS_MODE in
 		0)
-			MIRROR_COUNT=`egrep -i '^(local|remote|mirror)=' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
+			MIRROR_COUNT=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		1)
-			MIRROR_COUNT=`grep -i '^local=' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
+			MIRROR_COUNT=`egrep -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		2)
-			MIRROR_COUNT=`grep -i '^remote=' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
+			MIRROR_COUNT=`egrep -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		esac
 
