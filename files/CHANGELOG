@@ -7,7 +7,7 @@
 
  !! Important notices !!
 
- - Dates in this file are formatted as DD/MM/YYYY (European format)
+ - Dates in this file are formatted as DD/MM/YYYY (European format).
  - The rkhunter configuration file (default /etc/rkhunter.conf) will
    not be overwritten when using the rkhunter installer, unless
    specifically requested to do so (using the '--overwrite' option).
@@ -24,7 +24,7 @@
  - Added the GLOBSTAR configuration file option. This will set the
    shells globstar option to allow recursive checks of directories.
    By default this option is disabled.
- - Added Japanese translation file.
+ - Added a Japanese translation file.
 
  Changes:
  - The DISABLE_UNHIDE option has been removed from the configuration
@@ -36,7 +36,8 @@
    files within it are mode 644. The 'rkhunter' program itself will
    set the mode of copied files to 600 (for example log files, and
    the passwd/group files).
- - By default the 'apps' test is now disabled.
+ - By default the 'apps' test is now disabled in the configuration
+   file.
  - The default hash function for the file properties test, given by
    the HASH_CMD option in the configuration file, has now changed
    to SHA256. It was previously SHA1, or MD5 if SHA1 was not found.

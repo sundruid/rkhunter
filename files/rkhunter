@@ -20033,7 +20033,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				fi
 				;;
 			BSD)
-				display --to LOG --type INFO FOUND_CMD 'pkg-info' "${PKG_CMD}"
+				display --to LOG --type INFO FOUND_CMD 'pkg_info' "${PKG_CMD}"
 				;;
 			SOLARIS)
 				if [ $USE_SUNSUM -eq 1 ]; then
@@ -20073,7 +20073,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 				;;
 			BSD)
-				display --to LOG --type INFO FOUND_CMD 'pkg-info' "${PKG_CMD}"
+				display --to LOG --type INFO FOUND_CMD 'pkg_info' "${PKG_CMD}"
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
 				;;
 			SOLARIS)
