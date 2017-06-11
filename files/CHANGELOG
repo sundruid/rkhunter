@@ -37,6 +37,9 @@
    set the mode of copied files to 600 (for example log files, and
    the passwd/group files).
  - By default the 'apps' test is now disabled.
+ - The default hash function for the file properties test, given by
+   the HASH_CMD option in the configuration file, has now changed
+   to SHA256. It was previously SHA1, or MD5 if SHA1 was not found.
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.

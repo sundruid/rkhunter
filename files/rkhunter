@@ -4455,6 +4455,61 @@ get_md5_hash_function() {
 }
 
 
+get_sha_hash_function() {
+
+	#
+	# This is a short function to try and locate
+	# a SHA hash function command.
+	#
+	# The function takes one argument which is the
+	# SHA bit size.
+	#
+
+	SHA_SIZE=$1
+
+	check_is_digit SHA_SIZE HASH_FUNC ANY1
+
+	if [ $ERRCODE -eq 1 ]; then
+		echo "Error: Invalid argument to get_sha_hash_function function: $*" >&2
+		return
+	fi
+
+	HFUNC=`find_cmd sha${SHA_SIZE}sum`
+
+	if [ -z "${HFUNC}" ]; then
+		HFUNC=`find_cmd sha${SHA_SIZE}`
+
+		if [ -z "${HFUNC}" -a $MACOSX -eq 1 ]; then
+			HFUNC=`find_cmd shasum`
+
+			test -n "${HFUNC}" && HFUNC="${HFUNC} -a $SHA_SIZE"
+		fi
+	fi
+
+	if [ -z "${HFUNC}" -a -n "${PERL_CMD}" ]; then
+		MOD_INSTALLED=""
+
+		if [ $SHA_SIZE -eq 1 ]; then
+			MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA1 Digest::SHA::PurePerl 2>/dev/null`
+		elif [ $SHA_SIZE -eq 224 ]; then
+			MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA::PurePerl 2>/dev/null`
+		else
+			MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA256 Digest::SHA::PurePerl 2>/dev/null`
+		fi
+
+		USE_MOD=`echo "${MOD_INSTALLED}" | grep -v 'NOT installed' 2>/dev/null | head ${HEAD_OPT}1 | cut -d' ' -f1`
+
+		if [ -n "${USE_MOD}" ]; then
+			HFUNC="${PERL_CMD} "${SCRIPT_PATH}/filehashsha.pl" ${USE_MOD} $SHA_SIZE"
+		fi
+	fi
+
+	echo "${HFUNC}"
+
+	return
+}
+
+
 get_hash_function() {
 
 	#
@@ -4518,12 +4573,12 @@ get_hash_function() {
 	# command, the reserved word 'NONE', one of the SHA or other functions,
 	# or nothing. For the SHA and MD5 reserved words we must find the SHA
 	# or MD5 command, or use the supplied perl scripts. For the RIPEMD160
-	# and WHIRLPOOL reserved words, we use the perl scripts.
+	# and WHIRLPOOL reserved words, we only use the perl scripts.
 	#
 
 	SHA_SIZE=0
 
-	test -z "${HASH_FUNC}" && HASH_FUNC="SHA1"
+	test -z "${HASH_FUNC}" && HASH_FUNC="SHA256"
 
 	case "${HASH_FUNC}" in
 	SHA1)	SHA_SIZE=1
@@ -4538,7 +4593,7 @@ get_hash_function() {
 		;;
 	esac
 
-	if [ "${HASH_FUNC}" = "SHA1" -a  $PRELINKED -eq 1 ]; then
+	if [ $SHA_SIZE -eq 1 -a  $PRELINKED -eq 1 ]; then
 		PRELINK_HASH="SHA1"
 
 		if [ $USE_RUNCON -eq 1 ]; then
@@ -4546,38 +4601,18 @@ get_hash_function() {
 		else
 			HASH_FUNC="${PRELINK_CMD} --verify --sha"
 		fi
-	elif [ $SHA_SIZE -gt 0 ]; then
-		HF=`find_cmd sha${SHA_SIZE}sum`
+	elif [ $SHA_SIZE -ge 1 ]; then
+		HASH_FUNC=`get_sha_hash_function $SHA_SIZE`
+	elif [ "${HASH_FUNC}" = "MD5" ]; then
+		HF=`get_md5_hash_function`
 
-		if [ -z "${HF}" ]; then
-			HF=`find_cmd sha${SHA_SIZE}`
+		test -n "${HF}" && HASH_FUNC="${HF}"
 
-			if [ -z "${HF}" -a $MACOSX -eq 1 ]; then
-				HF=`find_cmd shasum`
-
-				test -n "${HF}" && HF="${HF} -a $SHA_SIZE"
-			fi
+		if [ $PRELINKED -eq 1 ]; then
+			PRELINK_HASH="MD5"
+		elif [ -z "`echo \"${HF}\" | grep '/filehashsha\.pl Digest::MD5'`" ]; then
+			MD5_CMD="${HF}"
 		fi
-
-		if [ -z "${HF}" -a -n "${PERL_CMD}" ]; then
-			MOD_INSTALLED=""
-
-			if [ $SHA_SIZE -eq 1 ]; then
-				MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA1 Digest::SHA::PurePerl 2>/dev/null`
-			elif [ $SHA_SIZE -eq 224 ]; then
-				MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA::PurePerl 2>/dev/null`
-			else
-				MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Digest::SHA Digest::SHA256 Digest::SHA::PurePerl 2>/dev/null`
-			fi
-
-			USE_MOD=`echo "${MOD_INSTALLED}" | grep -v 'NOT installed' 2>/dev/null | head ${HEAD_OPT}1 | cut -d' ' -f1`
-
-			if [ -n "${USE_MOD}" ]; then
-				HF="${PERL_CMD} "${SCRIPT_PATH}/filehashsha.pl" ${USE_MOD} $SHA_SIZE"
-			fi
-		fi
-
-		HASH_FUNC="${HF}"
 	elif [ "${HASH_FUNC}" = "RIPEMD160" ]; then
 		MOD_INSTALLED=`${PERL_CMD} "${SCRIPT_PATH}/check_modules.pl" Crypt::RIPEMD160 2>/dev/null`
 
@@ -4594,31 +4629,21 @@ get_hash_function() {
 
 
 	#
-	# If we still have no hash function, then look for an MD5 command,
-	# but only if MD5 or SHA1 were specified.
-	#
-
-	if [ \( -z "${HASH_FUNC}" -a $SHA_SIZE -eq 1 \) -o "${HASH_FUNC}" = "MD5" ]; then
-		SHA_SIZE=0
-
-		HASH_FUNC=`get_md5_hash_function`
-
-		if [ $PRELINKED -eq 1 ]; then
-			PRELINK_HASH="MD5"
-		elif [ -z "`echo \"${HASH_FUNC}\" | grep '/filehashsha\.pl Digest::MD5'`" ]; then
-			MD5_CMD="${HASH_FUNC}"
-		fi
-	fi
-
-
-	#
 	# A final check that the command is actually executable.
-	# This will ensure that the SHA/MD5 perl scripts have been
-	# installed correctly, should they be needed.
+	# This will ensure that the perl scripts have been installed
+	# correctly, should they be needed.
 	#
 
 	if [ "${HASH_FUNC}" = "NONE" ]; then
 		:
+	elif [ "${HASH_FUNC}" = "MD5" ]; then
+		LEAVE=1
+
+		if [ $HASH_OPT -eq 1 ]; then
+			echo "Invalid '--hash' option: no usable hash command or perl module for MD5 could be found."
+		else
+			echo "Invalid HASH_FUNC configuration option: no usable hash command or perl module for MD5 could be found."
+		fi
 	elif [ "${HASH_FUNC}" = "RIPEMD160" -o "${HASH_FUNC}" = "WHIRLPOOL" ]; then
 		LEAVE=1
 
@@ -4652,13 +4677,13 @@ get_hash_function() {
 		fi
 	elif [ $HASH_OPT -eq 1 ]; then
 		LEAVE=1
-		echo "Invalid '--hash' option: no usable hash command or perl modules could be found."
-	elif [ $SHA_SIZE -gt 1 ]; then
+		echo "Invalid '--hash' option: no usable hash command or perl module could be found."
+	elif [ $SHA_SIZE -ge 1 ]; then
 		LEAVE=1
 		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl module for SHA${SHA_SIZE} could be found."
 	else
 		LEAVE=1
-		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl modules for SHA1 or MD5 could be found."
+		echo "Invalid HASH_FUNC configuration option: no usable hash command or perl module could be found."
 	fi
 
 
@@ -9963,12 +9988,11 @@ file_properties_check() {
 
 			if [ -z "${OLD_HASH_FUNC}" ]; then
 				OLD_HASH_FUNC_ERR="Unset"
+			elif [ "${OLD_HASH_FUNC}" = "MD5" -o "${OLD_HASH_FUNC}" = "SHA1" ]; then
+				# Oops! This can't be reached.
+				OLD_HASH_FUNC_ERR="prelink with ${OLD_HASH_FUNC}"
 			else
-				if [ "${OLD_HASH_FUNC}" = "MD5" -o "${OLD_HASH_FUNC}" = "SHA1" ]; then
-					OLD_HASH_FUNC_ERR="prelink with ${OLD_HASH_FUNC}"
-				else
-					OLD_HASH_FUNC_ERR="${OLD_HASH_FUNC}"
-				fi
+				OLD_HASH_FUNC_ERR="${OLD_HASH_FUNC}"
 			fi
 
 			if [ -z "${PKGMGR}" ]; then
@@ -18228,7 +18252,7 @@ help() {
 	echo $ECHOOPT "                                       (Default is to enable all tests)"
 	echo $ECHOOPT "         --hash {MD5 | SHA1 | SHA224 | SHA256 | SHA384 | SHA512 |"
 	echo $ECHOOPT "                 NONE | <command>}     Use the specified file hash function"
-	echo $ECHOOPT "                                       (Default is SHA1, then MD5)"
+	echo $ECHOOPT "                                       (Default is SHA256)"
 	echo $ECHOOPT "     -h, --help                        Display this help menu, then exit"
 	echo $ECHOOPT " --lang, --language <language>         Specify the language to use"
 	echo $ECHOOPT "                                       (Default is English)"
@@ -19622,8 +19646,7 @@ fi
 if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a -z "${PKGMGR}" -a "${HASH_FUNC}" != "NONE" ]; then
 	#
 	# For a hash update on a prelinked system, we must have
-	# a valid hash function to use. The package managers use
-	# an MD5 hash function by default.
+	# a valid hash function to use.
 	#
 
 	if [ -z "${PRELINK_HASH}" ]; then
