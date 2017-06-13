@@ -4758,7 +4758,7 @@ get_hash_function() {
 			echo "Unable to find the package database directory (/var/lib/dpkg/info) for package manager 'DPKG'."
 		fi
 
-		if [ $CHECK -eq 1 ]; then
+		if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
 			PKGMGR_MD5_HASH=`get_md5_hash_function`
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
@@ -4778,7 +4778,7 @@ get_hash_function() {
 			echo "Unable to find the package database directory (/var/db/pkg) for package manager 'BSD'."
 		fi
 
-		if [ $CHECK -eq 1 ]; then
+		if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
 			PKGMGR_MD5_HASH=`get_md5_hash_function`
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
@@ -4803,7 +4803,8 @@ get_hash_function() {
 			fi
 		fi
 
-		if [ $CHECK -eq 1 ]; then
+#jh
+		if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
 			PKGMGR_SHA_HASH=`get_sha_hash_function 256`
 
 			if [ -z "${PKGMGR_SHA_HASH}" ]; then
@@ -6874,8 +6875,15 @@ do_prop_update() {
 	if [ -n "${RELEASE}" ]; then
 		display --to LOG --type INFO PROPUPD_REL_FILE "${RELEASE}"
 	else
-		display --to LOG --type INFO PROPUPD_NO_REL_FILE
-		display --to LOG --type PLAIN NAME "      `ls -ld /etc/*release* /etc/*version* 2>/dev/null | tr '\n' ' '`"
+#jh
+		RKHTMPVAR=`ls -ld /etc/*release* /etc/*version* 2>/dev/null | tr '\n' ' '`
+
+		if [ -n "${RKHTMPVAR}" ]; then
+			display --to LOG --type INFO PROPUPD_NO_REL_FILE
+			display --to LOG --type PLAIN NAME "      ${RKHTMPVAR}"
+		else
+			display --to LOG --type INFO PROPUPD_NO_REL_FILE_NO_OUTPUT
+		fi
 	fi
 
 	if [ -n "${OSNAME}" ]; then

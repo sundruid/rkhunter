@@ -1,4 +1,4 @@
-Version:2017061201
+Version:2017061401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -213,7 +213,8 @@ PROPUPD_START:Starting file properties data update...
 PROPUPD_OSINFO_START:Collecting O/S info...
 PROPUPD_ARCH_FOUND:Found system architecture: $1
 PROPUPD_REL_FILE:Found release file: $1
-PROPUPD_NO_REL_FILE:Unable to find a release file: LS output shows:
+PROPUPD_NO_REL_FILE_NO_OUTPUT:Unable to find an O/S release file.
+PROPUPD_NO_REL_FILE:Unable to find an O/S release file: LS output shows:
 PROPUPD_OSNAME_FOUND:Found O/S name: $1
 PROPUPD_ERROR:Error installing new 'rkhunter.dat' file. Code $1
 PROPUPD_NEW_DAT_FILE:New 'rkhunter.dat' file installed in '$1'
