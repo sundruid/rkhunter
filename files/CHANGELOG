@@ -25,6 +25,9 @@
    shells globstar option to allow recursive checks of directories.
    By default this option is disabled.
  - Added a Japanese translation file.
+ - Added support for the 'BSDng' package manager option. This can
+   be used by those *BSD systems which have the 'pkg' command
+   available (currently later FreeBSD systems).
 
  Changes:
  - The DISABLE_UNHIDE option has been removed from the configuration

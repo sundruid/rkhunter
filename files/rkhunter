@@ -915,14 +915,15 @@ check_paths() {
 		# For some options we may have to remove the leading character.
 		#
 
-#jh - no longer needed since we moved the check_paths for bindir paths.
-#jh - code left here since we may need something very similar for overloaded options.
-#jh - overloaded options - ALLOWPROCDELFILE PORT_PATH_WHITELIST RTKT_FILE_WHITELIST
-#jh		if [ "${OPT_NAME}" = "BINDIR" ]; then
-#jh			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
-#jh				FNAME=`echo "${FNAME}" | cut -c2-`
-#jh			fi
-#jh		fi
+# TODO:
+# This is no longer needed since we moved the check_paths for bindir paths.
+# The code is left here since we may need something very similar for overloaded options.
+#   overloaded options - ALLOWPROCDELFILE PORT_PATH_WHITELIST RTKT_FILE_WHITELIST
+#		if [ "${OPT_NAME}" = "BINDIR" ]; then
+#			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
+#				FNAME=`echo "${FNAME}" | cut -c2-`
+#			fi
+#		fi
 
 
 		#
@@ -4741,7 +4742,7 @@ get_hash_function() {
 
 		if [ -z "${RPM_CMD}" ]; then
 			LEAVE=1
-			echo "Unable to find 'rpm' command for package manager 'RPM'."
+			echo "Unable to find the 'rpm' command for package manager 'RPM'."
 		fi
 		;;
 	DPKG)
@@ -4754,7 +4755,7 @@ get_hash_function() {
 			echo "Unable to find 'dpkg-query' or 'dpkg' commands for package manager 'DPKG'."
 		elif [ ! -d "/var/lib/dpkg/info" ]; then
 			LEAVE=1
-			echo "Unable to find package database directory (/var/lib/dpkg/info) for package manager 'DPKG'."
+			echo "Unable to find the package database directory (/var/lib/dpkg/info) for package manager 'DPKG'."
 		fi
 
 		if [ $CHECK -eq 1 ]; then
@@ -4771,10 +4772,10 @@ get_hash_function() {
 
 		if [ -z "${PKG_CMD}" ]; then
 			LEAVE=1
-			echo "Unable to find 'pkg_info' command for package manager 'BSD'."
+			echo "Unable to find the 'pkg_info' command for package manager 'BSD'."
 		elif [ ! -d "/var/db/pkg" ]; then
 			LEAVE=1
-			echo "Unable to find package database directory (/var/db/pkg) for package manager 'BSD'."
+			echo "Unable to find the package database directory (/var/db/pkg) for package manager 'BSD'."
 		fi
 
 		if [ $CHECK -eq 1 ]; then
@@ -4783,6 +4784,31 @@ get_hash_function() {
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
 				LEAVE=1
 				echo "Unable to find an MD5 hash function command to assist package manager 'BSD'."
+			fi
+		fi
+		;;
+	BSDNG)
+		PKG_CMD=`find_cmd pkg`
+
+		if [ -z "${PKG_CMD}" ]; then
+			LEAVE=1
+			echo "Unable to find the 'pkg' command for package manager 'BSDng'."
+		else
+			${PKG_CMD} -N >/dev/null 2>&1
+			ERRCODE=$?
+
+			if [ $ERRCODE -ne 0 ]; then
+				LEAVE=1
+				echo "System not set up for use with package manager 'BSDng'."
+			fi
+		fi
+
+		if [ $CHECK -eq 1 ]; then
+			PKGMGR_SHA_HASH=`get_sha_hash_function 256`
+
+			if [ -z "${PKGMGR_SHA_HASH}" ]; then
+				LEAVE=1
+				echo "Unable to find a SHA256 hash function command to assist package manager 'BSDng'."
 			fi
 		fi
 		;;
@@ -4802,7 +4828,7 @@ get_hash_function() {
 
 				if [ -z "${SUM_CMD}" ]; then
 					LEAVE=1
-					echo "Unable to find 'sum' command for package manager 'SOLARIS'."
+					echo "Unable to find the 'sum' command for package manager 'SOLARIS'."
 				fi
 			else
 				LEAVE=1
@@ -4813,7 +4839,7 @@ get_hash_function() {
 
 		if [ ! -f "/var/sadm/install/contents" ]; then
 			LEAVE=1
-			echo "Unable to find package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
+			echo "Unable to find the package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
 		fi
 		;;
 	*)
@@ -6451,6 +6477,26 @@ ${DIR}:1"
 				PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1 | sed -e 's/[0-9]nb[0-9][0-9]*$//; s/-[0-9.]*$//'`
 			fi
 			;;
+		BSDNG)
+			#
+			# First see if the file is exempt or part of a known package.
+			#
+
+			if [ $NOVRFYFILE -eq 1 ]; then
+				ERRCODE=1
+			else
+				RKHTMPVAR=`${PKG_CMD} which "${FNAME}" 2>/dev/null`
+				ERRCODE=$?
+			fi
+
+			if [ $ERRCODE -eq 0 ]; then
+				#
+				# Now we sort out the base part of the package name.
+				#
+
+				PKGNAME=`echo "${RKHTMPVAR}" | sed -e 's/^.* was installed by package //'`
+			fi
+			;;
 		SOLARIS)
 			#
 			# First see if the file is exempt or belongs to a package.
@@ -6535,6 +6581,16 @@ ${DIR}:1"
 					if [ -n "${PKGNAME}" ]; then
 						FILNAM=`echo "${FNAME}" | sed -e 's:^/usr/pkg/::; s:\.:\\\.:g'`
 						SYSHASH=`${PKG_CMD} -v -L "${RKHTMPVAR}" 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f3`
+						test -n "${SYSHASH}" && FILE_IS_PKGD=1
+					fi
+					;;
+				BSDNG)
+					#
+					# If we have a package name, then get the hash value.
+					#
+
+					if [ -n "${PKGNAME}" ]; then
+						SYSHASH=`${PKG_CMD} query '%Fp\n%Fs' 2>/dev/null | grep -A 1 -x -F "${FNAME}" 2>/dev/null | tail ${TAIL_OPT}1`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
 					;;
@@ -10669,6 +10725,34 @@ ${RKHLINE}"
 								PKGMGR_VERIFY_RESULT="5"
 
 								if [ -n "`${PKGMGR_MD5_HASH} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+									DEPENDENCY_ERR=1
+								fi
+							fi
+						fi
+					fi
+					;;
+				BSDNG)
+					#
+					# First see if the file is exempt or part of a known package.
+					#
+
+					if [ $NOVRFYFILE -eq 1 ]; then
+						PKGNAME=""
+					else
+						PKGNAME=`${PKG_CMD} which "${FNAME}" 2>/dev/null | sed -e 's/^.* was installed by package //'`
+					fi
+
+					if [ -n "${PKGNAME}" ]; then
+						SYSHASH=`${PKG_CMD} query '%Fp\n%Fs' 2>/dev/null | grep -A 1 -x -F "${FNAME}" 2>/dev/null | tail ${TAIL_OPT}1`
+
+						if [ -n "${SYSHASH}" ]; then
+							FILE_IS_PKGD=1
+							RKHTMPVAR=`${PKGMGR_SHA_HASH} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
+
+							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
+								PKGMGR_VERIFY_RESULT="5"
+
+								if [ -n "`${PKGMGR_SHA_HASH} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 							fi
@@ -17781,8 +17865,8 @@ ${LINKDIR}"
 	    killall ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
-	    newsyslog nologin passwd perl pgrep ping pkgdb pkg_info pkill prelink ps pstree pwck
-	    pwd readlink rkhunter rmmod route rpm rsyslogd runcon runlevel sed sestatus sh
+	    newsyslog nologin passwd perl pgrep ping pkg pkgdb pkg_info pkill prelink ps pstree
+	    pwck pwd readlink rkhunter rmmod route rpm rsyslogd runcon runlevel sed sestatus sh
 	    sha1 sha1sum sha224 sha224sum sha256 sha256sum sha384 sha384sum sha512
 	    sha512sum size skdet slocate sockstat sort ssh sshd stat strace strings su sudo
 	    sulogin sysctl syslogd systat tail tcpd telnet test top touch tr uname
@@ -18269,8 +18353,9 @@ help() {
 	echo $ECHOOPT "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
 	echo $ECHOOPT "   --ns, --nosummary                   Do not show the summary of check results"
 	echo $ECHOOPT " --novl, --no-verbose-logging          No verbose logging"
-	echo $ECHOOPT "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain or"
-	echo $ECHOOPT "                   SOLARIS | NONE}     verify file property values. (Default is NONE)"
+	echo $ECHOOPT "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain"
+	echo $ECHOOPT "                   BSDng | SOLARIS |   or verify file property values."
+	echo $ECHOOPT "                   NONE}               (Default is NONE)"
 	echo $ECHOOPT "         --propupd [file | directory | Update the entire file properties database,"
 	echo $ECHOOPT "                    package]...        or just for the specified entries"
 	echo $ECHOOPT "     -q, --quiet                       Quiet mode (no output at all)"
@@ -18401,6 +18486,7 @@ PRELINKED=0
 PRELINK_CMD=""
 PRELINK_HASH=""
 PKGMGR_MD5_HASH=""
+PKGMGR_SHA_HASH=""
 MD5_CMD=""
 EPOCH_DATE_CMD=""
 PKGMGRNOVRFY=""
@@ -20035,6 +20121,9 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			BSD)
 				display --to LOG --type INFO FOUND_CMD 'pkg_info' "${PKG_CMD}"
 				;;
+			BSDNG)
+				display --to LOG --type INFO FOUND_CMD 'pkg' "${PKG_CMD}"
+				;;
 			SOLARIS)
 				if [ $USE_SUNSUM -eq 1 ]; then
 					display --to LOG --type INFO HASH_PKGMGR_SUM
@@ -20075,6 +20164,10 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			BSD)
 				display --to LOG --type INFO FOUND_CMD 'pkg_info' "${PKG_CMD}"
 				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+				;;
+			BSDNG)
+				display --to LOG --type INFO FOUND_CMD 'pkg' "${PKG_CMD}"
+				display --to LOG --type INFO HASH_PKGMGR_SHA "${PKGMGR_SHA_HASH}"
 				;;
 			SOLARIS)
 				if [ $USE_SUNSUM -eq 1 ]; then
