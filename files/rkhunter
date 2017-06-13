@@ -6590,7 +6590,7 @@ ${DIR}:1"
 					#
 
 					if [ -n "${PKGNAME}" ]; then
-						SYSHASH=`${PKG_CMD} query '%Fp\n%Fs' 2>/dev/null | grep -A 1 -x -F "${FNAME}" 2>/dev/null | tail ${TAIL_OPT}1`
+						SYSHASH=`${PKG_CMD} query '%Fp: %Fs' ${PKGNAME} 2>/dev/null | grep "^${FNAME}: " 2>/dev/null | sed -r -e 's/^.*: (1\\$)?([A-Fa-f0-9]+)$/\2/'`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
 					;;
@@ -10739,11 +10739,18 @@ ${RKHLINE}"
 					if [ $NOVRFYFILE -eq 1 ]; then
 						PKGNAME=""
 					else
-						PKGNAME=`${PKG_CMD} which "${FNAME}" 2>/dev/null | sed -e 's/^.* was installed by package //'`
+						RKHTMPVAR=`${PKG_CMD} which "${FNAME}" 2>/dev/null`
+						ERRCODE=$?
+
+						if [ $ERRCODE -eq 0 ]; then
+							PKGNAME=`echo "${RKHTMPVAR}" | sed -e 's/^.* was installed by package //'`
+						else
+							PKGNAME=""
+						fi
 					fi
 
 					if [ -n "${PKGNAME}" ]; then
-						SYSHASH=`${PKG_CMD} query '%Fp\n%Fs' 2>/dev/null | grep -A 1 -x -F "${FNAME}" 2>/dev/null | tail ${TAIL_OPT}1`
+						SYSHASH=`${PKG_CMD} query '%Fp: %Fs' ${PKGNAME} 2>/dev/null | grep "^${FNAME}: " 2>/dev/null | sed -r -e 's/^.*: (1\\$)?([A-Fa-f0-9]+)$/\2/'`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
