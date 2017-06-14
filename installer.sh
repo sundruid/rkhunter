@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.18"
+INSTALLER_VERSION="1.2.19"
 INSTALLER_COPYRIGHT="Copyright 2003-2017, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -92,6 +92,7 @@ showHelp() { # Show help / version
 	echo "                     (Default is to create a separate configuration file.)"
 	echo "  --show           : Show chosen layout."
 	echo "  --remove         : Uninstall according to chosen layout."
+	echo "  --uninstall      : Alias for the '--remove' option."
 	echo "  --version        : Show the installer version."
 	echo ""
 
@@ -1296,7 +1297,7 @@ while [ $# -ge 1 ]; do
 			exit 1
 		fi
 		;;
-	--show | --remove | --install)
+	--show | --remove | --install | --uninstall)
 		RKHINST_ACTION_SEEN=1
 		RKHINST_ACTION=`echo "$1" | sed 's/-//g'`
 		;;
@@ -1323,7 +1324,7 @@ else
 	show)
 		showTemplate $RKHINST_LAYOUT
 		;;
-	remove)	# Clean active window
+	remove | uninstall)	# Clean active window
 		selectTemplate $RKHINST_LAYOUT
 		clear
 		doRemove
