@@ -6499,17 +6499,11 @@ ${DIR}:1"
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
 			else
-				RKHTMPVAR=`${PKG_CMD} which "${FNAME}" 2>/dev/null`
+				RKHTMPVAR=`${PKG_CMD} which -q "${FNAME}" 2>/dev/null`
 				ERRCODE=$?
 			fi
 
-			if [ $ERRCODE -eq 0 ]; then
-				#
-				# Now we sort out the base part of the package name.
-				#
-
-				PKGNAME=`echo "${RKHTMPVAR}" | sed -e 's/^.* was installed by package //'`
-			fi
+			test $ERRCODE -eq 0 && PKGNAME="${RKHTMPVAR}" || PKGNAME=""
 			;;
 		SOLARIS)
 			#
@@ -10775,14 +10769,10 @@ ${RKHLINE}"
 					if [ $NOVRFYFILE -eq 1 ]; then
 						PKGNAME=""
 					else
-						RKHTMPVAR=`${PKG_CMD} which "${FNAME}" 2>/dev/null`
+						RKHTMPVAR=`${PKG_CMD} which -q "${FNAME}" 2>/dev/null`
 						ERRCODE=$?
 
-						if [ $ERRCODE -eq 0 ]; then
-							PKGNAME=`echo "${RKHTMPVAR}" | sed -e 's/^.* was installed by package //'`
-						else
-							PKGNAME=""
-						fi
+						test $ERRCODE -eq 0 && PKGNAME="${RKHTMPVAR}" || PKGNAME=""
 					fi
 
 					if [ -n "${PKGNAME}" ]; then
