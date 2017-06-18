@@ -28,6 +28,8 @@
  - Added support for the 'BSDng' package manager option. This can
    be used by those *BSD systems which have the 'pkg' command
    available (currently later FreeBSD systems).
+ - The BSD package manager will now try the 'pkg_info' command '-W'
+   option if the '-F' option fails.
 
  Changes:
  - The DISABLE_UNHIDE option has been removed from the configuration
@@ -81,6 +83,8 @@
    occurrences correctly. This has now been corrected.
  - Tighten up the input verification check on the mirror file to
    ensure that only URL's are used as a mirror. (CVE-2017-7480)
+ - The BSD package manager seemed to be needlessly stripping out
+   parts of package names on NetBSD systems. It no longer does this.
 
  -- 
 
