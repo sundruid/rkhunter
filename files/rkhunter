@@ -9470,8 +9470,14 @@ do_system_check_initialisation() {
 		  file:/etc/xfsdxd:BillGates botnet component		  
 		  file:/tmp/bill.lock:BillGates botnet component
 		  file:/tmp/gates.lock:BillGates botnet component
+		  file:/tmp/gates.lod:BillGates botnet component
 		  file:/tmp/moni.lock:BillGates botnet component
+		  file:/tmp/moni.lod:BillGates botnet component
 		  file:/tmp/notify.file:BillGates botnet component
+		  file:/usr/bin/.sshd:BillGates botnet component
+		  file:/usr/bin/bsd-port/getty:BillGates botnet component
+		  file:/usr/bin/bsd-port/getty.lock:BillGates botnet component
+		  file:/usr/bin/bsd-port/udevd.lock:BillGates botnet component
 		  file:/usr/lib/libamplify.so:BillGates botnet component
 		  file:/etc/init.d/DbSecuritySpt:BillGates botnet component
 		  file:/etc/rc.d/init.d/DbSecuritySpt:BillGates botnet component
