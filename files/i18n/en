@@ -1,4 +1,4 @@
-Version:2017061402
+Version:2017061901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -634,6 +634,7 @@ LIST_PERL:Perl module installation status:
 LIST_RTKTS:Rootkits checked for:
 
 LOCK_USED:Locking is being used: timeout is $1 seconds
+LOCK_DIR:Using '$1' as the locking directory
 LOCK_UNUSED:Locking is not being used
 LOCK_WAIT:Waiting for lock file
 LOCK_FAIL:Unable to get the lock file: rkhunter has not run!

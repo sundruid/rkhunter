@@ -988,7 +988,7 @@ check_paths() {
 
 			if [ -f "${FNAME}" ]; then
 				case "${OPT_NAME}" in
-				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|RTKT_DIR_WHITELIST)
+				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|RTKT_DIR_WHITELIST|LOCKDIR)
 					ERRCODE=1
 
 					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
@@ -1035,7 +1035,7 @@ check_paths() {
 				ERRCODE=1
 
 				case "${OPT_NAME}" in
-				ALLOWHIDDENDIR|RTKT_DIR_WHITELIST|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP)
+				ALLOWHIDDENDIR|RTKT_DIR_WHITELIST|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|LOCKDIR)
 					RKHTMPVAR2="directory"
 					;;
 				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|*_CMD)
@@ -3018,6 +3018,50 @@ get_locking_options() {
 		test $ERRCODE -eq 1 && LEAVE=1
 	else
 		USE_LOCKING=0
+	fi
+
+
+	#
+	# Now get the lock directory to use. If this is unset, then
+	# we need to look for a suitable directory.
+	#
+
+	LOCKDIR=`get_option single LOCKDIR` || exit $?
+
+	if [ -n "${LOCKDIR}" ]; then
+		check_paths LOCKDIR LOCKDIR "NOWILD EXIST NOBROKENLINK"
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	else
+		PATHNAMES="/run/lock /var/lock /var/run/lock /run /var/run ${RKHTMPDIR}"
+
+		for DIR in ${PATHNAMES}; do
+			# Check for read/write capability before accepting a default directory.
+			if [ -d "${DIR}" -a -w "${DIR}" -a -r "${DIR}" ]; then
+				LOCKDIR="${DIR}"
+				break
+			fi
+		done
+
+		if [ -z "${LOCKDIR}" ]; then
+			LEAVE=1
+			echo "No suitable directory found for LOCKDIR configuration option."
+			echo "Locking directories checked: ${PATHNAMES}"
+		fi
+	fi
+
+	#
+	# Check that the directory we have is usable.
+	#
+
+	if [ $LEAVE -eq 1 ]; then
+		:
+	elif [ ! -w "${LOCKDIR}" ]; then
+		LEAVE=1
+		echo "The LOCKDIR directory is not writable: `name2text \"${LOCKDIR}\"`"
+	elif [ ! -r "${LOCKDIR}" ]; then
+		LEAVE=1
+		echo "The LOCKDIR directory is not readable: `name2text \"${LOCKDIR}\"`"
 	fi
 
 
@@ -7653,7 +7697,7 @@ do_config_file_check() {
 		   ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING APPEND_LOG
 		   AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR EPOCH_DATE_CMD GLOBSTAR
 		   HASH_FLD_IDX HASH_FUNC HASH_CMD IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
-		   LANGUAGE LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
+		   LANGUAGE LOCKDIR LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
 		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
 		   SCAN_MODE_DEV SCANROOTKITMODE SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_TIME SHOW_SUMMARY_WARNINGS_NUMBER
 		   SSH_CONFIG_DIR SUSPSCAN_DEBUG SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP
@@ -18276,7 +18320,7 @@ get_lock() {
 	RKHTMPVAR=0
 
 	while test $RKHTMPVAR -lt $LOCK_TIMEOUT; do
-		if [ -f "${RKHTMPDIR}/rkhunter.LCK" ]; then
+		if [ -f "${LOCKDIR}/rkhunter.LCK" ]; then
 			test $SHOW_LOCK_MSGS -eq 1 -a $RKHTMPVAR -eq 0 && display --to SCREEN --type PLAIN --nonl LOCK_WAIT
 
 			sleep 10;
@@ -18289,8 +18333,8 @@ get_lock() {
 		fi
 	done
 
-	if [ $RKHTMPVAR -lt $LOCK_TIMEOUT -o ! -f "${RKHTMPDIR}/rkhunter.LCK" ]; then
-		touch "${RKHTMPDIR}/rkhunter.LCK"
+	if [ $RKHTMPVAR -lt $LOCK_TIMEOUT -o ! -f "${LOCKDIR}/rkhunter.LCK" ]; then
+		echo "$$" >"${LOCKDIR}/rkhunter.LCK"
 
 		test $SHOW_LOCK_MSGS -eq 1 -a $RKHTMPVAR -gt 0 -a $NOTTY -eq 0 && echo ""
 
@@ -18298,7 +18342,7 @@ get_lock() {
 		# We handle any subsequent exit conditions by setting a trap.
 		#
 
-		trap "rm -f \"${RKHTMPDIR}/rkhunter.LCK\" >/dev/null 2>&1" 0 >/dev/null 2>&1
+		trap "rm -f \"${LOCKDIR}/rkhunter.LCK\" >/dev/null 2>&1" 0 >/dev/null 2>&1
 	else
 		#
 		# We need to be careful here. We do not want to display the message if the user
@@ -18870,6 +18914,7 @@ SHARED_LIB_WHITELIST=""
 
 # If used, these lock values must be set in the config file.
 USE_LOCKING=0
+LOCKDIR=""
 LOCK_TIMEOUT=0
 SHOW_LOCK_MSGS=1
 
@@ -19844,7 +19889,7 @@ fi
 #
 
 if [ $UNLOCK -eq 1 ]; then
-	rm -f "${RKHTMPDIR}/rkhunter.LCK" >/dev/null 2>&1
+	rm -f "${LOCKDIR}/rkhunter.LCK" >/dev/null 2>&1
 
 	# If we are just unlocking the lock file, then exit.
 	test $CHECK -eq 0 -a $VERSIONCHECK -eq 0 -a $UPDATE -eq 0 -a $PROP_UPDATE -eq 0 && exit 0
@@ -20386,6 +20431,7 @@ fi
 
 if [ $USE_LOCKING -eq 1 ]; then
 	display --to LOG --type INFO LOCK_USED "$LOCK_TIMEOUT"
+	display --to LOG --type INFO LOCK_DIR "${LOCKDIR}"
 else
 	display --to LOG --type INFO LOCK_UNUSED
 fi

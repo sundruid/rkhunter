@@ -30,6 +30,11 @@
    available (currently later FreeBSD systems).
  - The BSD package manager will now try the 'pkg_info' command '-W'
    option if the '-F' option fails.
+ - Added the LOCKDIR configuration option. It is now possible to
+   specify the directory rkhunter will use to store the lock file
+   (if USE_LOCKING has been set). The default is unset, and this
+   will cause rkhunter to look for a directory to use. Details are
+   in the configuration file.
 
  Changes:
  - The DISABLE_UNHIDE option has been removed from the configuration
@@ -46,6 +51,8 @@
  - The default hash function for the file properties test, given by
    the HASH_CMD option in the configuration file, has now changed
    to SHA256. It was previously SHA1, or MD5 if SHA1 was not found.
+ - Previously the lock file (if locking was used) was just an empty
+   file. It now contains the PID of the running process.
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.

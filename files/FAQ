@@ -363,8 +363,9 @@ A.   See the README file for information about the test names.
 
 3.5) Can rkhunter handle filenames with spaces in them?
 
-A.   Generally yes. Some tests still may not like filenames
-     with the colon (:) character in them though.
+A.   Generally yes for the tests themselves, but not for configuration options.
+     Additionally, Some tests may not like filenames with the colon (:) character
+     in them.
 
 
 3.6) What does the following warning mean:
