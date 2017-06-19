@@ -9352,7 +9352,6 @@ do_system_check_initialisation() {
 		  file:/dev/dkx:Rootkit component
 		  file:/usr/sbin/sshd3:Rootkit component
 		  file:/usr/sbin/jcd:Rootkit component
-		  file:/etc/rc.d/init.d/jcd:Rootkit component
 		  file:/usr/sbin/atd2:Rootkit component
 		  file:/home/httpd/cgi-bin/linux.cgi:Dica-Kit Rootkit
 		  file:/home/httpd/cgi-bin/psid:Dica-Kit Rootkit
@@ -9445,8 +9444,12 @@ do_system_check_initialisation() {
 		  file:/etc/atddd:BillGates botnet component
 		  file:/etc/cupsdd:BillGates botnet component
 		  file:/etc/cupsddd:BillGates botnet component
+		  file:/etc/cupsddh:BillGates botnet component
 		  file:/etc/dsfrefr:BillGates botnet component
+		  file:/etc/fdsfsfvff:BillGates botnet component
 		  file:/etc/ferwfrre:BillGates botnet component
+		  file:/etc/fwke.cfg:BillGates botnet component
+		  file:/etc/gdmorpen:BillGates botnet component
 		  file:/etc/gfhddsfew:BillGates botnet component
 		  file:/etc/gfhjrtfyhuf:BillGates botnet component
 		  file:/etc/ksapd:BillGates botnet component
@@ -9456,10 +9459,13 @@ do_system_check_initialisation() {
 		  file:/etc/rewgtf3er4t:BillGates botnet component
 		  file:/etc/sdmfdsfhjfe:BillGates botnet component
 		  file:/etc/sfewfesfs:BillGates botnet component
+		  file:/etc/sfewfesfsh:BillGates botnet component
 		  file:/etc/sksapd:BillGates botnet component
 		  file:/etc/sksapdd:BillGates botnet component
 		  file:/etc/skysapd:BillGates botnet component
 		  file:/etc/skysapdd:BillGates botnet component
+		  file:/etc/smarvtd:BillGates botnet component
+		  file:/etc/whitptabil:BillGates botnet component
 		  file:/etc/xfsdx:BillGates botnet component
 		  file:/etc/xfsdxd:BillGates botnet component		  
 		  file:/tmp/bill.lock:BillGates botnet component
@@ -9467,7 +9473,10 @@ do_system_check_initialisation() {
 		  file:/tmp/moni.lock:BillGates botnet component
 		  file:/tmp/notify.file:BillGates botnet component
 		  file:/usr/lib/libamplify.so:BillGates botnet component
+		  file:/etc/init.d/DbSecuritySpt:BillGates botnet component
 		  file:/etc/rc.d/init.d/DbSecuritySpt:BillGates botnet component
+		  file:/etc/cron.hourly/gcc.sh:BillGates botnet component
+		  file:/root/2016ttfacai:BillGates botnet component
 		  file:/proc/rs_dev:xorddos component
 		  file:/var/run/sftp.pid:xorddos component
 		  file:/var/run/udev.pid:xorddos component
