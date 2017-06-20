@@ -1004,7 +1004,7 @@ check_paths() {
 
 
 				case "${OPT_NAME}" in
-				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|*_CMD)
+				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|*_CMD)
 					ERRCODE=1
 
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
@@ -1038,7 +1038,7 @@ check_paths() {
 				ALLOWHIDDENDIR|RTKT_DIR_WHITELIST|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|LOCKDIR)
 					RKHTMPVAR2="directory"
 					;;
-				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|*_CMD)
+				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|*_CMD)
 					RKHTMPVAR2="file"
 					;;
 				*)
@@ -4397,6 +4397,43 @@ get_suspscan_options() {
 }
 
 
+get_ipc_options() {
+
+	#
+	# This function processes the ALLOWIPCPROC option, which is
+	# used to whitelist process pathnames using shared memory segments.
+	#
+
+	LEAVE=0
+	ERRCODE=0
+
+	ALLOWIPCPROC=""
+
+	ALLOWIPCPROC_OPT=`get_option newline-list ALLOWIPCPROC` || exit $?
+
+	if [ -n "${ALLOWIPCPROC_OPT}" ]; then
+		# Note that we do not get the expanded list of pathnames at
+		# this point. That will be done when the test actually runs.
+
+		ALLOWIPCPROC=${ALLOWIPCPROC_OPT}
+
+		check_paths ALLOWIPCPROC ALLOWIPCPROC
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	fi
+
+	if [ $LEAVE -eq 1 ]; then
+		if [ $CONFIG_CHECK -eq 0 ]; then
+			exit 1
+		else
+			RET_CODE=1
+		fi
+	fi
+
+	return
+}
+
+
 get_if_prelinked() {
 
 	#
@@ -5822,8 +5859,6 @@ get_configfile_options() {
 
 	get_locking_options
 
-	get_scanmode_option
-
 	get_shell_options
 
 
@@ -5845,6 +5880,8 @@ get_configfile_options() {
 	fi
 
 	if [ $CHECK -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
+		get_scanmode_option
+
 		get_syslog_option
 
 		get_startup_paths_option
@@ -5856,6 +5893,8 @@ get_configfile_options() {
 		get_phalanx2_option
 
 		get_summary_options
+
+		get_ipc_options
 
 		test $NOMOW -eq 0 && get_mailonwarn_option
 
@@ -14097,7 +14136,7 @@ ${FOUND_PROCS}"
 
 
 	#
-	# Next we check System V Shared Memory (Linux only for now).
+	# Next we check the System V Shared Memory (Linux only for now).
 	#
 
 	if [ $LINUXOS -eq 1 ]; then
@@ -14106,29 +14145,49 @@ ${FOUND_PROCS}"
 			IPCS_TMPFILE="${TEMPFILE}"
 			touch "${IPCS_TMPFILE}"
 
-			echo 0 > "${IPCS_TMPFILE}"
+			echo 0 >"${IPCS_TMPFILE}"
 
 			RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $3}'`
 			test -z "${RKHTMPVAR}" && RKHTMPVAR=0
 
 			if [ $RKHTMPVAR -ne 0 ]; then
+				#
+				# We expand the whitelist option here to ensure
+				# that any wildcard entries are the most recent.
+				#
+
+				if [ -n "${ALLOWIPCPROC_OPT}" ]; then
+					ALLOWIPCPROC=`expand_paths ALLOWIPCPROC_OPT`
+				fi
+
 				LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | grep '^0x' | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
 					if [ $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 -a $RKH_SHM_BYTES -ge 1000000 ]; then
-						if [ -z "`grep '^1' \"${IPCS_TMPFILE}\"`" ]; then
-							echo 1 > "${IPCS_TMPFILE}"
+						LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
+							RKH_SHM_PATH=`${READLINK_CMD} -f /proc/${RKH_SHM_CPID}/exe`
 
-							# We must log the overall result before any found entry.
-							display --to LOG --type PLAIN --result WARNING --color RED --log-nl --log-indent 2 ROOTKIT_MALWARE_IPCS
-							display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
-						fi
+							#
+							# First check to see if the process pathname is whitelisted.
+							#
 
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
-								RKH_SHM_PATH=`${READLINK_CMD} -f /proc/${RKH_SHM_CPID}/exe`
+							FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-								display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "${RKH_SHM_PATH}" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
-							done
-						fi
+							if [ -n "`echo \"${ALLOWIPCPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+								# At this moment we have to store these for displaying later.
+								echo "`name2text \"${RKH_SHM_PATH}\"`" >>"${IPCS_TMPFILE}"
+							else
+								if [ -z "`grep '^1' \"${IPCS_TMPFILE}\"`" ]; then
+									echo 1 >>"${IPCS_TMPFILE}"
+
+									# We must log the overall result before any found entry.
+									display --to LOG --type PLAIN --result WARNING --color RED --log-nl --log-indent 2 ROOTKIT_MALWARE_IPCS
+									display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
+								fi
+
+								if [ $VERBOSE_LOGGING -eq 1 ]; then
+									display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "${RKH_SHM_PATH}" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
+								fi
+							fi
+						done
 					fi
 				done
 			fi
@@ -14137,7 +14196,7 @@ ${FOUND_PROCS}"
 			# Now display the results.
 			#
 
-			RKHTMPVAR=`cat "${IPCS_TMPFILE}"`
+			RKHTMPVAR=`grep '^[01]' "${IPCS_TMPFILE}" | tail ${TAIL_OPT}1`
 			test -z "${RKHTMPVAR}" && RKHTMPVAR=0
 
 			if [ $RKHTMPVAR -eq 0 ]; then
@@ -14145,6 +14204,16 @@ ${FOUND_PROCS}"
 			else
 				display --to SCREEN --type PLAIN --result WARNING --color RED --screen-indent 4 ROOTKIT_MALWARE_IPCS
 			fi
+
+			#
+			# We can now display any whitelisted pathnames that were found.
+			#
+
+			for FNAME in `cat "${IPCS_TMPFILE}"`; do
+				test "${FNAME}" = "0" -o "${FNAME}" = "1" && continue
+
+				display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL "${FNAME}"
+			done
 
 			rm -f "${IPCS_TMPFILE}" >/dev/null 2>&1
 		else
@@ -15551,10 +15620,14 @@ do_network_interface_checks() {
 	if [ -n "${LIBPCAPRES}" ]; then
 		ALLOWPROCLISTENERS=""
 
+		#
+		# We expand the whitelist option here to ensure
+		# that any wildcard entries are the most recent.
+		#
+
 		if [ -n "${ALLOWPROCLIST_OPT}" ]; then
 			ALLOWPROCLISTENERS=`expand_paths ALLOWPROCLIST_OPT`
 		fi
-
 
 		INODE_LIST=""
 
@@ -18809,10 +18882,10 @@ SPACE_LIST_OPTS="ALLOWPROMISCIF APP_WHITELIST BINDIR DISABLE_TESTS EMPTY_LOGFILE
 SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 
 # A list of configuration options which are newline-separated lists.
-NEWLINE_LIST_OPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWPROCLISTEN
-		   ATTRWHITELIST EXCLUDE_USER_FILEPROP_FILES_DIRS EXISTWHITELIST IMMUTWHITELIST
-		   PKGMGR_NO_VRFY PORT_PATH_WHITELIST RTKT_DIR_WHITELIST RTKT_FILE_WHITELIST
-		   SCRIPTWHITELIST USER_FILEPROP_FILES_DIRS WRITEWHITELIST"
+NEWLINE_LIST_OPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWIPCPROC
+		   ALLOWPROCLISTEN ATTRWHITELIST EXCLUDE_USER_FILEPROP_FILES_DIRS EXISTWHITELIST
+		   IMMUTWHITELIST PKGMGR_NO_VRFY PORT_PATH_WHITELIST RTKT_DIR_WHITELIST
+		   RTKT_FILE_WHITELIST SCRIPTWHITELIST USER_FILEPROP_FILES_DIRS WRITEWHITELIST"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.

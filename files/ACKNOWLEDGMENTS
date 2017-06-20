@@ -34,6 +34,7 @@ Jan Iven            Bug reports, ideas and fixes
 CaPaCuL             Turkish translations
 Mitsuhiri Yoshida   Japanese translation
 Alexander Wittig    BSDng package manager code
+Patrick G.          IPCS whitelisting code
 
 
 And thanks to all others who contributed to Rootkit Hunter:

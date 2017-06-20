@@ -1,4 +1,4 @@
-Version:2017061901
+Version:2017062001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -415,6 +415,7 @@ ROOTKIT_MALWARE_SNIFFER_FOUND:Found possible sniffer log file: $1
 ROOTKIT_MALWARE_IPCS:Checking for suspicious shared memory segments
 ROOTKIT_MALWARE_IPCS_FOUND:The following suspicious shared memory segments have been found:
 ROOTKIT_MALWARE_IPCS_DETAILS:Process: $1    PID: $2    Owner: $3
+ROOTKIT_MALWARE_IPCS_WL:Found process pathname '$1': it is whitelisted.
 
 ROOTKIT_TROJAN_START:Performing trojan specific checks
 ROOTKIT_TROJAN_INETD:Checking for enabled inetd services
