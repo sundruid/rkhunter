@@ -13965,6 +13965,7 @@ ${FOUND_PROCS}"
 	suspscan
 
 
+#jh - make other_malware a group.
 	#
 	# We have completed the checks which can be enabled/disabled,
 	# but we need to be able to exclude or include the rest of the
@@ -13985,7 +13986,7 @@ ${FOUND_PROCS}"
 
 
 	#
-	# Nex we check for login backdoors.
+	# Next we check for login backdoors.
 	#
 
 	FOUND=0
@@ -14209,10 +14210,17 @@ ${FOUND_PROCS}"
 			# We can now display any whitelisted pathnames that were found.
 			#
 
+			FOUND=""
+
 			for FNAME in `cat "${IPCS_TMPFILE}"`; do
 				test "${FNAME}" = "0" -o "${FNAME}" = "1" && continue
 
-				display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL "${FNAME}"
+				FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
+					FOUND="${FOUND} ${FNAME} "
+					display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL "${FNAME}"
+				fi
 			done
 
 			rm -f "${IPCS_TMPFILE}" >/dev/null 2>&1
@@ -16496,271 +16504,285 @@ do_system_config_files_check() {
 		return
 	fi
 
-	#
-	# First find out where the SSH configuration file is located.
-	#
 
-	SSH_CONFIG_FILE=""
-
-	if [ -n "${SSH_CONFIG_DIR}" ]; then
-		RKHTMPVAR="${SSH_CONFIG_DIR}"
-	else
-		RKHTMPVAR="/etc /etc/ssh /usr/local/etc /usr/local/etc/ssh"
-	fi
-
-	for DIR in ${RKHTMPVAR}; do
-		if [ -f "${DIR}/sshd_config" ]; then
-			SSH_CONFIG_FILE="${DIR}/sshd_config"
-			break
-		fi
-	done
-
-	if [ -n "${SSH_CONFIG_FILE}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
-
-		display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND 'an' 'SSH' "${SSH_CONFIG_FILE}"
-
-		display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
-		display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
-
+	if `check_test system_configs_ssh`; then
+		display --to LOG --type INFO --nl STARTING_TEST system_configs_ssh
 
 		#
-		# Now we check some of the configuration options.
-		#
-		# First we check for allowed root access.
+		# First find out where the SSH configuration file is located.
 		#
 
-		RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+		SSH_CONFIG_FILE=""
 
-		if [ -n "${RKHTMPVAR}" ]; then
-			#
-			# Get the value that has been set.
-			#
-
-			RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[:upper:]' '[:lower:]'`
-
-			if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
-				test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
-				display --to SCREEN+LOG --type PLAIN --result ${RKHTMPVAR} --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
-			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
-
-				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
-				display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND1 "${RKHTMPVAR2}"
-				display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND2 "${ALLOW_SSH_ROOT_USER}"
-			fi
-		elif [ "${ALLOW_SSH_ROOT_USER}" = "unset" ]; then
-			display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+		if [ -n "${SSH_CONFIG_DIR}" ]; then
+			RKHTMPVAR="${SSH_CONFIG_DIR}"
 		else
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND
+			RKHTMPVAR="/etc /etc/ssh /usr/local/etc /usr/local/etc/ssh"
 		fi
 
-
-		#
-		# Next we check to see if protocol version 1 is allowed.
-		#
-
-		RKHTMPVAR=`grep -i '^[ 	]*Protocol[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
-
-		if [ -n "${RKHTMPVAR}" ]; then
-			#
-			# See if the set protocol versions includes '1'.
-			#
-
-			RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/'`
-			RKHTMPVAR3=`echo "${RKHTMPVAR2}" | grep '1'`
-
-			if [ -z "${RKHTMPVAR3}" -a $ALLOW_SSH_PROT_V1 -eq 0 ]; then
-				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
-			elif [ -n "${RKHTMPVAR3}" -a \( $ALLOW_SSH_PROT_V1 -eq 1 -o $ALLOW_SSH_PROT_V1 -eq 2 \) ]; then
-				display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
-			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
-
-				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
-				display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF1 "${RKHTMPVAR2}"
-				display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF2 "${ALLOW_SSH_PROT_V1}"
-			fi
-		elif [ $ALLOW_SSH_PROT_V1 -eq 2 ]; then
-			display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
-		else
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND
-		fi
-	else
-		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
-	fi
-
-
-	#
-	# Next we find out if a system logging daemon is running.
-	#
-
-	TITLE_SHOWN=0
-	SYSLOG_SEEN=0; SYSTEMD_SEEN=0
-	METALOG_SEEN=0; SOCKLOG_SEEN=0
-
-	if [ -n "${PS_CMD}" ]; then
-		PS_ARGS="ax"
-
-		test $SUNOS -eq 1 -o $IRIXOS -eq 1 && PS_ARGS="-ef"
-
-		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep '(syslogd|syslog-ng)( |$)' | grep -v 'egrep'`
-
-		if [ -n "${RKHTMPVAR}" ]; then
-			SYSLOG_SEEN=1
-
-			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-
-			if [ -n "`echo \"${RKHTMPVAR}\" | grep 'rsyslog'`" ]; then
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'rsyslog'
-			elif [ -n "`echo \"${RKHTMPVAR}\" | grep 'syslog-ng'`" ]; then
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog-ng'
-			else
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog'
-			fi
-
-			TITLE_SHOWN=1
-		fi
-
-		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'systemd-journald( |$)' | grep -v 'egrep'`
-
-		if [ -n "${RKHTMPVAR}" ]; then
-			SYSTEMD_SEEN=1
-
-			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'systemd-journald'
-
-			TITLE_SHOWN=1
-		fi
-
-		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'metalog( |$)' | grep -v 'egrep'`
-
-		if [ -n "${RKHTMPVAR}" ]; then
-			METALOG_SEEN=1
-
-			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'metalog'
-
-			TITLE_SHOWN=1
-		fi
-
-		RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'socklog( |$)' | grep -v 'egrep'`
-
-		if [ -n "${RKHTMPVAR}" ]; then
-			SOCKLOG_SEEN=1
-
-			test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'socklog'
-
-			TITLE_SHOWN=1
-		fi
-
-		if [ $TITLE_SHOWN -eq 0 ]; then
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING
-		fi
-	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-		display --to LOG --type INFO NOT_FOUND_CMD 'ps'
-	fi
-
-
-	#
-	# Now loop through the system logging configuration files.
-	#
-
-	if [ -z "${SYSLOG_CONFIG_FILE}" ]; then
-		SYSLOG_CONFIG_FILE="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf /etc/systemd/journald.conf /etc/systemd/systemd-journald.conf"
-	fi
-
-	if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
-		display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
-	else
-		FILEFOUND=""
-		REM_LOGGING_FOUND=0
-
-		test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
-
-		for FNAME in ${SYSLOG_CONFIG_FILE}; do
-			test ! -f "${FNAME}" && continue
-
-			# First, log where the configuration file is located.
-
-			RKHTMPVAR="a"
-
-			if [ -n "`echo \"${FNAME}\" | grep '/rsyslog\.conf$'`" ]; then
-				FTYPE="rsyslog"
-				RKHTMPVAR="an"
-			elif [ -n "`echo \"${FNAME}\" | grep '/syslog-ng\.conf$'`" ]; then
-				FTYPE="syslog-ng"
-			elif [ -n "`echo \"${FNAME}\" | egrep '/(systemd-)?journald\.conf$'`" ]; then
-				FTYPE="systemd"
-			else
-				FTYPE="syslog"
-			fi
-
-			FILEFOUND="${FILEFOUND} ${FTYPE} "
-
-			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" "${FTYPE}" "`name2text \"${FNAME}\"`"
-
-
-			# Next see if the configuration file allows remote logging.
-
-			if [ "${FTYPE}" != "systemd" ]; then
-				RKHTMPVAR=""
-
-				if [ -n "`echo \"${FNAME}\" | egrep '/r?syslog\.conf$'`" ]; then
-					RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' "${FNAME}" | egrep -i -v '(@|:omrelp:)127\.'`
-				else
-					#
-					# For syslog-ng we must look for a destination
-					# block which uses TCP or UDP.
-					#
-
-					RKHTMPVAR=`${AWK_CMD} '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' "${FNAME}" | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
-				fi
-
-				if [ -n "${RKHTMPVAR}" ]; then
-					REM_LOGGING_FOUND=1
-					display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG "${FTYPE}" "${RKHTMPVAR}"
-				fi
+		for DIR in ${RKHTMPVAR}; do
+			if [ -f "${DIR}/sshd_config" ]; then
+				SSH_CONFIG_FILE="${DIR}/sshd_config"
+				break
 			fi
 		done
 
+		if [ -n "${SSH_CONFIG_FILE}" ]; then
+			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 
-		#
-		# Now display the results. We need to rank these so
-		# that the warnings are shown before anything else.
-		#
+			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND 'an' 'SSH' "${SSH_CONFIG_FILE}"
 
-		if [ $SYSLOG_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE 'syslog'
-		elif [ $SYSTEMD_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | grep ' systemd '`" ]; then
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
-			display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE 'systemd-journald'
-		elif [ -n "${FILEFOUND}" ]; then
-			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+			display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
+			display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
+
+
+			#
+			# Now we check some of the configuration options.
+			#
+			# First we check for allowed root access.
+			#
+
+			RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				#
+				# Get the value that has been set.
+				#
+
+				RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[:upper:]' '[:lower:]'`
+
+				if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
+					test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
+					display --to SCREEN+LOG --type PLAIN --result ${RKHTMPVAR} --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+				else
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+
+					display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND1 "${RKHTMPVAR2}"
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND2 "${ALLOW_SSH_ROOT_USER}"
+				fi
+			elif [ "${ALLOW_SSH_ROOT_USER}" = "unset" ]; then
+				display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_NOTFOUND
+			fi
+
+
+			#
+			# Next we check to see if protocol version 1 is allowed.
+			#
+
+			RKHTMPVAR=`grep -i '^[ 	]*Protocol[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				#
+				# See if the set protocol versions includes '1'.
+				#
+
+				RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/'`
+				RKHTMPVAR3=`echo "${RKHTMPVAR2}" | grep '1'`
+
+				if [ -z "${RKHTMPVAR3}" -a $ALLOW_SSH_PROT_V1 -eq 0 ]; then
+					display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+				elif [ -n "${RKHTMPVAR3}" -a \( $ALLOW_SSH_PROT_V1 -eq 1 -o $ALLOW_SSH_PROT_V1 -eq 2 \) ]; then
+					display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+				else
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+
+					display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF1 "${RKHTMPVAR2}"
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF2 "${ALLOW_SSH_PROT_V1}"
+				fi
+			elif [ $ALLOW_SSH_PROT_V1 -eq 2 ]; then
+				display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND
+			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
+		fi
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs_ssh
+	fi
+
+
+	if `check_test system_configs_syslog`; then
+		display --to LOG --type INFO --nl STARTING_TEST system_configs_syslog
+
+		#
+		# Next we find out if a system logging daemon is running.
+		#
+
+		TITLE_SHOWN=0
+		SYSLOG_SEEN=0; SYSTEMD_SEEN=0
+		METALOG_SEEN=0; SOCKLOG_SEEN=0
+
+		if [ -n "${PS_CMD}" ]; then
+			PS_ARGS="ax"
+
+			test $SUNOS -eq 1 -o $IRIXOS -eq 1 && PS_ARGS="-ef"
+
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep '(syslogd|syslog-ng)( |$)' | grep -v 'egrep'`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				SYSLOG_SEEN=1
+
+				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+
+				if [ -n "`echo \"${RKHTMPVAR}\" | grep 'rsyslog'`" ]; then
+					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'rsyslog'
+				elif [ -n "`echo \"${RKHTMPVAR}\" | grep 'syslog-ng'`" ]; then
+					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog-ng'
+				else
+					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog'
+				fi
+
+				TITLE_SHOWN=1
+			fi
+
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'systemd-journald( |$)' | grep -v 'egrep'`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				SYSTEMD_SEEN=1
+
+				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'systemd-journald'
+
+				TITLE_SHOWN=1
+			fi
+
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'metalog( |$)' | grep -v 'egrep'`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				METALOG_SEEN=1
+
+				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'metalog'
+
+				TITLE_SHOWN=1
+			fi
+
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'socklog( |$)' | grep -v 'egrep'`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				SOCKLOG_SEEN=1
+
+				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'socklog'
+
+				TITLE_SHOWN=1
+			fi
+
+			if [ $TITLE_SHOWN -eq 0 ]; then
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING
+			fi
+		else
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+			display --to LOG --type INFO NOT_FOUND_CMD 'ps'
 		fi
 
+
 		#
-		# We only display the remote logging result if a configuration file was found.
+		# Now loop through the system logging configuration files.
 		#
 
-		if [ -n "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
-			if [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 ]; then
-				display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
-			elif [ $REM_LOGGING_FOUND -eq 0 ]; then
-				display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+		if [ -z "${SYSLOG_CONFIG_FILE}" ]; then
+			SYSLOG_CONFIG_FILE="/etc/syslog.conf /etc/rsyslog.conf /etc/syslog-ng/syslog-ng.conf /etc/systemd/journald.conf /etc/systemd/systemd-journald.conf"
+		fi
+
+		if [ "${SYSLOG_CONFIG_FILE}" = "NONE" ]; then
+			display --to SCREEN+LOG --type PLAIN --result WHITELISTED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+		else
+			FILEFOUND=""
+			REM_LOGGING_FOUND=0
+
+			test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
+
+			for FNAME in ${SYSLOG_CONFIG_FILE}; do
+				test ! -f "${FNAME}" && continue
+
+				# First, log where the configuration file is located.
+
+				RKHTMPVAR="a"
+
+				if [ -n "`echo \"${FNAME}\" | grep '/rsyslog\.conf$'`" ]; then
+					FTYPE="rsyslog"
+					RKHTMPVAR="an"
+				elif [ -n "`echo \"${FNAME}\" | grep '/syslog-ng\.conf$'`" ]; then
+					FTYPE="syslog-ng"
+				elif [ -n "`echo \"${FNAME}\" | egrep '/(systemd-)?journald\.conf$'`" ]; then
+					FTYPE="systemd"
+				else
+					FTYPE="syslog"
+				fi
+
+				FILEFOUND="${FILEFOUND} ${FTYPE} "
+
+				display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" "${FTYPE}" "`name2text \"${FNAME}\"`"
+
+
+				# Next see if the configuration file allows remote logging.
+
+				if [ "${FTYPE}" != "systemd" ]; then
+					RKHTMPVAR=""
+
+					if [ -n "`echo \"${FNAME}\" | egrep '/r?syslog\.conf$'`" ]; then
+						RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' "${FNAME}" | egrep -i -v '(@|:omrelp:)127\.'`
+					else
+						#
+						# For syslog-ng we must look for a destination
+						# block which uses TCP or UDP.
+						#
+
+						RKHTMPVAR=`${AWK_CMD} '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' "${FNAME}" | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
+					fi
+
+					if [ -n "${RKHTMPVAR}" ]; then
+						REM_LOGGING_FOUND=1
+						display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG "${FTYPE}" "${RKHTMPVAR}"
+					fi
+				fi
+			done
+
+
+			#
+			# Now display the results. We need to rank these so
+			# that the warnings are shown before anything else.
+			#
+
+			if [ $SYSLOG_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE 'syslog'
+			elif [ $SYSTEMD_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | grep ' systemd '`" ]; then
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+				display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE 'systemd-journald'
+			elif [ -n "${FILEFOUND}" ]; then
+				display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
 			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
+			fi
+
+			#
+			# We only display the remote logging result if a configuration file was found.
+			#
+
+			if [ -n "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
+				if [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 ]; then
+					display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+				elif [ $REM_LOGGING_FOUND -eq 0 ]; then
+					display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+				else
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
+				fi
 			fi
 		fi
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs_syslog
 	fi
+
 
 	return
 }
@@ -18833,8 +18855,9 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     group_changes possible_rkt_files possible_rkt_strings
 	     system_commands shared_libs shared_libs_path running_procs
 	     hidden_procs trojans other_malware os_specific startup_malware
-	     startup_files group_accounts system_configs filesystem suspscan
-	     ports hidden_ports promisc loaded_modules avail_modules"
+	     startup_files group_accounts system_configs system_configs_ssh
+	     system_configs_syslog filesystem suspscan ports hidden_ports
+	     promisc loaded_modules avail_modules"
 
 # A space-separated list of test 'group names'. This list allows test
 # names to be grouped together. For example, 'system_commands' can include
@@ -18850,10 +18873,11 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 	       additional_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps:ports:hidden_ports:promisc
 	       malware:running_procs:hidden_procs:deleted_files:suspscan:other_malware
-	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem
+	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem:system_configs_ssh:system_configs_syslog
 	       startup_files:startup_malware
 	       os_specific:loaded_modules:avail_modules
-	       group_accounts:passwd_changes:group_changes"
+	       group_accounts:passwd_changes:group_changes
+	       system_configs:system_configs_ssh:system_configs_syslog"
 
 # A comma-separated list of rootkits we check for.
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.

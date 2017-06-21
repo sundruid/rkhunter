@@ -56,6 +56,10 @@
    to SHA256. It was previously SHA1, or MD5 if SHA1 was not found.
  - Previously the lock file (if locking was used) was just an empty
    file. It now contains the PID of the running process.
+ - The 'system_configs' test has now been changed into a test group
+   consisting of the two tests 'system_configs_ssh' and
+   'system_configs_syslog'. Each test may now be enabled or disabled
+   individually.
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.
