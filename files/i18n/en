@@ -1,4 +1,4 @@
-Version:2017062101
+Version:2017062201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -400,17 +400,14 @@ ROOTKIT_MALWARE_DELETED_FILES_FOUND:The following processes are using deleted fi
 ROOTKIT_MALWARE_DELETED_FILES_FOUND_DATA:Process: $1    PID: $2    File: $3
 ROOTKIT_MALWARE_DELETED_FILES_WL:Found process '$1' using file '$2': it is whitelisted.
 ROOTKIT_MALWARE_LOGIN_BDOOR:Checking for login backdoors
-ROOTKIT_MALWARE_LOGIN_BDOOR_LOG:Performing check for login backdoors
 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK:Checking for '$1'
 ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND:Found login backdoor file: $1
 ROOTKIT_MALWARE_SUSP_DIR:Checking for suspicious directories
-ROOTKIT_MALWARE_SUSP_DIR_LOG:Performing check for suspicious directories
 ROOTKIT_MALWARE_SUSP_DIR_FOUND:Found suspicious directory: $1
 ROOTKIT_MALWARE_SFW_INTRUSION:Checking for software intrusions
 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND:The file '$1' contains the string '$2'. Possible rootkit: SHV5
 ROOTKIT_MALWARE_SFW_INTRUSION_SKIP:Check skipped - tripwire not installed
 ROOTKIT_MALWARE_SNIFFER:Checking for sniffer log files
-ROOTKIT_MALWARE_SNIFFER_LOG:Performing check for sniffer log files
 ROOTKIT_MALWARE_SNIFFER_FOUND:Found possible sniffer log file: $1
 ROOTKIT_MALWARE_IPCS:Checking for suspicious shared memory segments
 ROOTKIT_MALWARE_IPCS_FOUND:The following suspicious shared memory segments have been found:
@@ -639,3 +636,5 @@ LOCK_DIR:Using '$1' as the locking directory
 LOCK_UNUSED:Locking is not being used
 LOCK_WAIT:Waiting for lock file
 LOCK_FAIL:Unable to get the lock file: rkhunter has not run!
+
+LINUX_ONLY:Check skipped - this check is only for Linux systems.

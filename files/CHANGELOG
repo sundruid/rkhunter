@@ -56,10 +56,14 @@
    to SHA256. It was previously SHA1, or MD5 if SHA1 was not found.
  - Previously the lock file (if locking was used) was just an empty
    file. It now contains the PID of the running process.
- - The 'system_configs' test has now been changed into a test group
-   consisting of the two tests 'system_configs_ssh' and
+ - The 'system_configs' test name has now been changed into a test
+   group consisting of the two tests 'system_configs_ssh' and
    'system_configs_syslog'. Each test may now be enabled or disabled
    individually.
+ - The 'other_malware' test name has been removed, and replaced by
+   the 'login_backdoors', 'sniffer_logs', 'tripwire', 'susp_dirs'
+   and 'ipc_shared_mem' test names. These are now all part of the
+   'malware' test group.
 
  Bugfixes:
  - Ensure that 'lsof' errors are not displayed.

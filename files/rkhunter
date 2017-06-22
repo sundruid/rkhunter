@@ -3500,14 +3500,10 @@ get_enable_option() {
 	ERRCODE=0
 
 	if [ $ENABLE_OPT -eq 1 ]; then
-		ENABLE_TESTS=`echo "${CL_ENABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' '`
-
-		ENABLE_TESTS=`make_space_list "${ENABLE_TESTS}"`
+		ENABLE_TESTS=`make_space_list "${CL_ENABLE_TESTS}"`
 		ENABLE_TESTS=`echo ${ENABLE_TESTS}`
 
-		if [ -n "${ENABLE_TESTS}" ]; then
-			ENABLE_TESTS=`echo ${ENABLE_TESTS} | tr '[:upper:]' '[:lower:]'`
-		else
+		if [ -z "${ENABLE_TESTS}" ]; then
 			LEAVE=1
 			echo "Invalid '--enable' option - no test names given."
 		fi
@@ -3581,14 +3577,10 @@ get_disable_option() {
 	LEAVE=0
 
 	if [ -n "${CL_DISABLE_TESTS}" ]; then
-		CL_DISABLE_TESTS=`echo "${CL_DISABLE_TESTS}" | tr -d '"' | tr -d "'" | tr ',' ' '`
-
 		CL_DISABLE_TESTS=`make_space_list "${CL_DISABLE_TESTS}"`
 		CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
 
-		if [ -n "${CL_DISABLE_TESTS}" ]; then
-			CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS} | tr '[:upper:]' '[:lower:]'`
-		else
+		if [ -z "${CL_DISABLE_TESTS}" ]; then
 			LEAVE=1
 			echo "Invalid '--disable' option - no test names given."
 		fi
@@ -13965,63 +13957,49 @@ ${FOUND_PROCS}"
 	suspscan
 
 
-#jh - make other_malware a group.
-	#
-	# We have completed the checks which can be enabled/disabled,
-	# but we need to be able to exclude or include the rest of the
-	# malware checks. As such we do a simple test for 'other_malware'
-	# as a test name, and only proceed if it is enabled.
-	#
-
-	if `check_test other_malware`; then
-		display --to LOG --type INFO --nl STARTING_TEST other_malware
-
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR_LOG
-		fi
-	else
-		display --to LOG --type INFO --nl USER_DISABLED_TEST other_malware
-		return
-	fi
-
-
 	#
 	# Next we check for login backdoors.
 	#
 
-	FOUND=0
-	FOUNDFILES=""
+	if `check_test login_backdoors`; then
+		FOUND=0
+		FOUNDFILES=""
 
-	for FNAME in ${LOGIN_BACKDOOR_FILES}; do
-		if [ -e "${FNAME}" ]; then
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+		display --to LOG --type INFO --nl STARTING_TEST login_backdoors
 
-			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'other_malware'
-			else
-				FOUND=1
-				FOUNDFILES="${FOUNDFILES} ${FNAME}"
+		for FNAME in ${LOGIN_BACKDOOR_FILES}; do
+			if [ -e "${FNAME}" ]; then
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'login_backdoors'
+				else
+					FOUND=1
+					FOUNDFILES="${FOUNDFILES} ${FNAME}"
+				fi
+
+				test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
+			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
 			fi
-
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
-		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
-		fi
-	done
-
-
-	#
-	# Now display the results.
-	#
-
-	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
-	else
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
-
-		for FNAME in ${FOUNDFILES}; do
-			display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "`name2text \"${FNAME}\"`"
 		done
+
+
+		#
+		# Now display the results.
+		#
+
+		if [ $FOUND -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
+
+			for FNAME in ${FOUNDFILES}; do
+				display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "`name2text \"${FNAME}\"`"
+			done
+		fi
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST login_backdoors
 	fi
 
 
@@ -14029,43 +14007,45 @@ ${FOUND_PROCS}"
 	# Next, check for sniffer log files.
 	#
 
-	FOUND=0
-	FOUNDFILES=""
+	if `check_test sniffer_logs`; then
+		FOUND=0
+		FOUNDFILES=""
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_SNIFFER_LOG
-	fi
+		display --to LOG --type INFO --nl STARTING_TEST sniffer_logs
 
-	for FNAME in ${SNIFFER_FILES}; do
-		if [ -f "${FNAME}" ]; then
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+		for FNAME in ${SNIFFER_FILES}; do
+			if [ -f "${FNAME}" ]; then
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'other_malware'
-			else
-				FOUND=1
-				FOUNDFILES="${FOUNDFILES} ${FNAME}"
+				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'sniffer_logs'
+				else
+					FOUND=1
+					FOUNDFILES="${FOUNDFILES} ${FNAME}"
+				fi
+
+				test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
+			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 			fi
-
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
-		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
-		fi
-	done
-
-
-	#
-	# Now display the results.
-	#
-
-	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
-	else
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
-
-		for FNAME in ${FOUNDFILES}; do
-			display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text \"${FNAME}\"`"
 		done
+
+
+		#
+		# Now display the results.
+		#
+
+		if [ $FOUND -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
+
+			for FNAME in ${FOUNDFILES}; do
+				display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text \"${FNAME}\"`"
+			done
+		fi
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST sniffer_logs
 	fi
 
 
@@ -14073,22 +14053,33 @@ ${FOUND_PROCS}"
 	# Next we check for any software intrusions.
 	#
 
-	TRIPWIREFILE="/var/lib/tripwire/`uname -n 2>/dev/null`.twd"
+	if `check_test tripwire`; then
+		display --to LOG --type INFO --nl STARTING_TEST tripwire
 
-	if [ -f "${TRIPWIREFILE}" ]; then
-		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+		TRIPWIREFILE="/var/lib/tripwire/`uname -n 2>/dev/null`.twd"
 
-		if [ -z "`grep ${GREP_OPT} 'Tripwire segment-faulted !' \"${TRIPWIREFILE}\"`" ]; then
-			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
+		if [ -f "${TRIPWIREFILE}" ]; then
+			ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
+			if [ -z "`grep ${GREP_OPT} 'Tripwire segment-faulted !' \"${TRIPWIREFILE}\"`" ]; then
+				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION
+			else
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION
+				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND "${TRIPWIREFILE}" 'Tripwire segment-faulted'
+			fi
 		else
-			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+			if [ -n "`echo \" ${CL_ENABLE_TESTS} \" | grep ' tripwire '`" ]; then
+				display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION
+			else
+				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION
+			fi
 
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
-			display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND "${TRIPWIREFILE}" 'Tripwire segment-faulted'
+			display --to LOG --type INFO ROOTKIT_MALWARE_SFW_INTRUSION_SKIP
 		fi
 	else
-		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 --log-nl ROOTKIT_MALWARE_SFW_INTRUSION
-		display --to LOG --type INFO ROOTKIT_MALWARE_SFW_INTRUSION_SKIP
+		display --to LOG --type INFO --nl USER_DISABLED_TEST tripwire
 	fi
 
 
@@ -14096,43 +14087,45 @@ ${FOUND_PROCS}"
 	# Next check for any suspicious directories.
 	#
 
-	FOUND=0
-	FOUNDDIRS=""
+	if `check_test susp_dirs`; then
+		FOUND=0
+		FOUNDDIRS=""
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR_LOG
-	fi
+		display --to LOG --type INFO --nl STARTING_TEST susp_dirs
 
-	for DIR in ${SUSPICIOUS_DIRS}; do
-		if [ -d "${DIR}" ]; then
-			FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+		for DIR in ${SUSPICIOUS_DIRS}; do
+			if [ -d "${DIR}" ]; then
+				FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${DIR}\"`" 'other_malware'
-			else
-				FOUND=1
-				FOUNDDIRS="${FOUNDDIRS} ${DIR}"
+				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${DIR}\"`" 'susp_dirs'
+				else
+					FOUND=1
+					FOUNDDIRS="${FOUNDDIRS} ${DIR}"
+				fi
+
+				test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
+			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
 			fi
-
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
-		elif [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
-		fi
-	done
-
-
-	#
-	# Now display the results.
-	#
-
-	if [ $FOUND -eq 0 ]; then
-		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
-	else
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
-
-		for DIR in ${FOUNDDIRS}; do
-			display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_DIR_FOUND "`name2text \"${DIR}\"`"
 		done
+
+
+		#
+		# Now display the results.
+		#
+
+		if [ $FOUND -eq 0 ]; then
+			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
+		else
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
+
+			for DIR in ${FOUNDDIRS}; do
+				display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_DIR_FOUND "`name2text \"${DIR}\"`"
+			done
+		fi
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST susp_dirs
 	fi
 
 
@@ -14140,94 +14133,108 @@ ${FOUND_PROCS}"
 	# Next we check the System V Shared Memory (Linux only for now).
 	#
 
-	if [ $LINUXOS -eq 1 ]; then
-		if [ -n "${IPCS_CMD}" ]; then
-			get_temp_file "${RKHTMPDIR}/ipcs.tmp"
-			IPCS_TMPFILE="${TEMPFILE}"
-			touch "${IPCS_TMPFILE}"
+	if `check_test ipc_shared_mem`; then
+		display --to LOG --type INFO --nl STARTING_TEST ipc_shared_mem
 
-			echo 0 >"${IPCS_TMPFILE}"
+		if [ $LINUXOS -eq 1 ]; then
+			if [ -n "${IPCS_CMD}" ]; then
+				get_temp_file "${RKHTMPDIR}/ipcs.tmp"
+				IPCS_TMPFILE="${TEMPFILE}"
+				touch "${IPCS_TMPFILE}"
 
-			RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $3}'`
-			test -z "${RKHTMPVAR}" && RKHTMPVAR=0
+				echo 0 >"${IPCS_TMPFILE}"
 
-			if [ $RKHTMPVAR -ne 0 ]; then
-				#
-				# We expand the whitelist option here to ensure
-				# that any wildcard entries are the most recent.
-				#
+				RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $3}'`
+				test -z "${RKHTMPVAR}" && RKHTMPVAR=0
 
-				if [ -n "${ALLOWIPCPROC_OPT}" ]; then
-					ALLOWIPCPROC=`expand_paths ALLOWIPCPROC_OPT`
+				if [ $RKHTMPVAR -ne 0 ]; then
+					#
+					# We expand the whitelist option here to ensure
+					# that any wildcard entries are the most recent.
+					#
+
+					if [ -n "${ALLOWIPCPROC_OPT}" ]; then
+						ALLOWIPCPROC=`expand_paths ALLOWIPCPROC_OPT`
+					fi
+
+					LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | grep '^0x' | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
+						if [ $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 -a $RKH_SHM_BYTES -ge 1000000 ]; then
+							LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
+								RKH_SHM_PATH=`${READLINK_CMD} -f /proc/${RKH_SHM_CPID}/exe`
+
+								#
+								# First check to see if the process pathname is whitelisted.
+								#
+
+								FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+								if [ -n "`echo \"${ALLOWIPCPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+									# At this moment we have to store these for displaying later.
+									echo "`name2text \"${RKH_SHM_PATH}\"`" >>"${IPCS_TMPFILE}"
+								else
+									if [ -z "`grep '^1' \"${IPCS_TMPFILE}\"`" ]; then
+										echo 1 >>"${IPCS_TMPFILE}"
+
+										# We must log the overall result before any found entry.
+										display --to LOG --type PLAIN --result WARNING --color RED --log-indent 2 ROOTKIT_MALWARE_IPCS
+										display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
+									fi
+
+									if [ $VERBOSE_LOGGING -eq 1 ]; then
+										display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "${RKH_SHM_PATH}" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
+									fi
+								fi
+							done
+						fi
+					done
 				fi
 
-				LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | grep '^0x' | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
-					if [ $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 -a $RKH_SHM_BYTES -ge 1000000 ]; then
-						LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
-							RKH_SHM_PATH=`${READLINK_CMD} -f /proc/${RKH_SHM_CPID}/exe`
+				#
+				# Now display the results.
+				#
 
-							#
-							# First check to see if the process pathname is whitelisted.
-							#
+				RKHTMPVAR=`grep '^[01]' "${IPCS_TMPFILE}" | tail ${TAIL_OPT}1`
+				test -z "${RKHTMPVAR}" && RKHTMPVAR=0
 
-							FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				if [ $RKHTMPVAR -eq 0 ]; then
+					display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_IPCS
+				else
+					display --to SCREEN --type PLAIN --result WARNING --color RED --screen-indent 4 ROOTKIT_MALWARE_IPCS
+				fi
 
-							if [ -n "`echo \"${ALLOWIPCPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-								# At this moment we have to store these for displaying later.
-								echo "`name2text \"${RKH_SHM_PATH}\"`" >>"${IPCS_TMPFILE}"
-							else
-								if [ -z "`grep '^1' \"${IPCS_TMPFILE}\"`" ]; then
-									echo 1 >>"${IPCS_TMPFILE}"
+				#
+				# We can now display any whitelisted pathnames that were found.
+				#
 
-									# We must log the overall result before any found entry.
-									display --to LOG --type PLAIN --result WARNING --color RED --log-nl --log-indent 2 ROOTKIT_MALWARE_IPCS
-									display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
-								fi
+				FOUND=""
 
-								if [ $VERBOSE_LOGGING -eq 1 ]; then
-									display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "${RKH_SHM_PATH}" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
-								fi
-							fi
-						done
+				for FNAME in `cat "${IPCS_TMPFILE}"`; do
+					test "${FNAME}" = "0" -o "${FNAME}" = "1" && continue
+
+					FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
+						FOUND="${FOUND} ${FNAME} "
+						display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL "${FNAME}"
 					fi
 				done
-			fi
 
-			#
-			# Now display the results.
-			#
-
-			RKHTMPVAR=`grep '^[01]' "${IPCS_TMPFILE}" | tail ${TAIL_OPT}1`
-			test -z "${RKHTMPVAR}" && RKHTMPVAR=0
-
-			if [ $RKHTMPVAR -eq 0 ]; then
-				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-nl --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_IPCS
+				rm -f "${IPCS_TMPFILE}" >/dev/null 2>&1
 			else
-				display --to SCREEN --type PLAIN --result WARNING --color RED --screen-indent 4 ROOTKIT_MALWARE_IPCS
+				display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_IPCS
+				display --to LOG --type INFO NOT_FOUND_CMD 'ipcs'
+			fi
+		else
+			if [ -n "`echo \" ${CL_ENABLE_TESTS} \" | grep ' ipc_shared_mem '`" ]; then
+				display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_IPCS
+			else
+				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_MALWARE_IPCS
 			fi
 
-			#
-			# We can now display any whitelisted pathnames that were found.
-			#
-
-			FOUND=""
-
-			for FNAME in `cat "${IPCS_TMPFILE}"`; do
-				test "${FNAME}" = "0" -o "${FNAME}" = "1" && continue
-
-				FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
-				if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
-					FOUND="${FOUND} ${FNAME} "
-					display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL "${FNAME}"
-				fi
-			done
-
-			rm -f "${IPCS_TMPFILE}" >/dev/null 2>&1
-		else
-			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-nl --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_IPCS
-			display --to LOG --type INFO NOT_FOUND_CMD 'ipcs'
+			display --to LOG --type INFO LINUX_ONLY
 		fi
+	else
+		display --to LOG --type INFO --nl USER_DISABLED_TEST ipc_shared_mem
 	fi
 
 	return
@@ -14502,6 +14509,7 @@ trojan_checks() {
 	fi
 
 
+#jh - test this by disabling inetd_conf? check that skipped msg is displayed on screen if required.
 	if [ -f "${INETD_CONF_PATH}" -o -f "${XINETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
 		RKHTMPVAR="SCREEN+LOG"
 	else
@@ -14645,6 +14653,7 @@ trojan_checks() {
 	FOUND=0
 	FOUNDFILES=""
 
+#jh - if none of these dirs exist then is anything shown on the screen.
 	MOD_DIRS="/etc/apache2/mods-enabled /etc/httpd/modules /usr/apache/libexec /usr/lib/modules /usr/local/apache/modules"
 
 	HTTPDDIRS="/usr/local/apache/conf /usr/local/etc/apache /etc/apache /etc/httpd/conf"
@@ -17220,7 +17229,7 @@ do_local_host_checks() {
 
 
 	#
-	# Finally check the filesystem for suspicious files.
+	# Finally check the filesystem for hidden files, directories etc.
 	#
 
 	do_filesystem_check
@@ -18031,12 +18040,11 @@ ${LINKDIR}"
 
 	IFS=$RKHIFS
 
-
 	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
 	    chkconfig chmod chown chroot cp cron csh curl cut date depmod df
 	    diff dirname dmesg dpkg dpkg-query du echo ed egrep elinks env fgrep
 	    file find fsck fuser GET grep groupadd groupdel groupmod groups grpck head id
-	    ifconfig ifdown ifstatus ifup inetd init insmod ip kallsyms kill
+	    ifconfig ifdown ifstatus ifup inetd init insmod ip ipcs kallsyms kill
 	    killall ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
@@ -18854,10 +18862,11 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 	     additional_rkts malware local_host network passwd_changes
 	     group_changes possible_rkt_files possible_rkt_strings
 	     system_commands shared_libs shared_libs_path running_procs
-	     hidden_procs trojans other_malware os_specific startup_malware
+	     hidden_procs trojans os_specific startup_malware
 	     startup_files group_accounts system_configs system_configs_ssh
 	     system_configs_syslog filesystem suspscan ports hidden_ports
-	     promisc loaded_modules avail_modules"
+	     promisc loaded_modules avail_modules login_backdoors
+	     sniffer_logs tripwire susp_dirs ipc_shared_mem"
 
 # A space-separated list of test 'group names'. This list allows test
 # names to be grouped together. For example, 'system_commands' can include
@@ -18869,10 +18878,10 @@ KNOWN_TESTS="strings properties hashes scripts immutable attributes
 GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:shared_libs_path:immutable:attributes
 	       properties:hashes:scripts:immutable:attributes
 	       shared_libs:shared_libs_path
-	       rootkits:known_rkts:additional_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:other_malware:os_specific:suspscan:loaded_modules:avail_modules
+	       rootkits:known_rkts:additional_rkts:possible_rkt_files:possible_rkt_strings:malware:running_procs:hidden_procs:deleted_files:trojans:os_specific:suspscan:loaded_modules:avail_modules:login_backdoors:sniffer_logs:tripwire:susp_dirs:ipc_shared_mem
 	       additional_rkts:possible_rkt_files:possible_rkt_strings
 	       network:packet_cap_apps:ports:hidden_ports:promisc
-	       malware:running_procs:hidden_procs:deleted_files:suspscan:other_malware
+	       malware:running_procs:hidden_procs:deleted_files:suspscan:login_backdoors:sniffer_logs:tripwire:susp_dirs:ipc_shared_mem
 	       local_host:startup_files:passwd_changes:group_changes:startup_malware:group_accounts:system_configs:filesystem:system_configs_ssh:system_configs_syslog
 	       startup_files:startup_malware
 	       os_specific:loaded_modules:avail_modules
@@ -19491,7 +19500,9 @@ fi
 #
 
 if [ $ENDIS_OPT -eq 1 ]; then
-	CL_ENABLE_TESTS=`echo ${CL_ENABLE_TESTS}`
+	CL_ENABLE_TESTS=`echo ${CL_ENABLE_TESTS} | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '[:upper:]' '[:lower:]'`
+
+	CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS} | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '[:upper:]' '[:lower:]'`
 	CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
 
 	# The '--nocf' option is only for disabled tests.
