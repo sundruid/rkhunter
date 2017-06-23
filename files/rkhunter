@@ -18615,10 +18615,10 @@ PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.3"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2017, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
-Currently under active development by the ${PROGRAM_NAME} project team.
-Please review your rkhunter.conf before using.
+Developed by the ${PROGRAM_NAME} project team.
+Please review your rkhunter configuration files before using.
 Please review the documentation before posting bug reports or questions.
-To report bugs, obtain updates, or provide patches or comments, please go to:
+To report bugs, provide patches or comments, please go to:
 http://rkhunter.sourceforge.net
 
 To ask questions about rkhunter, please use the rkhunter-users mailing list.
