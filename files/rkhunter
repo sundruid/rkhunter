@@ -18615,7 +18615,7 @@ PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.3"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2017, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
-Developed by the ${PROGRAM_NAME} project team.
+This software is developed by the ${PROGRAM_NAME} project team.
 Please review your rkhunter configuration files before using.
 Please review the documentation before posting bug reports or questions.
 To report bugs, provide patches or comments, please go to:

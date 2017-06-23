@@ -15,8 +15,9 @@ INSTALLER_VERSION="1.2.19"
 INSTALLER_COPYRIGHT="Copyright 2003-2017, Michael Boelen"
 INSTALLER_LICENSE="
 
-Developed by the Rootkit Hunter project team. For reporting bugs,
-updates, patches, comments and questions see: rkhunter.sourceforge.net
+This software is developed by the Rootkit Hunter project team.
+For reporting bugs, patches, comments and questions, please go to:
+http://rkhunter.sourceforge.net
 
 Rootkit Hunter comes with ABSOLUTELY NO WARRANTY. This is free
 software, and you are welcome to redistribute it under the terms
