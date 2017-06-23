@@ -14481,11 +14481,13 @@ trojan_checks() {
 	# This function performs some trojan specific checks.
 	#
 
-	if `check_test trojans`; then
-		if ! `check_test malware`; then
-			display --to SCREEN --type PLAIN --screen-indent 2 --nl ROOTKIT_MALWARE_START
-		fi
+	#
+	# We must first of all remember if the test was named on the command-line.
+	#
 
+	test -n "`echo \" ${CL_ENABLE_TESTS} \" | grep ' trojans '`" && CL_TEST=1 || CL_TEST=0
+
+	if `check_test trojans`; then
 		display --to LOG --type INFO --nl STARTING_TEST trojans
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST trojans
@@ -14509,14 +14511,15 @@ trojan_checks() {
 	fi
 
 
-#jh - test this by disabling inetd_conf? check that skipped msg is displayed on screen if required.
-	if [ -f "${INETD_CONF_PATH}" -o -f "${XINETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
+	if [ $CL_TEST -eq 1 ]; then
+		RKHTMPVAR="SCREEN+LOG --screen-nl"
+	elif [ -f "${INETD_CONF_PATH}" -o -f "${XINETD_CONF_PATH}" -o -n "${INETADM_CMD}" ]; then
 		RKHTMPVAR="SCREEN+LOG"
 	else
 		RKHTMPVAR="LOG"
 	fi
 
-	display --to "${RKHTMPVAR}" --type PLAIN --screen-indent 2 ROOTKIT_TROJAN_START
+	display --to ${RKHTMPVAR} --type PLAIN --screen-indent 2 ROOTKIT_TROJAN_START
 
 
 	#
@@ -14601,7 +14604,12 @@ trojan_checks() {
 			done
 		fi
 	else
-		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_INETD
+		if [ $CL_TEST -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 --log-indent 2 ROOTKIT_TROJAN_INETD
+		else
+			display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_INETD
+		fi
+
 		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${INETD_CONF_PATH}"
 	fi
 
@@ -14612,10 +14620,6 @@ trojan_checks() {
 
 	FOUND=0
 	FOUNDFILES=""
-
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl --log-indent 2 ROOTKIT_TROJAN_XINETD_LOG
-	fi
 
 	if [ -f "${XINETD_CONF_PATH}" ]; then
 		XINETD_DFLTS_SEEN=0
@@ -14641,7 +14645,12 @@ trojan_checks() {
 			done
 		fi
 	else
-		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_XINETD
+		if [ $CL_TEST -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_XINETD
+		else
+			display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_XINETD
+		fi
+
 		display --to LOG --type INFO ROOTKIT_TROJAN_INETD_SKIP "${XINETD_CONF_PATH}"
 	fi
 
@@ -14653,7 +14662,6 @@ trojan_checks() {
 	FOUND=0
 	FOUNDFILES=""
 
-#jh - if none of these dirs exist then is anything shown on the screen.
 	MOD_DIRS="/etc/apache2/mods-enabled /etc/httpd/modules /usr/apache/libexec /usr/lib/modules /usr/local/apache/modules"
 
 	HTTPDDIRS="/usr/local/apache/conf /usr/local/etc/apache /etc/apache /etc/httpd/conf"
@@ -14679,6 +14687,12 @@ trojan_checks() {
 	#
 
 	if [ $FOUND -eq 0 ]; then
+		if [ $CL_TEST -eq 1 ]; then
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_APACHE
+		else
+			display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_TROJAN_APACHE
+		fi
+
 		display --to LOG --type INFO ROOTKIT_TROJAN_APACHE_SKIPPED
 	elif [ -z "${FOUNDFILES}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_TROJAN_APACHE
@@ -14717,19 +14731,19 @@ bsd_specific_checks() {
 		NETSTAT_OUTPUT=`${NETSTAT_CMD} -an | ${AWK_CMD} '$1 ~ /^(tcp|udp)/ { print $4 }' | grep '[:.][0-9][0-9]*$' | sed -e 's/^.*[:.]\([0-9]*\)$/\1/' | sort | uniq`
 
 		if [ "${SOCKSTAT_OUTPUT}" = "${NETSTAT_OUTPUT}" ]; then
-			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
+			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 4 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 		else
 			SOCKSTAT_OUTPUT=`echo ${SOCKSTAT_OUTPUT}`
 			NETSTAT_OUTPUT=`echo ${NETSTAT_OUTPUT}`
 
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 
 			display --to LOG --type WARNING ROOTKIT_OS_BSD_SOCKNET_FOUND
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_BSD_SOCKNET_OUTPUT 'Sockstat' "${SOCKSTAT_OUTPUT}"
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_BSD_SOCKNET_OUTPUT 'Netstat' "${NETSTAT_OUTPUT}"
 		fi
 	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 
 		test -z "${SOCKSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'sockstat'
 		test -z "${NETSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'netstat'
@@ -14769,16 +14783,16 @@ freebsd_specific_checks() {
 
 
 		if [ $FOUND -eq 0 ]; then
-			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_KLD
+			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_KLD
 		else
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_KLD
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_KLD
 
 			for RKHTMPVAR in ${FOUNDKEYS}; do
 				display --to LOG --type WARNING ROOTKIT_OS_FREEBSD_KLD_FOUND "${RKHTMPVAR}"
 			done
 		fi
 	else
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_KLD
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_KLD
 
 		display --to LOG --type INFO NOT_FOUND_CMD 'kldstat'
 	fi
@@ -14795,14 +14809,14 @@ freebsd_specific_checks() {
 			RKHTMPVAR=`${PKGDB_CMD} check 2>&1 >/dev/null`
 
 			if [ -z "${RKHTMPVAR}" ]; then
-				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
+				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 
 				display --to LOG --type WARNING ROOTKIT_OS_DFLY_PKGDB_NOTOK
 			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 
 			display --to LOG --type INFO NOT_FOUND_CMD 'pkg_admin'
 		fi
@@ -14813,14 +14827,14 @@ freebsd_specific_checks() {
 			RKHTMPVAR=`${PKGDB_CMD} -Fa -v 2>&1 | grep 'Skipped\.'`
 
 			if [ -z "${RKHTMPVAR}" ]; then
-				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
+				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 
 				display --to LOG --type WARNING ROOTKIT_OS_FREEBSD_PKGDB_NOTOK
 			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
+			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_FREEBSD_PKGDB
 
 			display --to LOG --type INFO NOT_FOUND_CMD 'pkgdb'
 		fi
@@ -14845,11 +14859,11 @@ linux_loaded_modules() {
 
 
 	if [ ! -f "/proc/modules" ]; then
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_MOD_MISSING '/proc/modules'
 	elif [ -z "${LSMOD_CMD}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'lsmod'
 	else
@@ -14859,16 +14873,16 @@ linux_loaded_modules() {
 
 		if [ -n "${PROC_OUTPUT}" -a -n "${LSMOD_OUTPUT}" ]; then
 			if [ "${PROC_OUTPUT}" = "${LSMOD_OUTPUT}" ]; then
-				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+				display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 			else
-				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_FOUND
 				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT '/proc/modules' "${PROC_OUTPUT}"
 				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT 'lsmod' "${LSMOD_OUTPUT}"
 			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
 			display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKM_EMPTY
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_OS_LINUX_LKM_OUTPUT '/proc/modules' "${PROC_OUTPUT}"
@@ -14926,15 +14940,15 @@ linux_avail_modules() {
 	#
 
 	if [ ! -d "${LKM_PATH}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
 	elif [ -z "${FIND_CMD}" ]; then
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 		display --to LOG --type INFO NOT_FOUND_CMD 'find'
 	elif [ -z "`ls -1 \"${LKM_PATH}\" 2>/dev/null`" ]; then
-		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
 	else
@@ -14949,9 +14963,9 @@ linux_avail_modules() {
 
 
 		if [ $FOUND -eq 0 ]; then
-			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+			display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 		else
-			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
+			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 			for RKHTMPVAR in ${FOUNDFILES}; do
 				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/\\\././g'`
@@ -14999,19 +15013,19 @@ os_specific_checks() {
 
 	case "${OPERATING_SYSTEM}" in
 	FreeBSD|NetBSD|DragonFly)
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --log-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 
 		bsd_specific_checks
 
 		test "${OPERATING_SYSTEM}" = "FreeBSD" -o "${OPERATING_SYSTEM}" = "DragonFly" && freebsd_specific_checks
 		;;
 	Linux)
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --log-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 
 		linux_specific_checks
 		;;
 	*)
-		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED ROOTKIT_OS_START "${OPERATING_SYSTEM}"
+		display --to SCREEN+LOG --type PLAIN --screen-indent 2 --color YELLOW --result SKIPPED --log-indent 2 ROOTKIT_OS_START "${OPERATING_SYSTEM}"
 		display --to LOG --type INFO ROOTKIT_OS_SKIPPED
 		;;
 	esac

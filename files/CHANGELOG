@@ -103,6 +103,8 @@
    ensure that only URL's are used as a mirror. (CVE-2017-7480)
  - The BSD package manager seemed to be needlessly stripping out
    parts of package names on NetBSD systems. It no longer does this.
+ - In certain cases it was possible for certain tests to not display
+   any output. This has now been corrected.
 
  -- 
 

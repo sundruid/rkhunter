@@ -1,4 +1,4 @@
-Version:2017062201
+Version:2017062301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -419,14 +419,13 @@ ROOTKIT_TROJAN_INETD:Checking for enabled inetd services
 ROOTKIT_TROJAN_INETD_SKIP:Check skipped - file '$1' does not exist.
 ROOTKIT_TROJAN_INETD_FOUND:Found enabled inetd service: $1
 ROOTKIT_TROJAN_XINETD:Checking for enabled xinetd services
-ROOTKIT_TROJAN_XINETD_LOG:Performing check for enabled xinetd services
 ROOTKIT_TROJAN_XINETD_ENABLED:Checking '$1' for enabled services
 ROOTKIT_TROJAN_XINETD_INCLUDE:Found 'include $1' directive
 ROOTKIT_TROJAN_XINETD_INCLUDEDIR:Found 'includedir $1' directive
 ROOTKIT_TROJAN_XINETD_ENABLED_FOUND:Found enabled xinetd service: $1
 ROOTKIT_TROJAN_XINETD_WHITELIST:Found service '$1': it is $2 whitelisted.
 ROOTKIT_TROJAN_APACHE:Checking for Apache backdoor
-ROOTKIT_TROJAN_APACHE_SKIPPED:Apache backdoor check skipped: Apache modules and configuration directories not found.
+ROOTKIT_TROJAN_APACHE_SKIPPED:Check skipped - no Apache module or configuration directories found.
 ROOTKIT_TROJAN_APACHE_FOUND:Apache backdoor module 'mod_rootme' found: $1
 
 ROOTKIT_OS_START:Performing $1 specific checks
