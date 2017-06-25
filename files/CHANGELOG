@@ -105,6 +105,8 @@
    parts of package names on NetBSD systems. It no longer does this.
  - In certain cases it was possible for certain tests to not display
    any output. This has now been corrected.
+ - The installer did not always add the 'rkhunter.d' directory, if
+   it existed, to the main configuration file for monitoring.
 
  -- 
 
