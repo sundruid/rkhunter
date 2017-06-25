@@ -158,13 +158,19 @@ This command option displays the help screen menu, and then exits.
 
 .SH OPTIONS
 \fBrkhunter\fP uses a configuration file, named \fIrkhunter.conf\fP, for many of
-its configuration options. It will also use a local configuration file, named
-\fIrkhunter.conf.local\fP, if it is present. However, some options can also be
-specified on the command\-line, and these will override the configuration file
-options. The configuration file options are well documented within the main
-configuration file itself. The following are the command\-line options. The
-defaults mentioned here are the program defaults, unless explicitly stated as
-the configuration file default.
+its configuration options. It can also use a local configuration file, named
+\fIrkhunter.conf.local\fP, and a directory named \fIrkhunter.d\fP if it is present.
+Both the local configuration file, and the local directory, must be in the same
+directory as the main configuration file. The installer does not create the local
+file or directory, but one, or both, can be created by the user if required.
+If a directory is used, then within the directory any file ending in \fI.conf\fP
+will be treated as a local configuration file.
+
+Some options can also be specified on the command\-line, and these will
+override the equivalent configuration file options. The configuration file options are well
+documented within the main configuration file itself. The following are the
+command\-line options. The defaults mentioned here are the program defaults,
+unless explicitly stated as the configuration file default.
 
 .PP
 
@@ -195,8 +201,8 @@ The installation process will automatically tell \fBrkhunter\fP where its
 configuration file is located. However, if necessary, this option can be used
 to specify a different pathname.
 
-If a local configuration file is to be used, then it must reside in the same
-directory as the configuration file specified by this option.
+If a local configuration file, or directory, is to be used, then it must
+reside in the same directory as the configuration file specified by this option.
 
 .IP \fB\-\-cronjob\fP
 This is similar to the \fB\-\-check\fP command option, but it disables several

@@ -22,12 +22,12 @@ Please note that RKH has some requirements:
    'cat', 'sed', 'head', 'tail', etc. If a command is missing then
    RKH will not run.
 
-2) Some tests require commands such as stat, readlink, md5/md5sum or
-   sha1/sha1sum. If these are not present, then RKH has perl
-   scripts which will automatically be used instead. However, this
-   requires perl, and certain modules, being present. If they are
-   not, then the tests will be skipped. Readlink is provided as a
-   script itself, and does not use perl. Other tests will use other
+2) Some tests require commands such as stat, readlink, sha256 or
+   sha256sum. If these are not present, then RKH has perl scripts
+   which will automatically be used instead. However, this requires
+   perl, and certain modules, being present. If they are not, then
+   the tests will be skipped. Readlink is provided as a script
+   itself, and does not use perl. Other tests will use other
    commands. If the relevant command is not found on the system,
    then the test will be skipped.
 
@@ -88,13 +88,20 @@ you chose using the '--layout' switch. You can either edit the main
 configuration file itself, or create a 'local' configuration file
 for your own settings. This file, which must be called
 'rkhunter.conf.local', must reside in the same directory as the main
-configuration file. Alternatively you can create a directory, named
-'rkhunter.d', in the same directory as the main configuration file.
-Within 'rkhunter.d' you can then create further configuration files.
-The only restriction is that the file names end in '.conf'.
+configuration file. Alternatively, or in addition if wished, you can
+create a directory, named 'rkhunter.d', in the same directory as the
+main configuration file. Within 'rkhunter.d' you can then create
+further configuration files. The only restriction is that the file
+names end in '.conf'.
 
 You should edit the configuration file(s) according to your own
 system requirements.
+
+Note: If the installer detects an existing 'rkhunter.conf.local' file,
+or an 'rkhunter.d' directory, then these will be added to the main
+configuration file for monitoring by rkhunter. The installer will also
+add the 'rkhunter.conf' file itself to be monitored. By doing this, any
+changes to the rkhunter configuration file(s) will be detected.
 
 If the installer encounters an existing 'rkhunter.conf' file, it will
 not be overwritten. Instead the installer creates a new configuration
@@ -291,7 +298,8 @@ sub-directory).
 
 During uninstallation, the installer will remove the initial configuration
 file (usually '/etc/rkhunter.conf'). However, any other files beginning with
-'rkhunter.conf' are not removed. These may be removed manually if wished.
+'rkhunter.conf' are not removed. Similarly, any 'rkhunter.d' directory is
+not removed. These may be removed manually if wished.
 
 When installing RKH, some directories may have been created. However,
 RKH is unaware of this when being uninstalled. As such, and especially

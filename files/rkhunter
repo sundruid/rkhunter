@@ -19555,8 +19555,8 @@ check_required_commands 1
 
 #
 # Now we check for the configuration file. We then see if there is a
-# local configuration file present in the same directory, and finally
-# check the various options within them.
+# local configuration file, and/or a local directory, present in the
+# same directory, and finally check the various options within them.
 #
 # NOTE: Do not change the format of the following 'if' statement.
 # The installer script will modify it directly during installation.
