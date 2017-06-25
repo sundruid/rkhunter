@@ -37,7 +37,7 @@
    in the configuration file.
  - Added the ALLOWIPCPROC configuration file option. This can be
    used to whitelist suspicious processes using shared memory
-   segments (found during the 'other_malware' check).
+   segments (found during the 'ipc_shared_mem' check).
 
  Changes:
  - The DISABLE_UNHIDE option has been removed from the configuration
