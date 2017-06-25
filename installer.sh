@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.19"
+INSTALLER_VERSION="1.2.20"
 INSTALLER_COPYRIGHT="Copyright 2003-2017, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -838,6 +838,10 @@ doInstall()  {
 	# Language support files
 	ERRCODE=0
 
+	if [ -d "./files/i18n/CVS" ]; then
+		rm -rf "./files/i18n/CVS"
+	fi
+
 	for FILE in `find ./files/i18n -type f`; do
 		cp "${FILE}" "${RKHINST_LANG_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
@@ -862,6 +866,10 @@ doInstall()  {
 
 	# ClamAV signatures
 	ERRCODE=0
+
+	if [ -d "./files/signatures/CVS" ]; then
+		rm -rf "./files/signatures/CVS"
+	fi
 
 	for FILE in `find ./files/signatures -type f`; do
 		cp "${FILE}" "${RKHINST_SIG_DIR}" >/dev/null 2>&1
@@ -961,6 +969,10 @@ doInstall()  {
 				if [ -f "${RKHINST_ETC_DIR}/${FILE}.local" ]; then
 					echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/${FILE}.local" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
 					chmod "${RKHINST_MODE_RW}" "${RKHINST_ETC_DIR}/${FILE}.local"
+				fi
+
+				if [ -d "${RKHINST_ETC_DIR}/rkhunter.d" ]; then
+					echo "USER_FILEPROP_FILES_DIRS=${RKHINST_ETC_DIR}/rkhunter.d/*.conf" >>"${RKHINST_ETC_DIR}/${NEWFILE}"
 				fi
 			fi
 
