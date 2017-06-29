@@ -6,7 +6,7 @@
 #%%dump
 
 %define name rkhunter
-%define ver 1.4.2
+%define ver 1.4.4
 %define rel 1
 %define epoch 0
 
@@ -119,6 +119,9 @@ fi
 
 
 %changelog
+* Thu Jun 29 2017 jhorne - 1.4.4
+- Updated for release 1.4.4
+
 * Sun Dec 27 2015 jhorne - 1.4.2
 - Changed file permissions mode to 700 for executables, and 600
   for others. Directories are now set to mode 700. The man page
