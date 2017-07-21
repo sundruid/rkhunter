@@ -25,6 +25,8 @@
  Changes:
 
  Bugfixes:
+ - For prelinked systems ensure that the default hash function is
+   SHA1 and not SHA256.
 
  --
 

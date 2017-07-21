@@ -6,7 +6,7 @@
 #%%dump
 
 %define name rkhunter
-%define ver 1.4.4
+%define ver 1.4.5
 %define rel 1
 %define epoch 0
 
