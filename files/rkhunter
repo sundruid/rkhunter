@@ -4652,7 +4652,9 @@ get_hash_function() {
 
 	SHA_SIZE=0
 
-	test -z "${HASH_FUNC}" && HASH_FUNC="SHA256"
+	if [ -z "${HASH_FUNC}" ]; then
+		test $PRELINKED -eq 1 && HASH_FUNC="SHA1" || HASH_FUNC="SHA256"
+	fi
 
 	case "${HASH_FUNC}" in
 	SHA1)	SHA_SIZE=1
@@ -18611,7 +18613,7 @@ RKH_VER_MAJ="1"
 RKH_VER_MIN="4"
 
 PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.4"
+PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.5"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2017, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
