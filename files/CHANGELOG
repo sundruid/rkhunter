@@ -27,6 +27,8 @@
  Bugfixes:
  - For prelinked systems ensure that the default hash function is
    SHA1 and not SHA256.
+ - The result from the 'hidden_procs' check was not being
+   calculated correctly.
 
  --
 
