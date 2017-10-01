@@ -6236,6 +6236,13 @@ rkh_dat_get_os_info() {
 
 rkh_dat_set_file_properties() {
 
+#jh - breakout the inode check as a separate test for BTRFS filesystems etc.
+#jh - Ebury check?
+#jh - /etc/issue file - modify /r /n etc?
+#jh	See man agetty
+#jh - include in file list /usr/lib/os-release, /usr/lib/os.release.d/os-release-fedora
+#jh	Check for Debian /usr/lib/os-release files too
+#jh	Also use '/proc/version' truncated before first '('?
 	#
 	# This function obtains various bits of information about the files to
 	# be checked. The current format in the rkhunter.dat file is:
@@ -13913,7 +13920,7 @@ ${FOUND_PROCS}"
 
 		if [ $FOUND -eq 0 ]; then
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
-		elif [ -z "${HIDDEN_PROCS}" -a $ERRCODE -ne 1 -a $SEEN -eq 1 ]; then
+		elif [ -z "${HIDDEN_PROCS}" -a $SEEN -eq 1 ]; then
 			display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS
 		else
 			#
