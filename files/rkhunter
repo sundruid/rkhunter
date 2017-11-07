@@ -170,6 +170,16 @@ fi
 
 
 #
+# We also need to run a test to see if POSIX grep is being
+# used. If it is, then some typical grep tests will fail.
+#
+
+if [ "`echo \"rkh-grep-test\" | grep '^\+'`" = "rkh-grep-test" ]; then
+	alias grep='grep -E'
+fi
+
+
+#
 # Finally, we need to test the 'head' and 'tail' commands
 # to see if they understand the '-n' option or not.
 #
