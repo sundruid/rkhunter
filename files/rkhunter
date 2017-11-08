@@ -6106,6 +6106,11 @@ rkh_dat_get_os_info() {
 				if [ -z "${OSNAME}" ]; then
 					RKHTMPVAR=`grep '^NAME=' "${RELEASE}" | sed -e 's/NAME=//'`;
 					RKHTMPVAR2=`grep '^VERSION=' "${RELEASE}" | sed -e 's/VERSION=//' | tr -d '"'`;
+
+					if [ -z "${RKHTMPVAR2}" ]; then
+						RKHTMPVAR2=`grep '^VERSION_ID=' "${RELEASE}" | sed -e 's/VERSION_ID=//' | tr -d '"'`;
+					fi
+
 					OSNAME="${RKHTMPVAR} ${RKHTMPVAR2}"
 				fi
 				;;

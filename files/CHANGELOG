@@ -30,6 +30,7 @@
    SHA1 and not SHA256.
  - The result from the 'hidden_procs' check was not being
    calculated correctly.
+ - Checking the O/S version number could be missed in some cases.
 
  --
 
