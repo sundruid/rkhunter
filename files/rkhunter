@@ -187,6 +187,15 @@ fi
 
 
 #
+# It seems that the BusyBox 'readlink' command does have
+# a '-f' option, but it does not show the true pathname.
+# So we only use the option for everyone else.
+#
+
+test $BUSYBOX -eq 1 && READLINK_OPT="" || READLINK_OPT="-f"
+
+
+#
 # Finally, we need to test the 'head' and 'tail' commands
 # to see if they understand the '-n' option or not.
 #
@@ -5474,7 +5483,7 @@ ${FNAME}"
 					test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
 					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						RKHTMPVAR=`${READLINK_CMD} -f "${FNAME}"`
+						RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 						if [ -n "${RKHTMPVAR}" ]; then
 							FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -5498,7 +5507,7 @@ ${RKHTMPVAR}"
 ${FNAME}"
 				elif [ -d "${FNAME}" ]; then
 					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						RKHTMPVAR=`${READLINK_CMD} -f "${FNAME}"`
+						RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 						if [ -z "${RKHTMPVAR}" ]; then
 							if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -6521,7 +6530,7 @@ ${DIR}:1"
 							SYSLNK="${DIR}/${SYSLNK}"
 
 							# This ensures the link target has things like '..' removed.
-							test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f "${SYSLNK}"`
+							test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${SYSLNK}"`
 						fi
 
 						#
@@ -6729,7 +6738,7 @@ ${DIR}:1"
 						fi
 					elif [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
 						if [ $HAVE_READLINK -eq 1 ]; then
-							SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+							SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 							RKHTMPVAR="${SYSLNK}"
 							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -6767,7 +6776,7 @@ ${DIR}:1"
 
 
 		if [ -h "${FNAME}" -a -z "${SYSLNK}" ]; then
-			test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+			test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 		fi
 
 
@@ -10494,7 +10503,7 @@ file_properties_check() {
 					ADDNEWENTRY=1
 
 					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+						SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 					fi
 
 					if [ $FMTVERSION -eq 0 ]; then
@@ -10688,7 +10697,7 @@ ${RKHLINE}"
 								fi
 
 								# This ensures the link target has things like '..' removed.
-								test $HAVE_READLINK -eq 1 && RKHLNK=`${READLINK_CMD} -f "${RKHLNK}"`
+								test $HAVE_READLINK -eq 1 && RKHLNK=`${READLINK_CMD} ${READLINK_OPT} "${RKHLNK}"`
 							fi
 
 							FDATA="${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}:"
@@ -10965,7 +10974,7 @@ ${RKHLINE}"
 								# Check the link target to see if it is whitelisted.
 
 								if [ -z "${SYSLNK}" ]; then
-									SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+									SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 								fi
 
 								FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -11014,7 +11023,7 @@ ${RKHLINE}"
 									# Check the link target to see if it is whitelisted.
 
 									if [ -z "${SYSLNK}" ]; then
-										SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+										SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 									fi
 
 									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -11219,7 +11228,7 @@ ${RKHLINE}"
 									# Check the link target to see if it is whitelisted.
 
 									if [ -z "${SYSLNK}" ]; then
-										SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+										SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 									fi
 
 									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -11246,7 +11255,7 @@ ${RKHLINE}"
 							RKHLNK=`echo ${RKHLINE} | cut -d: -f${RKH_CC2}-${SYSLNK_CC}`
 
 							if [ $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" ]; then
-								SYSLNK=`${READLINK_CMD} -f "${FNAME}"`
+								SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 							fi
 
 							if [ -n "${RKHLNK}" ]; then
@@ -11839,7 +11848,7 @@ suspscan() {
 					if [ $HAVE_READLINK -eq 1 ]; then
 						RKHTMPVAR="${SUSPSCAN_ITEM}"
 
-						SUSPSCAN_ITEM=`${READLINK_CMD} -f "${RKHTMPVAR}"`
+						SUSPSCAN_ITEM=`${READLINK_CMD} ${READLINK_OPT} "${RKHTMPVAR}"`
 
 						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
 							echo "6 SUSPSCAN_FILE_LINK_CHANGE "${RKHTMPVAR}" "${SUSPSCAN_ITEM}"" >>"${SUSPSCAN_TMPFILE}"
@@ -13534,9 +13543,9 @@ malware_checks() {
 						RKHTMPVAR=""
 
 						if [ $SOL_PROC -eq 1 ]; then
-							test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/path/a.out"`
+							test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/path/a.out"`
 						elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
-							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/exe"`
+							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/exe"`
 						fi
 
 						test -n "${RKHTMPVAR}" && PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
@@ -14191,7 +14200,7 @@ ${FOUND_PROCS}"
 					LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | grep '^0x' | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
 						if [ $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 -a $RKH_SHM_BYTES -ge 1000000 ]; then
 							LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
-								RKH_SHM_PATH=`${READLINK_CMD} -f /proc/${RKH_SHM_CPID}/exe`
+								RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
 
 								#
 								# First check to see if the process pathname is whitelisted.
@@ -15149,9 +15158,9 @@ check_port_wl() {
 				RKHTMPVAR=""
 
 				if [ $SOL_PROC -eq 1 ]; then
-					test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/path/a.out"`
+					test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/path/a.out"`
 				elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
-					test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} -f "/proc/${PID}/exe"`
+					test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/exe"`
 				fi
 
 				test -n "${RKHTMPVAR}" && FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
@@ -15705,7 +15714,7 @@ do_network_interface_checks() {
 			NAME=""
 
 			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
-				NAME=`${READLINK_CMD} -f "/proc/$PID/exe" | cut -d' ' -f1`
+				NAME=`${READLINK_CMD} ${READLINK_OPT} "/proc/$PID/exe" | cut -d' ' -f1`
 			elif [ -f "/proc/$PID/status" ]; then
 				NAME=`grep '^Name:.' /proc/$PID/status | sed -e 's/^Name:.//'`
 			fi
@@ -18072,7 +18081,7 @@ set_file_prop_dirs_files() {
 		test ! -d "${DIR}" && continue
 
 		if [ -h "${DIR}" -a $HAVE_READLINK -eq 1 ]; then
-			LINKDIR=`${READLINK_CMD} -f "${DIR}"`
+			LINKDIR=`${READLINK_CMD} ${READLINK_OPT} "${DIR}"`
 		else
 			LINKDIR="${DIR}"
 		fi
@@ -18182,7 +18191,7 @@ ${USER_SIMPLE_FILE_LIST}"
 		for DIR in ${PROP_DIR_LIST}; do
 			for FNAME in ${PROP_FILE_LIST}; do
 				if [ -h "${DIR}/${FNAME}" ]; then
-					RKHTMPVAR=`${READLINK_CMD} -f "${DIR}/${FNAME}"`
+					RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${DIR}/${FNAME}"`
 
 					test ! -f "${RKHTMPVAR}" && continue
 
