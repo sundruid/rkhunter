@@ -70,6 +70,7 @@ fi
 #
 
 if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
+	RKHDEBUGFILE=""
 	RKHDEBUGBASE="/tmp/rkhunter-debug"
 
 	#
@@ -82,15 +83,17 @@ if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 		RKHDEBUGFILE="${RKHDEBUGBASE}.$RANDOM"
 	elif [ -n "`date +%N%s 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
 		RKHDEBUGFILE="${RKHDEBUGBASE}.`date +%N%s%N`"
-	else
+	elif [ -n "`date +%Y%m%d%H%M%S 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
 		RKHDEBUGFILE="${RKHDEBUGBASE}.`date +%Y%m%d%H%M%S`"
+	else
+		RKHDEBUGFILE="${RKHDEBUGBASE}.$$`"
 	fi
 
 	if [ -e "${RKHDEBUGFILE}" ]; then
 		if [ -f "${RKHDEBUGFILE}" -a ! -h "${RKHDEBUGFILE}" ]; then
 			rm -f "${RKHDEBUGFILE}" >/dev/null 2>&1
 		else
-			echo "Cannot use '--debug' option. \"${RKHDEBUGFILE}\" already exists, but it is not a file."
+			echo "Cannot use '--debug' option. Debug file \"${RKHDEBUGFILE}\" already exists, but it is not a file."
 			exit 1
 		fi
 	fi
