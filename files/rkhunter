@@ -271,10 +271,22 @@ display() {
 	WRITETO=''; TYPE=''; RESULT=''; COLOR=''; MSG=''
 	LINE1=''; LOGLINE1=''; SPACES=''; NONL=''
 
+	#
+	# The IFS environment variable could be set to a non-default value
+	# when this function is called. However, we need it to be the default
+	# value in order to dislay things correctly. So, we record the initial
+	# value, and then set it to the default. We set it back to the initial
+	# value whenever we return from this function.
+	#
+
+	ORIG_IFS=$IFS
+	IFS=$RKHIFS
+
 	DISPLAY_LINE="display $*"
 
 	if [ $# -le 0 ]; then
 		echo "Error: Invalid display call - no arguments given"
+		IFS=$ORIG_IFS
 		return
 	fi
 
@@ -287,6 +299,7 @@ display() {
 				;;
 			*)
 				echo "Error: Invalid display destination: $2   Display line: ${DISPLAY_LINE}"
+				IFS=$ORIG_IFS
 				return
 				;;
 			esac
@@ -299,6 +312,7 @@ display() {
 			if [ -z "${TYPE}" -a "$2" != "PLAIN" ]; then
 				if [ $RKHLANGUPDT -eq 0 ]; then
 					echo "Error: Invalid display type: $2   Display line: ${DISPLAY_LINE}"
+					IFS=$ORIG_IFS
 					return
 				fi
 			fi
@@ -313,6 +327,7 @@ display() {
 			if [ -z "${RESULT}" ]; then
 				if [ $RKHLANGUPDT -eq 0 ]; then
 					echo "Error: Invalid display result: $2   Display line: ${DISPLAY_LINE}"
+					IFS=$ORIG_IFS
 					return
 				fi
 			fi
@@ -325,6 +340,7 @@ display() {
 
 				if [ -z "${COLOR}" ]; then
 					echo "Error: Invalid display color: $2   Display line: ${DISPLAY_LINE}"
+					IFS=$ORIG_IFS
 					return
 				fi
 			fi
@@ -336,9 +352,11 @@ display() {
 
 			if [ -z "${LOGINDENT}" ]; then
 				echo "Error: No --log-indent value given.   Display line: ${DISPLAY_LINE}"
+				IFS=$ORIG_IFS
 				return
 			elif [ -z "`echo ${LOGINDENT} | grep '^[0-9]*$'`" ]; then
 				echo "Error: Invalid '--log-indent' value given: $2   Display line: ${DISPLAY_LINE}"
+				IFS=$ORIG_IFS
 				return
 			fi
 
@@ -349,9 +367,11 @@ display() {
 
 			if [ -z "${SCREENINDENT}" ]; then
 				echo "Error: No --screen-indent value given.   Display line: ${DISPLAY_LINE}"
+				IFS=$ORIG_IFS
 				return
 			elif [ -z "`echo ${SCREENINDENT} | grep '^[0-9]*$'`" ]; then
 				echo "Error: Invalid '--screen-indent' value given: $2   Display line: ${DISPLAY_LINE}"
+				IFS=$ORIG_IFS
 				return
 			fi
 
@@ -381,6 +401,7 @@ display() {
 			;;
 		-*)
 			echo "Error: Invalid display option given: $1   Display line: ${DISPLAY_LINE}"
+			IFS=$ORIG_IFS
 			return
 			;;
 		*)
@@ -408,13 +429,19 @@ display() {
 	#
 
 	if [ $NOLOG -eq 1 ]; then
-		test "${WRITETO}" = "LOG" && return
+		if [ "${WRITETO}" = "LOG" ]; then
+			IFS=$ORIG_IFS
+			return
+		fi
 
 		test "${WRITETO}" = "SCREEN+LOG" && WRITETO="SCREEN"
 	fi
 
 	if [ $NOTTY -eq 1 ]; then
-		test "${WRITETO}" = "SCREEN" && return
+		if [ "${WRITETO}" = "SCREEN" ]; then
+			IFS=$ORIG_IFS
+			return
+		fi
 
 		test "${WRITETO}" = "SCREEN+LOG" && WRITETO="LOG"
 	fi
@@ -431,9 +458,11 @@ display() {
 
 	if [ $WRITETOTTY -eq 0 -a $WRITETOLOG -eq 0 ]; then
 		echo "Error: Invalid display destination: Display line: ${DISPLAY_LINE}"
+		IFS=$ORIG_IFS
 		return
 	elif [ $WRITETOTTY -eq 1 -a $COLORS -eq 1 -a -n "${RESULT}" -a -z "${COLOR}" ]; then
 		echo "Error: Invalid display - no color given: Display line: ${DISPLAY_LINE}"
+		IFS=$ORIG_IFS
 		return
 	fi
 
@@ -478,6 +507,7 @@ display() {
 
 			if [ -z "${LINE1}" ]; then
 				echo "Error: Invalid display - keyword cannot be found: Display line: ${DISPLAY_LINE}"
+				IFS=$ORIG_IFS
 				return
 			fi
 		else
@@ -578,7 +608,7 @@ display() {
 			test $SHOWWARNINGSONLY -eq 1 && echo $ECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
 
 			LINE1=1
-			OLDIFS="${IFS}"
+			OLDIFS=$IFS
 			IFS=$IFSNL
 
 			for LOGLINE1 in `grep ${GREP_OPT} "^${MSG}:" "${LANG_FILE}" 2>/dev/null | cut -d: -f2-`; do
@@ -591,7 +621,7 @@ display() {
 				fi
 			done
 
-			IFS="${OLDIFS}"
+			IFS=$OLDIFS
 		elif [ $SHOWWARNINGSONLY -eq 1 -a -n "`echo \"${LOGLINE1}\" | grep '^\[[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\]         '`" ]; then
 			echo $ECHOOPT "${LOGLINE1}" | cut -d' ' -f2-
 		fi
@@ -602,6 +632,8 @@ display() {
 	#
 
 	test $WRITETOTTY -eq 1 -a $NLAFTER -eq 1 && echo ""
+
+	IFS=$ORIG_IFS
 
 	return
 }
@@ -1504,7 +1536,7 @@ ${FNAME}"
 					fi
 				fi
 				;;
-			*) # Scan ze old vay
+			*) # Scan the old way
 				if [ -f "${RKHTMPVAR}" ]; then
 					#
 					# We first check to see if the file is whitelisted. Note that we use
