@@ -21,7 +21,7 @@
  * 1.4.6 (??/??/2017)
 
  New:
- - Added support for POSIX 'grep' command.
+ - Added support for Alpine Linux (busybox).
 
  Changes:
 

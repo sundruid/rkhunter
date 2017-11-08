@@ -32,6 +32,7 @@
 
 BSDOS=0
 SUNOS=0
+BUSYBOX=0
 
 OPERATING_SYSTEM=`uname 2>/dev/null`
 
@@ -142,6 +143,9 @@ else
 
 	# Assume 'bash' if we have problems finding the real shell.
 	test -z "${MYSHELL}" && MYSHELL=bash
+
+	# Check if we are using BusyBox.
+	test "${MYSHELL}" = "busybox" && BUSYBOX=1
 
 	#
 	# Now test the 'echo -e' command.
@@ -17707,7 +17711,7 @@ do_system_check() {
 
 	if [ -n "$SECONDS" ]; then
 		BEGINTIME=`echo $SECONDS | cut -d. -f1`
-	elif [ $BSDOS -eq 1 ]; then
+	elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 ]; then
 		BEGINTIME=`date +%s`
 	elif [ -n "${PERL_CMD}" ]; then
 		BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
@@ -17767,7 +17771,7 @@ do_system_check() {
 	if [ $BEGINTIME -ne 0 ]; then
 		if [ -n "$SECONDS" ]; then
 			ENDTIME=`echo $SECONDS | cut -d. -f1`
-		elif [ $BSDOS -eq 1 ]; then
+		elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 ]; then
 			ENDTIME=`date +%s`
 		else
 			ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
