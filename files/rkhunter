@@ -10251,6 +10251,8 @@ file_properties_check() {
 				SKIP_IMMUT=1
 				RKHTMPVAR="${RKHTMPVAR} immutable"
 			else
+#jhjh - shouldn't the BSD test above be the same as the non-BSD one?
+#jhjh - what if no file is found at all?
 				for FNAME in ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} ${DB_PATH}/*.dat ${DB_PATH}/i18n/*; do
 					test -f "${FNAME}" -a ! -h "${FNAME}" && break
 				done
@@ -11448,10 +11450,19 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 				if [ -z "${WL_FILE}" ]; then
 					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
-					if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
+					# BusyBox does not necessarily understand the 'cat -v' command.
+					if [ $BUSYBOX -eq 1 ]; then
+						if [ "${RKHTMPVAR}" = "rkhunter" ]; then
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
+						else
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | egrep -i ' script( |,|$)'`
+						fi
 					else
-						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i ' script( |,|$)'`
+						if [ "${RKHTMPVAR}" = "rkhunter" ]; then
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
+						else
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i ' script( |,|$)'`
+						fi
 					fi
 
 					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
