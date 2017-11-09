@@ -1434,7 +1434,7 @@ suckit_extra_checks() {
 		display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_ADD_SUCKIT
 	else
 		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
-		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}Suckit Rookit (additional checks), "
+		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}Suckit Rootkit (additional checks), "
 
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_ADD_SUCKIT
 

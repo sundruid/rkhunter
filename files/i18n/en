@@ -1,4 +1,4 @@
-Version:2017062301
+Version:2017110901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -364,8 +364,8 @@ ROOTKIT_PHALANX2_PROC_PPID:Expected 'kthread' parent PID '$1' found parent PID '
 ROOTKIT_PHALANX2_PROC_PS_ERR:Running 'ps' returned unexpected results: possibly unsupported cmdline arguments.
 
 ROOTKIT_ADD_START:Performing additional rootkit checks
-ROOTKIT_ADD_SUCKIT:Suckit Rookit additional checks
-ROOTKIT_ADD_SUCKIT_LOG:Performing Suckit Rookit additional checks
+ROOTKIT_ADD_SUCKIT:Suckit Rootkit additional checks
+ROOTKIT_ADD_SUCKIT_LOG:Performing Suckit Rootkit additional checks
 ROOTKIT_ADD_SUCKIT_LINK_NOCMD:Checking '/sbin/init' link count: no 'stat' command found
 ROOTKIT_ADD_SUCKIT_LINK_FOUND:Checking '/sbin/init' link count: count is $1, it should be 1
 ROOTKIT_ADD_SUCKIT_EXT:Checking for hidden file extensions
