@@ -10242,7 +10242,11 @@ file_properties_check() {
 
 	if [ $SKIP_IMMUT -eq 0 ]; then
 		if [ $BSDOS -eq 1 ]; then
-			if [ -z "`ls -lno ${CONFIGFILE} 2>/dev/null`" ]; then
+			for FNAME in ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} ${DB_PATH}/*.dat ${DB_PATH}/i18n/*; do
+				test -f "${FNAME}" -a ! -h "${FNAME}" && break
+			done
+
+			if [ -z "`ls -lno \"${FNAME}\" 2>/dev/null`" ]; then
 				SKIP_IMMUT=1
 				RKHTMPVAR="${RKHTMPVAR} immutable-bsd"
 			fi
@@ -10251,8 +10255,6 @@ file_properties_check() {
 				SKIP_IMMUT=1
 				RKHTMPVAR="${RKHTMPVAR} immutable"
 			else
-#jhjh - shouldn't the BSD test above be the same as the non-BSD one?
-#jhjh - what if no file is found at all?
 				for FNAME in ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES} ${DB_PATH}/*.dat ${DB_PATH}/i18n/*; do
 					test -f "${FNAME}" -a ! -h "${FNAME}" && break
 				done
