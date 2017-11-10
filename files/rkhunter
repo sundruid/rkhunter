@@ -11450,19 +11450,10 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 				if [ -z "${WL_FILE}" ]; then
 					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
-					# BusyBox does not necessarily understand the 'cat -v' command.
-					if [ $BUSYBOX -eq 1 ]; then
-						if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
-						else
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | egrep -i ' script( |,|$)'`
-						fi
+					if [ "${RKHTMPVAR}" = "rkhunter" ]; then
+						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
 					else
-						if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
-						else
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | cat -v | egrep -i ' script( |,|$)'`
-						fi
+						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i ' script( |,|$)'`
 					fi
 
 					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
