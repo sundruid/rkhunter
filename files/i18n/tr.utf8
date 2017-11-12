@@ -1,4 +1,4 @@
-Version:2014030201
+Version:2017080401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -108,6 +108,7 @@ HASH_PKGMGR_OLD_UNSET:Depolan doğrulama verileri, bir paket yöneticisi kullanm
 
 HASH_PKGMGR:Dosya özellikleri kontrolü için '$1' paket yöneticisi kullanılıyor
 HASH_PKGMGR_MD5:Paket yöneticisi doğrulamasına yardımcı olması için MD5 sağlama fonksiyonu komutu '$1' kullanılıyor
+HASH_PKGMGR_SHA:Paket yöneticisi doğrulamasına yardımcı olması için SHA sağlama fonksiyonu komutu '$1' kullanılıyor
 HASH_PKGMGR_SUM:Paket doğrulaması için depolanan 16-bit sağlama kullanılıyor
 HASH_PKGMGR_NOT_SPEC:Paket yöneticisi belirtilmedi: '$1' sağlama fonksiyonu kullanılıyor
 HASH_PKGMGR_NOT_SPEC_PRELINKED:Paket yöneticisi belirtilmedi: '$1' ile prelink komutu kullanılıyor
@@ -212,7 +213,8 @@ PROPUPD_START:Dosya özellikleri veri güncellemesi başlatılıyor...
 PROPUPD_OSINFO_START:İşletim Sistemi bilgisi toplanıyor...
 PROPUPD_ARCH_FOUND:Sistem mimarisi bulundu: $1
 PROPUPD_REL_FILE:Sürüm dosyası bulundu: $1
-PROPUPD_NO_REL_FILE:Bir sürüm dosyası bulunamadı: LS çıktısı:
+PROPUPD_NO_REL_FILE_NO_OUTPUT:Bir İ/S sürüm dosyası bulunamadı.
+PROPUPD_NO_REL_FILE:Bir İ/S sürüm dosyası bulunamadı: LS çıktısı:
 PROPUPD_OSNAME_FOUND:Bulunan İşletim Sistemi: $1
 PROPUPD_ERROR:Yeni rkhunter.dat dosyası kurulurken hata. Kod $1
 PROPUPD_NEW_DAT_FILE:Yeni rkhunter.dat dosyası '$1' dizininde kuruldu
@@ -389,38 +391,34 @@ ROOTKIT_MALWARE_SUSP_FILES_FOUND_CMD:Komut: $1
 ROOTKIT_MALWARE_SUSP_FILES_FOUND_PATH:Yol ismi: $1
 ROOTKIT_MALWARE_SUSP_FILES_FOUND_RTKT:Olası Rootkit: $1
 ROOTKIT_MALWARE_HIDDEN_PROCS:Gizli işlemler kontrol ediliyor
-ROOTKIT_MALWARE_HIDDEN_PROCS_NOUNHIDE:Kullanıcı isteğiyle, '$1' kullanımı devredışı bırakıldı
 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_VERS:'unhide' komut sürümü bulundu: $1
 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD:'$1' komutu kullanılıyor
 ROOTKIT_MALWARE_HIDDEN_PROCS_UNH_ERR:'unhide' çalıştırılabilir değil: geçersiz yapılandırılmış testler: $1
-ROOTKIT_MALWARE_HIDDEN_PROCS_RUBY_ERR:'unhide.rb' komutu bir hata verdi:
 ROOTKIT_MALWARE_HIDDEN_PROCS_FOUND:Gizli işlemler bulundu:
 ROOTKIT_MALWARE_DELETED_FILES:Silinen dosyalar için çalışan işlemler kontrol ediliyor
 ROOTKIT_MALWARE_DELETED_FILES_FOUND:Aşağıdaki işlemler silinen dosya(lar) kullanıyor:
 ROOTKIT_MALWARE_DELETED_FILES_FOUND_DATA:İşlem: $1    PID: $2    Dosya: $3
 ROOTKIT_MALWARE_DELETED_FILES_WL:Beyaz listedeki '$1' dosyasını kullanan '$1' işlemi bulundu.
 ROOTKIT_MALWARE_LOGIN_BDOOR:Arkakapı girişleri kontrol ediliyor
-ROOTKIT_MALWARE_LOGIN_BDOOR_LOG:Arkakapı girişlerinin kontrolü çalıştırılıyor
 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK:'$1' kontrol ediliyor
 ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND:Arkakapı giriş dosyası bulundu: $1
 ROOTKIT_MALWARE_SUSP_DIR:Şüpheli klasörler kontrol ediliyor
-ROOTKIT_MALWARE_SUSP_DIR_LOG:Şüpheli klasörlerin kontrolü çalıştırılıyor
 ROOTKIT_MALWARE_SUSP_DIR_FOUND:Şüpheli klasör bulundu: $1
 ROOTKIT_MALWARE_SFW_INTRUSION:Yazılım ihlalleri kontrol ediliyor
 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND:'$1' dosyası '$2' dizisini içeriyor. Olası rootkit: SHV5
 ROOTKIT_MALWARE_SFW_INTRUSION_SKIP:Kontrol atlandı - tripwire yüklü değil
 ROOTKIT_MALWARE_SNIFFER:Algılayıcı günlük/kayıt dosyaları kontrol ediliyor
-ROOTKIT_MALWARE_SNIFFER_LOG:Algılayıcı günlük/kayıt dosyalarının kontrolü çalıştırılıyor
 ROOTKIT_MALWARE_SNIFFER_FOUND:Algılayıcı günlük/kayıt dosyası bulundu: $1
 ROOTKIT_MALWARE_IPCS:Şüpheli Paylaşılan Bellek segmentleri
+ROOTKIT_MALWARE_IPCS_FOUND:Şu şüpheli paylaşım belleği segmentleri bulundu:
 ROOTKIT_MALWARE_IPCS_DETAILS:İşlem: $1    PID: $2    Sahibi: $3
+ROOTKIT_MALWARE_IPCS_WL:İşlem yolu adı '$1': beyaz listeye alındı.
 
 ROOTKIT_TROJAN_START:Spesifik trojan kontrolleri çalıştırılıyor
 ROOTKIT_TROJAN_INETD:Etkin inetd servisleri kontrol ediliyor
 ROOTKIT_TROJAN_INETD_SKIP:Kontrol atlandı - '$1' dosyası mevcut değil.
 ROOTKIT_TROJAN_INETD_FOUND:Etkin inetd servisi bulundu: $1
 ROOTKIT_TROJAN_XINETD:Etkin xinetd servisleri kontrol ediliyor
-ROOTKIT_TROJAN_XINETD_LOG:Etkin xinetd servislerinin kontrolü çalıştırılıyor
 ROOTKIT_TROJAN_XINETD_ENABLED:Etkin servisler için, '$1' çalıştırılıyor
 ROOTKIT_TROJAN_XINETD_INCLUDE:'include $1' direktifi bulundu
 ROOTKIT_TROJAN_XINETD_INCLUDEDIR:'includedir $1' direktifi bulundu
@@ -633,6 +631,9 @@ LIST_PERL:Perl modülü kurulum durumu:
 LIST_RTKTS:Kontrol edilen rootkitler:
 
 LOCK_USED:Kilitleme kullanımda: zaman aşımı $1 saniye
+LOCK_DIR:Kilitleme dizini olarak '$1' kullanılıyor
 LOCK_UNUSED:Kilitleme kullanımda değil
 LOCK_WAIT:Kilit dosyası bekleniyor
 LOCK_FAIL:Kilit dosyası alınamadı: rkhunter çalışmadı!
+
+LINUX_ONLY:Kontrol atlandı - bu kontrol sadece Linux sistemler içindir.
