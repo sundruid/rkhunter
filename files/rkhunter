@@ -6122,7 +6122,7 @@ rkh_dat_get_os_info() {
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		REL_FILES="${OS_VERSION_FILE}"
 	else
-		REL_FILES="/etc/system-release /etc/os-release /etc/lsb-release /etc/debian_version /etc/slackware-version /var/ipcop/general-functions.pl /etc/lunar.release /etc/ROCK-VERSION /etc/GoboLinuxVersion /etc/kanotix-version /etc/sidux-version /etc/knoppix-version /etc/zenwalk-version /etc/release /etc/*-release"
+		REL_FILES="/etc/system-release /etc/os-release /usr/lib/os-release /etc/lsb-release /etc/debian_version /etc/devuan_version /etc/slackware-version /var/ipcop/general-functions.pl /etc/lunar.release /etc/ROCK-VERSION /etc/GoboLinuxVersion /etc/kanotix-version /etc/sidux-version /etc/knoppix-version /etc/zenwalk-version /etc/release /etc/*-release"
 	fi
 
 	RKH_LSB_SEEN=0
@@ -6141,7 +6141,7 @@ rkh_dat_get_os_info() {
 			RKH_IN_LSB=0
 
 			case "${RELEASE}" in
-			/etc/os-release)
+			/etc/os-release|/usr/lib/os-release)
 				OSNAME=`grep '^PRETTY_NAME=' "${RELEASE}" | sed -e 's/PRETTY_NAME=//' | tr -d '"'`
 
 				if [ -z "${OSNAME}" ]; then
@@ -6172,6 +6172,9 @@ rkh_dat_get_os_info() {
 				;;
 			/etc/debian_version)
 				OSNAME="Debian `cat \"${RELEASE}\"`"
+				;;
+			/etc/devuan_version)
+				OSNAME="Devuan `cat \"${RELEASE}\"`"
 				;;
 			/etc/GoboLinuxVersion)
 				OSNAME="GoboLinux `cat \"${RELEASE}\"`"
