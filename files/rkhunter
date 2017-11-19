@@ -875,7 +875,7 @@ check_paths() {
 	ERRCODE=0
 	MUSTEXIST=0
 	NOWILD=0
-	NOLINK=0
+	NOBROKENLINK=0
 
 	for RKHTMPVAR in ${STRICT}; do
 		case "${RKHTMPVAR}" in
@@ -886,7 +886,7 @@ check_paths() {
 			NOWILD=1
 			;;
 		NOBROKENLINK)
-			NOLINK=1
+			NOBROKENLINK=1
 			;;
 		*)
 			echo "Error: Invalid argument in check_paths function: $*" >&2
@@ -1075,7 +1075,7 @@ check_paths() {
 				# these are not allowed at all.
 				#
 
-				if [ $NOLINK -eq 1 ]; then
+				if [ $NOBROKENLINK -eq 1 ]; then
 					ERRCODE=1
 
 					echo "Invalid ${OPT_NAME} configuration option: Broken link found: ${FNAME}"
@@ -5348,6 +5348,14 @@ get_os_info_options() {
 			elif [ ! -s "${OS_VERSION_FILE}" ]; then
 				LEAVE=1
 				echo "Invalid OS_VERSION_FILE configuration option: File is empty: ${OS_VERSION_FILE}"
+			elif [ -h "${OS_VERSION_FILE}" ]; then
+#jhjh - test this
+				if [ $HAVE_READLINK -eq 1 ]; then
+					OS_VERSION_FILE=`${READLINK_CMD} ${READLINK_OPT} "${OS_VERSION_FILE}"`
+				else
+					LEAVE=1
+					echo "Invalid OS_VERSION_FILE configuration option: File is a link: ${OS_VERSION_FILE}"
+				fi
 			fi
 		else
 			LEAVE=1
@@ -6255,6 +6263,12 @@ rkh_dat_get_os_info() {
 		;;
 	esac
 
+	#
+	# If the O/S name seems to be a string of numbers, then forget we saw it.
+	#
+
+	test -n "`echo \"${OSNAME}\" | grep '^[0-9._-][0-9._-]*$'`" && OSNAME=""
+
 
 	#
 	# If we still have no O/S version information, then as a last
@@ -6262,14 +6276,13 @@ rkh_dat_get_os_info() {
 	# whatever is in the LSB release file. We test these last because
 	# they are not necessarily reliable in providing the O/S version.
 	#
-	# However, if an O/S has been found, but it seems to be just a
-	# version number, then we look for the first word in the 'issue'
-	# file and prepend that. Hopefully, it will make sense!
-	#
 
 	if [ -z "${OSNAME}" ]; then
 		if [ -f "/etc/issue" ]; then
-			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/issue 2>/dev/null | head ${HEAD_OPT}1`
+			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	\\]/ { print $0 }' /etc/issue 2>/dev/null | head ${HEAD_OPT}1`
+#jhjh - modify \s, \r, \m etc to uname values.
+#jhjh - test this
+			OSNAME=`echo "${OSNAME}" | sed -e 's/ (*\\[^ ]*//g'`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/issue"
 		fi
@@ -6278,12 +6291,6 @@ rkh_dat_get_os_info() {
 			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $0 }' /etc/lsb-release 2>/dev/null | head ${HEAD_OPT}1`
 			OSNAME=`echo ${OSNAME}`
 			test -n "${OSNAME}" && RELEASE="/etc/lsb-release"
-		fi
-	elif [ -n "`echo \"${OSNAME}\" | grep '^[0-9.][0-9.]*$'`" ]; then
-		if [ -f "/etc/issue" ]; then
-			RKHTMPVAR=`${AWK_CMD} '/^[ 	]*[^ 	]/ { print $1 }' /etc/issue 2>/dev/null | head ${HEAD_OPT}1`
-
-			test -n "${RKHTMPVAR}" && OSNAME="${RKHTMPVAR} ${OSNAME}"
 		fi
 	fi
 
@@ -6305,10 +6312,7 @@ rkh_dat_set_file_properties() {
 #jh - breakout the inode check as a separate test for BTRFS filesystems etc.
 #jh - Ebury check?
 #jh - /etc/issue file - modify /r /n etc?
-#jh	See man agetty
-#jh - include in file list /usr/lib/os-release, /usr/lib/os.release.d/os-release-fedora
-#jh	Check for Debian /usr/lib/os-release files too
-#jh	Also use '/proc/version' truncated before first '('?
+#jh	See man agetty - http://www.linuxfromscratch.org/blfs/view/svn/postlfs/logon.html
 	#
 	# This function obtains various bits of information about the files to
 	# be checked. The current format in the rkhunter.dat file is:
