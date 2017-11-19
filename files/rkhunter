@@ -5336,6 +5336,15 @@ get_os_info_options() {
 
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		#
+		# We must have a real pathname for this option. So, if it is a link,
+		# then we get its real pathname before any further tests.
+		#
+
+		if [ $HAVE_READLINK -eq 1 -a -h "${OS_VERSION_FILE}" ]; then
+			OS_VERSION_FILE=`${READLINK_CMD} ${READLINK_OPT} "${OS_VERSION_FILE}"`
+		fi
+
+		#
 		# Check that the given file is usable.
 		#
 
@@ -5348,13 +5357,6 @@ get_os_info_options() {
 			elif [ ! -s "${OS_VERSION_FILE}" ]; then
 				LEAVE=1
 				echo "Invalid OS_VERSION_FILE configuration option: File is empty: ${OS_VERSION_FILE}"
-			elif [ -h "${OS_VERSION_FILE}" ]; then
-				if [ $HAVE_READLINK -eq 1 ]; then
-					OS_VERSION_FILE=`${READLINK_CMD} ${READLINK_OPT} "${OS_VERSION_FILE}"`
-				else
-					LEAVE=1
-					echo "Invalid OS_VERSION_FILE configuration option: File is a link: ${OS_VERSION_FILE}"
-				fi
 			fi
 		else
 			LEAVE=1
@@ -6319,7 +6321,7 @@ rkh_dat_set_file_properties() {
 
 #jh - breakout the inode check as a separate test for BTRFS filesystems etc.
 #jh - Ebury check?
-#jh - F27 - why missing links?
+#jh - F27 - why missing links? - ARCH use '=ARCH'?
 	#
 	# This function obtains various bits of information about the files to
 	# be checked. The current format in the rkhunter.dat file is:
@@ -6524,6 +6526,7 @@ ${DIR}:1"
 					PKGNAME=`echo "${RKHTMPVAR}" | tail ${TAIL_OPT}1`
 
 					RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' "${FNAME}" 2>/dev/null | grep ":${FNAMEGREP}\$"`
+#jh - this gives an error
 					ERRCODE=$?
 
 					#
@@ -6540,6 +6543,7 @@ ${DIR}:1"
 						fi
 
 						RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' "${FNAME}" 2>/dev/null | grep ":${RKHTMPVAR3}\$"`
+#jh - this gives an error
 						ERRCODE=$?
 					fi
 
