@@ -5349,7 +5349,6 @@ get_os_info_options() {
 				LEAVE=1
 				echo "Invalid OS_VERSION_FILE configuration option: File is empty: ${OS_VERSION_FILE}"
 			elif [ -h "${OS_VERSION_FILE}" ]; then
-#jhjh - test this
 				if [ $HAVE_READLINK -eq 1 ]; then
 					OS_VERSION_FILE=`${READLINK_CMD} ${READLINK_OPT} "${OS_VERSION_FILE}"`
 				else
@@ -6127,6 +6126,10 @@ rkh_dat_get_os_info() {
 	OSNAME=""
 	RELEASE=""
 
+	UNAME_R=`uname -r 2>/dev/null`
+	UNAME_S=`uname -s 2>/dev/null`
+	UNAME_M=`uname -m 2>/dev/null`
+
 	if [ -n "${OS_VERSION_FILE}" ]; then
 		REL_FILES="${OS_VERSION_FILE}"
 	else
@@ -6243,7 +6246,7 @@ rkh_dat_get_os_info() {
 		OSNAME=`uname -v 2>/dev/null | cut -d' ' -f1,2`
 		;;
 	OpenBSD)
-		OSNAME="OpenBSD `uname -r 2>/dev/null`"
+		OSNAME="OpenBSD ${UNAME_R}"
 		;;
 	Darwin)
 		OSNAME=`sw_vers 2>/dev/null | grep '^ProductName:' | sed -e 's/ProductName:[ 	]*//'`
@@ -6259,7 +6262,7 @@ rkh_dat_get_os_info() {
 		OSNAME="IBM AIX `oslevel 2>/dev/null`"
 		;;
 	IRIX*)
-		OSNAME="${OPERATING_SYSTEM} `uname -r 2>/dev/null`"
+		OSNAME="${OPERATING_SYSTEM} ${UNAME_R}"
 		;;
 	esac
 
@@ -6279,11 +6282,16 @@ rkh_dat_get_os_info() {
 
 	if [ -z "${OSNAME}" ]; then
 		if [ -f "/etc/issue" ]; then
-			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	\\]/ { print $0 }' /etc/issue 2>/dev/null | head ${HEAD_OPT}1`
-#jhjh - modify \s, \r, \m etc to uname values.
-#jhjh - test this
-			OSNAME=`echo "${OSNAME}" | sed -e 's/ (*\\[^ ]*//g'`
+			OSNAME=`${AWK_CMD} '/^[ 	]*[^ 	\\\]/ { print $0 }' /etc/issue 2>/dev/null | head ${HEAD_OPT}1`
+
+			#
+			# Modify or remove the escape sequences seen in the file.
+			#
+
+			OSNAME=`echo "${OSNAME}" | sed -e "s/\\\\\s/${UNAME_S}/g; s/\\\\\r/${UNAME_R}/g; s/\\\\\m/${UNAME_M}/g"`
+			OSNAME=`echo "${OSNAME}" | sed -e 's/ (*\\\[^ ]*//g'`
 			OSNAME=`echo ${OSNAME}`
+
 			test -n "${OSNAME}" && RELEASE="/etc/issue"
 		fi
 
@@ -6299,8 +6307,8 @@ rkh_dat_get_os_info() {
 	# If some things have still not been set, then set them now.
 	#
 
-	test -z "${ARCH}" && ARCH=`uname -m 2>/dev/null`
-	test -z "${OSNAME}" && OSNAME="`uname` `uname -r 2>/dev/null`"
+	test -z "${ARCH}" && ARCH="${UNAME_M}"
+	test -z "${OSNAME}" && OSNAME="`uname` ${UNAME_R}"
 
 
 	return
@@ -6311,8 +6319,7 @@ rkh_dat_set_file_properties() {
 
 #jh - breakout the inode check as a separate test for BTRFS filesystems etc.
 #jh - Ebury check?
-#jh - /etc/issue file - modify /r /n etc?
-#jh	See man agetty - http://www.linuxfromscratch.org/blfs/view/svn/postlfs/logon.html
+#jh - F27 - why missing links?
 	#
 	# This function obtains various bits of information about the files to
 	# be checked. The current format in the rkhunter.dat file is:
