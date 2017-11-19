@@ -32,9 +32,11 @@
    calculated correctly.
  - Checking the O/S version number could be missed in some cases.
  - Minor improvement to the *BSD immutable files check.
- - The 'OS_VERSION_FILE' option pathname cannot be a link, but
-   this was not tested.
+ - The 'OS_VERSION_FILE' configuration option pathname cannot be
+   a link, but this was not checked.
  - Improved checks for the O/S name on Devuan systems.
+ - Handling of the '/etc/issue' file during O/S detection has now
+   improved. Escape sequences are either replaced or removed.
 
  --
 
