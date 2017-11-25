@@ -15046,14 +15046,21 @@ linux_avail_modules() {
 
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
 	else
-		for FNAME in `${FIND_CMD} "${LKM_PATH}" -type f -name "*.o" 2>/dev/null`; do
-			for RKHTMPVAR in ${LKM_NAMES}; do
-				if [ -n "`echo ${FNAME} | grep \"/${RKHTMPVAR}$\"`" ]; then
-					FOUND=1
-					FOUNDFILES="${FOUNDFILES} ${RKHTMPVAR}"
-				fi
-			done
+		get_temp_file "${RKHTMPDIR}/modslist"
+		MODS_TMPFILE="${TEMPFILE}"
+		${FIND_CMD} "${LKM_PATH}" -type f -a \( -name "*.o" -o -name "*.ko" -o -name "*.ko.xz" \) >"${MODS_TMPFILE}" 2>/dev/null
+
+		get_temp_file "${RKHTMPDIR}/modslist.new"
+		sed -e 's/\.xz$//' "${MODS_TMPFILE}" >"${TEMPFILE}"
+
+		for RKHTMPVAR in ${LKM_NAMES}; do
+			if [ -n "`grep \"/${RKHTMPVAR}$\" "${TEMPFILE}"`" ]; then
+				FOUND=1
+				FOUNDFILES="${FOUNDFILES} ${RKHTMPVAR}"
+			fi
 		done
+
+		rm -f "${MODS_TMPFILE}" "${TEMPFILE}" >/dev/null 2>&1
 
 
 		if [ $FOUND -eq 0 ]; then
