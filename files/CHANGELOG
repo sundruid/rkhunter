@@ -37,6 +37,7 @@
  - Improved checks for the O/S name on Devuan systems.
  - Handling of the '/etc/issue' file during O/S detection has now
    improved. Escape sequences are either replaced or removed.
+ - Not all the linux kernel module names were being checked.
 
  --
 
