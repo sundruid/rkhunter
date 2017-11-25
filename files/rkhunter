@@ -9759,7 +9759,8 @@ do_system_check_initialisation() {
 		      rpldev.o
 		      xC.o
 		      strings.o
-		      wkmr26.ko"
+		      wkmr26.ko
+		      diamorphine.ko"
 
 	return
 }
