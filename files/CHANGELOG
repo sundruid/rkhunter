@@ -22,6 +22,7 @@
 
  New:
  - Added support for Alpine Linux (busybox).
+ - Add a very basic check for the diamorphine LKM file.
 
  Changes:
 
