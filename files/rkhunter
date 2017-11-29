@@ -14251,9 +14251,10 @@ ${FOUND_PROCS}"
 
 					LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | grep '^0x' | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
 						if [ $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 -a $RKH_SHM_BYTES -ge 1000000 ]; then
+#jhjh						if [ \( $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 \) -a $RKH_SHM_BYTES -ge 1000000 -a $RKH_SHM_NATTACH -gt 0 ]; then
 							LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID}" | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
 								RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
-
+#jhjh   if rkh_shm_path = "" then fnamegrep = rkh_shm_path; rkh_shm_path="(none)"
 								#
 								# First check to see if the process pathname is whitelisted.
 								#
@@ -14303,7 +14304,8 @@ ${FOUND_PROCS}"
 				for FNAME in `cat "${IPCS_TMPFILE}"`; do
 					test "${FNAME}" = "0" -o "${FNAME}" = "1" && continue
 
-					FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+#jhjh - shouldn't this rkh_shm_path be FNAME instead??
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
 						FOUND="${FOUND} ${FNAME} "
