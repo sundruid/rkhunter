@@ -14301,10 +14301,7 @@ ${FOUND_PROCS}"
 
 				FOUND=""
 
-				for FNAME in `cat "${IPCS_TMPFILE}"`; do
-					test "${FNAME}" = "0" -o "${FNAME}" = "1" && continue
-
-#jhjh - shouldn't this rkh_shm_path be FNAME instead??
+				for FNAME in `grep -v '^[01]' "${IPCS_TMPFILE}"`; do
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
