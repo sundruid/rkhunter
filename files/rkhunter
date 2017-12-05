@@ -14287,7 +14287,7 @@ ${FOUND_PROCS}"
 
 				echo 0 >"${IPCS_TMPFILE}"
 
-				RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $3}'`
+				RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $NF}'`
 				test -z "${RKHTMPVAR}" && RKHTMPVAR=0
 
 				if [ $RKHTMPVAR -ne 0 ]; then
