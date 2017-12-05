@@ -4450,14 +4450,37 @@ get_suspscan_options() {
 get_ipc_options() {
 
 	#
-	# This function processes the ALLOWIPCPROC option, which is
-	# used to whitelist process pathnames using shared memory segments.
+	# This function processes the configuration options which
+	# are used during the shared memory segments checks.
 	#
 
 	LEAVE=0
 	ERRCODE=0
 
+	ALLOWIPCPID=""
 	ALLOWIPCPROC=""
+	ALLOWIPCUSER=""
+
+	#
+	# First see if any segment PIDs have been whitelisted.
+	#
+
+	ALLOWIPCPID=`get_option space-list ALLOWIPCPID` || exit $?
+
+	if [ -n "${ALLOWIPCPID}" ]; then
+		for RKHTMPVAR in ${ALLOWIPCPID}; do
+			check_is_digit RKHTMPVAR ALLOWIPCPID ANY1
+
+			test $ERRCODE -eq 1 && LEAVE=1
+		done
+
+		ALLOWIPCPID=" ${ALLOWIPCPID} "
+	fi
+
+
+	#
+	# Next we check for any whitelisted process names.
+	#
 
 	ALLOWIPCPROC_OPT=`get_option newline-list ALLOWIPCPROC` || exit $?
 
@@ -4471,6 +4494,34 @@ get_ipc_options() {
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	fi
+
+
+	#
+	# Now check if any usernames have been whitelisted.
+	#
+
+	ALLOWIPCUSER=`get_option space-list ALLOWIPCUSER` || exit $?
+
+	if [ -n "${ALLOWIPCUSER}" ]; then
+		ALLOWIPCUSER=" ${ALLOWIPCUSER} "
+	fi
+
+
+	#
+	# Finally, we check for the configured minimum segment size.
+	# Any segment above this size is considered to be suspicious.
+	#
+
+	IPC_SEG_SIZE=`get_option single IPC_SEG_SIZE` || exit $?
+
+	if [ -n "${IPC_SEG_SIZE}" ]; then
+		check_is_digit IPC_SEG_SIZE IPC_SEG_SIZE ANY1
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	else
+		IPC_SEG_SIZE=1000000
+	fi
+
 
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
@@ -7815,7 +7866,7 @@ do_config_file_check() {
 		   ALLOW_SSH_PROT_V1 ALLOW_SSH_ROOT_USER ALLOW_SYSLOG_REMOTE_LOGGING APPEND_LOG
 		   AUTO_X_DETECT COLOR_SET2 COPY_LOG_ON_ERROR DBDIR EPOCH_DATE_CMD GLOBSTAR
 		   HASH_FLD_IDX HASH_FUNC HASH_CMD IMMUTABLE_SET INETD_CONF_PATH INSTALLDIR
-		   LANGUAGE LOCKDIR LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
+		   IPC_SEG_SIZE LANGUAGE LOCKDIR LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
 		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
 		   SCAN_MODE_DEV SCANROOTKITMODE SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_TIME SHOW_SUMMARY_WARNINGS_NUMBER
 		   SSH_CONFIG_DIR SUSPSCAN_DEBUG SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP
@@ -14241,7 +14292,7 @@ ${FOUND_PROCS}"
 
 				if [ $RKHTMPVAR -ne 0 ]; then
 					#
-					# We expand the whitelist option here to ensure
+					# We expand the process whitelist option here to ensure
 					# that any wildcard entries are the most recent.
 					#
 
@@ -14250,8 +14301,8 @@ ${FOUND_PROCS}"
 					fi
 
 					LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | grep '^0x' | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
-#jh - make max seg size configurable?
-						if [ \( $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 \) -a $RKH_SHM_BYTES -ge 1000000 ]; then
+#jh
+						if [ \( $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 \) -a $RKH_SHM_BYTES -ge $IPC_SEG_SIZE ]; then
 							LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID} " | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
 								RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
 
@@ -14275,12 +14326,12 @@ ${FOUND_PROCS}"
 									FOUND=1
 									echo "User:${RKH_SHM_OWNER}" >>"${IPCS_TMPFILE}"
 								fi
-#jhjh - add this config option
+
 								if [ $FOUND -eq 0 -a -n "`echo \"${ALLOWIPCPID}\" | grep \" ${RKH_SHM_CPID} \"`" ]; then
 									FOUND=1
 									echo "PID:${RKH_SHM_CPID}" >>"${IPCS_TMPFILE}"
 								fi
-#jhjh - add this config option
+
 								if [ $FOUND -eq 0 ]; then
 									if [ -z "`grep '^1' \"${IPCS_TMPFILE}\"`" ]; then
 										echo 1 >>"${IPCS_TMPFILE}"
@@ -19058,8 +19109,8 @@ LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA D
 	      Digest::SHA::PurePerl Digest::Whirlpool LWP URI HTTP::Status HTTP::Date Socket Carp"
 
 # A list of configuration options which are space-separated lists.
-SPACE_LIST_OPTS="ALLOWPROMISCIF APP_WHITELIST BINDIR DISABLE_TESTS EMPTY_LOGFILES ENABLE_TESTS
-		 IGNORE_PRELINK_DEP_ERR INETD_ALLOWED_SVC MAIL-ON-WARNING MISSING_LOGFILES
+SPACE_LIST_OPTS="ALLOWIPCPID ALLOWIPCUSER ALLOWPROMISCIF APP_WHITELIST BINDIR DISABLE_TESTS EMPTY_LOGFILES
+		 ENABLE_TESTS IGNORE_PRELINK_DEP_ERR INETD_ALLOWED_SVC MAIL-ON-WARNING MISSING_LOGFILES
 		 PORT_WHITELIST PWDLESS_ACCOUNTS SHARED_LIB_WHITELIST STARTUP_PATHS SUSPSCAN_DIRS
 		 SYSLOG_CONFIG_FILE UID0_ACCOUNTS UNHIDE_TESTS UNHIDETCP_OPTS UPDATE_LANG
 		 XINETD_ALLOWED_SVC"

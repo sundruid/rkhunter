@@ -23,6 +23,13 @@
  New:
  - Added support for Alpine Linux (busybox).
  - Add a very basic check for the diamorphine LKM file.
+ - Added the ALLOWIPCPID configuration file option. This will allow
+   specific PIDs to be whitelisted from the shared memory check.
+ - Added the ALLOWIPCUSER configuration file option. This will allow
+   specific usernames to be whitelisted from the shared memory check.
+ - Added the IPC_SEG_SIZE configuration file option. This can be used
+   to set the minimum shared memory segment size to check. The default
+   value is 1000000 bytes.
 
  Changes:
 
@@ -39,6 +46,9 @@
  - Handling of the '/etc/issue' file during O/S detection has now
    improved. Escape sequences are either replaced or removed.
  - Not all the linux kernel module names were being checked.
+ - The logging of detached memory segments tried to show the
+   process pathname. This has now been corrected, and where no
+   pathname is available, the segment owner and PID will be logged.
 
  --
 
