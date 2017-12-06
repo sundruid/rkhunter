@@ -49,6 +49,8 @@
  - The logging of detached memory segments tried to show the
    process pathname. This has now been corrected, and where no
    pathname is available, the segment owner and PID will be logged.
+ - It was possible for the return code to be lost when running the
+   'ipc_shared_mem' check. This has now been corrected.
 
  --
 
