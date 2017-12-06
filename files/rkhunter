@@ -804,7 +804,8 @@ get_option() {
 
 			if [ -n "${OPTVAR}" ]; then
 				RKHLINES=`echo "${OPTVAR}" | wc -l | tr -d ' '`
-				OPTVAR=`echo "${OPTVAR}" | ${AWK_CMD} -v l=\`echo ${RKHLINES}\` '/./ { if (a) { a = a "\n" $0 } else a = $0 }; /^$/ { a = "" }; NR == l { print a }'`
+
+				OPTVAR=`echo "${OPTVAR}" | ${AWK_CMD} -v l="$RKHLINES" '/./ { if (a) { a = a "\n" $0 } else a = $0 }; /^$/ { a = "" }; NR == l { print a }'`
 				test -n "`echo \"${OPTVAR} \" | grep '^-'`" && OPTVAR="${OPTVAR} "
 			fi
 		else
@@ -4474,7 +4475,7 @@ get_ipc_options() {
 			test $ERRCODE -eq 1 && LEAVE=1
 		done
 
-		ALLOWIPCPID=" ${ALLOWIPCPID} "
+		ALLOWIPCPID=" `echo ${ALLOWIPCPID}` "
 	fi
 
 
@@ -4503,7 +4504,7 @@ get_ipc_options() {
 	ALLOWIPCUSER=`get_option space-list ALLOWIPCUSER` || exit $?
 
 	if [ -n "${ALLOWIPCUSER}" ]; then
-		ALLOWIPCUSER=" ${ALLOWIPCUSER} "
+		ALLOWIPCUSER=" `echo ${ALLOWIPCUSER}` "
 	fi
 
 
@@ -4519,7 +4520,7 @@ get_ipc_options() {
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		IPC_SEG_SIZE=1000000
+		IPC_SEG_SIZE=$DFLT_SEG_SIZE
 	fi
 
 
@@ -14281,16 +14282,18 @@ ${FOUND_PROCS}"
 
 		if [ $LINUXOS -eq 1 ]; then
 			if [ -n "${IPCS_CMD}" ]; then
-				get_temp_file "${RKHTMPDIR}/ipcs.tmp"
-				IPCS_TMPFILE="${TEMPFILE}"
-				touch "${IPCS_TMPFILE}"
+				# No bad segments found yet.
+				SEGS_FOUND=""
 
-				echo 0 >"${IPCS_TMPFILE}"
+				# No whitelisted entries found yet.
+				SHM_WL_LIST_PID=""
+				SHM_WL_LIST_PATH=""
+				SHM_WL_LIST_USER=""
 
-				RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $NF}'`
+				RKHTMPVAR=`LC_LANG=C ${IPCS_CMD} -u 2>/dev/null | ${AWK_CMD} -F' ' '/segments allocated/ {print $3}'`
 				test -z "${RKHTMPVAR}" && RKHTMPVAR=0
 
-				if [ $RKHTMPVAR -ne 0 ]; then
+				if [ $RKHTMPVAR -gt 0 ]; then
 					#
 					# We expand the process whitelist option here to ensure
 					# that any wildcard entries are the most recent.
@@ -14300,111 +14303,144 @@ ${FOUND_PROCS}"
 						ALLOWIPCPROC=`expand_paths ALLOWIPCPROC_OPT`
 					fi
 
-					LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | grep '^0x' | while read RKH_SHM_KEY RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_PERMS RKH_SHM_BYTES RKH_SHM_NATTACH RKH_SHM_STATUS; do
-#jh
-						if [ \( $RKH_SHM_PERMS -eq 666 -o $RKH_SHM_PERMS -eq 600 \) -a $RKH_SHM_BYTES -ge $IPC_SEG_SIZE ]; then
-							LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID} " | while read RKH_SHM_SHMID RKH_SHM_OWNER RKH_SHM_CPID RKH_SHM_LPID; do
-								RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
+					IFS=$IFSNL
 
-								#
-								# First check to see if this segment is whitelisted.
-								#
+					for SHM_LINE in `LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | ${AWK_CMD} -v SHM_SIZE="$IPC_SEG_SIZE" '/^0x/ && ($4 == 600 || $4 == 666) && $5 >= SHM_SIZE { print $0 }'`; do
+						RKH_SHM_SHMID=`echo "${SHM_LINE}" | ${AWK_CMD} '{ print $2 }'`
+						RKH_SHM_OWNER=`echo "${SHM_LINE}" | ${AWK_CMD} '{ print $3 }'`
+						RKH_SHM_NATTACH=`echo "${SHM_LINE}" | ${AWK_CMD} '{ print $6 }'`
 
-								FOUND=0
+						for SHM_PID_LINE in `LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID} "` ; do
+							RKH_SHM_CPID=`echo "${SHM_PID_LINE}" | ${AWK_CMD} '{ print $3 }'`
+							RKH_SHM_LPID=`echo "${SHM_PID_LINE}" | ${AWK_CMD} '{ print $4 }'`
 
-								if [ -n "${RKH_SHM_PATH}" ]; then
-									FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+							RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
 
-									if [ -n "`echo \"${ALLOWIPCPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-										FOUND=1
-										# At this moment we have to store these for displaying later.
-										echo "Path:`name2text \"${RKH_SHM_PATH}\"`" >>"${IPCS_TMPFILE}"
-									fi
-								fi
+							#
+							# First check to see if this segment is whitelisted.
+							#
 
-								if [ $FOUND -eq 0 -a -n "`echo \"${ALLOWIPCUSER}\" | grep \" ${RKH_SHM_OWNER} \"`" ]; then
+							FOUND=0
+
+							if [ -n "${RKH_SHM_PATH}" ]; then
+								FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+								if [ -n "`echo \"${ALLOWIPCPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 									FOUND=1
-									echo "User:${RKH_SHM_OWNER}" >>"${IPCS_TMPFILE}"
+									SHM_WL_LIST_PATH="${SHM_WL_LIST_PATH} `name2text \"${RKH_SHM_PATH}\"`"
 								fi
+							fi
 
-								if [ $FOUND -eq 0 -a -n "`echo \"${ALLOWIPCPID}\" | grep \" ${RKH_SHM_CPID} \"`" ]; then
-									FOUND=1
-									echo "PID:${RKH_SHM_CPID}" >>"${IPCS_TMPFILE}"
-								fi
+							if [ $FOUND -eq 0 -a -n "`echo \"${ALLOWIPCUSER}\" | grep \" ${RKH_SHM_OWNER} \"`" ]; then
+								FOUND=1
+								SHM_WL_LIST_USER="${SHM_WL_LIST_USER} ${RKH_SHM_OWNER}"
+							fi
 
-								if [ $FOUND -eq 0 ]; then
-									if [ -z "`grep '^1' \"${IPCS_TMPFILE}\"`" ]; then
-										echo 1 >>"${IPCS_TMPFILE}"
+							if [ $FOUND -eq 0 -a -n "`echo \"${ALLOWIPCPID}\" | grep \" ${RKH_SHM_CPID} \"`" ]; then
+								FOUND=1
+								SHM_WL_LIST_PID="${SHM_WL_LIST_PID} ${RKH_SHM_CPID}"
+							fi
 
-										# We must log the overall result before any found entry.
-										display --to LOG --type PLAIN --result WARNING --color RED --log-indent 2 ROOTKIT_MALWARE_IPCS
-										display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
-									fi
+							if [ $FOUND -eq 0 ]; then
+								#
+								# We have found a suspicious segment. We just add it to a
+								# newline-separated list for displaying later on.
+								#
 
-									if [ $VERBOSE_LOGGING -eq 1 ]; then
-										if [ -n "${RKH_SHM_PATH}" ]; then
-											display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "`name2text \"${RKH_SHM_PATH}\"`" "${RKH_SHM_CPID}" "${RKH_SHM_OWNER}"
-										elif [ -n "${RKH_SHM_OWNER}" -a ${RKH_SHM_CPID} -gt 0 ]; then
-											if [ ${RKH_SHM_NATTACH} -eq 0 ]; then
-												display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETACHED "${RKH_SHM_OWNER}" "${RKH_SHM_CPID}" "${RKH_SHM_SHMID}"
-											else
-												display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_ATTACHED "${RKH_SHM_OWNER}" "${RKH_SHM_SHMID}" "${RKH_SHM_NATTACH}" "${RKH_SHM_CPID}" "${RKH_SHM_LPID}"
-											fi
+								if [ $VERBOSE_LOGGING -eq 1 ]; then
+									if [ -n "${RKH_SHM_PATH}" ]; then
+										SEGS_FOUND="${SEGS_FOUND}
+1:`name2text \"${RKH_SHM_PATH}\"` ${RKH_SHM_CPID} ${RKH_SHM_OWNER}"
+									elif [ -n "${RKH_SHM_OWNER}" -a ${RKH_SHM_CPID} -gt 0 ]; then
+										if [ ${RKH_SHM_NATTACH} -eq 0 ]; then
+											SEGS_FOUND="${SEGS_FOUND}
+2:${RKH_SHM_OWNER} ${RKH_SHM_CPID} ${RKH_SHM_SHMID}"
+										else
+											SEGS_FOUND="${SEGS_FOUND}
+3:${RKH_SHM_OWNER} ${RKH_SHM_SHMID} ${RKH_SHM_NATTACH} ${RKH_SHM_CPID} ${RKH_SHM_LPID}"
 										fi
 									fi
 								fi
-							done
-						fi
+							fi
+						done
 					done
+
+					IFS=$RKHIFS
 				fi
 
 				#
 				# Now display the results.
 				#
 
-				RKHTMPVAR=`grep '^[01]' "${IPCS_TMPFILE}" | tail ${TAIL_OPT}1`
-				test -z "${RKHTMPVAR}" && RKHTMPVAR=0
-
-				if [ $RKHTMPVAR -eq 0 ]; then
+				if [ -z "${SEGS_FOUND}" ]; then
 					display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_IPCS
 				else
-					display --to SCREEN --type PLAIN --result WARNING --color RED --screen-indent 4 ROOTKIT_MALWARE_IPCS
+					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_IPCS
+
+					display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
+
+					IFS=$IFSNL
+					for SHM_LINE in ${SEGS_FOUND}; do
+						test -z "${SHM_LINE}" && continue
+
+						# We need to do this to ensure the 'set' below works correctly.
+						IFS=$RKHIFS
+
+						SHM_TYPE=`echo "${SHM_LINE}" | cut -d: -f1`
+						SHM_LINE=`echo "${SHM_LINE}" | cut -d: -f2-`
+
+						case "${SHM_TYPE}" in
+						1) # A normal segment.
+							set -- ${SHM_LINE}
+							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1" "$2" "$3"
+							;;
+						2) # A detached segment with no pathname.
+							set -- ${SHM_LINE}
+							# Display $RKH_SHM_OWNER, $RKH_SHM_CPID, $RKH_SHM_SHMID
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETACHED "$1" "$2" "$3"
+							;;
+						3) # An attached segment, but with no pathname.
+							set -- ${SHM_LINE}
+							# Display $RKH_SHM_OWNER, $RKH_SHM_SHMID, $RKH_SHM_NATTACH, $RKH_SHM_CPID, $RKH_SHM_LPID
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_ATTACHED "$1" "$2" "$3" "$4" "$5"
+							;;
+						esac
+
+						IFS=$IFSNL
+					done
+					IFS=$RKHIFS
 				fi
 
 				#
-				# We can now display any whitelisted segments that were found.
+				# Finally display any whitelisted segments that were found.
 				#
 
 				FOUND=""
+				for FNAME in ${SHM_WL_LIST_PATH}; do
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-				for FNAME in `grep -v '^[01]' "${IPCS_TMPFILE}"`; do
-					# First check to see if it is a pathname.
-					if [ -n "`echo \"${FNAME}\" | grep '^Path:'`" ]; then
-						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
-						if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
-							FOUND="${FOUND} ${FNAME} "
-							SHORTFNAME=`echo "${FNAME}" | cut -d: -f2-`
-							display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PATH "${SHORTFNAME}"
-						fi
-					elif [ -n "`echo \"${FNAME}\" | grep '^User:'`" ]; then
-						# Check to see if the username is whitelisted.
-						if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
-							FOUND="${FOUND} ${FNAME} "
-							SHORTFNAME=`echo "${FNAME}" | cut -d: -f2-`
-							display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_USER "${SHORTFNAME}"
-						fi
-					elif [ -n "`echo \"${FNAME}\" | grep '^PID:'`" ]; then
-						# Check to see if the segment creator PID is whitelisted.
-						if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
-							FOUND="${FOUND} ${FNAME} "
-							SHORTFNAME=`echo "${FNAME}" | cut -d: -f2-`
-							display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PID "${SHORTFNAME}"
-						fi
+					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
+						FOUND="${FOUND} ${FNAME} "
+						display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PATH "${FNAME}"
 					fi
 				done
 
-				rm -f "${IPCS_TMPFILE}" >/dev/null 2>&1
+				FOUND=""
+				for FNAME in ${SHM_WL_LIST_USER}; do
+					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
+						FOUND="${FOUND} ${FNAME} "
+						display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_USER "${FNAME}"
+					fi
+				done
+
+				FOUND=""
+				for FNAME in ${SHM_WL_LIST_PID}; do
+					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
+						FOUND="${FOUND} ${FNAME} "
+						display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PID "${FNAME}"
+					fi
+				done
 			else
 				display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_IPCS
 				display --to LOG --type INFO NOT_FOUND_CMD 'ipcs'
@@ -19259,6 +19295,9 @@ ALLOWPROCLIST_OPT=""
 # This option will be set if the shell globstar option is to be set.
 GLOBSTAR=0
 
+# The default value for the minimum shared memory segement size.
+DFLT_SEG_SIZE=1000000
+
 
 ######################################################################
 #
@@ -20750,6 +20789,10 @@ if [ $CHECK -eq 1 ]; then
 
 			check_os_info
 		fi
+	fi
+
+	if `check_test ipc_shared_mem`; then
+		display --to LOG --type INFO IPC_SEG_SIZE "$IPC_SEG_SIZE"
 	fi
 fi
 
