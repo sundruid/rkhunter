@@ -1,4 +1,4 @@
-Version:2017120501
+Version:2017120601
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -639,5 +639,7 @@ LOCK_DIR:Using '$1' as the locking directory
 LOCK_UNUSED:Locking is not being used
 LOCK_WAIT:Waiting for lock file
 LOCK_FAIL:Unable to get the lock file: rkhunter has not run!
+
+IPC_SEG_SIZE:The minimum shared memory segment size to be checked is set to $1 bytes.
 
 LINUX_ONLY:Check skipped - this check is only for Linux systems.
