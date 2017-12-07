@@ -2013,6 +2013,8 @@ get_language_option() {
 		UPDATE_LANG=`get_option space-list UPDATE_LANG` || exit $?
 
 		if [ -n "${UPDATE_LANG}" ]; then
+			UPDATE_LANG=`echo ${UPDATE_LANG}`
+
 			if [ -z "`echo \" ${UPDATE_LANG} \" | grep \" ${LANGUAGE} \"`" ]; then
 				UPDATE_LANG="${UPDATE_LANG} ${LANGUAGE}"
 			fi
@@ -2648,6 +2650,13 @@ get_mailonwarn_option() {
 	MAILONWARNING=`get_option space-list MAIL-ON-WARNING` || exit $?
 
 	if [ -n "${MAILONWARNING}" ]; then
+		MAILONWARNING=`echo ${MAILONWARNING}`
+
+		#
+		# If an email address is configured, then we need
+		# to check the email command option as well.
+		#
+
 		MAIL_CMD=`get_option single MAIL_CMD` || exit $?
 
 		test -z "${MAIL_CMD}" && MAIL_CMD="mail -s \"[rkhunter] Warnings found for \${HOST_NAME}\""
@@ -4238,9 +4247,14 @@ get_unhide_options() {
 
 	UNHIDE_TESTS=`get_option space-list UNHIDE_TESTS` || exit $?
 
-	if [ -z "${UNHIDE_TESTS}" ]; then
+	if [ -n "${UNHIDE_TESTS}" ]; then
+		# We need to include a space to avoid the problem with hyphens.
+		UNHIDE_TESTS=" `echo ${UNHIDE_TESTS}`"
+	else
 		UNHIDE_TESTS="sys"
-	elif [ -z "`echo \" ${UNHIDE_TESTS}\" | grep ' [a-zA-Z]'`" ]; then
+	fi
+
+	if [ -z "`echo \" ${UNHIDE_TESTS}\" | grep ' [a-zA-Z]'`" ]; then
 		LEAVE=1
 		echo "Invalid UNHIDE_TESTS configuration option - no tests specified: ${UNHIDE_TESTS}"
 	fi
@@ -4326,24 +4340,22 @@ get_suspscan_options() {
 	LEAVE=0
 	ERRCODE=0
 
-	SUSPSCAN_DFLT_TMP=0
-	SUSPSCAN_DFLT_DIRS=0
-	SUSPSCAN_DFLT_THRESH=0
-	SUSPSCAN_DFLT_MAXSIZE=0
-
 	#
 	# Get the directories to scan.
 	#
 
 	SUSPSCAN_DIRS=`get_option space-list SUSPSCAN_DIRS` || exit $?
 
-	if [ -n "${SUSPSCAN_DIRS}" ]; then
-		check_paths SUSPSCAN_DIRS SUSPSCAN_DIRS "EXIST NOBROKENLINK NOWILD"
+	if [ -z "${SUSPSCAN_DIRS}" ]; then
+		SUSPSCAN_DIRS="${SUSPSCAN_DFLT_DIRS}"
+	fi
 
-		test $ERRCODE -eq 1 && LEAVE=1
+	check_paths SUSPSCAN_DIRS SUSPSCAN_DIRS "EXIST NOBROKENLINK NOWILD"
+
+	if [ $ERRCODE -eq 0 ]; then
+		SUSPSCAN_DIRS=`echo ${SUSPSCAN_DIRS}`
 	else
-		SUSPSCAN_DFLT_DIRS=1
-		SUSPSCAN_DIRS="/tmp /var/tmp"
+		LEAVE=1
 	fi
 
 
@@ -4354,8 +4366,7 @@ get_suspscan_options() {
 	SUSPSCAN_TEMP=`get_option single SUSPSCAN_TEMP` || exit $?
 
 	if [ -z "${SUSPSCAN_TEMP}" ]; then
-		SUSPSCAN_DFLT_TMP=1
-		SUSPSCAN_TEMP="/dev/shm"
+		SUSPSCAN_TEMP="${SUSPSCAN_DFLT_TMP}"
 	fi
 
 	check_paths SUSPSCAN_TEMP SUSPSCAN_TEMP "EXIST NOBROKENLINK NOWILD"
@@ -4371,7 +4382,7 @@ get_suspscan_options() {
 
 
 	#
-	# Get the maximum file size to handle, for example 1024000.
+	# Get the maximum file size to handle.
 	#
 
 	SUSPSCAN_MAXSIZE=`get_option single SUSPSCAN_MAXSIZE` || exit $?
@@ -4381,8 +4392,7 @@ get_suspscan_options() {
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		SUSPSCAN_DFLT_MAXSIZE=1
-		SUSPSCAN_MAXSIZE=1024000
+		SUSPSCAN_MAXSIZE=$SUSPSCAN_DFLT_MAXSIZE
 	fi
 
 
@@ -4397,8 +4407,7 @@ get_suspscan_options() {
 
 		test $ERRCODE -eq 1 && LEAVE=1
 	else
-		SUSPSCAN_THRESH=200
-		SUSPSCAN_DFLT_THRESH=1
+		SUSPSCAN_THRESH=$SUSPSCAN_DFLT_THRESH
 	fi
 
 
@@ -5251,7 +5260,7 @@ get_shared_lib_whitelist_option() {
 		check_paths SHARED_LIB_WHITELIST SHARED_LIB_WHITELIST "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
-			SHARED_LIB_WHITELIST=" ${SHARED_LIB_WHITELIST} "
+			SHARED_LIB_WHITELIST=" `echo ${SHARED_LIB_WHITELIST}` "
 		else
 			LEAVE=1
 		fi
@@ -5753,6 +5762,8 @@ get_prelink_dep_option() {
 	RKHTMPVAR=`get_option space-list IGNORE_PRELINK_DEP_ERR` || exit $?
 
 	if [ -n "${RKHTMPVAR}" ]; then
+		RKHTMPVAR=`make_space_list "${RKHTMPVAR}"`
+
 		check_paths RKHTMPVAR IGNORE_PRELINK_DEP_ERR "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
@@ -5910,6 +5921,7 @@ get_app_options() {
 	RKHTMPVAR=`get_option space-list APP_WHITELIST` || exit $?
 
 	if [ -n "${RKHTMPVAR}" ]; then
+		RKHTMPVAR=`echo ${RKHTMPVAR}`
 		APP_WHITELIST=`echo " ${RKHTMPVAR} " | tr '[:upper:]' '[:lower:]'`
 	fi
 
@@ -6373,6 +6385,7 @@ rkh_dat_set_file_properties() {
 
 #jh - breakout the inode check as a separate test for BTRFS filesystems etc.
 #jh - Ebury check?
+#jh - Heroin lkm? - should we treat the new dia lkm similarly?
 	#
 	# This function obtains various bits of information about the files to
 	# be checked. The current format in the rkhunter.dat file is:
@@ -11825,8 +11838,6 @@ suspscan() {
 	# Suspscan is a CPU hog and only useful to some limit.
 	# Suspscan should NEVER be enabled by default.
 	#
-	# The suspscan options are intially processed in 'get_suspscan_options'.
-	#
 
 	if `check_test suspscan`; then
 		display --to LOG --type INFO --nl STARTING_TEST suspscan
@@ -11866,50 +11877,16 @@ suspscan() {
 	fi
 
 	#
-	# Now log the configurable option values.
-	#
-	# Log which directories are to be scanned.
+	# Next log our configuration settings.
 	#
 
-	if [ $SUSPSCAN_DFLT_DIRS -eq 1 ]; then
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_DIRS "${SUSPSCAN_DIRS}"
-	else
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_DIRS "${SUSPSCAN_DIRS}"
-	fi
+	display --to LOG --type INFO SUSPSCAN_DIRS "${SUSPSCAN_DIRS}"
+	display --to LOG --type INFO SUSPSCAN_TEMP "${SUSPSCAN_TEMP}"
+	display --to LOG --type INFO SUSPSCAN_SIZE "${SUSPSCAN_MAXSIZE}"
+	display --to LOG --type INFO SUSPSCAN_THRESH "${SUSPSCAN_THRESH}"
 
 	#
-	# Log the temporary directory being used.
-	#
-
-	if [ $SUSPSCAN_DFLT_TMP -eq 1 ]; then
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_TEMP "${SUSPSCAN_TEMP}"
-	else
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_TEMP "${SUSPSCAN_TEMP}"
-	fi
-
-	#
-	# Log the maximum file size to handle.
-	#
-
-	if [ $SUSPSCAN_DFLT_MAXSIZE -eq 1 ]; then
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_SIZE "${SUSPSCAN_MAXSIZE}"
-	else
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_SIZE "${SUSPSCAN_MAXSIZE}"
-	fi
-
-	#
-	# Log the score threshold.
-	#
-
-	if [ $SUSPSCAN_DFLT_THRESH -eq 1 ]; then
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_NO_THRESH "${SUSPSCAN_THRESH}"
-	else
-		display --to LOG --type PLAIN --log-indent 4 SUSPSCAN_THRESH "${SUSPSCAN_THRESH}"
-	fi
-
-
-	#
-	# Start the test.
+	# Finally start the test.
 	#
 
 	FOUND=0
@@ -11919,13 +11896,12 @@ suspscan() {
 	rm -f ${SUSPSCAN_TEMP}/suspscan.*.strings >/dev/null 2>&1
 
 	#
-	# Set a temporary file to log scan results to.
+	# Get a temporary file used to log the scan results.
 	#
 
 	get_temp_file "${RKHTMPDIR}/suspscan.tmp"
 	SUSPSCAN_TMPFILE="${TEMPFILE}"
 	touch "${SUSPSCAN_TMPFILE}"
-
 
 	for DIR in ${SUSPSCAN_DIRS}; do
 		SUSPSCAN_DIR="${DIR}"
@@ -12148,7 +12124,7 @@ suspscan() {
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
 	fi
 
-	rm -f "${SUSPSCAN_TMPFILE}"
+	rm -f "${SUSPSCAN_TMPFILE}" >/dev/null 2>&1
 
 	return
 }
@@ -14282,6 +14258,9 @@ ${FOUND_PROCS}"
 
 		if [ $LINUXOS -eq 1 ]; then
 			if [ -n "${IPCS_CMD}" ]; then
+				# Log the minimum segment size we are going to check.
+				display --to LOG --type INFO IPC_SEG_SIZE "$IPC_SEG_SIZE"
+
 				# No bad segments found yet.
 				SEGS_FOUND=""
 
@@ -19226,8 +19205,12 @@ ROTATE_MIRRORS=1
 UPDATE_MIRRORS=1
 MIRRORS_MODE=0
 
-# By default suspscan verbose logging should be initialised and off.
+# Set the default suspscan settings.
 SUSPSCAN_DEBUG=0
+SUSPSCAN_DFLT_DIRS="/tmp /var/tmp"
+SUSPSCAN_DFLT_TMP="/dev/shm"
+SUSPSCAN_DFLT_THRESH=200
+SUSPSCAN_DFLT_MAXSIZE=1024000
 
 # SELinux runcon usage as determined by get_if_prelinked.
 USE_RUNCON=0
@@ -20789,10 +20772,6 @@ if [ $CHECK -eq 1 ]; then
 
 			check_os_info
 		fi
-	fi
-
-	if `check_test ipc_shared_mem`; then
-		display --to LOG --type INFO IPC_SEG_SIZE "$IPC_SEG_SIZE"
 	fi
 fi
 

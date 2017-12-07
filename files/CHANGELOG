@@ -32,6 +32,8 @@
    value is 1000000 bytes.
 
  Changes:
+ - The 'ipc_shared_mem' test will now log the minimum segment size
+   that will be checked.
 
  Bugfixes:
  - For prelinked systems ensure that the default hash function is
@@ -51,6 +53,8 @@
    pathname is available, the segment owner and PID will be logged.
  - It was possible for the return code to be lost when running the
    'ipc_shared_mem' check. This has now been corrected.
+ - Some configuration options were still not being handled correctly
+   when specified more than once.
 
  --
 
