@@ -22,7 +22,7 @@
 
  New:
  - Added support for Alpine Linux (busybox).
- - Add a very basic check for the diamorphine LKM file.
+ - Added the 'Diamorphine LKM' check.
  - Added the ALLOWIPCPID configuration file option. This will allow
    specific PIDs to be whitelisted from the shared memory check.
  - Added the ALLOWIPCUSER configuration file option. This will allow

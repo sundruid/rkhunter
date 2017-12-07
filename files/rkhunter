@@ -6385,7 +6385,6 @@ rkh_dat_set_file_properties() {
 
 #jh - breakout the inode check as a separate test for BTRFS filesystems etc.
 #jh - Ebury check?
-#jh - Heroin lkm? - should we treat the new dia lkm similarly?
 	#
 	# This function obtains various bits of information about the files to
 	# be checked. The current format in the rkhunter.dat file is:
@@ -8186,6 +8185,17 @@ do_system_check_initialisation() {
 		     /usr/doc/tar/.../.dracusor/stuff/old/sense"
 	DEVIL_DIRS="/usr/doc/tar/.../.dracusor"
 	DEVIL_KSYMS=
+
+
+	# Diamorphine LKM
+	DIAMORPHINE_FILES=
+	DIAMORPHINE_DIRS=
+	DIAMORPHINE_KSYMS="diamorphine
+			   module_hide
+			   module_hidden
+			   is_invisible
+			   hacked_getdents
+			   hacked_kill"
 
 
 	# Dica-Kit (T0rn variant) Rootkit
@@ -12338,6 +12348,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${DEVIL_FILES}
 	SCAN_DIRS=${DEVIL_DIRS}
 	SCAN_KSYMS=${DEVIL_KSYMS}
+	scanrootkit
+
+	# Diamorphine LKM
+
+	SCAN_ROOTKIT="Diamorphine LKM"
+	SCAN_FILES=${DIAMORPHINE_FILES}
+	SCAN_DIRS=${DIAMORPHINE_DIRS}
+	SCAN_KSYMS=${DIAMORPHINE_KSYMS}
 	scanrootkit
 
 	# Dica-Kit Rootkit
@@ -19110,7 +19128,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
-  Danny-Boy'"'"'s Abuse Kit, Devil, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
+  Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, KBeast, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
