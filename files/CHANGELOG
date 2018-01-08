@@ -55,6 +55,9 @@
    'ipc_shared_mem' check. This has now been corrected.
  - Some configuration options were still not being handled correctly
    when specified more than once.
+ - The 'ipc_shared_mem' check did not correctly handle whitelisting
+   when a segment pathname was flagged as deleted. This has now
+   been corrected.
 
  --
 
