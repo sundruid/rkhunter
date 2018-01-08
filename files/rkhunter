@@ -14313,6 +14313,9 @@ ${FOUND_PROCS}"
 
 							RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
 
+							# Strip off the '(deleted)' part from the pathname if present.
+							RKH_SHM_PATH_STRIPPED=`echo "${RKH_SHM_PATH}" | sed -e 's/ (deleted)$//'`
+
 							#
 							# First check to see if this segment is whitelisted.
 							#
@@ -14320,11 +14323,11 @@ ${FOUND_PROCS}"
 							FOUND=0
 
 							if [ -n "${RKH_SHM_PATH}" ]; then
-								FNAMEGREP=`echo "${RKH_SHM_PATH}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+								FNAMEGREP=`echo "${RKH_SHM_PATH_STRIPPED}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 								if [ -n "`echo \"${ALLOWIPCPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 									FOUND=1
-									SHM_WL_LIST_PATH="${SHM_WL_LIST_PATH} `name2text \"${RKH_SHM_PATH}\"`"
+									SHM_WL_LIST_PATH="${SHM_WL_LIST_PATH} `name2text \"${RKH_SHM_PATH_STRIPPED}\"`"
 								fi
 							fi
 
@@ -14346,15 +14349,22 @@ ${FOUND_PROCS}"
 
 								if [ $VERBOSE_LOGGING -eq 1 ]; then
 									if [ -n "${RKH_SHM_PATH}" ]; then
-										SEGS_FOUND="${SEGS_FOUND}
-1:`name2text \"${RKH_SHM_PATH}\"` ${RKH_SHM_CPID} ${RKH_SHM_OWNER}"
+										RKHTMPVAR2=`name2text "${RKH_SHM_PATH_STRIPPED}"`
+
+										if [ "${RKH_SHM_PATH}" == "${RKH_SHM_PATH_STRIPPED}" ]; then
+											SEGS_FOUND="${SEGS_FOUND}
+1:${RKHTMPVAR2} ${RKH_SHM_CPID} ${RKH_SHM_OWNER}"
+										else
+											SEGS_FOUND="${SEGS_FOUND}
+2:${RKHTMPVAR2} ${RKH_SHM_CPID} ${RKH_SHM_OWNER}"
+										fi
 									elif [ -n "${RKH_SHM_OWNER}" -a ${RKH_SHM_CPID} -gt 0 ]; then
 										if [ ${RKH_SHM_NATTACH} -eq 0 ]; then
 											SEGS_FOUND="${SEGS_FOUND}
-2:${RKH_SHM_OWNER} ${RKH_SHM_CPID} ${RKH_SHM_SHMID}"
+3:${RKH_SHM_OWNER} ${RKH_SHM_CPID} ${RKH_SHM_SHMID}"
 										else
 											SEGS_FOUND="${SEGS_FOUND}
-3:${RKH_SHM_OWNER} ${RKH_SHM_SHMID} ${RKH_SHM_NATTACH} ${RKH_SHM_CPID} ${RKH_SHM_LPID}"
+4:${RKH_SHM_OWNER} ${RKH_SHM_SHMID} ${RKH_SHM_NATTACH} ${RKH_SHM_CPID} ${RKH_SHM_LPID}"
 										fi
 									fi
 								fi
@@ -14392,12 +14402,17 @@ ${FOUND_PROCS}"
 							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER
 							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1" "$2" "$3"
 							;;
-						2) # A detached segment with no pathname.
+						2) # A segment with a deleted pathname.
+							set -- ${SHM_LINE}
+							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1 (deleted)" "$2" "$3"
+							;;
+						3) # A detached segment with no pathname.
 							set -- ${SHM_LINE}
 							# Display $RKH_SHM_OWNER, $RKH_SHM_CPID, $RKH_SHM_SHMID
 							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETACHED "$1" "$2" "$3"
 							;;
-						3) # An attached segment, but with no pathname.
+						4) # An attached segment, but with no pathname.
 							set -- ${SHM_LINE}
 							# Display $RKH_SHM_OWNER, $RKH_SHM_SHMID, $RKH_SHM_NATTACH, $RKH_SHM_CPID, $RKH_SHM_LPID
 							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_ATTACHED "$1" "$2" "$3" "$4" "$5"
