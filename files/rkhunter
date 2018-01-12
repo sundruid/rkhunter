@@ -1288,18 +1288,15 @@ suckit_extra_checks() {
 	# the value of those variables.
 	#
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --log-indent 2 --nl ROOTKIT_ADD_SUCKIT_LOG
-	fi
-
+	display --to LOG --type PLAIN --log-indent 2 --nl ROOTKIT_ADD_SUCKIT_LOG
 
 	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
 	#
-	# The first check tests the link count of the /sbin/init file.
+	# The first check tests the link count of the '/sbin/init' file.
 	# We use the NLINKS variable to indicate the test result:
-	#	-1 means that no stat command was available
-	#	 0 means that the stat command gave an error
+	#	-1 means that no 'stat' command was available
+	#	 0 means that the 'stat' command gave an error
 	#	 1 is okay
 	#	>1 means that suckit may be installed
 	#
@@ -1326,6 +1323,12 @@ suckit_extra_checks() {
 		fi
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' stat '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'stat'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'stat'
+		fi
 	fi
 
 
@@ -1358,12 +1361,10 @@ suckit_extra_checks() {
 		rm -f "${TEMPFILE}.${EXT}" >/dev/null 2>&1
 	done
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		if [ -z "${HIDDEN}" ]; then
-			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
-		else
-			display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
-		fi
+	if [ -z "${HIDDEN}" ]; then
+		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
+	else
+		display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
 	fi
 
 
@@ -1414,14 +1415,12 @@ suckit_extra_checks() {
 			test -n "${SKDET_OUTPUT}" && SKDET=1
 		fi
 
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			if [ $SKDET -eq 0 ]; then
-				display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
-			else
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
-			fi
+		if [ $SKDET -eq 0 ]; then
+			display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
+		else
+			display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
 		fi
-	elif [ $VERBOSE_LOGGING -eq 1 ]; then
+	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
 		display --to LOG --type INFO NOT_FOUND_CMD 'skdet'
 	fi
@@ -1431,7 +1430,7 @@ suckit_extra_checks() {
 	# Now we can display the results.
 	#
 
-	if [ $NLINKS -eq 1 -a -z "${HIDDEN}" -a $SKDET -le 0 ]; then
+	if [ \( $NLINKS -eq 1 -o $NLINKS -eq -1 \) -a -z "${HIDDEN}" -a $SKDET -le 0 ]; then
 		display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_ADD_SUCKIT
 	else
 		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
@@ -1440,7 +1439,11 @@ suckit_extra_checks() {
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_ADD_SUCKIT
 
 		if [ $NLINKS -eq -1 ]; then
-			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_ADD_SUCKIT_LINK_NOCMD
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' stat '`" ]; then
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_ADD_SUCKIT_LINK_DISABLED
+			else
+				display --to LOG --type PLAIN --log-indent 9 ROOTKIT_ADD_SUCKIT_LINK_NOCMD
+			fi
 		elif [ $NLINKS -eq 0 ]; then
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" '/sbin/init'
 		elif [ $NLINKS -gt 1 ]; then
@@ -1833,13 +1836,13 @@ check_commands() {
 	# the '-f' option, then we must use the supplied shell script.
 	#
 
-	if [ -z "${READLINK_CMD}" -o "${READLINK_CMD}" = "BUILTIN" ]; then
-		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
-	elif [ -n "`${READLINK_CMD} -f \"${SCRIPT_PATH}/readlink.sh\" 2>&1 >/dev/null`" ]; then
-		test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
+	if [ "${READLINK_CMD}" != "DISABLED" ]; then
+		if [ -z "${READLINK_CMD}" -o "${READLINK_CMD}" = "BUILTIN" ]; then
+			test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
+		elif [ -n "`${READLINK_CMD} -f \"${SCRIPT_PATH}/readlink.sh\" 2>&1 >/dev/null`" ]; then
+			test -x "${SCRIPT_PATH}/readlink.sh" && READLINK_CMD="${SCRIPT_PATH}/readlink.sh" || READLINK_CMD=""
+		fi
 	fi
-
-	test -n "${READLINK_CMD}" && HAVE_READLINK=1
 
 
 	#
@@ -1874,7 +1877,20 @@ check_commands() {
 
 
 	#
-	# Finally we must remove all the DISABLED commands.
+	# For OSX systems we should use the 'gnumfmt' command
+	# rather than 'numfmt', if it is available.
+	#
+
+	if [ $MACOSX -eq 1 ]; then
+		if [ "${NUMFMT_CMD}" != "DISABLED" ]; then
+			RKHTMPVAR=`find_cmd gnumfmt`
+			test -n "${RKHTMPVAR}" && NUMFMT_CMD="${RKHTMPVAR}"
+		fi
+	fi
+
+
+	#
+	# Now remove all the DISABLED commands.
 	#
 
 	for CMD in ${CMDLIST}; do
@@ -1882,8 +1898,22 @@ check_commands() {
 		RKHTMPVAR="${RKHTMPVAR}_CMD"
 		RKHTMPVAR2=`eval echo "\\$${RKHTMPVAR}"`
 
-		test "${RKHTMPVAR2}" = "DISABLED" -o "${RKHTMPVAR2}" = "BUILTIN" && eval ${RKHTMPVAR}=\"\"
+		if [ "${RKHTMPVAR2}" = "DISABLED" -o "${RKHTMPVAR2}" = "BUILTIN" ]; then
+			eval ${RKHTMPVAR}=\"\"
+			test "${RKHTMPVAR2}" = "DISABLED" && DISABLED_CMDS="${DISABLED_CMDS} ${CMD}"
+		fi
 	done
+
+	test -n "${DISABLED_CMDS}" && DISABLED_CMDS=" ${DISABLED_CMDS} "
+
+
+	#
+	# Finally we can set some variables based on
+	# whether the commands exist or not.
+	#
+
+	test -n "${NUMFMT_CMD}" && HAVE_NUMFMT=1
+	test -n "${READLINK_CMD}" && HAVE_READLINK=1
 
 	return
 }
@@ -9862,7 +9892,13 @@ strings_check() {
 
 	if [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 STRINGS_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD 'strings'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' strings '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'strings'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'strings'
+		fi
+
 		return
 	fi
 
@@ -10069,7 +10105,12 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 --log-indent 2 SHARED_LIBS_PATH
-			display --to LOG --type INFO NOT_FOUND_CMD 'ldd'
+
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' ldd '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'ldd'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'ldd'
+			fi
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs_path
@@ -10437,7 +10478,11 @@ file_properties_check() {
 		for TEST_RESULT in ${RKHTMPVAR}; do
 			case "${TEST_RESULT}" in
 			attr)
-				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_ATTR
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' stat '`" ]; then
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_ATTR_DISABLED
+				else
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_ATTR
+				fi
 				;;
 			hash|prelink|sha1|libsafe)
 				if [ $RKHTMPVAR2 -eq 0 ]; then
@@ -10461,7 +10506,11 @@ file_properties_check() {
 				esac
 				;;
 			immutable)
-				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' lsattr '`" ]; then
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_DISABLED
+				else
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT
+				fi
 				;;
 			immutable-bsd)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD 'ls -lno'
@@ -10470,7 +10519,11 @@ file_properties_check() {
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_IMMUT_CMD 'lsattr'
 				;;
 			script)
-				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_SCRIPT
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' file '`" ]; then
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_SCRIPT_DISABLED
+				else
+					display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_SCRIPT
+				fi
 				;;
 			script-cmd)
 				display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SKIP_FILE_CMD
@@ -11864,11 +11917,23 @@ suspscan() {
 
 	if [ -z "${FILE_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD 'file'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' file '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'file'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'file'
+		fi
+
 		return
 	elif [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 SUSPSCAN_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD 'strings'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' strings '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'strings'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'strings'
+		fi
+
 		return
 	fi
 
@@ -12722,9 +12787,14 @@ rootkit_file_dir_checks() {
 						display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_LINK_COUNT "${DIR_NAME}"
 					fi
 				done
-			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+			else
 				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_LINK_COUNT '/etc and /usr/share'
-				display --to LOG --type INFO NOT_FOUND_CMD 'stat'
+
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' stat '`" ]; then
+					display --to LOG --type INFO DISABLED_CMD 'stat'
+				else
+					display --to LOG --type INFO NOT_FOUND_CMD 'stat'
+				fi
 			fi
 		fi
 
@@ -12769,7 +12839,12 @@ rootkit_file_dir_checks() {
 		else # PGREP_CMD not found
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
-				display --to LOG --type INFO NOT_FOUND_CMD 'pgrep'
+
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' pgrep '`" ]; then
+					display --to LOG --type INFO DISABLED_CMD 'pgrep'
+				else
+					display --to LOG --type INFO NOT_FOUND_CMD 'pgrep'
+				fi
 			fi
 		fi
 
@@ -12943,7 +13018,12 @@ rootkit_file_dir_checks() {
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-			display --to LOG --type INFO NOT_FOUND_CMD 'find'
+
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' find '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'find'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'find'
+			fi
 		fi
 	fi
 
@@ -13400,7 +13480,13 @@ possible_rootkit_string_checks() {
 
 	if [ -z "${STRINGS_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 ROOTKIT_POSS_STRINGS
-		display --to LOG --type INFO NOT_FOUND_CMD 'strings'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' strings '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'strings'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'strings'
+		fi
+
 		return
 	elif [ "${STARTUP_PATHS}" = "NONE" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color GREEN --screen-indent 4 ROOTKIT_POSS_STRINGS
@@ -13793,7 +13879,12 @@ ${PROC} ${PID} ${FNAME}"
 			IFS=$RKHIFS
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
-			display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
+
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' lsof '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'lsof'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
+			fi
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST deleted_files
@@ -13909,7 +14000,12 @@ ${RKHTMPVAR}:${FNAME}"
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_SUSP_FILES
-			display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
+
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' lsof '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'lsof'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
+			fi
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST running_procs
@@ -14276,8 +14372,28 @@ ${FOUND_PROCS}"
 
 		if [ $LINUXOS -eq 1 ]; then
 			if [ -n "${IPCS_CMD}" ]; then
+				#
 				# Log the minimum segment size we are going to check.
-				display --to LOG --type INFO IPC_SEG_SIZE "$IPC_SEG_SIZE"
+				# If possible, use the human-readable format for the
+				# number of bytes.
+				#
+
+				IPC_SSIZE_HUMAN=$IPC_SEG_SIZE
+
+				if [ $HAVE_NUMFMT -eq 1 ]; then
+					RKHTMPVAR=`${NUMFMT_CMD} --to iec $IPC_SEG_SIZE 2>/dev/null`
+
+					if [ -n "${RKHTMPVAR}" ]; then
+						IPC_SSIZE_HUMAN="${RKHTMPVAR}B"
+						RKHTMPVAR="$IPC_SEG_SIZE (${IPC_SSIZE_HUMAN})"
+					else
+						RKHTMPVAR="$IPC_SEG_SIZE"
+					fi
+				else
+					RKHTMPVAR="$IPC_SEG_SIZE"
+				fi
+
+				display --to LOG --type INFO IPC_SEG_SIZE "$RKHTMPVAR"
 
 				# No bad segments found yet.
 				SEGS_FOUND=""
@@ -14305,13 +14421,31 @@ ${FOUND_PROCS}"
 					for SHM_LINE in `LC_LANG=C ${IPCS_CMD} -m 2>/dev/null | ${AWK_CMD} -v SHM_SIZE="$IPC_SEG_SIZE" '/^0x/ && ($4 == 600 || $4 == 666) && $5 >= SHM_SIZE { print $0 }'`; do
 						RKH_SHM_SHMID=`echo "${SHM_LINE}" | ${AWK_CMD} '{ print $2 }'`
 						RKH_SHM_OWNER=`echo "${SHM_LINE}" | ${AWK_CMD} '{ print $3 }'`
+						RKH_SHM_SIZE=`echo "${SHM_LINE}" | ${AWK_CMD} '{ print $5 }'`
 						RKH_SHM_NATTACH=`echo "${SHM_LINE}" | ${AWK_CMD} '{ print $6 }'`
+
+						if [ $HAVE_NUMFMT -eq 1 ]; then
+							RKH_SHM_SIZE_HUMAN=`${NUMFMT_CMD} --to iec $RKH_SHM_SIZE 2>/dev/null`
+
+							if [ -n "${RKH_SHM_SIZE_HUMAN}" ]; then
+								RKH_SHM_SIZE_HUMAN="${RKH_SHM_SIZE_HUMAN}B"
+							else
+								RKH_SHM_SIZE_HUMAN=$RKH_SHM_SIZE
+							fi
+						else
+							RKH_SHM_SIZE_HUMAN=$RKH_SHM_SIZE
+						fi
 
 						for SHM_PID_LINE in `LC_LANG=C ${IPCS_CMD} -p 2>/dev/null | grep "^${RKH_SHM_SHMID} "` ; do
 							RKH_SHM_CPID=`echo "${SHM_PID_LINE}" | ${AWK_CMD} '{ print $3 }'`
 							RKH_SHM_LPID=`echo "${SHM_PID_LINE}" | ${AWK_CMD} '{ print $4 }'`
 
-							RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
+							if [ $HAVE_READLINK -eq 1 ]; then
+								RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
+							else
+								# Make an attempt to get the pathname using the 'ls' command.
+								RKH_SHM_PATH=`ls -l /proc/${RKH_SHM_CPID}/exe | ${AWK_CMD} '{ print $NF }'`
+							fi
 
 							# Strip off the '(deleted)' part from the pathname if present.
 							RKH_SHM_PATH_STRIPPED=`echo "${RKH_SHM_PATH}" | sed -e 's/ (deleted)$//'`
@@ -14347,25 +14481,23 @@ ${FOUND_PROCS}"
 								# newline-separated list for displaying later on.
 								#
 
-								if [ $VERBOSE_LOGGING -eq 1 ]; then
-									if [ -n "${RKH_SHM_PATH}" ]; then
-										RKHTMPVAR2=`name2text "${RKH_SHM_PATH_STRIPPED}"`
+								if [ -n "${RKH_SHM_PATH}" ]; then
+									RKHTMPVAR2=`name2text "${RKH_SHM_PATH_STRIPPED}"`
 
-										if [ "${RKH_SHM_PATH}" == "${RKH_SHM_PATH_STRIPPED}" ]; then
-											SEGS_FOUND="${SEGS_FOUND}
-1:${RKHTMPVAR2} ${RKH_SHM_CPID} ${RKH_SHM_OWNER}"
-										else
-											SEGS_FOUND="${SEGS_FOUND}
-2:${RKHTMPVAR2} ${RKH_SHM_CPID} ${RKH_SHM_OWNER}"
-										fi
-									elif [ -n "${RKH_SHM_OWNER}" -a ${RKH_SHM_CPID} -gt 0 ]; then
-										if [ ${RKH_SHM_NATTACH} -eq 0 ]; then
-											SEGS_FOUND="${SEGS_FOUND}
-3:${RKH_SHM_OWNER} ${RKH_SHM_CPID} ${RKH_SHM_SHMID}"
-										else
-											SEGS_FOUND="${SEGS_FOUND}
-4:${RKH_SHM_OWNER} ${RKH_SHM_SHMID} ${RKH_SHM_NATTACH} ${RKH_SHM_CPID} ${RKH_SHM_LPID}"
-										fi
+									if [ "${RKH_SHM_PATH}" == "${RKH_SHM_PATH_STRIPPED}" ]; then
+										SEGS_FOUND="${SEGS_FOUND}
+1:${RKHTMPVAR2} ${RKH_SHM_CPID} ${RKH_SHM_OWNER} ${RKH_SHM_SIZE_HUMAN} ${IPC_SSIZE_HUMAN}"
+									else
+										SEGS_FOUND="${SEGS_FOUND}
+2:${RKHTMPVAR2} ${RKH_SHM_CPID} ${RKH_SHM_OWNER} ${RKH_SHM_SIZE_HUMAN} ${IPC_SSIZE_HUMAN}"
+									fi
+								elif [ -n "${RKH_SHM_OWNER}" -a ${RKH_SHM_CPID} -gt 0 ]; then
+									if [ ${RKH_SHM_NATTACH} -eq 0 ]; then
+										SEGS_FOUND="${SEGS_FOUND}
+3:${RKH_SHM_OWNER} ${RKH_SHM_CPID} ${RKH_SHM_SHMID} ${RKH_SHM_SIZE_HUMAN} ${IPC_SSIZE_HUMAN}"
+									else
+										SEGS_FOUND="${SEGS_FOUND}
+4:${RKH_SHM_OWNER} ${RKH_SHM_SHMID} ${RKH_SHM_NATTACH} ${RKH_SHM_CPID} ${RKH_SHM_LPID} ${RKH_SHM_SIZE_HUMAN} ${IPC_SSIZE_HUMAN}"
 									fi
 								fi
 							fi
@@ -14399,23 +14531,23 @@ ${FOUND_PROCS}"
 						case "${SHM_TYPE}" in
 						1) # A normal segment.
 							set -- ${SHM_LINE}
-							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER
-							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1" "$2" "$3"
+							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER, $RKH_SHM_SIZE, $IPC_SEG_SIZE
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1" "$2" "$3" "$4" "$5"
 							;;
 						2) # A segment with a deleted pathname.
 							set -- ${SHM_LINE}
-							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER
-							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1 (deleted)" "$2" "$3"
+							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER, $RKH_SHM_SIZE, $IPC_SEG_SIZE
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1 (deleted)" "$2" "$3" "$4" "$5"
 							;;
 						3) # A detached segment with no pathname.
 							set -- ${SHM_LINE}
-							# Display $RKH_SHM_OWNER, $RKH_SHM_CPID, $RKH_SHM_SHMID
-							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETACHED "$1" "$2" "$3"
+							# Display $RKH_SHM_OWNER, $RKH_SHM_CPID, $RKH_SHM_SHMID, $RKH_SHM_SIZE, $IPC_SEG_SIZE
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETACHED "$1" "$2" "$3" "$4" "$5"
 							;;
 						4) # An attached segment, but with no pathname.
 							set -- ${SHM_LINE}
-							# Display $RKH_SHM_OWNER, $RKH_SHM_SHMID, $RKH_SHM_NATTACH, $RKH_SHM_CPID, $RKH_SHM_LPID
-							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_ATTACHED "$1" "$2" "$3" "$4" "$5"
+							# Display $RKH_SHM_OWNER, $RKH_SHM_SHMID, $RKH_SHM_NATTACH, $RKH_SHM_CPID, $RKH_SHM_LPID, $RKH_SHM_SIZE, $IPC_SEG_SIZE
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_ATTACHED "$1" "$2" "$3" "$4" "$5" "$6" "$7"
 							;;
 						esac
 
@@ -14455,7 +14587,12 @@ ${FOUND_PROCS}"
 				done
 			else
 				display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_IPCS
-				display --to LOG --type INFO NOT_FOUND_CMD 'ipcs'
+
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' ipcs '`" ]; then
+					display --to LOG --type INFO DISABLED_CMD 'ipcs'
+				else
+					display --to LOG --type INFO NOT_FOUND_CMD 'ipcs'
+				fi
 			fi
 		else
 			if [ -n "`echo \" ${CL_ENABLE_TESTS} \" | grep ' ipc_shared_mem '`" ]; then
@@ -14979,7 +15116,14 @@ bsd_specific_checks() {
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_BSD_SOCKNET
 
 		test -z "${SOCKSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'sockstat'
-		test -z "${NETSTAT_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'netstat'
+
+		if [ -z "${NETSTAT_CMD}" ]; then
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' netstat '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'netstat'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'netstat'
+			fi
+		fi
 	fi
 
 	return
@@ -15098,7 +15242,13 @@ linux_loaded_modules() {
 	elif [ -z "${LSMOD_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKM
 
-		test -z "${LSMOD_CMD}" && display --to LOG --type INFO NOT_FOUND_CMD 'lsmod'
+		if [ -z "${LSMOD_CMD}" ]; then
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' lsmod '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'lsmod'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'lsmod'
+			fi
+		fi
 	else
 		PROC_OUTPUT=`cat /proc/modules | cut -d' ' -f1 | sort`
 		LSMOD_OUTPUT=`${LSMOD_CMD} | grep -v 'Size *Used *by' | cut -d' ' -f1 | sort`
@@ -15179,7 +15329,11 @@ linux_avail_modules() {
 	elif [ -z "${FIND_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
-		display --to LOG --type INFO NOT_FOUND_CMD 'find'
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' find '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'find'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'find'
+		fi
 	elif [ -z "`ls -1 \"${LKM_PATH}\" 2>/dev/null`" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
@@ -15783,6 +15937,12 @@ do_network_interface_checks() {
 				esac
 			else
 				display --to LOG --type INFO NETWORK_PROMISC_NO_CMD ifconfig ip
+
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' ifconfig '`" ]; then
+					display --to LOG --type INFO DISABLED_CMD 'ifconfig'
+				else
+					display --to LOG --type INFO NOT_FOUND_CMD 'ifconfig'
+				fi
 			fi
 
 			if [ $LINUXOS -eq 1 ]; then
@@ -15790,6 +15950,12 @@ do_network_interface_checks() {
 					PROMISCSCAN2=`${IP_CMD} link | grep '^[0-9]' | grep -vE "^[0-9][0-9]*: (${IFWLIST}):" | grep 'PROMISC'`
 				else
 					display --to LOG --type INFO NETWORK_PROMISC_NO_CMD ip ifconfig
+
+					if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' ip '`" ]; then
+						display --to LOG --type INFO DISABLED_CMD 'ip'
+					else
+						display --to LOG --type INFO NOT_FOUND_CMD 'ip'
+					fi
 				fi
 			fi
 
@@ -15837,8 +16003,22 @@ do_network_interface_checks() {
 				fi
 			fi
 		else
-			display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --screen-indent 4 NETWORK_PROMISC_CHECK
-			display --to LOG --type WARNING NETWORK_PROMISC_NO_IFCONF_IP
+			display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --screen-indent 4 NETWORK_PROMISC_CHECK
+			display --to LOG --type INFO NETWORK_PROMISC_NO_IFCONF_IP
+
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' ifconfig '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'ifconfig'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'ifconfig'
+			fi
+
+			if [ $LINUXOS -eq 1 ]; then
+				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' ip '`" ]; then
+					display --to LOG --type INFO DISABLED_CMD 'ip'
+				else
+					display --to LOG --type INFO NOT_FOUND_CMD 'ip'
+				fi
+			fi
 		fi
 	else
 		display --to LOG --type INFO --nl USER_DISABLED_TEST promisc
@@ -15868,7 +16048,13 @@ do_network_interface_checks() {
 		return
 	elif [ -z "${LSOF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --color YELLOW --result SKIPPED --log-indent 2 --screen-indent 4 NETWORK_PACKET_CAP_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' lsof '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'lsof'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
+		fi
+
 		return
 	fi
 
@@ -16597,7 +16783,12 @@ ${RKHTMPVAR}"
 		display --to LOG --type INFO ACCOUNTS_NO_PWD_FILE '/etc/passwd'
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 PASSWD_CHANGES
-		display --to LOG --type INFO NOT_FOUND_CMD 'diff'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' diff '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'diff'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'diff'
+		fi
 
 		cp -f -p /etc/passwd "${RKHTMPDIR}/passwd"
 	elif [ ! -f "${RKHTMPDIR}/passwd" ]; then
@@ -16650,7 +16841,12 @@ ${RKHTMPVAR}"
 		display --to LOG --type WARNING GROUP_CHANGES_NO_FILE '/etc/group'
 	elif [ -z "${DIFF_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 GROUP_CHANGES
-		display --to LOG --type INFO NOT_FOUND_CMD 'diff'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' diff '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'diff'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'diff'
+		fi
 
 		cp -f -p /etc/group "${RKHTMPDIR}/group"
 	elif [ ! -f "${RKHTMPDIR}/group" ]; then
@@ -16940,7 +17136,12 @@ do_system_config_files_check() {
 			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-			display --to LOG --type INFO NOT_FOUND_CMD 'ps'
+
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' ps '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'ps'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'ps'
+			fi
 		fi
 
 
@@ -17107,10 +17308,20 @@ do_filesystem_check() {
 		display --to LOG --type WARNING FILESYSTEM_DEV_CHECK_NO_DEV
 	elif [ -z "${FILE_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD 'file'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' file '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'file'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'file'
+		fi
 	elif [ "${SCAN_MODE_DEV}" = "THOROUGH" -a -z "${FIND_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_DEV_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD 'find'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' find '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'find'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'find'
+		fi
 	else
 		#
 		# Now we can run the check on /dev.
@@ -17218,7 +17429,13 @@ do_filesystem_check() {
 
 	if [ -z "${FILE_CMD}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 FILESYSTEM_HIDDEN_CHECK
-		display --to LOG --type INFO NOT_FOUND_CMD 'file'
+
+		if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' file '`" ]; then
+			display --to LOG --type INFO DISABLED_CMD 'file'
+		else
+			display --to LOG --type INFO NOT_FOUND_CMD 'file'
+		fi
+
 		return
 	fi
 
@@ -18327,14 +18544,14 @@ ${LINKDIR}"
 		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-posix unhide-tcp"
 		;;
 	Linux)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp numfmt"
 
 		if [ -n "`uname -r | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
 		fi
 		;;
 	Darwin)
-		PROP_FILE_LIST="${PROP_FILE_LIST} shasum launchctl dscl"
+		PROP_FILE_LIST="${PROP_FILE_LIST} shasum launchctl dscl gnumfmt"
 		;;
 	esac
 
@@ -19069,7 +19286,7 @@ RKHROOTPATH=`echo ${PATH} | tr ':' ' '`
 
 # List of commands used during RKH. If a command does not exist, then
 # the code may use an alternative method.
-CMDLIST="basename diff dirname file find ifconfig ip ipcs ldd lsattr lsmod lsof mktemp netstat perl pgrep ps pwd readlink stat strings"
+CMDLIST="basename diff dirname file find ifconfig ip ipcs ldd lsattr lsmod lsof mktemp netstat numfmt perl pgrep ps pwd readlink stat strings"
 
 # Commands that are required to exist for RKH to run. The absolutely
 # required commands are tested early on using just the root PATH. Then
@@ -19077,6 +19294,9 @@ CMDLIST="basename diff dirname file find ifconfig ip ipcs ldd lsattr lsmod lsof 
 # checked using the new PATH from BINDIR.
 ABSOLUTELY_REQUIRED_CMDS="cut egrep grep sed tail tr"
 REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed sort tail touch tr uname uniq wc"
+
+# This will be set to a list of commands that have been disabled.
+DISABLED_CMDS=""
 
 # List of commands used to download files from the web. This list is 
 # used by the '--update' and '--versioncheck' options. Preferred commands
@@ -19312,7 +19532,10 @@ ALLOWPROCLIST_OPT=""
 GLOBSTAR=0
 
 # The default value for the minimum shared memory segement size.
-DFLT_SEG_SIZE=1000000
+DFLT_SEG_SIZE=1048576
+
+# This gets set if we have the numfmt command.
+HAVE_NUMFMT=0
 
 
 ######################################################################
@@ -20448,6 +20671,8 @@ if [ $NOLOG -eq 0 ]; then
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
+		elif [ -n "`echo \"${DISABLED_CMDS}\" | grep \" ${CMD} \"`" ]; then
+			display --to LOG --type INFO DISABLED_CMD "${CMD}"
 		else
 			display --to LOG --type INFO NOT_FOUND_CMD "${CMD}"
 		fi

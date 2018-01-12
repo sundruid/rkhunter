@@ -33,7 +33,9 @@
 
  Changes:
  - The 'ipc_shared_mem' test will now log the minimum segment size
-   that will be checked.
+   that will be checked. It will also log the size of any segments
+   which appear suspicious (that is, larger than the configured
+   allowed maximum size).
 
  Bugfixes:
  - For prelinked systems ensure that the default hash function is
@@ -58,6 +60,8 @@
  - The 'ipc_shared_mem' check did not correctly handle whitelisting
    when a segment pathname was flagged as deleted. This has now
    been corrected.
+ - Commands disabled in the configuration file were being logged
+   as not found. They are now logged as having been disabled.
 
  --
 

@@ -1,4 +1,4 @@
-Version:2017120701
+Version:2018011103
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -87,6 +87,7 @@ CONFIG_MIRRORS_MODE2:Only remote mirrors will be used
 
 FOUND_CMD:Found the '$1' command: $2
 NOT_FOUND_CMD:Unable to find the '$1' command
+DISABLED_CMD:The '$1' command has been disabled
 CMD_ERROR:The command '$1' gave error code $2.
 
 SYS_PRELINK:System is using prelinking
@@ -260,15 +261,18 @@ FILE_PROP_START:Performing file properties checks
 FILE_PROP_CMDS:Checking for prerequisites
 FILE_PROP_IMMUT_OS:Skipping all immutable-bit checks. This check is only available for Linux systems.
 FILE_PROP_IMMUT_SET:The immutable-bit check will be reversed.
-FILE_PROP_SKIP_ATTR:Unable to find 'stat' command - all file attribute checks will be skipped.
+FILE_PROP_SKIP_ATTR:Unable to find the 'stat' command - all file attribute checks will be skipped.
+FILE_PROP_SKIP_ATTR_DISABLED:The 'stat' command has been disabled - all file attribute checks will be skipped.
 FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:
 FILE_PROP_SKIP_HASH_FUNC:The current hash function ($1) or package manager ($2) is incompatible with the hash function ($3) or package manager ($4) used to store the values.
 FILE_PROP_SKIP_HASH_PRELINK:Unable to find 'prelink' command.
 FILE_PROP_SKIP_HASH_SHA1:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
 FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe was found, which can cause errors. If possible, disable libsafe and then run the prelink command. Finally, recreate the hash values using 'rkhunter --propupd'.
-FILE_PROP_SKIP_IMMUT:Unable to find 'lsattr' command - all file immutable-bit checks will be skipped.
+FILE_PROP_SKIP_IMMUT:Unable to find the 'lsattr' command - all file immutable-bit checks will be skipped.
+FILE_PROP_SKIP_IMMUT_DISABLED:The 'lsattr' command has been disabled - all file immutable-bit checks will be skipped.
 FILE_PROP_SKIP_IMMUT_CMD:No output from the '$1' command - all file immutable-bit checks will be skipped.
-FILE_PROP_SKIP_SCRIPT:Unable to find 'file' command - all script replacement checks will be skipped.
+FILE_PROP_SKIP_SCRIPT:Unable to find the 'file' command - all script replacement checks will be skipped.
+FILE_PROP_SKIP_SCRIPT_DISABLED:The 'file' command has been disabled - all script replacement checks will be skipped.
 FILE_PROP_SKIP_FILE_CMD:No output from the 'file' command - all script replacement checks will be skipped.
 FILE_PROP_NO_OS_WARNING:Warnings of any O/S change have been disabled at the users request.
 FILE_PROP_OS_CHANGED:The local host configuration or operating system has changed.
@@ -367,6 +371,7 @@ ROOTKIT_ADD_START:Performing additional rootkit checks
 ROOTKIT_ADD_SUCKIT:Suckit Rootkit additional checks
 ROOTKIT_ADD_SUCKIT_LOG:Performing Suckit Rootkit additional checks
 ROOTKIT_ADD_SUCKIT_LINK_NOCMD:Checking '/sbin/init' link count: no 'stat' command found
+ROOTKIT_ADD_SUCKIT_LINK_DISABLED:Checking '/sbin/init' link count: the 'stat' command has been disabled
 ROOTKIT_ADD_SUCKIT_LINK_FOUND:Checking '/sbin/init' link count: count is $1, it should be 1
 ROOTKIT_ADD_SUCKIT_EXT:Checking for hidden file extensions
 ROOTKIT_ADD_SUCKIT_EXT_FOUND:Checking for hidden file extensions: found: $1
@@ -409,11 +414,11 @@ ROOTKIT_MALWARE_SFW_INTRUSION_FOUND:The file '$1' contains the string '$2'. Poss
 ROOTKIT_MALWARE_SFW_INTRUSION_SKIP:Check skipped - tripwire not installed
 ROOTKIT_MALWARE_SNIFFER:Checking for sniffer log files
 ROOTKIT_MALWARE_SNIFFER_FOUND:Found possible sniffer log file: $1
-ROOTKIT_MALWARE_IPCS:Checking for suspicious shared memory segments
-ROOTKIT_MALWARE_IPCS_FOUND:The following suspicious shared memory segments have been found:
-ROOTKIT_MALWARE_IPCS_DETAILS:Process: $1    PID: $2    Owner: $3
-ROOTKIT_MALWARE_IPCS_DETACHED:Detached segment with no pathname: Owner: $1    PID: $2    Segment ID: $3
-ROOTKIT_MALWARE_IPCS_ATTACHED:Attached segment with no pathname: Owner: $1    Segment ID: $2    Attached processes: $3    Creator PID: $4    Last PID: $5
+ROOTKIT_MALWARE_IPCS:Checking for suspicious (large) shared memory segments
+ROOTKIT_MALWARE_IPCS_FOUND:The following suspicious (large) shared memory segments have been found:
+ROOTKIT_MALWARE_IPCS_DETAILS:Process: $1    PID: $2    Owner: $3    Size: $4 (configured size allowed: $5)
+ROOTKIT_MALWARE_IPCS_DETACHED:Detached segment with no pathname: Owner: $1    PID: $2    Segment ID: $3    Size: $4 (configured size allowed: $5)
+ROOTKIT_MALWARE_IPCS_ATTACHED:Attached segment with no pathname: Owner: $1    Segment ID: $2    Attached processes: $3    Creator PID: $4    Last PID: $5    Size: $4 (configured size allowed: $5)
 ROOTKIT_MALWARE_IPCS_WL_PATH:Found process pathname '$1': it is whitelisted.
 ROOTKIT_MALWARE_IPCS_WL_USER:Found process username '$1': it is whitelisted.
 ROOTKIT_MALWARE_IPCS_WL_PID:Found process PID '$1': it is whitelisted.
