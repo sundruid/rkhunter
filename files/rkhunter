@@ -1312,14 +1312,14 @@ suckit_extra_checks() {
 
 		test -z "${NLINKS}" && NLINKS=0
 
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			if [ $NLINKS -eq 0 ]; then
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
-			elif [ $NLINKS -eq 1 ]; then
+		if [ $NLINKS -eq 0 ]; then
+			display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
+		elif [ $NLINKS -eq 1 ]; then
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
-			else
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
 			fi
+		else
+			display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
 		fi
 	else
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_LINK_COUNT '/sbin/init'
@@ -1362,7 +1362,9 @@ suckit_extra_checks() {
 	done
 
 	if [ -z "${HIDDEN}" ]; then
-		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
+		fi
 	else
 		display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_ADD_SUCKIT_EXT
 	fi
@@ -1386,7 +1388,9 @@ suckit_extra_checks() {
 	SKDET_CMD=`find_cmd skdet`
 
 	if [ -n "${SKDET_CMD}" ]; then
-		display --to LOG --type INFO FOUND_CMD 'skdet' "${SKDET_CMD}"
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO FOUND_CMD 'skdet' "${SKDET_CMD}"
+		fi
 
 		#
 		# We need to check the skdet version first.
@@ -1416,7 +1420,9 @@ suckit_extra_checks() {
 		fi
 
 		if [ $SKDET -eq 0 ]; then
-			display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result OK --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
+			fi
 		else
 			display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_ADD_SUCKIT_SKDET
 		fi
@@ -1478,9 +1484,7 @@ scanrootkit() {
 
 	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
-	fi
+	display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
 
 	#
@@ -1517,7 +1521,9 @@ scanrootkit() {
 				FILENAMES=`${FIND_CMD} / -xdev -name "${FNAME}"`
 
 				if [ -z "${FILENAMES}" ]; then
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
+					fi
 				else
 					FOUND=0
 
@@ -1551,14 +1557,18 @@ ${FNAME}"
 					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${RKHTMPVAR}\"`" 'known_rkts'
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${RKHTMPVAR}\"`" 'known_rkts'
+						fi
 					else
 						SCAN_STATUS=1
 						FILE_FOUND="${FILE_FOUND}
 ${RKHTMPVAR}"
 					fi
 
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
+					fi
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_FILE "`name2text \"${RKHTMPVAR}\"`"
 				fi
@@ -1586,14 +1596,18 @@ ${RKHTMPVAR}"
 			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${RKHTMPVAR}\"`" 'known_rkts'
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${RKHTMPVAR}\"`" 'known_rkts'
+				fi
 			else
 				SCAN_STATUS=1
 				DIR_FOUND="${DIR_FOUND}
 ${RKHTMPVAR}"
 			fi
 
-			test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "`name2text \"${RKHTMPVAR}\"`"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "`name2text \"${RKHTMPVAR}\"`"
+			fi
 		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "`name2text \"${RKHTMPVAR}\"`"
 		fi
@@ -1616,11 +1630,13 @@ ${RKHTMPVAR}"
 					KSYM_FOUND="${KSYM_FOUND}
 ${KS}"
 
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND  --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
+					fi
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
 				fi
-			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+			else
 				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_FILES_DIRS_KSYM "${KS}"
 			fi
 		done
@@ -4818,7 +4834,7 @@ get_hash_function() {
 		;;
 	esac
 
-	if [ $SHA_SIZE -eq 1 -a  $PRELINKED -eq 1 ]; then
+	if [ $SHA_SIZE -eq 1 -a $PRELINKED -eq 1 ]; then
 		PRELINK_HASH="SHA1"
 
 		if [ $USE_RUNCON -eq 1 ]; then
@@ -9881,6 +9897,7 @@ strings_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST strings
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 STRINGS_CHECK_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST strings
 		return
 	fi
@@ -9950,6 +9967,7 @@ shared_libs_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST shared_libs
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 SHARED_LIBS_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs
 		return
 	fi
@@ -10113,6 +10131,7 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 			fi
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs_path
 	fi
 
@@ -10275,9 +10294,11 @@ file_properties_check() {
 	fi
 
 	if ! `check_test properties`; then
+#jh - only display this if VL but what about the '--nl'?
 		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
 		return
 	elif [ $SKIP_ATTR -eq 1 -a $SKIP_HASH -eq 1 -a $SKIP_IMMUT -eq 1 -a $SKIP_SCRIPT -eq 1 ]; then
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
 		return
 	else
@@ -10307,7 +10328,9 @@ file_properties_check() {
 			;;
 		esac
 
-		test $TEST_NAME -eq 1 && display --to LOG --type INFO USER_DISABLED_TEST ${RKHTMPVAR}
+		if [ $TEST_NAME -eq 1 -a $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO USER_DISABLED_TEST ${RKHTMPVAR}
+		fi
 	done
 
 
@@ -11804,7 +11827,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 			done
 		fi
 
-		if [ -n "${WHITELIST_RESULT}" ]; then
+		if [ -n "${WHITELIST_RESULT}" -a $VERBOSE_LOGGING -eq 1 ]; then
 			for WL_FILE in ${WHITELIST_RESULT}; do
 				case "${WL_FILE}" in
 				hash)
@@ -11906,6 +11929,7 @@ suspscan() {
 		display --to LOG --type INFO --nl STARTING_TEST suspscan
 		display --to LOG --type PLAIN --log-indent 2 SUSPSCAN_START
 	else
+#jh - same problem again with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST suspscan
 		return
 	fi
@@ -12090,9 +12114,9 @@ suspscan() {
 
 						case "${SUSPSCAN_STRING}" in
 						*+[0-9][0-9]*) 
-							  	SUSPSCAN_TERM=`echo "${SUSPSCAN_TERM}" | cut -d'+' -f1`
-							  	SUSPSCAN_MULTIPLIER=`echo "${SUSPSCAN_STRING}" | cut -d'+' -f2`
-								;;
+							SUSPSCAN_TERM=`echo "${SUSPSCAN_TERM}" | cut -d'+' -f1`
+							SUSPSCAN_MULTIPLIER=`echo "${SUSPSCAN_STRING}" | cut -d'+' -f2`
+							;;
 						esac
 
 						grep -i ${SUSPSCAN_TERM} "${FILENAME}" >/dev/null 2>&1
@@ -12217,6 +12241,7 @@ do_system_commands_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST system_commands
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_SYS_COMMANDS
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_commands
 		return
 	fi
@@ -12245,6 +12270,7 @@ rootkit_file_dir_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST known_rkts
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_FILES_DIRS_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST known_rkts
 		return
 	fi
@@ -12264,26 +12290,19 @@ rootkit_file_dir_checks() {
 
 	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
-	fi
+	display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
 	if [ -f "/etc/passwd" ]; then
 		RKHTMPVAR=`grep 'w0rm' /etc/passwd`
 
 		if [ -z "${RKHTMPVAR}" ]; then
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
-			fi
-
+			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		else
 			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
-			fi
+			display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
 
 			display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_STR_FOUND 'w0rm' '/etc/passwd'
@@ -12717,9 +12736,7 @@ rootkit_file_dir_checks() {
 
 		ROOTKIT_PHALANX2_TEST=0
 
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
-		fi
+		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
 		if [ $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
 			ROOTKIT_PHALANX2_DIRNAMES=`${FIND_CMD} /etc /usr -type d -iname "*.p2"`
@@ -12734,16 +12751,15 @@ rootkit_file_dir_checks() {
 
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
 						display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${ROOTKIT_PHALANX2_DIRNAME}"
-					fi
 
-					display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
-					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${ROOTKIT_PHALANX2_DIRNAME}"
+						display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
+						display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_DIR_FOUND "${ROOTKIT_PHALANX2_DIRNAME}"
+					fi
 				elif [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "${ROOTKIT_PHALANX2_DIRNAME}"
 				fi
 			done
-
-		elif [ $VERBOSE_LOGGING -eq 1 -a $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
+		elif [ $ROOTKIT_PHALANX2_DIRTESTVAL -eq 1 ]; then
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_DIR "*.p2"
 		fi
 
@@ -12762,20 +12778,18 @@ rootkit_file_dir_checks() {
 					test -z "${NLINKS2}" && NLINKS2=-2
 
 					if [ $NLINKS1 -ne $NLINKS2 ]; then
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_LINK_COUNT "${DIR_NAME}"
+						display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_LINK_COUNT "${DIR_NAME}"
 
-							if [ $NLINKS1 -eq -1 ]; then
-								display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" "${DIR_NAME}"
-							fi
-
-							if [ $NLINKS2 -eq -2 ]; then
-								display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR 'ls -ld' "${DIR_NAME}"
-							fi
-
-							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL "${STAT_CMD}" "$NLINKS1"
-							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL 'ls -ld' "$NLINKS2"
+						if [ $NLINKS1 -eq -1 ]; then
+							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR "${STAT_CMD}" "${DIR_NAME}"
 						fi
+
+						if [ $NLINKS2 -eq -2 ]; then
+							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_CMDERR 'ls -ld' "${DIR_NAME}"
+						fi
+
+						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL "${STAT_CMD}" "$NLINKS1"
+						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_LINK_COUNT_FAIL 'ls -ld' "$NLINKS2"
 
 						if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
 							ROOTKIT_PHALANX2_TEST=1
@@ -12783,7 +12797,7 @@ rootkit_file_dir_checks() {
 						fi
 
 						display --to LOG --type PLAIN --log-indent 9 ROOTKIT_PHALANX2_LINK_COUNT_FAIL "${DIR_NAME}"
-					elif [ $VERBOSE_LOGGING -eq 1 ]; then
+					else
 						display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_LINK_COUNT "${DIR_NAME}"
 					fi
 				done
@@ -12809,10 +12823,8 @@ rootkit_file_dir_checks() {
 
 				if [ -n "${ROOTKIT_PHALANX2_PROC_ATA_PPID}" -a -n "${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID}" ]; then
 					if [ ${ROOTKIT_PHALANX2_PROC_ATA_PPID} -ne ${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID} ]; then
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_PHALANX2_PROC_FOUND
-							display --to LOG --type PLAIN --log-indent 4 ROOTKIT_PHALANX2_PROC_PPID "${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID}" "${ROOTKIT_PHALANX2_PROC_ATA_PPID}"
-						fi
+						display --to LOG --type PLAIN --result WARNING --log-indent 2 ROOTKIT_PHALANX2_PROC_FOUND
+						display --to LOG --type PLAIN --log-indent 4 ROOTKIT_PHALANX2_PROC_PPID "${ROOTKIT_PHALANX2_PROC_KTHREAD_PPID}" "${ROOTKIT_PHALANX2_PROC_ATA_PPID}"
 
 						if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
 							ROOTKIT_PHALANX2_TEST=1
@@ -12821,30 +12833,23 @@ rootkit_file_dir_checks() {
 
 						display --to LOG --type PLAIN --log-indent 9 ROOTKIT_PHALANX2_PROC_FOUND
 					else
-						if [ $VERBOSE_LOGGING -eq 1 ]; then
-							display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_PHALANX2_PROC
-						fi
+						display --to LOG --type PLAIN --result OK --log-indent 2 ROOTKIT_PHALANX2_PROC
 					fi
 
 				else # ROOTKIT_PHALANX2_PROC_ATA_PPID ps might not support some cmdline args
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
-						display --to LOG --type INFO ROOTKIT_PHALANX2_PROC_PS_ERR
-					fi
+					display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
+					display --to LOG --type INFO ROOTKIT_PHALANX2_PROC_PS_ERR
 				fi
 
-			#else # This kernel does not run any 'ata/0' kthread child processes, no warning necessary.
+			# else # This kernel does not run any 'ata/0' kthread child processes, no warning necessary.
 			fi
-
 		else # PGREP_CMD not found
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
+			display --to LOG --type PLAIN --result SKIPPED --log-indent 2 ROOTKIT_PHALANX2_PROC
 
-				if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' pgrep '`" ]; then
-					display --to LOG --type INFO DISABLED_CMD 'pgrep'
-				else
-					display --to LOG --type INFO NOT_FOUND_CMD 'pgrep'
-				fi
+			if [ -n "`echo \"${DISABLED_CMDS}\" | grep ' pgrep '`" ]; then
+				display --to LOG --type INFO DISABLED_CMD 'pgrep'
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD 'pgrep'
 			fi
 		fi
 
@@ -12903,9 +12908,7 @@ rootkit_file_dir_checks() {
 
 	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
-	if [ $VERBOSE_LOGGING -eq 1 ]; then
-		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
-	fi
+	display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
 	FOUND=0
 
@@ -12927,9 +12930,7 @@ rootkit_file_dir_checks() {
 		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM 'adore or sebek'
-		fi
+		display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM 'adore or sebek'
 
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		display --to LOG --type PLAIN --log-indent 9 ROOTKIT_FILES_DIRS_KSYM_FOUND 'adore or sebek'
@@ -12977,9 +12978,7 @@ rootkit_file_dir_checks() {
 
 		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
-		fi
+		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
 		if [ -n "${FIND_CMD}" ]; then
 			for DIR in ${BINPATHS}; do
@@ -12989,7 +12988,9 @@ rootkit_file_dir_checks() {
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "${FNAME}" known_rkts
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type INFO FILE_PROP_WL "${FNAME}" known_rkts
+						fi
 					elif `grep -i 'sinar' "${FNAME}" >/dev/null 2>&1`; then
 						FOUND=1
 						FOUNDINDIR="FOUND"
@@ -12997,9 +12998,7 @@ rootkit_file_dir_checks() {
 					fi
 				done
 
-				if [ $VERBOSE_LOGGING -eq 1 ]; then
-					display --to LOG --type PLAIN --result "${FOUNDINDIR}" --log-indent 2 ROOTKIT_FILES_DIRS_SINAR_DIR "${DIR}"
-				fi
+				display --to LOG --type PLAIN --result "${FOUNDINDIR}" --log-indent 2 ROOTKIT_FILES_DIRS_SINAR_DIR "${DIR}"
 			done
 
 
@@ -13266,6 +13265,7 @@ possible_rootkit_file_dir_checks() {
 		display --to LOG --type INFO --nl STARTING_TEST possible_rkt_files
 		display --to LOG --type PLAIN --log-indent 2 ROOTKIT_POSS_FILES_DIRS_LOG
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_files
 		return
 	fi
@@ -13293,8 +13293,10 @@ possible_rootkit_file_dir_checks() {
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" 'possible_rkt_files'
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${FNAME}\"`"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" 'possible_rkt_files'
+						display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${FNAME}\"`"
+					fi
 				else
 					FOUND=1
 					FOUNDDIRS="${FOUNDDIRS}
@@ -13313,8 +13315,10 @@ ${FNAME}:${INFO}"
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_files'
-					test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_files'
+						display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
+					fi
 				else
 					FOUND=1
 					FOUNDFILES="${FOUNDFILES}
@@ -13446,10 +13450,12 @@ ${FNAME}"
 	if [ $STARTUP_PATHS_LOGGED -eq 0 ]; then
 		STARTUP_PATHS_LOGGED=1
 
-		test -z "${RKHTMPVAR2}" && RKHTMPVAR2="${RKHTMPVAR}"
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			test -z "${RKHTMPVAR2}" && RKHTMPVAR2="${RKHTMPVAR}"
 
-		RKHTMPVAR2=`echo ${RKHTMPVAR2}`
-		display --to LOG --type INFO CONFIG_STARTUP_PATHS "${RKHTMPVAR2}"
+			RKHTMPVAR2=`echo ${RKHTMPVAR2}`
+			display --to LOG --type INFO CONFIG_STARTUP_PATHS "${RKHTMPVAR2}"
+		fi
 	fi
 
 	return
@@ -13465,11 +13471,9 @@ possible_rootkit_string_checks() {
 
 	if `check_test possible_rkt_strings`; then
 		display --to LOG --type INFO --nl STARTING_TEST possible_rkt_strings
-
-		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --log-indent 2 ROOTKIT_POSS_STRINGS_LOG
-		fi
+		display --to LOG --type PLAIN --log-indent 2 ROOTKIT_POSS_STRINGS_LOG
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_strings
 		return
 	fi
@@ -13543,9 +13547,13 @@ possible_rootkit_string_checks() {
 					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" 'possible_rkt_strings'
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" 'possible_rkt_strings'
+						fi
 					elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_strings'
+						if [ $VERBOSE_LOGGING -eq 1 ]; then
+							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_strings'
+						fi
 					else
 						FOUND=1
 						STRINGFOUND=1
@@ -13577,9 +13585,13 @@ ${FNAME}:${FILESTRING}:${INFO}"
 						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" 'possible_rkt_strings'
+							if [ $VERBOSE_LOGGING -eq 1 ]; then
+								display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${FILESTRING}" 'possible_rkt_strings'
+							fi
 						elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_strings'
+							if [ $VERBOSE_LOGGING -eq 1 ]; then
+								display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_strings'
+							fi
 						else
 							FOUND=1
 							STRINGFOUND=1
@@ -13596,12 +13608,12 @@ ${FNAME}:${FILESTRING}:${INFO}"
 		if [ $FOUNDFILE -eq 1 ]; then
 			ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				if [ $STRINGFOUND -eq 0 ]; then
+			if [ $STRINGFOUND -eq 0 ]; then
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_STR "${FILESTRING}"
-				else
-					display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_STR "${FILESTRING}"
 				fi
+			else
+				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_FILES_DIRS_STR "${FILESTRING}"
 			fi
 		fi
 
@@ -13657,6 +13669,7 @@ additional_rootkit_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST additional_rkts
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_ADD_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST additional_rkts
 		return
 	fi
@@ -13681,6 +13694,7 @@ malware_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST malware
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_MALWARE_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST malware
 		return
 	fi
@@ -13863,18 +13877,20 @@ ${PROC} ${PID} ${FNAME}"
 				done
 			fi
 
-			for RKHTMPVAR in ${WHITEPROC}; do
-				test -z "${RKHTMPVAR}" && continue
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				for RKHTMPVAR in ${WHITEPROC}; do
+					test -z "${RKHTMPVAR}" && continue
 
-				if [ -n "`echo \"${RKHTMPVAR}\" | grep ' /'`" ]; then
-					PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
-					FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f2-`
+					if [ -n "`echo \"${RKHTMPVAR}\" | grep ' /'`" ]; then
+						PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+						FNAME=`echo "${RKHTMPVAR}" | cut -d' ' -f2-`
 
-					display --to LOG --type INFO ROOTKIT_MALWARE_DELETED_FILES_WL "${PROC}" "`name2text \"${FNAME}\"`"
-				else
-					display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${RKHTMPVAR}"
-				fi
-			done
+						display --to LOG --type INFO ROOTKIT_MALWARE_DELETED_FILES_WL "${PROC}" "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type INFO NETWORK_PACKET_CAP_WL "${RKHTMPVAR}"
+					fi
+				done
+			fi
 
 			IFS=$RKHIFS
 		else
@@ -13887,6 +13903,7 @@ ${PROC} ${PID} ${FNAME}"
 			fi
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST deleted_files
 	fi
 
@@ -13950,7 +13967,9 @@ ${PROC} ${PID} ${FNAME}"
 						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-							display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FILENAME}\"`" 'running_procs'
+							if [ $VERBOSE_LOGGING -eq 1 ]; then
+								display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FILENAME}\"`" 'running_procs'
+							fi
 						else
 							FOUND=1
 							SUSP_FILES="${SUSP_FILES}
@@ -14008,6 +14027,7 @@ ${RKHTMPVAR}:${FNAME}"
 			fi
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST running_procs
 	fi
 
@@ -14052,7 +14072,9 @@ ${RKHTMPVAR}:${FNAME}"
 		if [ -n "${UNHIDE_CMD}" ]; then
 			FOUND=1
 
-			display --to LOG --type INFO FOUND_CMD "${RKHTMPVAR}" "${UNHIDE_CMD}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO FOUND_CMD "${RKHTMPVAR}" "${UNHIDE_CMD}"
+			fi
 
 			#
 			# Dig out the version number for use later on.
@@ -14099,9 +14121,7 @@ ${RKHTMPVAR}:${FNAME}"
 
 				if [ -z "${FOUND_PROCS}" ]; then
 					# Nothing found.
-					if [ $VERBOSE_LOGGING -eq 1 ]; then
-						display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
-					fi
+					display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 				else
 					# For newer versions we can sort the messages.
 					if [ $UNHIDE_VERS -ge 20100919 ]; then
@@ -14123,8 +14143,7 @@ ${FOUND_PROCS}"
 			if [ $SEEN -eq 0 ]; then
 				display --to LOG --type PLAIN --result SKIPPED --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 			fi
-		else
-			SEEN=1
+		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type INFO NOT_FOUND_CMD 'unhide'
 
 			if [ "${RKHTMPVAR}" != "unhide" ]; then
@@ -14180,6 +14199,7 @@ ${FOUND_PROCS}"
 			fi
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_procs
 	fi
 
@@ -14206,14 +14226,16 @@ ${FOUND_PROCS}"
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'login_backdoors'
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'login_backdoors'
+					fi
 				else
 					FOUND=1
 					FOUNDFILES="${FOUNDFILES} ${FNAME}"
 				fi
 
-				test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
-			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
+			else
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
 			fi
 		done
@@ -14233,6 +14255,7 @@ ${FOUND_PROCS}"
 			done
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST login_backdoors
 	fi
 
@@ -14252,14 +14275,16 @@ ${FOUND_PROCS}"
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'sniffer_logs'
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'sniffer_logs'
+					fi
 				else
 					FOUND=1
 					FOUNDFILES="${FOUNDFILES} ${FNAME}"
 				fi
 
-				test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
-			elif [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
+			else
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 			fi
 		done
@@ -14279,6 +14304,7 @@ ${FOUND_PROCS}"
 			done
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST sniffer_logs
 	fi
 
@@ -14313,6 +14339,7 @@ ${FOUND_PROCS}"
 			display --to LOG --type INFO ROOTKIT_MALWARE_SFW_INTRUSION_SKIP
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST tripwire
 	fi
 
@@ -14332,13 +14359,17 @@ ${FOUND_PROCS}"
 				FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${DIR}\"`" 'susp_dirs'
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${DIR}\"`" 'susp_dirs'
+					fi
 				else
 					FOUND=1
 					FOUNDDIRS="${FOUNDDIRS} ${DIR}"
 				fi
 
-				test $VERBOSE_LOGGING -eq 1 && display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
+				fi
 			elif [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_DIR "`name2text \"${DIR}\"`"
 			fi
@@ -14359,6 +14390,7 @@ ${FOUND_PROCS}"
 			done
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST susp_dirs
 	fi
 
@@ -14393,7 +14425,9 @@ ${FOUND_PROCS}"
 					RKHTMPVAR="$IPC_SEG_SIZE"
 				fi
 
-				display --to LOG --type INFO IPC_SEG_SIZE "$RKHTMPVAR"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO IPC_SEG_SIZE "$RKHTMPVAR"
+				fi
 
 				# No bad segments found yet.
 				SEGS_FOUND=""
@@ -14560,31 +14594,33 @@ ${FOUND_PROCS}"
 				# Finally display any whitelisted segments that were found.
 				#
 
-				FOUND=""
-				for FNAME in ${SHM_WL_LIST_PATH}; do
-					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					FOUND=""
+					for FNAME in ${SHM_WL_LIST_PATH}; do
+						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
-						FOUND="${FOUND} ${FNAME} "
-						display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PATH "${FNAME}"
-					fi
-				done
+						if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
+							FOUND="${FOUND} ${FNAME} "
+							display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PATH "${FNAME}"
+						fi
+					done
 
-				FOUND=""
-				for FNAME in ${SHM_WL_LIST_USER}; do
-					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
-						FOUND="${FOUND} ${FNAME} "
-						display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_USER "${FNAME}"
-					fi
-				done
+					FOUND=""
+					for FNAME in ${SHM_WL_LIST_USER}; do
+						if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
+							FOUND="${FOUND} ${FNAME} "
+							display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_USER "${FNAME}"
+						fi
+					done
 
-				FOUND=""
-				for FNAME in ${SHM_WL_LIST_PID}; do
-					if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
-						FOUND="${FOUND} ${FNAME} "
-						display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PID "${FNAME}"
-					fi
-				done
+					FOUND=""
+					for FNAME in ${SHM_WL_LIST_PID}; do
+						if [ -z "`echo \"${FOUND}\" | grep \" ${FNAME} \"`" ]; then
+							FOUND="${FOUND} ${FNAME} "
+							display --to LOG --type INFO ROOTKIT_MALWARE_IPCS_WL_PID "${FNAME}"
+						fi
+					done
+				fi
 			else
 				display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_IPCS
 
@@ -14604,6 +14640,7 @@ ${FOUND_PROCS}"
 			display --to LOG --type INFO LINUX_ONLY
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST ipc_shared_mem
 	fi
 
@@ -14752,14 +14789,15 @@ xinetd_include() {
 			FOUND=1
 			FOUNDFILES="${FOUNDFILES} ${FILENAME}"
 
-			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${FILENAME}"
-			fi
-		elif [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type PLAIN --result WARNING --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${FILENAME}"
+		else
 			display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${FILENAME}"
-			display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${FILENAME}" 'xinetd'
+
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${FILENAME}" 'xinetd'
+			fi
 		fi
-	elif [ $VERBOSE_LOGGING -eq 1 ]; then
+	else
 		display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_TROJAN_XINETD_ENABLED "${FILENAME}"
 	fi
 
@@ -14860,6 +14898,7 @@ trojan_checks() {
 	if `check_test trojans`; then
 		display --to LOG --type INFO --nl STARTING_TEST trojans
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST trojans
 		return
 	fi
@@ -14918,7 +14957,11 @@ trojan_checks() {
 			for SVC in ${INETDALLOWEDSVCS}; do
 				if [ "${STR}" = "${SVC}" ]; then
 					FOUND=1
-					display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" 'inetd'
+
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" 'inetd'
+					fi
+
 					break
 				fi
 			done
@@ -14947,7 +14990,11 @@ trojan_checks() {
 					for SVC in ${INETDALLOWEDSVCS}; do
 						if [ "${STR}" = "${SVC}" ]; then
 							FOUND=1
-							display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" 'inetd'
+
+							if [ $VERBOSE_LOGGING -eq 1 ]; then
+								display --to LOG --type INFO ROOTKIT_TROJAN_XINETD_WHITELIST "${SVC}" 'inetd'
+							fi
+
 							break
 						fi
 					done
@@ -15230,6 +15277,7 @@ linux_loaded_modules() {
 	#
 
 	if ! `check_test loaded_modules`; then
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST loaded_modules
 		return
 	fi
@@ -15285,6 +15333,7 @@ linux_avail_modules() {
 	#
 
 	if ! `check_test avail_modules`; then
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST avail_modules
 		return
 	fi
@@ -15303,7 +15352,9 @@ linux_avail_modules() {
 	FOUNDFILES=""
 	LKM_NAMES=""
 
-	display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKM_PATH}"
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKM_PATH}"
+	fi
 
 
 	#
@@ -15392,6 +15443,7 @@ os_specific_checks() {
 	if `check_test os_specific`; then
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST os_specific
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST os_specific
 		return
 	fi
@@ -15436,6 +15488,7 @@ do_rootkit_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST rootkits
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_ROOTKITS
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST rootkits
 		return
 	fi
@@ -15628,6 +15681,7 @@ do_network_port_checks() {
 		display --to LOG --type INFO STARTING_TEST ports
 		display --to LOG --type PLAIN --log-indent 2 NETWORK_PORTS_BACKDOOR_LOG
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST ports
 		return
 	fi
@@ -15673,7 +15727,9 @@ do_network_port_checks() {
 		esac
 	fi
 
-	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+	if [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 -a $VERBOSE_LOGGING -eq 1 ]; then
+		display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+	fi
 
 
 	#
@@ -15714,15 +15770,24 @@ do_network_port_checks() {
 
 		case "${FOUND}" in
 		path_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+			fi
+
 			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		trusted_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+			fi
+
 			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		port_whitelisted)
-			display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+			fi
+
 			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		"")
@@ -15768,6 +15833,7 @@ do_network_hidden_port_checks() {
 	if `check_test hidden_ports`; then
 		display --to LOG --type INFO --nl STARTING_TEST hidden_ports
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_ports
 		return
 	fi
@@ -15780,10 +15846,16 @@ do_network_hidden_port_checks() {
 	UNHIDETCP_CMD=`find_cmd unhide-tcp`
 
 	if [ -n "${UNHIDETCP_CMD}" ]; then
-		display --to LOG --type INFO FOUND_CMD 'unhide-tcp' "${UNHIDETCP_CMD} ${UNHIDETCP_OPTS}"
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO FOUND_CMD 'unhide-tcp' "${UNHIDETCP_CMD} ${UNHIDETCP_OPTS}"
+		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
-		display --to LOG --type INFO NOT_FOUND_CMD 'unhide-tcp'
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO NOT_FOUND_CMD 'unhide-tcp'
+		fi
+
 		return
 	fi
 
@@ -15792,7 +15864,7 @@ do_network_hidden_port_checks() {
 			display --to SCREEN+LOG --type PLAIN --result SKIPPED --color YELLOW --screen-indent 4 NETWORK_HIDDEN_PORTS
 			display --to LOG --type INFO NOT_FOUND_CMD 'gawk or nawk'
 			return
-		else
+		elif [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type INFO FOUND_CMD 'awk' "${AWK_CMD}"
 		fi
 	fi
@@ -15802,7 +15874,9 @@ do_network_hidden_port_checks() {
 	# if it is available then it will be used to find out pathnames.
 	#
 
-	test $PORT_WHITELIST_ALL_TRUSTED -eq 1 && display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+	if [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 -a $VERBOSE_lOGGING -eq 1 ]; then
+		display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
+	fi
 
 
 	#
@@ -15837,13 +15911,19 @@ do_network_hidden_port_checks() {
 
 				case "${FOUND}" in
 				path_whitelisted)
-					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+					fi
 					;;
 				trusted_whitelisted)
-					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO NETWORK_HIDDEN_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+					fi
 					;;
 				port_whitelisted)
-					display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO NETWORK_HIDDEN_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+					fi
 					;;
 				*)
 					FOUND_PORTS="${FOUND_PORTS}
@@ -16021,6 +16101,7 @@ do_network_interface_checks() {
 			fi
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST promisc
 	fi
 
@@ -16034,6 +16115,7 @@ do_network_interface_checks() {
 	if `check_test packet_cap_apps`; then
 		display --to LOG --type INFO --nl STARTING_TEST packet_cap_apps
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
 		return
 	fi
@@ -16145,13 +16227,19 @@ ${PID}:${NAME}"
 	fi
 
 
-	IFS=$IFSNL
+	#
+	# Log any whitelisted entries.
+	#
 
-	for NAME in ${WHITEPROC}; do
-		test -z "${NAME}" && continue
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		IFS=$IFSNL
 
-		display --to LOG --type INFO NETWORK_PACKET_CAP_WL "`name2text \"${NAME}\"`"
-	done
+		for NAME in ${WHITEPROC}; do
+			test -z "${NAME}" && continue
+
+			display --to LOG --type INFO NETWORK_PACKET_CAP_WL "`name2text \"${NAME}\"`"
+		done
+	fi
 
 	IFS=$RKHIFS
 
@@ -16171,6 +16259,7 @@ do_network_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST network
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_NETWORK
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST network
 		return
 	fi
@@ -16195,6 +16284,7 @@ do_system_startup_file_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST startup_files
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 STARTUP_FILES_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_files
 		return
 	fi
@@ -16218,6 +16308,7 @@ do_system_startup_file_checks() {
 	if `check_test startup_malware`; then
 		display --to LOG --type INFO --nl STARTING_TEST startup_malware
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_malware
 		return
 	fi
@@ -16298,10 +16389,14 @@ ${STRING}:${INFO}"
 				test -z "`echo \"${RKHTMPVAR}\" | egrep -v '^[ 	]*#'`" && continue
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
-					STRING=`echo ${STRING} | sed -e 's/\\\//g'`
-					display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${STRING}" 'startup_malware'
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						STRING=`echo ${STRING} | sed -e 's/\\\//g'`
+						display --to LOG --type INFO FILE_PROP_WL_STR "`name2text \"${FNAME}\"`" "${STRING}" 'startup_malware'
+					fi
 				elif [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" -a -z "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:$\"`" ]; then
-					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'startup_malware'
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'startup_malware'
+					fi
 				else
 					FOUND=1
 
@@ -16528,6 +16623,7 @@ do_group_accounts_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST group_accounts
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ACCOUNTS_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST group_accounts
 		return
 	fi
@@ -16538,7 +16634,10 @@ do_group_accounts_check() {
 
 	if [ -s "/etc/passwd" ]; then
 		display --to SCREEN+LOG --type PLAIN --color GREEN --result FOUND --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
-		display --to LOG --type INFO ACCOUNTS_FOUND_PWD_FILE '/etc/passwd'
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO ACCOUNTS_FOUND_PWD_FILE '/etc/passwd'
+		fi
 	else
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 ACCOUNTS_PWD_FILE_CHECK
 		display --to LOG --type WARNING ACCOUNTS_NO_PWD_FILE '/etc/passwd'
@@ -16633,10 +16732,12 @@ ${RKHTMPVAR}"
 	#
 
 	if [ -n "${SHADOW_FILE}" -o $HAVE_TCB_SHADOW -eq 1 ]; then
-		if [ -n "${SHADOW_FILE}" ]; then
-			display --to LOG --type INFO ACCOUNTS_SHADOW_FILE "${SHADOW_FILE}"
-		else
-			display --to LOG --type INFO ACCOUNTS_SHADOW_TCB '/etc/tcb'
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			if [ -n "${SHADOW_FILE}" ]; then
+				display --to LOG --type INFO ACCOUNTS_SHADOW_FILE "${SHADOW_FILE}"
+			else
+				display --to LOG --type INFO ACCOUNTS_SHADOW_TCB '/etc/tcb'
+			fi
 		fi
 
 		#
@@ -16680,7 +16781,9 @@ ${RKHTMPVAR}"
 				else
 					WL_SEEN="${WL_SEEN} ${RKHTMPVAR} "
 
-					display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+					fi
 				fi
 			done
 
@@ -16714,7 +16817,9 @@ ${RKHTMPVAR}"
 				PWD_PWDLESS_LIST="${PWD_PWDLESS_LIST}
 ${RKHTMPVAR}"
 			elif [ -z "`echo \"${WL_SEEN}\" | grep \" ${RKHUSERID} \"`" ]; then
-				display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO ACCOUNTS_PWDLESS_WL "${RKHTMPVAR}"
+				fi
 			fi
 		done
 
@@ -16773,6 +16878,7 @@ ${RKHTMPVAR}"
 		display --to LOG --type INFO --nl STARTING_TEST passwd_changes
 	else
 		RKHTMPVAR=1
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST passwd_changes
 	fi
 
@@ -16831,6 +16937,7 @@ ${RKHTMPVAR}"
 		display --to LOG --type INFO --nl STARTING_TEST group_changes
 	else
 		RKHTMPVAR=1
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST group_changes
 	fi
 
@@ -16955,6 +17062,7 @@ do_system_config_files_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST system_configs
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 SYSTEM_CONFIGS_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs
 		return
 	fi
@@ -16985,10 +17093,12 @@ do_system_config_files_check() {
 		if [ -n "${SSH_CONFIG_FILE}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 
-			display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND 'an' 'SSH' "${SSH_CONFIG_FILE}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND 'an' 'SSH' "${SSH_CONFIG_FILE}"
 
-			display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
-			display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
+				display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
+				display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
+			fi
 
 
 			#
@@ -17059,6 +17169,7 @@ do_system_config_files_check() {
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs_ssh
 	fi
 
@@ -17086,12 +17197,14 @@ do_system_config_files_check() {
 
 				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
 
-				if [ -n "`echo \"${RKHTMPVAR}\" | grep 'rsyslog'`" ]; then
-					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'rsyslog'
-				elif [ -n "`echo \"${RKHTMPVAR}\" | grep 'syslog-ng'`" ]; then
-					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog-ng'
-				else
-					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog'
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					if [ -n "`echo \"${RKHTMPVAR}\" | grep 'rsyslog'`" ]; then
+						display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'rsyslog'
+					elif [ -n "`echo \"${RKHTMPVAR}\" | grep 'syslog-ng'`" ]; then
+						display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog-ng'
+					else
+						display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'syslog'
+					fi
 				fi
 
 				TITLE_SHOWN=1
@@ -17102,8 +17215,13 @@ do_system_config_files_check() {
 			if [ -n "${RKHTMPVAR}" ]; then
 				SYSTEMD_SEEN=1
 
-				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'systemd-journald'
+				if [ $TITLE_SHOWN -eq 0 ]; then
+					display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				fi
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'systemd-journald'
+				fi
 
 				TITLE_SHOWN=1
 			fi
@@ -17113,8 +17231,13 @@ do_system_config_files_check() {
 			if [ -n "${RKHTMPVAR}" ]; then
 				METALOG_SEEN=1
 
-				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'metalog'
+				if [ $TITLE_SHOWN -eq 0 ]; then
+					display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				fi
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'metalog'
+				fi
 
 				TITLE_SHOWN=1
 			fi
@@ -17124,8 +17247,13 @@ do_system_config_files_check() {
 			if [ -n "${RKHTMPVAR}" ]; then
 				SOCKLOG_SEEN=1
 
-				test $TITLE_SHOWN -eq 0 && display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
-				display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'socklog'
+				if [ $TITLE_SHOWN -eq 0 ]; then
+					display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG
+				fi
+
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO --log-indent 2 SYSTEM_CONFIGS_SYSLOG_DAEMON 'socklog'
+				fi
 
 				TITLE_SHOWN=1
 			fi
@@ -17159,7 +17287,9 @@ do_system_config_files_check() {
 			FILEFOUND=""
 			REM_LOGGING_FOUND=0
 
-			test $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 && display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
+			if [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 -a $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_ALLOWED
+			fi
 
 			for FNAME in ${SYSLOG_CONFIG_FILE}; do
 				test ! -f "${FNAME}" && continue
@@ -17181,7 +17311,9 @@ do_system_config_files_check() {
 
 				FILEFOUND="${FILEFOUND} ${FTYPE} "
 
-				display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" "${FTYPE}" "`name2text \"${FNAME}\"`"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" "${FTYPE}" "`name2text \"${FNAME}\"`"
+				fi
 
 
 				# Next see if the configuration file allows remote logging.
@@ -17240,6 +17372,7 @@ do_system_config_files_check() {
 			fi
 		fi
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs_syslog
 	fi
 
@@ -17278,7 +17411,9 @@ do_dev_whitelist_check() {
 	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-		display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "`name2text \"${RKHTMPVAR}\"`"
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "`name2text \"${RKHTMPVAR}\"`"
+		fi
 	else
 		FOUNDFILES="${FOUNDFILES}
 ${RKHTMPVAR}: ${FTYPE}"
@@ -17298,6 +17433,7 @@ do_filesystem_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST filesystem
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 FILESYSTEM_START
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST filesystem
 		return
 	fi
@@ -17327,7 +17463,9 @@ do_filesystem_check() {
 		# Now we can run the check on /dev.
 		#
 
-		display --to LOG --type INFO CONFIG_SCAN_MODE_DEV "${SCAN_MODE_DEV}"
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO CONFIG_SCAN_MODE_DEV "${SCAN_MODE_DEV}"
+		fi
 
 
 		#
@@ -17503,14 +17641,18 @@ ${RKHTMPVAR}"
 
 		if [ -n "`echo \"${FTYPE}\" | grep 'directory'`" ]; then
 			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "`name2text \"${FNAME}\"`"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "`name2text \"${FNAME}\"`"
+				fi
 			else
 				FOUNDDIRS="${FOUNDDIRS}
 ${FNAME}: ${FTYPE}"
 			fi
 		else
 			if [ -n "`echo \"${ALLOWHIDDENFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-				display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "`name2text \"${FNAME}\"`"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "`name2text \"${FNAME}\"`"
+				fi
 			else
 				FOUNDFILES="${FOUNDFILES}
 ${FNAME}: ${FTYPE}"
@@ -17594,8 +17736,9 @@ ${FNAME}"
 
 			IFS=$RKHIFS
 		fi
-	else
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 FILESYSTEM_LOGFILE_MISSING
+		display --to LOG --type INFO  FILESYSTEM_LOGFILE_MISS_DISABLED
 	fi
 
 
@@ -17648,8 +17791,9 @@ ${FNAME}"
 
 			IFS=$RKHIFS
 		fi
-	else
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type PLAIN --result SKIPPED --log-indent 2 FILESYSTEM_LOGFILE_EMPTY
+		display --to LOG --type INFO  FILESYSTEM_LOGFILE_EMPTY_DISABLED
 	fi
 
 
@@ -17668,6 +17812,7 @@ do_local_host_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST local_host
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_LOCALHOST
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST local_host
 		return
 	fi
@@ -17716,6 +17861,7 @@ do_app_checks() {
 	if `check_test apps`; then
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST apps
 	else
+#jh - same with nl
 		display --to LOG --type INFO --nl USER_DISABLED_TEST apps
 		return
 	fi
@@ -17940,10 +18086,16 @@ ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 					display --to LOG --type INFO APPS_CHECK_VERSION_UNKNOWN "${APPLICATION}"
 				elif [ $ISBAD -eq -2 ]; then
 					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
-					display --to LOG --type INFO APPS_CHECK_WL "${APPLICATION}"
+
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO APPS_CHECK_WL "${APPLICATION}"
+					fi
 				elif [ $ISBAD -eq -1 ]; then
 					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
-					display --to LOG --type INFO APPS_CHECK_VERSION_WL "${APPLICATION}" "${VERSION}"
+
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO APPS_CHECK_VERSION_WL "${APPLICATION}" "${VERSION}"
+					fi
 				elif [ $ISBAD -eq 1 ]; then
 					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
 					display --to LOG --type WARNING APPS_CHECK_FOUND "${APPLICATION}" "${VERSION}"
@@ -18367,7 +18519,10 @@ check_os_info() {
 	else
 		IND_COUNT=6
 		OSINFO_WARNING="INFO"
-		display --to LOG --type INFO FILE_PROP_NO_OS_WARNING
+
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO FILE_PROP_NO_OS_WARNING
+		fi
 	fi
 
 	OLD_HOST=`grep '^Host:' "${RKHDAT_FILE}" | cut -d: -f2-`
@@ -20182,15 +20337,6 @@ if [ $CHECK -eq 1 ]; then
 	elif [ -f "/proc/kallsyms" ]; then
 		KSYMS_FILE="/proc/kallsyms"
 	fi
-
-	#
-	# Check to make sure that the symbols are readable
-	# as certain security frameworks hide this.
-	#
-
-	if [ -z "`head ${HEAD_OPT}1 /proc/kallsyms 2>/dev/null`" ]; then
-		KSYMS_FILE=""
-	fi
 fi
 
 
@@ -20662,23 +20808,25 @@ if [ $NOLOG -eq 0 ]; then
 		fi
 	fi
 
-	test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
-	test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		test $AUTO_X_DTCT -eq 1 && display --to LOG --type INFO CONFIG_X_AUTO
+		test $CLRSET2 -eq 1 && display --to LOG --type INFO CONFIG_CLRSET2
 
-	for CMD in ${CMDLIST}; do
-		RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
-		RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
+		for CMD in ${CMDLIST}; do
+			RKHTMPVAR=`echo ${CMD} | tr '[:lower:]' '[:upper:]'`
+			RKHTMPVAR=`eval echo "\\$${RKHTMPVAR}_CMD"`
 
-		if [ -n "${RKHTMPVAR}" ]; then
-			display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
-		elif [ -n "`echo \"${DISABLED_CMDS}\" | grep \" ${CMD} \"`" ]; then
-			display --to LOG --type INFO DISABLED_CMD "${CMD}"
-		else
-			display --to LOG --type INFO NOT_FOUND_CMD "${CMD}"
-		fi
-	done
+			if [ -n "${RKHTMPVAR}" ]; then
+				display --to LOG --type INFO FOUND_CMD "${CMD}" "${RKHTMPVAR}"
+			elif [ -n "`echo \"${DISABLED_CMDS}\" | grep \" ${CMD} \"`" ]; then
+				display --to LOG --type INFO DISABLED_CMD "${CMD}"
+			else
+				display --to LOG --type INFO NOT_FOUND_CMD "${CMD}"
+			fi
+		done
 
-	test -n "${RKHWEBCMD}" && display --to LOG --type INFO FOUND_CMD "${RKHWEBCMD_BASE}" "${RKHWEBCMD}"
+		test -n "${RKHWEBCMD}" && display --to LOG --type INFO FOUND_CMD "${RKHWEBCMD_BASE}" "${RKHWEBCMD}"
+	fi
 fi
 
 if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
@@ -20760,7 +20908,9 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 	fi
 
-	display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		display --to LOG --type INFO HASH_FIELD_INDEX "$HASH_FLD_IDX"
+	fi
 
 	if [ $PROP_UPDATE -eq 1 ]; then
 		if ! `check_test hashes` && test $ENDIS_OPT -eq 0; then
@@ -20819,34 +20969,36 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		else
 			display --to LOG --type INFO HASH_PKGMGR "${PKGMGR}"
 
-			case "${PKGMGR}" in
-			RPM)
-				display --to LOG --type INFO FOUND_CMD 'rpm' "${RPM_CMD}"
-				;;
-			DPKG)
-				if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
-					display --to LOG --type INFO FOUND_CMD 'dpkg-query' "${DPKG_CMD}"
-				else
-					display --to LOG --type INFO FOUND_CMD 'dpkg' "${DPKG_CMD}"
-				fi
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				case "${PKGMGR}" in
+				RPM)
+					display --to LOG --type INFO FOUND_CMD 'rpm' "${RPM_CMD}"
+					;;
+				DPKG)
+					if [ -z "`echo \"${DPKG_CMD}\" | grep '/dpkg$'`" ]; then
+						display --to LOG --type INFO FOUND_CMD 'dpkg-query' "${DPKG_CMD}"
+					else
+						display --to LOG --type INFO FOUND_CMD 'dpkg' "${DPKG_CMD}"
+					fi
 
-				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-				;;
-			BSD)
-				display --to LOG --type INFO FOUND_CMD 'pkg_info' "${PKG_CMD}"
-				display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
-				;;
-			BSDNG)
-				display --to LOG --type INFO FOUND_CMD 'pkg' "${PKG_CMD}"
-				display --to LOG --type INFO HASH_PKGMGR_SHA "${PKGMGR_SHA_HASH}"
-				;;
-			SOLARIS)
-				if [ $USE_SUNSUM -eq 1 ]; then
-					display --to LOG --type INFO HASH_PKGMGR_SUM
-					display --to LOG --type INFO FOUND_CMD 'sum' "${SUM_CMD}"
-				fi
-				;;
-			esac
+					display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+					;;
+				BSD)
+					display --to LOG --type INFO FOUND_CMD 'pkg_info' "${PKG_CMD}"
+					display --to LOG --type INFO HASH_PKGMGR_MD5 "${PKGMGR_MD5_HASH}"
+					;;
+				BSDNG)
+					display --to LOG --type INFO FOUND_CMD 'pkg' "${PKG_CMD}"
+					display --to LOG --type INFO HASH_PKGMGR_SHA "${PKGMGR_SHA_HASH}"
+					;;
+				SOLARIS)
+					if [ $USE_SUNSUM -eq 1 ]; then
+						display --to LOG --type INFO HASH_PKGMGR_SUM
+						display --to LOG --type INFO FOUND_CMD 'sum' "${SUM_CMD}"
+					fi
+					;;
+				esac
+			fi
 		fi
 	fi
 fi
@@ -20880,75 +21032,79 @@ if [ $CHECK -eq 1 ]; then
 fi
 
 if `check_test properties` || test $PROP_UPDATE -eq 1; then
-	if [ -n "${USER_FILE_LIST}" ]; then
-		display --to LOG --type INFO USER_FILE_LIST
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		if [ -n "${USER_FILE_LIST}" ]; then
+			display --to LOG --type INFO USER_FILE_LIST
 
-		IFS=$IFSNL
+			IFS=$IFSNL
 
-		for FNAME in ${USER_FILE_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
-		done
+			for FNAME in ${USER_FILE_LIST}; do
+				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+			done
 
-		IFS=$RKHIFS
-	fi
+			IFS=$RKHIFS
+		fi
 
-	if [ -n "${USER_SIMPLE_FILE_LIST}" ]; then
-		display --to LOG --type INFO USER_CMD_LIST
+		if [ $VERBOSE_LOGGING -eq 1 -a -n "${USER_SIMPLE_FILE_LIST}" ]; then
+			display --to LOG --type INFO USER_CMD_LIST
 
-		IFS=$IFSNL
+			IFS=$IFSNL
 
-		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
-		done
+			for FNAME in ${USER_SIMPLE_FILE_LIST}; do
+				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+			done
 
-		IFS=$RKHIFS
-	fi
+			IFS=$RKHIFS
+		fi
 
-	if [ -n "${USER_DIR_LIST}" ]; then
-		display --to LOG --type INFO USER_DIR_LIST
+		if [ $VERBOSE_LOGGING -eq 1 -a -n "${USER_DIR_LIST}" ]; then
+			display --to LOG --type INFO USER_DIR_LIST
 
-		IFS=$IFSNL
+			IFS=$IFSNL
 
-		for FNAME in ${USER_DIR_LIST}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
-		done
+			for FNAME in ${USER_DIR_LIST}; do
+				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+			done
 
-		IFS=$RKHIFS
-	fi
+			IFS=$RKHIFS
+		fi
 
-	if [ -n "${USER_EXCLUDE_PROP}" ]; then
-		display --to LOG --type INFO USER_EXCLUDE_PROP
+		if [ -n "${USER_EXCLUDE_PROP}" ]; then
+			display --to LOG --type INFO USER_EXCLUDE_PROP
 
-		IFS=$IFSNL
+			IFS=$IFSNL
 
-		for FNAME in ${USER_EXCLUDE_PROP}; do
-			display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
-		done
+			for FNAME in ${USER_EXCLUDE_PROP}; do
+				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+			done
 
-		IFS=$RKHIFS
+			IFS=$RKHIFS
+		fi
 	fi
 fi
 
 if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
-	if [ $ROTATE_MIRRORS -eq 0 ]; then
-		display --to LOG --type INFO CONFIG_NO_ROTATE_MIRRORS
-	else
-		display --to LOG --type INFO CONFIG_ROTATE_MIRRORS
-	fi
-
-	if [ $MIRRORS_MODE -eq 0 ]; then
-		display --to LOG --type INFO CONFIG_MIRRORS_MODE0
-	elif [ $MIRRORS_MODE -eq 1 ]; then
-		display --to LOG --type INFO CONFIG_MIRRORS_MODE1
-	else
-		display --to LOG --type INFO CONFIG_MIRRORS_MODE2
-	fi
-
-	if [ $UPDATE -eq 1 ]; then
-		if [ $UPDATE_MIRRORS -eq 0 ]; then
-			display --to LOG --type INFO CONFIG_NO_UPDATE_MIRRORS
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		if [ $ROTATE_MIRRORS -eq 0 ]; then
+			display --to LOG --type INFO CONFIG_NO_ROTATE_MIRRORS
 		else
-			display --to LOG --type INFO CONFIG_UPDATE_MIRRORS
+			display --to LOG --type INFO CONFIG_ROTATE_MIRRORS
+		fi
+
+		if [ $MIRRORS_MODE -eq 0 ]; then
+			display --to LOG --type INFO CONFIG_MIRRORS_MODE0
+		elif [ $MIRRORS_MODE -eq 1 ]; then
+			display --to LOG --type INFO CONFIG_MIRRORS_MODE1
+		else
+			display --to LOG --type INFO CONFIG_MIRRORS_MODE2
+		fi
+
+		if [ $UPDATE -eq 1 ]; then
+			if [ $UPDATE_MIRRORS -eq 0 ]; then
+				display --to LOG --type INFO CONFIG_NO_UPDATE_MIRRORS
+			else
+				display --to LOG --type INFO CONFIG_UPDATE_MIRRORS
+			fi
 		fi
 	fi
 fi
@@ -20956,27 +21112,34 @@ fi
 if [ $NOLOG -eq 0 ]; then
 	test $CHECK -eq 0 -o $SHOW_SUMMARY -eq 0 && display --to LOG --type INFO CONFIG_LOG_FILE "${RKHLOGFILE}"
 
-	test $VERBOSE_LOGGING -eq 0 && display --to LOG --type INFO CONFIG_NO_VL
-
-	test $APPEND_LOG -eq 1 && display --to LOG --type INFO CONFIG_APPEND_LOG
-
-	test $COPY_LOG_ON_ERROR -eq 1 && display --to LOG --type INFO CONFIG_COPY_LOG
+	if [ $VERBOSE_LOGGING -eq 0 ]; then
+		display --to LOG --type INFO CONFIG_NO_VL
+	else
+		test $APPEND_LOG -eq 1 && display --to LOG --type INFO CONFIG_APPEND_LOG
+		test $COPY_LOG_ON_ERROR -eq 1 && display --to LOG --type INFO CONFIG_COPY_LOG
+	fi
 fi
 
 if [ $CHECK -eq 1 ]; then
 	if [ -n "${KSYMS_FILE}" ]; then
-		display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"
-	elif [ -f "/proc/ksyms" ]; then
-		display --to LOG --type INFO KSYMS_FOUND '/proc/ksyms'
-		display --to LOG --type INFO KSYMS_UNAVAIL
-	elif [ -f "/proc/kallsyms" ]; then
-		display --to LOG --type INFO KSYMS_FOUND '/proc/kallsyms'
-		display --to LOG --type INFO KSYMS_UNAVAIL
-	else
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO KSYMS_FOUND "${KSYMS_FILE}"
+		fi
+
+		if [ ! -r "${KSYMS_FILE}" ]; then
+			KSYMS_FILE=""
+
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO KSYMS_UNAVAIL
+			fi
+		fi
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO KSYMS_MISSING
 	fi
 
-	test $SHOW_SUMMARY -eq 0 && display --to LOG --type INFO CONFIG_NO_SHOW_SUMMARY
+	if [ $SHOW_SUMMARY -eq 0 -a $VERBOSE_LOGGING -eq 1 ]; then
+		display --to LOG --type INFO CONFIG_NO_SHOW_SUMMARY
+	fi
 
 
 	#
@@ -20986,12 +21149,18 @@ if [ $CHECK -eq 1 ]; then
 	if [ -n "${USE_SYSLOG}" ]; then
 		if [ "${USE_SYSLOG}" = "none" ]; then
 			USE_SYSLOG=""
-			display --to LOG --type INFO SYSLOG_DISABLED
+
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type INFO SYSLOG_DISABLED
+			fi
 		else
 			LOGGER_CMD=`find_cmd logger`
 
 			if [ -n "${LOGGER_CMD}" ]; then
-				display --to LOG --type INFO SYSLOG_ENABLED "${USE_SYSLOG}"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO SYSLOG_ENABLED "${USE_SYSLOG}"
+					display --to LOG --type INFO FOUND_CMD 'logger' "${LOGGER_CMD}"
+				fi
 			else
 				USE_SYSLOG=""
 				display --to LOG --type INFO SYSLOG_NO_LOGGER
@@ -21000,12 +21169,14 @@ if [ $CHECK -eq 1 ]; then
 	fi
 
 
-	if [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
-		:
-	elif [ -n "${EPOCH_DATE_CMD}" ]; then
-		display --to LOG --type INFO FILE_PROP_EPOCH_DATE_CMD "${EPOCH_DATE_CMD}"
-	elif [ -n "${PERL_CMD}" ]; then
-		display --to LOG --type INFO FILE_PROP_EPOCH_DATE_CMD "${PERL_CMD}"
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		if [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
+			:
+		elif [ -n "${EPOCH_DATE_CMD}" ]; then
+			display --to LOG --type INFO FILE_PROP_EPOCH_DATE_CMD "${EPOCH_DATE_CMD}"
+		elif [ -n "${PERL_CMD}" ]; then
+			display --to LOG --type INFO FILE_PROP_EPOCH_DATE_CMD "${PERL_CMD}"
+		fi
 	fi
 
 
@@ -21033,11 +21204,13 @@ if [ $CHECK -eq 1 ]; then
 	fi
 fi
 
-if [ $USE_LOCKING -eq 1 ]; then
-	display --to LOG --type INFO LOCK_USED "$LOCK_TIMEOUT"
-	display --to LOG --type INFO LOCK_DIR "${LOCKDIR}"
-else
-	display --to LOG --type INFO LOCK_UNUSED
+if [ $VERBOSE_LOGGING -eq 1 ]; then
+	if [ $USE_LOCKING -eq 1 ]; then
+		display --to LOG --type INFO LOCK_USED "$LOCK_TIMEOUT"
+		display --to LOG --type INFO LOCK_DIR "${LOCKDIR}"
+	else
+		display --to LOG --type INFO LOCK_UNUSED
+	fi
 fi
 
 

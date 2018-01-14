@@ -36,6 +36,8 @@
    that will be checked. It will also log the size of any segments
    which appear suspicious (that is, larger than the configured
    allowed maximum size).
+ - If verbose logging is disabled, then generally only the test
+   name and the final result for the test will now be logged.
 
  Bugfixes:
  - For prelinked systems ensure that the default hash function is
@@ -62,6 +64,7 @@
    been corrected.
  - Commands disabled in the configuration file were being logged
    as not found. They are now logged as having been disabled.
+ - Disabling verbose logging could hide some warning messages.
 
  --
 

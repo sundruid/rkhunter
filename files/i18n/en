@@ -1,4 +1,4 @@
-Version:2018011103
+Version:2018011201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -545,8 +545,10 @@ FILESYSTEM_HIDDEN_DIR_FOUND:Hidden directory found: $1
 FILESYSTEM_HIDDEN_FILE_FOUND:Hidden file found: $1
 FILESYSTEM_LOGFILE_MISSING:Checking for missing log files
 FILESYSTEM_LOGFILE_MISSING_FOUND:The log file '$1' is missing.
+FILESYSTEM_LOGFILE_MISS_DISABLED:No missing log file names configured.
 FILESYSTEM_LOGFILE_EMPTY:Checking for empty log files
 FILESYSTEM_LOGFILE_EMPTY_FOUND:The log file '$1' is empty.
+FILESYSTEM_LOGFILE_EMPTY_DISABLED:No empty log file names configured.
 
 CHECK_APPS:Checking application versions...
 APPS_NONE_FOUND:No known applications found - all version checks skipped.
