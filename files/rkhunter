@@ -11979,10 +11979,12 @@ suspscan() {
 	# Next log our configuration settings.
 	#
 
-	display --to LOG --type INFO SUSPSCAN_DIRS "${SUSPSCAN_DIRS}"
-	display --to LOG --type INFO SUSPSCAN_TEMP "${SUSPSCAN_TEMP}"
-	display --to LOG --type INFO SUSPSCAN_SIZE "${SUSPSCAN_MAXSIZE}"
-	display --to LOG --type INFO SUSPSCAN_THRESH "${SUSPSCAN_THRESH}"
+	if [ $VERBOSE_LOGGING -eq 1 ]; then
+		display --to LOG --type INFO SUSPSCAN_DIRS "${SUSPSCAN_DIRS}"
+		display --to LOG --type INFO SUSPSCAN_TEMP "${SUSPSCAN_TEMP}"
+		display --to LOG --type INFO SUSPSCAN_SIZE "${SUSPSCAN_MAXSIZE}"
+		display --to LOG --type INFO SUSPSCAN_THRESH "${SUSPSCAN_THRESH}"
+	fi
 
 	#
 	# Finally start the test.
@@ -12002,9 +12004,7 @@ suspscan() {
 	SUSPSCAN_TMPFILE="${TEMPFILE}"
 	touch "${SUSPSCAN_TMPFILE}"
 
-	for DIR in ${SUSPSCAN_DIRS}; do
-		SUSPSCAN_DIR="${DIR}"
-
+	for SUSPSCAN_DIR in ${SUSPSCAN_DIRS}; do
 		if [ -d "${SUSPSCAN_DIR}" ]; then
 			FOUND=0
 
