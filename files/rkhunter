@@ -15772,26 +15772,25 @@ do_network_port_checks() {
 		path_whitelisted)
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type INFO NETWORK_PORTS_PATH_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			fi
-
-			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		trusted_whitelisted)
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type INFO NETWORK_PORTS_TRUSTED_WHITELIST "${PROTO}" "${PORT}" "`name2text \"${FNAME}\"`"
+				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			fi
-
-			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		port_whitelisted)
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type INFO NETWORK_PORTS_PORT_WHITELIST "${PROTO}" "${PORT}"
+				display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			fi
-
-			display --to LOG --type PLAIN --log-indent 4 --result WHITELISTED NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
 			;;
 		"")
-			display --to LOG --type PLAIN --log-indent 4 --result NOT_FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
+			if [ $VERBOSE_LOGGING -eq 1 ]; then
+				display --to LOG --type PLAIN --log-indent 4 --result NOT_FOUND NETWORK_PORTS_BACKDOOR_CHK "${PROTO}" "${PORT}"
+			fi
 			;;
 		*)
 			FOUNDPORT=1
@@ -18077,7 +18076,9 @@ ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 					display --to LOG --type INFO APPS_CHECK_VERSION_UNKNOWN "${APPLICATION}"
 				fi
 			elif [ "${VERSION}" = "-1" ]; then
-				display --to LOG --type INFO APPS_NOT_FOUND "${APPLICATION}"
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type INFO APPS_NOT_FOUND "${APPLICATION}"
+				fi
 			else
 				ISBAD=`echo "${RKHTMPVAR}" | cut -d% -f4`
 
@@ -18101,7 +18102,10 @@ ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%0"
 					display --to LOG --type WARNING APPS_CHECK_FOUND "${APPLICATION}" "${VERSION}"
 				else
 					display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --log-indent 2 --screen-indent 4 APPS_CHECK "${APPLICATION_DESC}"
-					display --to LOG --type INFO APPS_CHECK_VERSION_FOUND "${APPLICATION}" "${VERSION}"
+
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO APPS_CHECK_VERSION_FOUND "${APPLICATION}" "${VERSION}"
+					fi
 				fi
 			fi
 		done
