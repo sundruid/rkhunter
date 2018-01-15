@@ -9903,8 +9903,10 @@ strings_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST strings
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 STRINGS_CHECK_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST strings
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST strings
+		fi
+
 		return
 	fi
 
@@ -9973,8 +9975,10 @@ shared_libs_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST shared_libs
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 SHARED_LIBS_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs
+		fi
+
 		return
 	fi
 
@@ -10136,8 +10140,7 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 				display --to LOG --type INFO NOT_FOUND_CMD 'ldd'
 			fi
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST shared_libs_path
 	fi
 
@@ -10300,12 +10303,16 @@ file_properties_check() {
 	fi
 
 	if ! `check_test properties`; then
-#jh - only display this if VL but what about the '--nl'?
-		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST properties
+		fi
+
 		return
 	elif [ $SKIP_ATTR -eq 1 -a $SKIP_HASH -eq 1 -a $SKIP_IMMUT -eq 1 -a $SKIP_SCRIPT -eq 1 ]; then
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST properties
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST properties
+		fi
+
 		return
 	else
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST properties
@@ -11935,8 +11942,10 @@ suspscan() {
 		display --to LOG --type INFO --nl STARTING_TEST suspscan
 		display --to LOG --type PLAIN --log-indent 2 SUSPSCAN_START
 	else
-#jh - same problem again with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST suspscan
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST suspscan
+		fi
+
 		return
 	fi
 
@@ -12247,8 +12256,10 @@ do_system_commands_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST system_commands
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_SYS_COMMANDS
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST system_commands
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST system_commands
+		fi
+
 		return
 	fi
 
@@ -12276,8 +12287,10 @@ rootkit_file_dir_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST known_rkts
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_FILES_DIRS_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST known_rkts
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST known_rkts
+		fi
+
 		return
 	fi
 
@@ -13271,8 +13284,10 @@ possible_rootkit_file_dir_checks() {
 		display --to LOG --type INFO --nl STARTING_TEST possible_rkt_files
 		display --to LOG --type PLAIN --log-indent 2 ROOTKIT_POSS_FILES_DIRS_LOG
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_files
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_files
+		fi
+
 		return
 	fi
 
@@ -13479,8 +13494,10 @@ possible_rootkit_string_checks() {
 		display --to LOG --type INFO --nl STARTING_TEST possible_rkt_strings
 		display --to LOG --type PLAIN --log-indent 2 ROOTKIT_POSS_STRINGS_LOG
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_strings
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST possible_rkt_strings
+		fi
+
 		return
 	fi
 
@@ -13675,8 +13692,10 @@ additional_rootkit_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST additional_rkts
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_ADD_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST additional_rkts
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST additional_rkts
+		fi
+
 		return
 	fi
 
@@ -13700,8 +13719,10 @@ malware_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST malware
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ROOTKIT_MALWARE_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST malware
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST malware
+		fi
+
 		return
 	fi
 
@@ -13908,8 +13929,7 @@ ${PROC} ${PID} ${FNAME}"
 				display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
 			fi
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST deleted_files
 	fi
 
@@ -14032,8 +14052,7 @@ ${RKHTMPVAR}:${FNAME}"
 				display --to LOG --type INFO NOT_FOUND_CMD 'lsof'
 			fi
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST running_procs
 	fi
 
@@ -14204,8 +14223,7 @@ ${FOUND_PROCS}"
 				IFS=$RKHIFS
 			fi
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_procs
 	fi
 
@@ -14240,8 +14258,10 @@ ${FOUND_PROCS}"
 					FOUNDFILES="${FOUNDFILES} ${FNAME}"
 				fi
 
-				display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
-			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
+				fi
+			elif [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_MALWARE_LOGIN_BDOOR_CHK "`name2text \"${FNAME}\"`"
 			fi
 		done
@@ -14260,8 +14280,7 @@ ${FOUND_PROCS}"
 				display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "`name2text \"${FNAME}\"`"
 			done
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST login_backdoors
 	fi
 
@@ -14289,8 +14308,10 @@ ${FOUND_PROCS}"
 					FOUNDFILES="${FOUNDFILES} ${FNAME}"
 				fi
 
-				display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
-			else
+				if [ $VERBOSE_LOGGING -eq 1 ]; then
+					display --to LOG --type PLAIN --result FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
+				fi
+			elif [ $VERBOSE_LOGGING -eq 1 ]; then
 				display --to LOG --type PLAIN --result NOT_FOUND --log-indent 4 ROOTKIT_FILES_DIRS_FILE "`name2text \"${FNAME}\"`"
 			fi
 		done
@@ -14309,8 +14330,7 @@ ${FOUND_PROCS}"
 				display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text \"${FNAME}\"`"
 			done
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST sniffer_logs
 	fi
 
@@ -14344,8 +14364,7 @@ ${FOUND_PROCS}"
 
 			display --to LOG --type INFO ROOTKIT_MALWARE_SFW_INTRUSION_SKIP
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST tripwire
 	fi
 
@@ -14395,8 +14414,7 @@ ${FOUND_PROCS}"
 				display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_DIR_FOUND "`name2text \"${DIR}\"`"
 			done
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST susp_dirs
 	fi
 
@@ -14645,8 +14663,7 @@ ${FOUND_PROCS}"
 
 			display --to LOG --type INFO LINUX_ONLY
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST ipc_shared_mem
 	fi
 
@@ -14904,8 +14921,10 @@ trojan_checks() {
 	if `check_test trojans`; then
 		display --to LOG --type INFO --nl STARTING_TEST trojans
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST trojans
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST trojans
+		fi
+
 		return
 	fi
 
@@ -15283,8 +15302,10 @@ linux_loaded_modules() {
 	#
 
 	if ! `check_test loaded_modules`; then
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST loaded_modules
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST loaded_modules
+		fi
+
 		return
 	fi
 
@@ -15339,8 +15360,10 @@ linux_avail_modules() {
 	#
 
 	if ! `check_test avail_modules`; then
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST avail_modules
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST avail_modules
+		fi
+
 		return
 	fi
 
@@ -15449,8 +15472,10 @@ os_specific_checks() {
 	if `check_test os_specific`; then
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST os_specific
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST os_specific
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST os_specific
+		fi
+
 		return
 	fi
 
@@ -15494,8 +15519,10 @@ do_rootkit_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST rootkits
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_ROOTKITS
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST rootkits
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST rootkits
+		fi
+
 		return
 	fi
 
@@ -15687,8 +15714,10 @@ do_network_port_checks() {
 		display --to LOG --type INFO STARTING_TEST ports
 		display --to LOG --type PLAIN --log-indent 2 NETWORK_PORTS_BACKDOOR_LOG
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST ports
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST ports
+		fi
+
 		return
 	fi
 
@@ -15838,8 +15867,10 @@ do_network_hidden_port_checks() {
 	if `check_test hidden_ports`; then
 		display --to LOG --type INFO --nl STARTING_TEST hidden_ports
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_ports
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST hidden_ports
+		fi
+
 		return
 	fi
 
@@ -15879,7 +15910,7 @@ do_network_hidden_port_checks() {
 	# if it is available then it will be used to find out pathnames.
 	#
 
-	if [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 -a $VERBOSE_lOGGING -eq 1 ]; then
+	if [ $PORT_WHITELIST_ALL_TRUSTED -eq 1 -a $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO NETWORK_PORTS_ENABLE_TRUSTED
 	fi
 
@@ -16105,8 +16136,7 @@ do_network_interface_checks() {
 				fi
 			fi
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST promisc
 	fi
 
@@ -16120,8 +16150,10 @@ do_network_interface_checks() {
 	if `check_test packet_cap_apps`; then
 		display --to LOG --type INFO --nl STARTING_TEST packet_cap_apps
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST packet_cap_apps
+		fi
+
 		return
 	fi
 
@@ -16264,8 +16296,10 @@ do_network_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST network
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_NETWORK
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST network
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST network
+		fi
+
 		return
 	fi
 
@@ -16289,8 +16323,10 @@ do_system_startup_file_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST startup_files
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 STARTUP_FILES_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_files
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST startup_files
+		fi
+
 		return
 	fi
 
@@ -16313,8 +16349,10 @@ do_system_startup_file_checks() {
 	if `check_test startup_malware`; then
 		display --to LOG --type INFO --nl STARTING_TEST startup_malware
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST startup_malware
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST startup_malware
+		fi
+
 		return
 	fi
 
@@ -16628,8 +16666,10 @@ do_group_accounts_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST group_accounts
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 ACCOUNTS_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST group_accounts
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST group_accounts
+		fi
+
 		return
 	fi
 
@@ -16883,8 +16923,9 @@ ${RKHTMPVAR}"
 		display --to LOG --type INFO --nl STARTING_TEST passwd_changes
 	else
 		RKHTMPVAR=1
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST passwd_changes
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST passwd_changes
+		fi
 	fi
 
 	if [ $RKHTMPVAR -eq 1 ]; then
@@ -16942,8 +16983,9 @@ ${RKHTMPVAR}"
 		display --to LOG --type INFO --nl STARTING_TEST group_changes
 	else
 		RKHTMPVAR=1
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST group_changes
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST group_changes
+		fi
 	fi
 
 	if [ $RKHTMPVAR -eq 1 ]; then
@@ -17067,8 +17109,10 @@ do_system_config_files_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST system_configs
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 SYSTEM_CONFIGS_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs
+		fi
+
 		return
 	fi
 
@@ -17173,8 +17217,7 @@ do_system_config_files_check() {
 		else
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs_ssh
 	fi
 
@@ -17376,8 +17419,7 @@ do_system_config_files_check() {
 				fi
 			fi
 		fi
-	else
-#jh - same with nl
+	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO --nl USER_DISABLED_TEST system_configs_syslog
 	fi
 
@@ -17438,8 +17480,10 @@ do_filesystem_check() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST filesystem
 		display --to SCREEN+LOG --type PLAIN --screen-indent 2 FILESYSTEM_START
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST filesystem
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST filesystem
+		fi
+
 		return
 	fi
 
@@ -17817,8 +17861,10 @@ do_local_host_checks() {
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST local_host
 		display --to SCREEN+LOG --type PLAIN --color YELLOW CHECK_LOCALHOST
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST local_host
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST local_host
+		fi
+
 		return
 	fi
 
@@ -17866,8 +17912,10 @@ do_app_checks() {
 	if `check_test apps`; then
 		display --to LOG --type INFO --screen-nl --nl STARTING_TEST apps
 	else
-#jh - same with nl
-		display --to LOG --type INFO --nl USER_DISABLED_TEST apps
+		if [ $VERBOSE_LOGGING -eq 1 ]; then
+			display --to LOG --type INFO --nl USER_DISABLED_TEST apps
+		fi
+
 		return
 	fi
 
