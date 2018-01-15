@@ -7400,6 +7400,12 @@ download_file() {
 	MIRROR_COUNT=0
 	TOTAL_MIRRORS=0
 
+	if [ -n "`echo \"${URL}\" | grep '/rkhunter_latest\.dat$'`" ]; then
+		DOING_VERS_CHK=1
+	else
+		DOING_VERS_CHK=0
+	fi
+
 	if [ -f "${DB_PATH}/mirrors.dat" ]; then
 		#
 		# The version check will use both the
@@ -7444,11 +7450,11 @@ download_file() {
 
 
 			#
-			# For the SF mirrors add on the final
-			# part of the mirror URL.
+			# For the SF mirrors add on the final part of the
+			# mirror URL, unless we are doing a version check.
 			#
 
-			if [ "${MIRROR}" = "http://rkhunter.sourceforge.net" ]; then
+			if [ $DOING_VERS_CHK -eq 0 -a "${MIRROR}" = "http://rkhunter.sourceforge.net" ]; then
 				MIRROR="${MIRROR}/${RKH_VER_MAJ}.${RKH_VER_MIN}"
 			fi
 		fi
@@ -7515,12 +7521,12 @@ download_file() {
 				#
 
 				:
-			elif [ -n "`echo \"${URL}\" | grep '/rkhunter_latest\.dat$'`" ]; then
+			elif [ $DOING_VERS_CHK -eq 1 ]; then
 				#
 				# The versioncheck file should just be a version number.
 				#
 
-				if [ -z "`grep '^[0-9][0-9]*\.[0-9][.0-9]*$' \"${OUTPUT_FILE}\"`" ]; then
+				if [ -z "`grep '^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' \"${OUTPUT_FILE}\"`" ]; then
 					DNLOADERR=1
 				fi
 			else
