@@ -5786,6 +5786,17 @@ get_properties_options() {
 	fi
 
 
+	SKIP_INODE_CHECK=`get_option single SKIP_INODE_CHECK` || exit $?
+
+	if [ -n "${SKIP_INODE_CHECK}" ]; then
+		check_is_digit SKIP_INODE_CHECK
+
+		test $ERRCODE -eq 1 && LEAVE=1
+	else
+		SKIP_INODE_CHECK=0
+	fi
+
+
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
@@ -6433,7 +6444,6 @@ rkh_dat_get_os_info() {
 
 rkh_dat_set_file_properties() {
 
-#jh - breakout the inode check as a separate test for BTRFS filesystems etc.
 #jh - Ebury check?
 	#
 	# This function obtains various bits of information about the files to
@@ -7938,7 +7948,7 @@ do_config_file_check() {
 		   IPC_SEG_SIZE LANGUAGE LOCKDIR LOCK_TIMEOUT LOGFILE MAIL_CMD MIRRORS_MODE MODULES_DIR
 		   OS_VERSION_FILE PASSWORD_FILE PHALANX2_DIRTEST PKGMGR ROOTDIR ROTATE_MIRRORS
 		   SCAN_MODE_DEV SCANROOTKITMODE SCRIPTDIR SHOW_LOCK_MSGS SHOW_SUMMARY_TIME SHOW_SUMMARY_WARNINGS_NUMBER
-		   SSH_CONFIG_DIR SUSPSCAN_DEBUG SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP
+		   SKIP_INODE_CHECK SSH_CONFIG_DIR SUSPSCAN_DEBUG SUSPSCAN_LINETHRESH SUSPSCAN_MAXSIZE SUSPSCAN_TEMP
 		   SUSPSCAN_THRESH TMPDIR UPDATE_MIRRORS UPDT_ON_OS_CHANGE USE_SUNSUM USE_LOCKING
 		   USE_SYSLOG WARN_ON_OS_CHANGE WEBCMD WEB_CMD WHITELISTED_IS_WHITE
 		   XINETD_CONF_PATH"
@@ -10497,12 +10507,16 @@ file_properties_check() {
 	# Display the results.
 	#
 
-	if [ $SKIP_IMMUT_OS -eq 1 ]; then
+	if [ $SKIP_IMMUT_OS -eq 1 -a $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO FILE_PROP_IMMUT_OS
 	fi
 
 	if [ $IMMUTABLE_SET -eq 1 ]; then
 		display --to LOG --type INFO FILE_PROP_IMMUT_SET
+	fi
+
+	if [ $SKIP_INODE_CHECK -eq 1 -a $VERBOSE_LOGGING -eq 1 ]; then
+		display --to LOG --type INFO FILE_PROP_SKIP_INODE
 	fi
 
 	if [ -z "${RKHTMPVAR}" ]; then
@@ -11381,10 +11395,12 @@ ${RKHLINE}"
 						RKHINODE=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
 						SYSINODE=`echo ${FDATA} | cut -d: -f1`
 
-						if [ -n "${RKHINODE}" ]; then
-							test "${RKHINODE}" != "${SYSINODE}" && TEST_RESULT="${TEST_RESULT} inodechanged"
-						else
-							TEST_RESULT="${TEST_RESULT} norkhinode"
+						if [ $SKIP_INODE_CHECK -eq 0 ]; then
+							if [ -n "${RKHINODE}" ]; then
+								test "${RKHINODE}" != "${SYSINODE}" && TEST_RESULT="${TEST_RESULT} inodechanged"
+							else
+								TEST_RESULT="${TEST_RESULT} norkhinode"
+							fi
 						fi
 					fi
 

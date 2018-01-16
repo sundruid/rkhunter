@@ -18,7 +18,7 @@
 
  -- 
 
- * 1.4.6 (??/??/2017)
+ * 1.4.6 (??/??/2018)
 
  New:
  - Added support for Alpine Linux (busybox).
@@ -30,6 +30,10 @@
  - Added the IPC_SEG_SIZE configuration file option. This can be used
    to set the minimum shared memory segment size to check. The default
    value is 1000000 bytes.
+ - Added the SKIP_INODE_CHECK configuration file option. Setting this
+   option will disable the reporting of any changed inode numbers.
+   The default is to report inode changes. (This option may be useful
+   for filesystems such as Btrfs.)
 
  Changes:
  - The 'ipc_shared_mem' test will now log the minimum segment size

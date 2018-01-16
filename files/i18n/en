@@ -1,4 +1,4 @@
-Version:2018011601
+Version:2018011602
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -274,6 +274,7 @@ FILE_PROP_SKIP_IMMUT_CMD:No output from the '$1' command - all file immutable-bi
 FILE_PROP_SKIP_SCRIPT:Unable to find the 'file' command - all script replacement checks will be skipped.
 FILE_PROP_SKIP_SCRIPT_DISABLED:The 'file' command has been disabled - all script replacement checks will be skipped.
 FILE_PROP_SKIP_FILE_CMD:No output from the 'file' command - all script replacement checks will be skipped.
+FILE_PROP_SKIP_INODE:All file inode checks will be skipped.
 FILE_PROP_NO_OS_WARNING:Warnings of any O/S change have been disabled at the users request.
 FILE_PROP_OS_CHANGED:The local host configuration or operating system has changed.
 FILE_PROP_DAT_MISSING:The file of stored file properties (rkhunter.dat) does not exist, and should be created. To do this type in 'rkhunter --propupd'.
