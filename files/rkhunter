@@ -1290,8 +1290,6 @@ suckit_extra_checks() {
 
 	display --to LOG --type PLAIN --log-indent 2 --nl ROOTKIT_ADD_SUCKIT_LOG
 
-	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
-
 	#
 	# The first check tests the link count of the '/sbin/init' file.
 	# We use the NLINKS variable to indicate the test result:
@@ -1304,6 +1302,8 @@ suckit_extra_checks() {
 	NLINKS=-1
 
 	if [ -n "${STAT_CMD}" ]; then
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			NLINKS=`${STAT_CMD} --nlink /sbin/init 2>/dev/null`
 		else
@@ -1342,6 +1342,8 @@ suckit_extra_checks() {
 	#
 
 	HIDDEN=""
+
+	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 
 	for EXT in xrk mem; do
 		get_temp_file "${RKHTMPDIR}/suckitexttest"
@@ -1388,6 +1390,8 @@ suckit_extra_checks() {
 	SKDET_CMD=`find_cmd skdet`
 
 	if [ -n "${SKDET_CMD}" ]; then
+		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type INFO FOUND_CMD 'skdet' "${SKDET_CMD}"
 		fi
@@ -12009,6 +12013,8 @@ suspscan() {
 	FOUNDDIRS=""
 	FILENAME="${SUSPSCAN_TEMP}/suspscan.$$.strings"
 
+	ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 	rm -f ${SUSPSCAN_TEMP}/suspscan.*.strings >/dev/null 2>&1
 
 	#
@@ -12101,7 +12107,6 @@ suspscan() {
 					$STRINGS_CMD -n 4 -a "${SUSPSCAN_ITEM}" 2>/dev/null | head ${HEAD_OPT}$SUSPSCAN_LINETHRESH >"${FILENAME}" 2>&1
 
 					for SUSPSCAN_STRING in `grep -v '^Version' "${DB_PATH}/suspscan.dat" 2>/dev/null | tail ${TAIL_OPT}1` ; do
-
 						#
 						# Break off if the score already exceeds the threshold.
 						#
@@ -12231,9 +12236,12 @@ suspscan() {
 	done
 
 	FOUNDDIRS=`grep '^6 SUSPSCAN_FILE_CHECK' "${SUSPSCAN_TMPFILE}" 2>/dev/null | head ${HEAD_OPT}1`
+
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else
+		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 		# The 'type' here should be PLAIN, but the loop prevents RKH from seeing that a warning has occurred.
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
 	fi
@@ -13740,6 +13748,8 @@ malware_checks() {
 			WHITEPROC=""
 			BLACKPROC=""
 
+			ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele' 2>/dev/null | head ${HEAD_OPT}1`
 
 			if [ -n "${DELE_FILES}" ]; then
@@ -13889,6 +13899,8 @@ ${PROC} ${PID} ${FNAME}"
 			if [ $FOUND -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
 			else
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
 
 				display --to LOG --type WARNING ROOTKIT_MALWARE_DELETED_FILES_FOUND
@@ -13943,6 +13955,8 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type INFO --nl STARTING_TEST running_procs
 
 		if [ -n "${LSOF_CMD}" ]; then
+			ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 			#
 			# First get a temporary file to store the output.
 			#
@@ -13971,8 +13985,6 @@ ${PROC} ${PID} ${FNAME}"
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				FOUNDFILES=`grep "/${FNAMEGREP}$" "${RKHLSOF_FILE}"`
-
-				ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 				if [ -n "${FOUNDFILES}" ]; then
 					FOUND=0
@@ -14141,6 +14153,8 @@ ${RKHTMPVAR}:${FNAME}"
 					test "${RKHTMPVAR}" != "sys" -a "${RKHTMPVAR}" != "proc" -a "${RKHTMPVAR}" != "brute" && continue
 				fi
 
+				ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 				SEEN=1
 				FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
 
@@ -14148,6 +14162,8 @@ ${RKHTMPVAR}:${FNAME}"
 					# Nothing found.
 					display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 				else
+					ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 					# For newer versions we can sort the messages.
 					if [ $UNHIDE_VERS -ge 20100919 ]; then
 						FOUND_PROCS=`echo "${FOUND_PROCS}" | sort | uniq`
@@ -14243,6 +14259,8 @@ ${FOUND_PROCS}"
 		FOUND=0
 		FOUNDFILES=""
 
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 		display --to LOG --type INFO --nl STARTING_TEST login_backdoors
 
 		for FNAME in ${LOGIN_BACKDOOR_FILES}; do
@@ -14277,6 +14295,8 @@ ${FOUND_PROCS}"
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
 
 			for FNAME in ${FOUNDFILES}; do
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 				display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "`name2text \"${FNAME}\"`"
 			done
 		fi
@@ -14292,6 +14312,8 @@ ${FOUND_PROCS}"
 	if `check_test sniffer_logs`; then
 		FOUND=0
 		FOUNDFILES=""
+
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 		display --to LOG --type INFO --nl STARTING_TEST sniffer_logs
 
@@ -14327,6 +14349,8 @@ ${FOUND_PROCS}"
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
 
 			for FNAME in ${FOUNDFILES}; do
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 				display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text \"${FNAME}\"`"
 			done
 		fi
@@ -14377,6 +14401,8 @@ ${FOUND_PROCS}"
 		FOUND=0
 		FOUNDDIRS=""
 
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 		display --to LOG --type INFO --nl STARTING_TEST susp_dirs
 
 		for DIR in ${SUSPICIOUS_DIRS}; do
@@ -14411,6 +14437,8 @@ ${FOUND_PROCS}"
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
 
 			for DIR in ${FOUNDDIRS}; do
+				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 				display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_DIR_FOUND "`name2text \"${DIR}\"`"
 			done
 		fi
@@ -14428,6 +14456,8 @@ ${FOUND_PROCS}"
 
 		if [ $LINUXOS -eq 1 ]; then
 			if [ -n "${IPCS_CMD}" ]; then
+				ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 				#
 				# Log the minimum segment size we are going to check.
 				# If possible, use the human-readable format for the
@@ -14579,6 +14609,8 @@ ${FOUND_PROCS}"
 					IFS=$IFSNL
 					for SHM_LINE in ${SEGS_FOUND}; do
 						test -z "${SHM_LINE}" && continue
+
+						ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
 
 						# We need to do this to ensure the 'set' below works correctly.
 						IFS=$RKHIFS
@@ -16399,6 +16431,8 @@ do_system_startup_file_checks() {
 
 	RCSTRINGS=""
 
+	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+
 	IFS=$IFSNL
 
 	for RKHTMPVAR in ${RCLOCAL_STRINGS}; do
@@ -16409,8 +16443,6 @@ do_system_startup_file_checks() {
 
 		RCSTRINGS="${RCSTRINGS}
 ${STRING}:${INFO}"
-
-		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
 	done
 
 	IFS=$RKHIFS
@@ -16463,6 +16495,8 @@ ${FNAME}:${STRING}:${INFO}"
 	if [ $FOUND -eq 0 ]; then
 		display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_MALWARE
 	else
+		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_MALWARE
 
 		IFS=$IFSNL
@@ -16473,9 +16507,6 @@ ${FNAME}:${STRING}:${INFO}"
 			FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			STRING=`echo "${RKHTMPVAR}" | cut -d: -f2`
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
-
-			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
-			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
 			display --to LOG --type WARNING ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "`name2text \"${FNAME}\"`" "${INFO}"
 		done
@@ -18210,12 +18241,12 @@ display_check_summary() {
 
 
 	#
-	# Do rootkit check summary.
+	# Do rootkit checks summary.
 	#
 
 	display --to SCREEN+LOG --type PLAIN --nl SUMMARY_RKT_SCAN
 
-	if `check_test rootkits || check_test startup_malware` || test $ROOTKIT_COUNT -gt 0; then
+	if `check_test rootkits || check_test startup_files` || test $ROOTKIT_COUNT -gt 0; then
 		RKHTMPVAR2=""
 
 		if [ -n "${ROOTKIT_FAILED_NAMES}" ]; then
