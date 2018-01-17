@@ -1,4 +1,4 @@
-Version:2018011701
+Version:2018011702
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -526,6 +526,8 @@ SYSTEM_CONFIGS_SSH_PROTO_DIFF1:SSH configuration option 'Protocol': $1
 SYSTEM_CONFIGS_SSH_PROTO_DIFF2:Rkhunter configuration option 'ALLOW_SSH_PROT_V1': $1
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The SSH configuration option 'Protocol' has not been set.
 SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND:The default value may be '2,1', to allow the use of protocol version 1.
+SYSTEM_CONFIGS_SSH_EXTRA:Checking for other suspicious configuration settings
+SYSTEM_CONFIGS_SSH_EBURY:Possible Ebury sshd backdoor found (SSH AuthorizedKeysFile setting)
 SYSTEM_CONFIGS_SYSLOG:Checking for a running system logging daemon
 SYSTEM_CONFIGS_SYSLOG_NOT_RUNNING:No running system logging daemon has been found.
 SYSTEM_CONFIGS_SYSLOG_DAEMON:A running '$1' daemon has been found.

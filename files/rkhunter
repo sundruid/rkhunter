@@ -8352,6 +8352,25 @@ do_system_check_initialisation() {
 	DUARAWKZ_KSYMS=
 
 
+	# Ebury sshd backdoor
+	EBURY_FILES="/lib/libns2.so
+		     /lib64/libns2.so
+		     /lib/libns5.so
+		     /lib64/libns5.so
+		     /lib/libpw3.so
+		     /lib64/libpw3.so
+		     /lib/libpw5.so
+		     /lib64/libpw5.so
+		     /lib/libsbr.so
+		     /lib64/libsbr.so
+		     /lib/libslr.so
+		     /lib64/libslr.so
+		     /lib/tls/libkeyutils.so.1
+		     /lib64/tls/libkeyutils.so.1"
+	EBURY_DIRS=
+	EBURY_KSYMS=
+
+
 	# ENYE LKM v1.1, v1.2
 	# Installer default.
 	ENYELKM_FILES="/etc/.enyelkmHIDE^IT.ko
@@ -9530,6 +9549,12 @@ do_system_check_initialisation() {
 		    sshd:includes.h:Trojaned SSH daemon
 		    sshd:DecodeString:Trojaned SSH daemon
 		    sshd:EncodeString:Trojaned SSH daemon
+		    sshd:libns2.so:Ebury sshd backdoor
+		    sshd:libns5.so:Ebury sshd backdoor
+		    sshd:libpw3.so:Ebury sshd backdoor
+		    sshd:libpw5.so:Ebury sshd backdoor
+		    sshd:libsbr.so:Ebury sshd backdoor
+		    sshd:libslr.so:Ebury sshd backdoor
 		    xntps:/.config:SHV4 Rootkit
 		    syslogd:promiscuous:Sniffer installed
 		    syslogd:/usr/lib/.tbd:TBD Rootkit
@@ -12533,6 +12558,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${DUARAWKZ_FILES}
 	SCAN_DIRS=${DUARAWKZ_DIRS}
 	SCAN_KSYMS=${DUARAWKZ_KSYMS}
+	scanrootkit
+
+	# Ebury sshd backdoor
+
+	SCAN_ROOTKIT="Ebury backdoor"
+	SCAN_FILES=${EBURY_FILES}
+	SCAN_DIRS=${EBURY_DIRS}
+	SCAN_KSYMS=${EBURY_KSYMS}
 	scanrootkit
 
 	# Enye LKM
@@ -17287,6 +17320,47 @@ do_system_config_files_check() {
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
 				display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_PROTO_NOTFOUND
 			fi
+
+
+			#
+			# Finally we check for any other known suspicious configuration settings.
+			#
+
+			FOUND=0
+			FOUNDNAMES=""
+
+			#
+			# First check for the Ebury backdoor.
+			#
+
+			RKHTMPVAR=`grep -i '^[ 	]*AuthorizedKeysFile[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+
+			if [ -n "${RKHTMPVAR}" ]; then
+				RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/'`
+
+				if [ "${RKHTMPVAR2}" = "/proc/self/environ" ]; then
+					FOUND=1
+					FOUNDNAMES="${FOUNDNAMES} ebury"
+				fi
+			fi
+
+			#
+			# Now display the results.
+			#
+
+			if [ $FOUND -eq 0 ]; then
+				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_EXTRA
+			else
+				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_EXTRA
+
+				for RKHTMPVAR in ${FOUNDNAMES}; do
+					case "${RKHTMPVAR}" in
+					ebury)
+						display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_EBURY
+						;;
+					esac
+				done
+			fi
 		else
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 		fi
@@ -19649,7 +19723,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
-  Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Enye LKM, Flea Linux, FreeBSD, Fu,
+  Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, KBeast, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
