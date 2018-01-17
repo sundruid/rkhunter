@@ -180,9 +180,9 @@ TESTING RKHUNTER WITHOUT INSTALLING IT
 
 It is perfectly understandable that new users may wish to try out rkhunter
 without having to fully install it. Similarly current users may want to
-test a new version of rkhunter, or a CVS version of it, without it affecting
-their current system or current installation of rkhunter. This is all
-perfectly possible, and quite easy, using a standalone installation.
+test a new version of rkhunter, or a development version of it, without it
+affecting their current system or current installation of rkhunter. This is
+all perfectly possible, and quite easy, using a standalone installation.
 
 First, as the root user, it is suggested that a separate temporary directory
 is created, and then change to that directory. For example:
@@ -193,14 +193,14 @@ is created, and then change to that directory. For example:
 It is now necessary to either copy or download a tarball of the version of
 rkhunter that you want to test. (Since you are reading this file, we assume
 you have already downloaded the relevant version.) For users wishing to try
-the latest CVS version, it is possible to download a tarball. For example:
+the latest development version, it is possible to download a tarball:
 
-       wget http://rkhunter.sourceforge.net/rkhunter-CVS.tar.gz
+       wget http://rkhunter.sourceforge.net/rkhunter-dev.tar.gz
 
 Next, it is necessary to extract the files from the tarball. The simplest
 way is to use the 'tar' command, such as:
 
-       tar xzf rkhunter-CVS.tar.gz
+       tar xzf rkhunter-dev.tar.gz
 
 Obviously, for official releases, you will need to use the correct tarball
 name. For example:
@@ -211,21 +211,16 @@ For users of systems with alternative implementations of 'tar', for example
 Solaris users, you may need to break the extraction process into two steps
 (or use the 'gtar' command if you have it installed). For example:
 
-       gunzip rkhunter-CVS.tar.gz
-       tar xf rkhunter-CVS.tar
-
-Additionally it is possible to download from CVS directly using the command:
-
-cvs -d:pserver:anonymous@rkhunter.cvs.sourceforge.net:/cvsroot/rkhunter co -P rkhunter
-
+       gunzip rkhunter-dev.tar.gz
+       tar xf rkhunter-dev.tar
 
 The extraction process will create a sub-directory containing all the
 rkhunter files. The sub-directory name will contain the rkhunter version
-number, or, for CVS tarballs, it will simply be called 'rkhunter'.
+number, or, for development tarballs, it will simply be called 'rkhunter'.
 Change into this directory:
 
        cd rkhunter-1.4.0         (for an official release tarball)
-   or  cd rkhunter               (for CVS and CVS tarballs)
+   or  cd rkhunter               (for development tarballs)
 
 Now, we can run the installer program as described in the section above
 about standalone installations:
