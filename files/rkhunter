@@ -941,7 +941,17 @@ check_paths() {
 	#
 
 	if [ $NOWILD -eq 1 ]; then
-		RKHTMPVAR=`echo "${OPT_VALUE}" | egrep '(^|[^\\])[][?*{}]'`
+		#
+		# For the SHARED_LIB_WHITELIST option the pathname may contain
+		# the '{}' characters (wrapped around variable names). So we do
+		# not check for these characters for that particular option.
+		#
+
+		if [ "${OPT_NAME}" = "SHARED_LIB_WHITELIST" ]; then
+			RKHTMPVAR=`echo "${OPT_VALUE}" | egrep '(^|[^\\])[][?*]'`
+		else
+			RKHTMPVAR=`echo "${OPT_VALUE}" | egrep '(^|[^\\])[][?*{}]'`
+		fi
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			ERRCODE=1
@@ -998,13 +1008,18 @@ check_paths() {
 		fi
 
 		#
-		# Next we check to see if it is a relative pathname.
+		# Next we check to see if it is a relative pathname. However, for
+		# the SHARED_LIB_WHITELIST option, the pathname may begin with a
+		# variable ($ORIGIN, ${LIB} etc). We must ignore these entries.
 		#
 
 		if [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
-			ERRCODE=1
-
-			echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAME}"
+			if [ "${OPT_NAME}" = "SHARED_LIB_WHITELIST" -a -n "`echo \"${FNAME}\" | grep '^\\$'`" ]; then
+				continue
+			else
+				ERRCODE=1
+				echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAME}"
+			fi
 		elif [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 			#
 			# Now we check to see if it is a simple file name.
@@ -1015,7 +1030,7 @@ check_paths() {
 			#
 
 			case "${OPT_NAME}" in
-			USER_FILEPROP_FILES_DIRS|*_CMD)
+			USER_FILEPROP_FILES_DIRS|SHARED_LIB_WHITELIST|*_CMD)
 				continue
 				;;
 			esac
@@ -1063,7 +1078,7 @@ check_paths() {
 
 
 				case "${OPT_NAME}" in
-				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|*_CMD)
+				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|SHARED_LIB_WHITELIST|*_CMD)
 					ERRCODE=1
 
 					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
@@ -1097,7 +1112,7 @@ check_paths() {
 				ALLOWHIDDENDIR|RTKT_DIR_WHITELIST|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|LOCKDIR)
 					RKHTMPVAR2="directory"
 					;;
-				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|*_CMD)
+				LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|SHARED_LIB_WHITELIST|*_CMD)
 					RKHTMPVAR2="file"
 					;;
 				*)
@@ -1112,6 +1127,17 @@ check_paths() {
 				#
 
 				test $MUSTEXIST -eq 0 && continue
+
+				#
+				# For the SHARED_LIB_WHITELIST option, we cannot test these
+				# if they contain a variable in the pathname.
+				#
+
+				if [ "${OPT_NAME}" = "SHARED_LIB_WHITELIST" ]; then
+					if [ -n "`echo \"${FNAME}\" | egrep '\\$\\{?(ORIGIN|LIB|PLATFORM)\\}?'`" ]; then
+						continue
+					fi
+				fi
 
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
@@ -6444,7 +6470,6 @@ rkh_dat_get_os_info() {
 
 rkh_dat_set_file_properties() {
 
-#jh - Ebury check?
 	#
 	# This function obtains various bits of information about the files to
 	# be checked. The current format in the rkhunter.dat file is:
@@ -10003,12 +10028,13 @@ shared_libs_check() {
 
 	VARFOUND=""
 
-	for RKHTMPVAR in LD_PRELOAD LD_AOUT_PRELOAD LD_ELF_PRELOAD; do
-		RKHTMPVAR_RES=`eval echo "\\$${RKHTMPVAR}"`
+	for VARNAME in LD_PRELOAD LD_AOUT_PRELOAD LD_ELF_PRELOAD; do
+		VARNAME_VALUE_ORIG=`eval echo "\\$${VARNAME}"`
+		VARNAME_VALUE=`echo "${VARNAME_VALUE_ORIG}" | tr ':' ' '`
 
 		FOUND=0
 
-		for FNAME in ${RKHTMPVAR_RES}; do
+		for FNAME in ${VARNAME_VALUE}; do
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
@@ -10020,7 +10046,7 @@ shared_libs_check() {
 
 		if [ $FOUND -eq 1 ]; then
 			VARFOUND="${VARFOUND}
-${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
+${VARNAME}=\"${VARNAME_VALUE_ORIG}\""
 		fi
 	done
 
@@ -10030,7 +10056,7 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 	if [ -z "${VARFOUND}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_VAR
 	else
-		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_VAR
+		display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 SHARED_LIBS_PRELOAD_VAR
 
 		IFS=$IFSNL
 
@@ -10047,14 +10073,14 @@ ${RKHTMPVAR}=\"${RKHTMPVAR_RES}\""
 	#
 
 	FOUND=0
-	RKHTMPVAR="/etc/ld.so.preload"
+	PRELOAD_FILE="/etc/ld.so.preload"
 
-	if [ -s "${RKHTMPVAR}" ]; then
+	if [ -s "${PRELOAD_FILE}" ]; then
 		RKHLIBLIST=""
 
-		display --to LOG --type INFO SHARED_LIBS_PRELOAD_FILE_FOUND "${RKHTMPVAR}"
+		display --to LOG --type INFO SHARED_LIBS_PRELOAD_FILE_FOUND "${PRELOAD_FILE}"
 
-		for FNAME in `grep -v '^#' "${RKHTMPVAR}"`; do
+		for FNAME in `grep -v '^#' "${PRELOAD_FILE}"`; do
 			FOUND=1
 
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`

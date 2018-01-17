@@ -1,4 +1,4 @@
-Version:2018011602
+Version:2018011701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -604,7 +604,7 @@ NETWORK_PACKET_CAP_WL:Found process '$1': it is whitelisted.
 
 SHARED_LIBS_START:Performing 'shared libraries' checks
 SHARED_LIBS_PRELOAD_VAR:Checking for preloading variables
-SHARED_LIBS_PRELOAD_VAR_FOUND:Found library preload variable(s): $1
+SHARED_LIBS_PRELOAD_VAR_FOUND:Found library preload variable: $1
 SHARED_LIBS_PRELOAD_FILE:Checking for preloaded libraries
 SHARED_LIBS_PRELOAD_LIB_FOUND:Found preloaded shared library: $1
 SHARED_LIBS_PRELOAD_FILE_FOUND:Found library preload file: $1

@@ -46,7 +46,7 @@
  Bugfixes:
  - For prelinked systems ensure that the default hash function is
    SHA1 and not SHA256.
- - The result from the 'hidden_procs' check was not being
+ - The result from the 'hidden_procs' test was not being
    calculated correctly.
  - Checking the O/S version number could be missed in some cases.
  - Minor improvement to the *BSD immutable files check.
@@ -60,15 +60,18 @@
    process pathname. This has now been corrected, and where no
    pathname is available, the segment owner and PID will be logged.
  - It was possible for the return code to be lost when running the
-   'ipc_shared_mem' check. This has now been corrected.
+   'ipc_shared_mem' test. This has now been corrected.
  - Some configuration options were still not being handled correctly
    when specified more than once.
- - The 'ipc_shared_mem' check did not correctly handle whitelisting
+ - The 'ipc_shared_mem' test did not correctly handle whitelisting
    when a segment pathname was flagged as deleted. This has now
    been corrected.
  - Commands disabled in the configuration file were being logged
    as not found. They are now logged as having been disabled.
  - Disabling verbose logging could hide some warning messages.
+ - The 'shared_libs' test now caters for simple filenames, as well
+   as pathnames which contain the '$LIB', '$ORIGIN' or '$PLATFORM'
+   variables.
 
  --
 
