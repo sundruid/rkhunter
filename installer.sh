@@ -11,8 +11,8 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.20"
-INSTALLER_COPYRIGHT="Copyright 2003-2017, Michael Boelen"
+INSTALLER_VERSION="1.2.21"
+INSTALLER_COPYRIGHT="Copyright 2017, Michael Boelen"
 INSTALLER_LICENSE="
 
 This software was developed by the Rootkit Hunter project team.
@@ -33,7 +33,6 @@ RKHINST_MODE_RWR="0644"
 RKHINST_LAYOUT="default"
 RKHINST_ACTION=""
 RKHINST_ACTION_SEEN=0
-USE_CVS=0
 ERRCODE=0
 OVERWRITE=0
 STRIPROOT=""
@@ -520,49 +519,6 @@ showTemplate() { # Take input from the "--install parameter"
 }
 
 
-useCVS() {
-	# If the 'which' output contains a space, then it is probably an error.
-	SEARCH=`which cvs 2>/dev/null | grep -v ' '`
-
-	if [ -z "${SEARCH}" ]; then
-		echo "Unable to find the 'cvs' command."
-		exit 1
-	else
-		cvs -z3 -d:pserver:anonymous@rkhunter.cvs.sourceforge.net:/cvsroot/rkhunter co rkhunter >/dev/null 2>&1
-		ERRCODE=$?
-
-		if [ $ERRCODE -eq 0 ]; then
-			echo "Succeeded in getting Rootkit Hunter source from CVS."
-
-			if [ -d "./files" ]; then
-				rm -rf "./files"
-			fi
-
-			mv -f rkhunter/files .
-
-			if [ -d "./files/CVS" ]; then
-				rm -rf "./files/CVS"
-			fi
-
-			case "${RKHINST_LAYOUT}" in
-			RPM|DEB|TGZ|TXZ) 
-				;;
-			*)
-				for ITEM in `find ./files`; do
-					chown "${RKHINST_OWNER}" "${ITEM}"
-				done
-				;;
-			esac
-		else
-			echo "Failed to get Rootkit Hunter from CVS: code $ERRCODE"
-			exit 1
-		fi
-	fi
-
-	return
-}
-
-
 #################################################################################
 #
 # Start installation
@@ -577,12 +533,6 @@ doInstall()  {
 
 	if [ -f "./files/${APPNAME}" ]; then
 		echo " ${INSTALLER_NAME} files: found"
-
-		if [ $USE_CVS -eq 1 ]; then
-			# You want it, and you got it!
-			# The hottest source in the land...
-			useCVS
-		fi
 
 		case "${RKHINST_LAYOUT}" in
 		RPM|DEB|TGZ|TXZ) 
@@ -646,14 +596,6 @@ doInstall()  {
 				# That's enough for a standalone installation.
 				if [ "${PREFIX}" = "." ]; then
 					chown -R ${RKHINST_OWNER} ./files 
-
-					for DIR in `find ./files -type d -name CVS`; do
-						rm -rf "${DIR}"
-					done
-
-					for FILE in `find ./files -type f -name Entries -o -name Repository -o -name Root`; do
-						rm -rf "${FILE}"
-					done
 
 					for ITEM in `find ./files -type f`; do
 						case "${ITEM}" in
@@ -838,10 +780,6 @@ doInstall()  {
 	# Language support files
 	ERRCODE=0
 
-	if [ -d "./files/i18n/CVS" ]; then
-		rm -rf "./files/i18n/CVS"
-	fi
-
 	for FILE in `find ./files/i18n -type f`; do
 		cp "${FILE}" "${RKHINST_LANG_DIR}" >/dev/null 2>&1
 		ERRCODE=$?
@@ -866,10 +804,6 @@ doInstall()  {
 
 	# ClamAV signatures
 	ERRCODE=0
-
-	if [ -d "./files/signatures/CVS" ]; then
-		rm -rf "./files/signatures/CVS"
-	fi
 
 	for FILE in `find ./files/signatures -type f`; do
 		cp "${FILE}" "${RKHINST_SIG_DIR}" >/dev/null 2>&1
