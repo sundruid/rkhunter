@@ -15486,23 +15486,10 @@ linux_avail_modules() {
 
 	FOUND=0
 	FOUNDFILES=""
-	LKM_NAMES=""
 
 	if [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO ROOTKIT_OS_LINUX_LKMNAMES_PATH "${LKM_PATH}"
 	fi
-
-
-	#
-	# We reformat the LKM names at this point
-	# since we only need to do it once.
-	#
-
-	for RKHTMPVAR in ${LKM_BADNAMES}; do
-		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/\./\\\./g'`
-
-		LKM_NAMES="${LKM_NAMES} ${RKHTMPVAR}"
-	done
 
 
 	#
@@ -15526,6 +15513,18 @@ linux_avail_modules() {
 
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
 	else
+		#
+		# First reformat the LKM names so we only need to do it once.
+		#
+
+		LKM_NAMES=""
+
+		for RKHTMPVAR in ${LKM_BADNAMES}; do
+			RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/\./\\\./g'`
+
+			LKM_NAMES="${LKM_NAMES} ${RKHTMPVAR}"
+		done
+
 		get_temp_file "${RKHTMPDIR}/modslist"
 		${FIND_CMD} "${LKM_PATH}" -type f -a \( -name "*.o" -o -name "*.ko" -o -name "*.ko.xz" \) >"${TEMPFILE}" 2>/dev/null
 
