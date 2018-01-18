@@ -8613,6 +8613,12 @@ do_system_check_initialisation() {
 	JYNX_KSYMS=
 
 
+	# Jynx2 Rootkit 
+	JYNX2_FILES="/XxJynx/reality.so"
+	JYNX2_DIRS="/XxJynx"
+	JYNX2_KSYMS=
+
+
 	# KBeast (Kernel Beast) Rootkit
 	KBEAST_FILES="/usr/_h4x_/ipsecs-kbeast-v1.ko
 		      /usr/_h4x_/_h4x_bd
@@ -9908,7 +9914,9 @@ do_system_check_initialisation() {
 			 .IptabLes:malware component
 			 .flush:malware component
 			 \[bluetooth\]:malware component
-			 \[flush:malware component"
+			 \[flush:malware component
+			 jynx2.so:Jynx2 Rootkit
+			 reality.so:Jynx2 Rootkit"
 
 
 	# System startup file pathnames
@@ -12706,6 +12714,14 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${JYNX_KSYMS}
 	scanrootkit
 
+	# Jynx2 Rootkit
+
+	SCAN_ROOTKIT="Jynx2 Rootkit"
+	SCAN_FILES=${JYNX2_FILES}
+	SCAN_DIRS=${JYNX2_DIRS}
+	SCAN_KSYMS=${JYNX2_KSYMS}
+	scanrootkit
+
 	# KBeast Rootkit
 
 	SCAN_ROOTKIT="KBeast Rootkit"
@@ -14030,8 +14046,6 @@ ${PROC} ${PID} ${FNAME}"
 		display --to LOG --type INFO --nl STARTING_TEST running_procs
 
 		if [ -n "${LSOF_CMD}" ]; then
-			ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
-
 			#
 			# First get a temporary file to store the output.
 			#
@@ -14053,6 +14067,8 @@ ${PROC} ${PID} ${FNAME}"
 			IFS=$IFSNL
 
 			for RKHTMPVAR in ${SUSP_FILES_INFO}; do
+				ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
+
 				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/^[ 	]*//'`
 
 				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
@@ -19724,7 +19740,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
-  IntoXonia-NG, Irix, Jynx, KBeast, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
+  IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),

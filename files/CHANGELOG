@@ -38,6 +38,7 @@
  - Added a new SSH configuration test to check for various suspicious
    configuration options. Currently there is only one check which
    relates to the Ebury backdoor.
+ - Added basic test for Jynx2 rootkit.
 
  Changes:
  - The 'ipc_shared_mem' test will now log the minimum segment size
