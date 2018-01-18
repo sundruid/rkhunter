@@ -15514,7 +15514,7 @@ linux_avail_modules() {
 		display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_PATH_MISSING "${LKM_PATH}"
 	else
 		#
-		# First reformat the LKM names so we only need to do it once.
+		# Reformat the LKM names so we only need to do it once.
 		#
 
 		LKM_NAMES=""
