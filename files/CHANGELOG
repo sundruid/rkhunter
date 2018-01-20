@@ -42,6 +42,7 @@
  - Added Komplex trojan test.
  - Added test for KeRanger running process.
  - Added test for Keydnap backdoor.
+ - Added basic test for Eleanor backdoor running process.
 
  Changes:
  - The 'ipc_shared_mem' test will now log the minimum segment size

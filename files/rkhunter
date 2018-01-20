@@ -9939,7 +9939,9 @@ do_system_check_initialisation() {
 			 reality.so:Jynx2 Rootkit
 			 kernel_service:OSX KeRanger ransomware
 			 icloudsyncd:OSX Keydnap backdoor
-			 icloudproc:OSX Keydnap backdoor"
+			 icloudproc:OSX Keydnap backdoor
+			 dbd:OSX Eleanor backdoor
+			 check_hostname:OSX Eleanor backdoor"
 
 
 	# System startup file pathnames
@@ -14125,9 +14127,13 @@ ${PROC} ${PID} ${FNAME}"
 
 					INFO=`echo "${RKHTMPVAR}" | cut -d: -f2-`
 
-					if [ $MACOSX -eq 0 -a -n "`echo \"${INFO}\" | grep '^OSX '`" ]; then
-						ROOTKIT_COUNT=`expr $ROOTKIT_COUNT - 1`
-						continue
+					if [ -n "`echo \"${INFO}\" | grep '^OSX '`" ]; then
+						if [ $MACOSX -eq 1 ]; then
+							INFO=`echo "${INFO}" | cut -d' ' -f2-`
+						else
+							ROOTKIT_COUNT=`expr $ROOTKIT_COUNT - 1`
+							continue
+						fi
 					fi
 
 					#
