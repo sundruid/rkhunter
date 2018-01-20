@@ -8635,6 +8635,16 @@ do_system_check_initialisation() {
 		     h4x_write"
 
 
+	# OSX Keydnap backdoor
+	# The '%' character represents a space.
+	KEYDNAP_FILES="/Applications/Transmission.app/Contents/Resources/License.rtf
+		       /Volumes/Transmission/Transmission.app/Contents/Resources/License.rtf
+		       /Library/LaunchAgents/com.apple.iCloud.sync.daemon.plist
+		       /Library/LaunchAgents/com.geticloud.icloud.photo.plist"
+	KEYDNAP_DIRS="/Library/Application%Support/com.apple.iCloud.sync.daemon/"
+	KEYDNAP_KSYMS=
+
+
 	# Kitko Rootkit
 	KITKO_FILES=
 	KITKO_DIRS="/usr/src/redhat/SRPMS/..."
@@ -9927,7 +9937,9 @@ do_system_check_initialisation() {
 			 \[flush:malware component
 			 jynx2.so:Jynx2 Rootkit
 			 reality.so:Jynx2 Rootkit
-			 kernel_service:OSX KeRanger ransomware"
+			 kernel_service:OSX KeRanger ransomware
+			 icloudsyncd:OSX Keydnap backdoor
+			 icloudproc:OSX Keydnap backdoor"
 
 
 	# System startup file pathnames
@@ -12740,6 +12752,16 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${KBEAST_DIRS}
 	SCAN_KSYMS=${KBEAST_KSYMS}
 	scanrootkit
+
+	# OSX Keydnap backdoor
+
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="Keydnap backdoor"
+		SCAN_FILES=${KEYDNAP_FILES}
+		SCAN_DIRS=${KEYDNAP_DIRS}
+		SCAN_KSYMS=${KEYDNAP_KSYMS}
+		scanrootkit
+	fi
 
 	# Kitko Rootkit
 
@@ -19766,7 +19788,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
-  IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
+  IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),

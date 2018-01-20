@@ -41,6 +41,7 @@
  - Added basic test for Jynx2 rootkit.
  - Added Komplex trojan test.
  - Added test for KeRanger running process.
+ - Added test for Keydnap backdoor.
 
  Changes:
  - The 'ipc_shared_mem' test will now log the minimum segment size
