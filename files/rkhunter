@@ -8735,6 +8735,15 @@ do_system_check_initialisation() {
 	LOCKIT_KSYMS=
 
 
+	# Mokes backdoor
+	MOKES_FILES="/tmp/ss0-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9].sst
+		     /tmp/aa0-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9].aat
+		     /tmp/kk0-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9].kkt
+		     /tmp/dd0-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9].ddt"
+	MOKES_DIRS=
+	MOKES_KSYMS=
+
+
 	# MRK (MiCrobul?) RootKit (based on Devil RootKit, also see Xzibit)
 	MRK_FILES="/dev/ida/.inet/pid
 		   /dev/ida/.inet/ssh_host_key
@@ -9941,7 +9950,10 @@ do_system_check_initialisation() {
 			 icloudsyncd:OSX Keydnap backdoor
 			 icloudproc:OSX Keydnap backdoor
 			 dbd:OSX Eleanor backdoor
-			 check_hostname:OSX Eleanor backdoor"
+			 check_hostname:OSX Eleanor backdoor
+			 profiled:Mokes backdoor
+			 DropboxCache:Mokes backdoor
+			 storeuserd:OSX Mokes backdoor"
 
 
 	# System startup file pathnames
@@ -12813,6 +12825,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${LOCKIT_FILES}
 	SCAN_DIRS=${LOCKIT_DIRS}
 	SCAN_KSYMS=${LOCKIT_KSYMS}
+	scanrootkit
+
+	# Mokes backdoor
+
+	SCAN_ROOTKIT="Mokes backdoor"
+	SCAN_FILES=${MOKES_FILES}
+	SCAN_DIRS=${MOKES_DIRS}
+	SCAN_KSYMS=${MOKES_KSYMS}
 	scanrootkit
 
 	# Mood-NT Rootkit
@@ -19794,8 +19814,8 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
-  IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
-  Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
+  IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mokes,
+  Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
   TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Turtle2, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
