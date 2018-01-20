@@ -9924,7 +9924,8 @@ do_system_check_initialisation() {
 			 \[bluetooth\]:malware component
 			 \[flush:malware component
 			 jynx2.so:Jynx2 Rootkit
-			 reality.so:Jynx2 Rootkit"
+			 reality.so:Jynx2 Rootkit
+			 kernel_service:OSX KeRanger ransomware"
 
 
 	# System startup file pathnames
