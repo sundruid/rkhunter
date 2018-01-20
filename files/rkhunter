@@ -8846,6 +8846,7 @@ do_system_check_initialisation() {
 		       /usr/lib/zupzz.p2"
 	PHALANX2_KSYMS=
 
+
 	# Portacelo Rootkit
 	PORTACELO_FILES="/var/lib/.../.ak
 			 /var/lib/.../.hk
@@ -8861,6 +8862,17 @@ do_system_check_initialisation() {
 			 /var/lib/.../sssh_pid ~/.sssh/known_hosts"
 	PORTACELO_DIRS=
 	PORTACELO_KSYMS=
+
+
+	# OSX Proton backdoor
+	PROTON_FILES="/Library/LaunchAgents/com.apple.xpcd.plist
+		      /Library/LaunchAgents/com.Eltima.UpdaterAgent.plist
+		      /Library/.rand/updateragent.app
+		      /tmp/Updater.app"
+	PROTON_DIRS="/Library/.rand
+		     /Library/.cachedir
+		     /Library/.random"
+	PROTON_KSYMS=
 
 
 	# R3dstorm Toolkit
@@ -9953,7 +9965,8 @@ do_system_check_initialisation() {
 			 check_hostname:OSX Eleanor backdoor
 			 profiled:Mokes backdoor
 			 DropboxCache:Mokes backdoor
-			 storeuserd:OSX Mokes backdoor"
+			 storeuserd:OSX Mokes backdoor
+			 updateragent:OSX Proton backdoor"
 
 
 	# System startup file pathnames
@@ -13052,6 +13065,16 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${PORTACELO_DIRS}
 	SCAN_KSYMS=${PORTACELO_KSYMS}
 	scanrootkit
+
+	# OSX Proton backdoor
+
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="Proton backdoor"
+		SCAN_FILES=${PROTON_FILES}
+		SCAN_DIRS=${PROTON_DIRS}
+		SCAN_KSYMS=${PROTON_KSYMS}
+		scanrootkit
+	fi
 
 	# R3dstorm Toolkit
 
@@ -19815,7 +19838,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mokes,
-  Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
+  Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, Proton, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
   TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Turtle2, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,

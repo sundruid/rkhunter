@@ -40,10 +40,11 @@
    relates to the Ebury backdoor.
  - Added basic test for Jynx2 rootkit.
  - Added Komplex trojan test.
- - Added test for KeRanger running process.
+ - Added basic test for KeRanger running process.
  - Added test for Keydnap backdoor.
  - Added basic test for Eleanor backdoor running process.
  - Added basic tests for Mokes backdoor.
+ - Added tests for Proton backdoor.
 
  Changes:
  - The 'ipc_shared_mem' test will now log the minimum segment size
