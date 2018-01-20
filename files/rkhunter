@@ -8647,6 +8647,14 @@ do_system_check_initialisation() {
 	KNARK_KSYMS=
 
 
+	# OSX Komplex Trojan
+	KOMPLEX_FILES="/Users/Shared/.local/kextd
+		       /Users/Shared/com.apple.updates.plist
+		       /Users/Shared/start.sh"
+	KOMPLEX_DIRS=
+	KOMPLEX_KSYMS=
+
+
 	# ld-linuxv.so (LD_PRELOAD shared library rootkit)
 	LINUXV_FILES="/lib/ld-linuxv.so.1"
 	LINUXV_DIRS="/var/opt/_so_cache
@@ -12745,6 +12753,16 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${KNARK_DIRS}
 	SCAN_KSYMS=${KNARK_KSYMS}
 	scanrootkit
+
+	# OSX Komplex Trojan
+
+	if [ $MACOSX -eq 1 ]; then
+		SCAN_ROOTKIT="Komplex Trojan"
+		SCAN_FILES=${KOMPLEX_FILES}
+		SCAN_DIRS=${KOMPLEX_DIRS}
+		SCAN_KSYMS=${KOMPLEX_KSYMS}
+		scanrootkit
+	fi
 
 	# ld-linuxv.so (LD_PRELOAD shared library rootkit)
 
@@ -19740,7 +19758,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
-  IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Kitko, Knark, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
+  IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mood-NT, MRK, Ni0,
   Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
