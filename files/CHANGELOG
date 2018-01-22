@@ -45,6 +45,9 @@
  - Added basic test for Eleanor backdoor running process.
  - Added basic tests for Mokes backdoor.
  - Added tests for Proton backdoor.
+ - Added the SUSPSCAN_WHITELIST configuration file option. This
+   option can be used to whitelist file pathnames from the
+   'suspscan' test.
 
  Changes:
  - The 'ipc_shared_mem' test will now log the minimum segment size

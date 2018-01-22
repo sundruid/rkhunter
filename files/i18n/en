@@ -1,4 +1,4 @@
-Version:2018011702
+Version:2018012201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -633,6 +633,7 @@ SUSPSCAN_FILE_LINK_CHANGE:Symbolic link found: '$1' -> '$2'
 SUSPSCAN_DAT_MISSING:The data file of suspicious contents is missing or empty: $1
 SUSPSCAN_DAT_MISSING:Run 'rkhunter --update' to restore the default file.
 SUSPSCAN_DAT_NOTAFILE:The data file of suspicious contents is not a file: $1
+SUSPSCAN_WL:Found file '$1': it is whitelisted.
 
 LIST_TESTS:Current test names:
 LIST_GROUPED_TESTS:Grouped test names:

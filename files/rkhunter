@@ -4521,6 +4521,13 @@ get_suspscan_options() {
 	fi
 
 
+	#
+	# Get any whitelisted file pathnames.
+	#
+
+	SUSPSCAN_WL_OPT=`get_option newline-list SUSPSCAN_WHITELIST` || exit $?
+
+
 	if [ $LEAVE -eq 1 ]; then
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
@@ -12150,6 +12157,17 @@ suspscan() {
 	SUSPSCAN_TMPFILE="${TEMPFILE}"
 	touch "${SUSPSCAN_TMPFILE}"
 
+	#
+	# We expand the whitelist option here to ensure
+	# that any wildcard entries are the most recent.
+	#
+
+	if [ -n "${SUSPSCAN_WL_OPT}" ]; then
+		SUSPSCAN_WHITELIST=`expand_paths SUSPSCAN_WL_OPT`
+	else
+		SUSPSCAN_WHITELIST=""
+	fi
+
 	for SUSPSCAN_DIR in ${SUSPSCAN_DIRS}; do
 		if [ -d "${SUSPSCAN_DIR}" ]; then
 			FOUND=0
@@ -12173,9 +12191,11 @@ suspscan() {
 					if [ $HAVE_READLINK -eq 1 ]; then
 						RKHTMPVAR="${SUSPSCAN_ITEM}"
 
-						SUSPSCAN_ITEM=`${READLINK_CMD} ${READLINK_OPT} "${RKHTMPVAR}"`
+						SUSPSCAN_ITEM=`${READLINK_CMD} ${READLINK_OPT} "${RKHTMPVAR}" 2>/dev/null`
 
-						if [ $SUSPSCAN_DEBUG -eq 1 ]; then
+						if [ -z "${SUSPSCAN_ITEM}" ]; then
+							continue
+						elif [ $SUSPSCAN_DEBUG -eq 1 ]; then
 							echo "6 SUSPSCAN_FILE_LINK_CHANGE "${RKHTMPVAR}" "${SUSPSCAN_ITEM}"" >>"${SUSPSCAN_TMPFILE}"
 						fi
 					else
@@ -12187,6 +12207,19 @@ suspscan() {
 					fi
 				fi
 
+				#
+				# Ignore any whitelisted files.
+				#
+
+				FNAMEGREP=`echo "${SUSPSCAN_ITEM}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				if [ -n "`echo \"${SUSPSCAN_WHITELIST}\" | grep \"^${SUSPSCAN_ITEM}$\"`" ]; then
+					if [ $VERBOSE_LOGGING -eq 1 ]; then
+						display --to LOG --type INFO SUSPSCAN_WL "${SUSPSCAN_ITEM}"
+					fi
+
+					continue
+				fi
 
 				#
 				# Next check the size of the file.
@@ -19860,7 +19893,8 @@ SPACE_LIST_OPTS=" `echo ${SPACE_LIST_OPTS}` "
 NEWLINE_LIST_OPTS="ALLOWDEVFILE ALLOWHIDDENDIR ALLOWHIDDENFILE ALLOWPROCDELFILE ALLOWIPCPROC
 		   ALLOWPROCLISTEN ATTRWHITELIST EXCLUDE_USER_FILEPROP_FILES_DIRS EXISTWHITELIST
 		   IMMUTWHITELIST PKGMGR_NO_VRFY PORT_PATH_WHITELIST RTKT_DIR_WHITELIST
-		   RTKT_FILE_WHITELIST SCRIPTWHITELIST USER_FILEPROP_FILES_DIRS WRITEWHITELIST"
+		   RTKT_FILE_WHITELIST SCRIPTWHITELIST SUSPSCAN_WHITELIST USER_FILEPROP_FILES_DIRS
+		   WRITEWHITELIST"
 NEWLINE_LIST_OPTS=" `echo ${NEWLINE_LIST_OPTS}` "
 
 # The program defaults of which tests to perform will be set later.
@@ -19936,6 +19970,7 @@ SUSPSCAN_DFLT_DIRS="/tmp /var/tmp"
 SUSPSCAN_DFLT_TMP="/dev/shm"
 SUSPSCAN_DFLT_THRESH=200
 SUSPSCAN_DFLT_MAXSIZE=1024000
+SUSPSCAN_WL_OPT=""
 
 # SELinux runcon usage as determined by get_if_prelinked.
 USE_RUNCON=0
