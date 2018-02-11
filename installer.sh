@@ -12,7 +12,7 @@
 
 INSTALLER_NAME="Rootkit Hunter installer"
 INSTALLER_VERSION="1.2.21"
-INSTALLER_COPYRIGHT="Copyright 2017, Michael Boelen"
+INSTALLER_COPYRIGHT="Copyright 2018, Michael Boelen"
 INSTALLER_LICENSE="
 
 This software was developed by the Rootkit Hunter project team.
