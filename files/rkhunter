@@ -1645,7 +1645,7 @@ ${RKHTMPVAR}"
 
 
 	#
-	# Next check the ksyms or kallsyms file.
+	# Finally check the kernel symbols file.
 	#
 
 	KSYM_FOUND=""
@@ -1687,7 +1687,7 @@ ${KS}"
 
 
 		#
-		# Log any files, directories or ksyms found.
+		# Log any files, directories or kernel symbols found.
 		#
 
 		IFS=$IFSNL
@@ -5979,7 +5979,7 @@ get_os_specific_options() {
 		LKM_PATH=`get_option single MODULES_DIR` || exit $?
 
 		if [ -z "${LKM_PATH}" ]; then
-			LKM_PATH="/lib/modules/`uname -r 2>/dev/null`"
+			LKM_PATH="/lib/modules/${UNAME_R}"
 			test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
 		fi
 
@@ -6286,7 +6286,6 @@ rkh_dat_get_os_info() {
 	OSNAME=""
 	RELEASE=""
 
-	UNAME_R=`uname -r 2>/dev/null`
 	UNAME_S=`uname -s 2>/dev/null`
 	UNAME_M=`uname -m 2>/dev/null`
 
@@ -14320,7 +14319,7 @@ ${RKHTMPVAR}:${FNAME}"
 			UNHIDE_CMD=`find_cmd unhide-linux`
 
 			if [ -z "${UNHIDE_CMD}" ]; then
-				if [ -n "`uname -r | grep '^2\.6'`" ]; then
+				if [ -n "`echo \"${UNAME_R}\" | grep '^2\.6'`" ]; then
 					RKHTMPVAR="unhide-linux26"
 					UNHIDE_CMD=`find_cmd unhide-linux26`
 				fi
@@ -15625,9 +15624,6 @@ linux_avail_modules() {
 	# First obtain and log where the modules are kept. This can
 	# be set in the configuration file, but generally rkhunter
 	# will determine the location based on the kernel version.
-	# However, in the case of remote diagnostics the diagnosing
-	# and diagnosed kernel versions may be different. In this
-	# case we simply look in '/lib/modules'.
 	#
 
 	FOUND=0
@@ -19051,7 +19047,7 @@ ${LINKDIR}"
 	Linux)
 		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp numfmt"
 
-		if [ -n "`uname -r | grep '^2\.6'`" ]; then
+		if [ -n "`echo \"${UNAME_R}\" | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"
 		fi
 		;;
@@ -19571,7 +19567,7 @@ RKH_VER_MIN="4"
 PROGRAM_NAME="Rootkit Hunter"
 PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.5"
 PROGRAM_copyright_owner="Michael Boelen"
-PROGRAM_copyright="Copyright (c) 2003-2017, ${PROGRAM_copyright_owner}"
+PROGRAM_copyright="Copyright (c) 2003-2018, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
 This software was developed by the ${PROGRAM_NAME} project team.
 Please review your rkhunter configuration files before using.
@@ -19780,7 +19776,7 @@ TOTAL_SCANTIME=""
 # This will be set if a warning message is logged.
 WARNING_COUNT=0
 
-# Ksyms or kallsyms file used in some checks.
+# This will be set to the kernel symbols file used in some checks.
 KSYMS_FILE=""
 
 # Record for logging the command-line being used.
@@ -20043,6 +20039,9 @@ DFLT_SEG_SIZE=1048576
 
 # This gets set if we have the numfmt command.
 HAVE_NUMFMT=0
+
+# Record the running kernel release.
+UNAME_R=`uname -r 2>/dev/null`
 
 
 ######################################################################
@@ -20681,13 +20680,15 @@ fi
 
 if [ $CHECK -eq 1 ]; then
 	#
-	# Check if we have a ksyms or kallsyms file.
+	# Check if we have a kernel symbols file.
 	#
 
 	if [ -f "/proc/ksyms" ]; then
 		KSYMS_FILE="/proc/ksyms"
 	elif [ -f "/proc/kallsyms" ]; then
 		KSYMS_FILE="/proc/kallsyms"
+	elif [ -f "/boot/System.map-${UNAME_R}" ]; then
+		KSYMS_FILE="/boot/System.map-${UNAME_R}"
 	fi
 fi
 
@@ -21479,11 +21480,11 @@ if [ $CHECK -eq 1 ]; then
 		fi
 
 		if [ ! -r "${KSYMS_FILE}" ]; then
-			KSYMS_FILE=""
-
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type INFO KSYMS_UNAVAIL
+				display --to LOG --type INFO KSYMS_UNAVAIL "${KSYMS_FILE}"
 			fi
+
+			KSYMS_FILE=""
 		fi
 	elif [ $VERBOSE_LOGGING -eq 1 ]; then
 		display --to LOG --type INFO KSYMS_MISSING

@@ -1,4 +1,4 @@
-Version:2018020501
+Version:2018021101
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -233,9 +233,9 @@ USER_CMD_LIST:Including user commands for file properties check:
 USER_DIR_LIST:Including user directories for file properties check:
 USER_EXCLUDE_PROP:Excluding from file properties check:
 
-KSYMS_FOUND:Found kernel symbol file '$1'
-KSYMS_UNAVAIL:All kernel symbol checks will be skipped - the '/proc/ksyms' or '/proc/kallsyms' file is unreadable.
-KSYMS_MISSING:All kernel symbol checks will be skipped - could not find the '/proc/ksyms' or '/proc/kallsyms' file on the system.
+KSYMS_FOUND:Found kernel symbols file '$1'
+KSYMS_UNAVAIL:All kernel symbol checks will be skipped - the kernel symbols file is unreadable: $1
+KSYMS_MISSING:All kernel symbol checks will be skipped - could not find a kernel symbols file on the system.
 
 STARTING_TEST:Starting test name '$1'
 USER_DISABLED_TEST:Test '$1' disabled at users request.

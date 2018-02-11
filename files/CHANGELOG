@@ -56,6 +56,8 @@
    allowed maximum size).
  - If verbose logging is disabled, then generally only the test
    name and the final result for the test will now be logged.
+ - Kernel symbol checks will now use the 'System.map' file, if it
+   exists, and no other kernel symbol file can be found.
 
  Bugfixes:
  - For prelinked systems ensure that the default hash function is
