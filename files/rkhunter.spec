@@ -6,7 +6,7 @@
 #%%dump
 
 %define name rkhunter
-%define ver 1.4.5
+%define ver 1.4.6
 %define rel 1
 %define epoch 0
 
@@ -119,6 +119,9 @@ fi
 
 
 %changelog
+* Tue Feb 20 2018 jhorne - 1.4.6
+- Updated for release 1.4.6
+
 * Thu Jun 29 2017 jhorne - 1.4.4
 - Updated for release 1.4.4
 
