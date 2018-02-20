@@ -19565,7 +19565,7 @@ RKH_VER_MAJ="1"
 RKH_VER_MIN="4"
 
 PROGRAM_NAME="Rootkit Hunter"
-PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.6"
+PROGRAM_version="${RKH_VER_MAJ}.${RKH_VER_MIN}.7"
 PROGRAM_copyright_owner="Michael Boelen"
 PROGRAM_copyright="Copyright (c) 2003-2018, ${PROGRAM_copyright_owner}"
 PROGRAM_blurb="
