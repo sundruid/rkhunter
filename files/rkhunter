@@ -14792,7 +14792,7 @@ ${FOUND_PROCS}"
 								if [ -n "${RKH_SHM_PATH}" ]; then
 									RKHTMPVAR2=`name2text "${RKH_SHM_PATH_STRIPPED}"`
 
-									if [ "${RKH_SHM_PATH}" == "${RKH_SHM_PATH_STRIPPED}" ]; then
+									if [ "${RKH_SHM_PATH}" = "${RKH_SHM_PATH_STRIPPED}" ]; then
 										SEGS_FOUND="${SEGS_FOUND}
 1:${RKHTMPVAR2} ${RKH_SHM_CPID} ${RKH_SHM_OWNER} ${RKH_SHM_SIZE_HUMAN} ${IPC_SSIZE_HUMAN}"
 									else
