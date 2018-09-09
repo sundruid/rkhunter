@@ -5607,13 +5607,16 @@ get_user_fileprop_list() {
 
 		#
 		# Next check the pathnames to ensure they are basically valid.
+		# We do not need to do this for any excluded entries.
 		#
 
-		check_paths FILENAMES ${WHICH_OPT} "EXIST"
+		if [ "${WHICH_OPT}" = "USER_FILEPROP_FILES_DIRS" ]; then
+			check_paths FILENAMES ${WHICH_OPT} "EXIST"
 
-		if [ $ERRCODE -eq 1 ]; then
-			LEAVE=1
-			continue
+			if [ $ERRCODE -eq 1 ]; then
+				LEAVE=1
+				continue
+			fi
 		fi
 
 		#
