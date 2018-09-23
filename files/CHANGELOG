@@ -23,6 +23,10 @@
  New:
 
  Changes:
+ - The installer test to ensure that the rkhunter command is in
+   the users PATH has been moved to cater for more layouts. The
+   same warning will now also be shown if the installer '--show'
+   option is used.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
