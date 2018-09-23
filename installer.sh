@@ -11,7 +11,7 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.21"
+INSTALLER_VERSION="1.2.22"
 INSTALLER_COPYRIGHT="Copyright 2018, Michael Boelen"
 INSTALLER_LICENSE="
 
@@ -25,7 +25,7 @@ of the GNU General Public License. See LICENSE for details.
 "
 
 APPNAME="rkhunter"
-APPVERSION="1.4.6"
+APPVERSION="1.4.7"
 RKHINST_OWNER="0:0"
 RKHINST_MODE_EX="0700"
 RKHINST_MODE_RW="0600"
@@ -149,16 +149,6 @@ selectTemplate() { # Take input from the "--install parameter"
 				;;
 			*)
 				test "${PREFIX}" = "/" && PREFIX=""
-
-				if [ "${RKHINST_ACTION}" = "install" ]; then
-					RKHTMPVAR=`echo "${PATH}" | grep "${PREFIX}/bin"`
-
-					if [ -z "${RKHTMPVAR}" ]; then
-						echo ""
-						echo "Note: Directory ${PREFIX}/bin is not in your PATH"
-						echo ""
-					fi
-				fi
 				;;
 			esac
 			;;
@@ -390,6 +380,22 @@ selectTemplate() { # Take input from the "--install parameter"
 		;;
 	esac
 
+	case "${RKHINST_LAYOUT}" in
+	RPM|DEB|TGZ|TXZ|custom_.)
+		;;
+	*)
+		if [ "${RKHINST_ACTION}" = "install" -o "${RKHINST_ACTION}" = "show" ]; then
+			RKHTMPVAR=`echo "${PATH}" | grep "${PREFIX}/bin"`
+
+			if [ -z "${RKHTMPVAR}" ]; then
+				echo ""
+				echo "Warning: Directory ${PREFIX}/bin is not in your PATH"
+				echo ""
+			fi
+		fi
+		;;
+	esac
+
 	RKHINST_ETC_DIR="${SYSCONFIGDIR}"
 	RKHINST_BIN_DIR="${BINDIR}"
 	RKHINST_SCRIPT_DIR="${LIBDIR}/${APPNAME}/scripts"
@@ -535,7 +541,7 @@ doInstall()  {
 		echo " ${INSTALLER_NAME} files: found"
 
 		case "${RKHINST_LAYOUT}" in
-		RPM|DEB|TGZ|TXZ) 
+		RPM|DEB|TGZ|TXZ)
 			;;
 		*)
 			for ITEM in `find ./files`; do
@@ -585,7 +591,7 @@ doInstall()  {
 	case "${RKHINST_LAYOUT}" in
 	RPM|DEB|TGZ|TXZ)
 		;;
-	*) 
+	*)
 		# Check PREFIX
 		if [ -z "${PREFIX}" ]; then
 			:
@@ -698,7 +704,7 @@ doInstall()  {
 		fi
 
 		case "${DIR}" in
-		*/${APPNAME}|*/${APPNAME}/*|*/${APPNAME}-${APPVERSION}) 
+		*/${APPNAME}|*/${APPNAME}/*|*/${APPNAME}-${APPVERSION})
 			chmod "${RKHINST_MODE_EX}" "${DIR}"
 			;;
 		esac
@@ -829,7 +835,7 @@ doInstall()  {
 	# Application
 	for FILE in ${RKHINST_BIN_FILES}; do
 		case "${RKHINST_LAYOUT}" in
-		RPM|DEB|TGZ|TXZ)	
+		RPM|DEB|TGZ|TXZ)
 			cp -f ./files/"${FILE}" "${RKHINST_BIN_DIR}/${FILE}" >/dev/null 2>&1
 			ERRCODE=$?
 
@@ -841,7 +847,7 @@ doInstall()  {
 				exit 1
 			fi
 			;;
-		*)	
+		*)
 			sed -e "s|-f /etc/rkhunter.conf|-f $RKHINST_ETC_DIR/rkhunter.conf|g" -e "s|CONFIGFILE=\"/etc|CONFIGFILE=\"$RKHINST_ETC_DIR|g" ./files/"${FILE}" >"${RKHINST_BIN_DIR}/${FILE}"
 			ERRCODE=$?
 
@@ -1041,7 +1047,7 @@ doRemove()  {
 
 
 	# Standalone removal involves just deleting the 'files' subdirectory.
-	if [ "$PREFIX" = "." ]; then
+	if [ "${PREFIX}" = "." ]; then
 		rm -rf ./files >/dev/null 2>&1
 		ERRCODE=$?
 
@@ -1120,8 +1126,8 @@ doRemove()  {
 	echo "Removing installation directories:"
 
 	for DIR in ${RKHINST_DIRS}; do
-		case "${DIR}" in 
-		*/${APPNAME}) 
+		case "${DIR}" in
+		*/${APPNAME})
 			if [ -d "${DIR}" ]; then
 				rm -rf "${DIR}" >/dev/null 2>&1
 				ERRCODE=$?
@@ -1133,7 +1139,7 @@ doRemove()  {
 				fi
 			fi
 			;;
-		*/${APPNAME}-${APPVERSION}) 
+		*/${APPNAME}-${APPVERSION})
 			# Anything involving a specific version number
 			# needs to remove all old versions as well.
 			DIR=`dirname "${DIR}"`
