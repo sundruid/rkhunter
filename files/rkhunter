@@ -6702,6 +6702,19 @@ ${DIR}:1"
 						ERRCODE=$?
 					fi
 
+					#
+					# If we still have an error, then check to make sure that the pathname
+					# does not contain a soft symlink somewhere in it. This is possible if,
+					# for example, the RedHat software collections is used.
+					#
+
+					if [ $ERRCODE -eq 1 -a $HAVE_READLINK -eq 1 ]; then
+						RKHTMPVAR3=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+						RKHTMPVAR4=`echo "${RKHTMPVAR3}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+						RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{=ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' "${FNAME}" 2>/dev/null | grep ":${RKHTMPVAR4}\$"`
+						ERRCODE=$?
+					fi
+
 					if [ $ERRCODE -eq 0 ]; then
 						#
 						# If multiple packages claim the same file, we

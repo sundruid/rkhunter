@@ -32,6 +32,8 @@
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
    were being checked for their existence and type. This no longer
    happens since we do not want the entries checked.
+ - When using the RPM package manager, ensure that symlinks caused
+   by SCL are handled correctly.
 
  --
 
