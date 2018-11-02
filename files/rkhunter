@@ -3328,7 +3328,20 @@ get_shell_options() {
 		if [ "${MYSHELL}" = "ksh" ]; then
 			set -o globstar
 		else
-			shopt -s globstar
+			#
+			# We need to test if the shell supports the 'shopt' command.
+			#
+
+			shopt -q globstar >/dev/null 2>&1
+			ERRCODE=$?
+
+			if [ $ERRCODE -eq 0 -o $ERRCODE -eq 1 ]; then
+				shopt -s globstar
+			else
+				LEAVE=1
+
+				echo "The current shell does not support the 'shopt' command for the GLOBSTAR configuration option."
+			fi
 		fi
 	fi
 

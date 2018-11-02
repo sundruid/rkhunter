@@ -34,6 +34,8 @@
    happens since we do not want the entries checked.
  - When using the RPM package manager, ensure that symlinks caused
    by SCL are handled correctly.
+ - Add in a check that the shell supports the shopt command when
+   using the GLOBSTAR configuration option.
 
  --
 
