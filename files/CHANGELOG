@@ -21,6 +21,11 @@
  * 1.4.7 (xx/xx/2018)
 
  New:
+ - Added further checks on the shell being used. If neither bash
+   nor ksh are recognised, then the program will try and locate
+   either of these and switch to it. This should now allow the
+   use of the GLOBSTAR configuration file option despite the
+   default shell not being bash or ksh.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in
@@ -34,8 +39,8 @@
    happens since we do not want the entries checked.
  - When using the RPM package manager, ensure that symlinks caused
    by SCL are handled correctly.
- - Add in a check that the shell supports the shopt command when
-   using the GLOBSTAR configuration option.
+ - Added in a check that the shell supports the shopt command when
+   using the GLOBSTAR configuration file option.
 
  --
 

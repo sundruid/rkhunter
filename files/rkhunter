@@ -33,6 +33,7 @@
 BSDOS=0
 SUNOS=0
 BUSYBOX=0
+UNKNOWNSH=0
 
 OPERATING_SYSTEM=`uname 2>/dev/null`
 
@@ -45,9 +46,30 @@ SunOS)
 	SUNOS=1
 	unset CLICOLOR CLICOLOR_FORCE
 	;;
+*)
+	#
+	# For other operating systems we need to
+	# determine if we are running bash or ksh.
+	#
+
+	if [ -d /proc ]; then
+		MYSHELL=`readlink /proc/$$/exe 2>/dev/null`
+	else
+		MYSHELL=`readlink /bin/sh 2>/dev/null`
+	fi
+
+	MYSHELL=`basename ${MYSHELL} 2>/dev/null`
+
+	test "$MYSHELL" != "bash" -a "$MYSHELL" != "ksh" && UNKNOWNSH=1
+	;;
 esac
 
-if [ $SUNOS -eq 1 ]; then
+#
+# For SunOS and unknown shells, we should try
+# and switch to either the bash or ksh shell.
+#
+
+if [ $SUNOS -eq 1 -o $UNKNOWNSH -eq 1 ]; then
 	# Simple SunOS test of RANDOM to see if we are now running bash or ksh.
 	if [ -z "$RANDOM" ]; then
 		# If the 'which' output contains a space, then it is probably an error.
