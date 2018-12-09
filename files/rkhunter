@@ -7535,7 +7535,7 @@ download_file() {
 			get_next_mirror
 
 			if [ -z "${MIRROR}" ]; then
-				if [ $MIRRORS_MODE -eq 0 ]; then
+				if [ $MIRRORS_MODE -eq 0 -o $MIRRORS_MODE -eq 2 ]; then
 					MIRROR="http://rkhunter.sourceforge.net"
 					display --to LOG --type INFO MIRRORS_SF_DEFAULT "${MIRROR}"
 				else

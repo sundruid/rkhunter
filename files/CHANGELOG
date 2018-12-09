@@ -32,6 +32,16 @@
    the users PATH has been moved to cater for more layouts. The
    same warning will now also be shown if the installer '--show'
    option is used.
+ - If the MIRRORS_MODE configuration option is set to 2, and the
+   mirrors file is missing or corrupt, then the sourceforge mirror
+   will be used. Previously this only occurred if MIRRORS_MODE was
+   set to 0.
+ - The sourceforge mirrors file contained two 'mirror' lines which
+   were both the same (pointing to the sourceforge mirror). One
+   line in the file has now been changed to be a 'remote' mirror.
+   This now allows the file to be used if the MIRRORS_MODE option
+   is set to 0 or 2. Previously it could only be used if the
+   option was set to 0.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
