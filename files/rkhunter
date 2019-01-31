@@ -5640,128 +5640,129 @@ get_user_fileprop_list() {
 			echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname(s): ${RKHTMPVAR}"
 		fi
 
+
 		#
-		# Next check the pathnames to ensure they are basically valid.
-		# We do not need to do this for any excluded entries.
+		# Now we can process each option.
 		#
 
-		if [ "${WHICH_OPT}" = "USER_FILEPROP_FILES_DIRS" ]; then
+		if [ "${WHICH_OPT}" = "EXCLUDE_USER_FILEPROP_FILES_DIRS" ]; then
+			#
+			# Keep a copy of the configured exclude pathnames.
+			#
+
+			USER_EXCLUDE_PROP=$FILENAMES
+		else
+			#
+			# First we check the pathnames to ensure they are basically valid.
+			#
+
 			check_paths FILENAMES ${WHICH_OPT} "EXIST"
 
 			if [ $ERRCODE -eq 1 ]; then
 				LEAVE=1
 				continue
 			fi
-		fi
 
-		#
-		# Now expand any wildcards.
-		#
-
-		FNAMES=`expand_paths FILENAMES`
-
-		#
-		# Now we loop through the entries and check them again. They
-		# are then added to the relevant variable used to build the
-		# file properties file list.
-		#
-
-		IFS=$IFSNL
-
-		for FNAME in ${FNAMES}; do
 			#
-			# First check for any files or directories to be excluded.
-			# We ignore any real checks on the pathnames since it is
-			# safer if they fail (the relevant files/directories will
-			# then be included in the file properties checks).
+			# Keep a copy of the configured include pathnames.
 			#
 
-			if [ "${WHICH_OPT}" = "EXCLUDE_USER_FILEPROP_FILES_DIRS" ]; then
-				test -z "${USER_EXCLUDE_PROP}" && USER_EXCLUDE_PROP="${FNAME}" || USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP}
+			USER_FILEPROP_OPTS=$FILENAMES
+
+			#
+			# Now expand any wildcards.
+			#
+
+			FNAMES=`expand_paths FILENAMES`
+
+			#
+			# Now we loop through the entries and check them again. They
+			# are then added to the relevant variable used to build the
+			# file properties file list.
+			#
+
+			IFS=$IFSNL
+
+			for FNAME in ${FNAMES}; do
+				#
+				# First check to see if it is a simple file name.
+				#
+
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+					# Check that the file name hasn't already been set. If it has, then we just ignore it.
+
+					if [ -z "`echo \"${USER_SIMPLE_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+						test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST}
 ${FNAME}"
-
-				continue
-			fi
-
-
-			#
-			# Now check to see if it is a simple file name.
-			#
-
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
-			if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
-				# Check that the file name hasn't already been set. If it has, then we just ignore it.
-
-				if [ -z "`echo \"${USER_SIMPLE_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					test -z "${USER_SIMPLE_FILE_LIST}" && USER_SIMPLE_FILE_LIST="${FNAME}" || USER_SIMPLE_FILE_LIST="${USER_SIMPLE_FILE_LIST}
-${FNAME}"
-				fi
-			else
-				# It's an absolute pathname. This could be a file or a directory.
-
-				if [ -f "${FNAME}" -o -h "${FNAME}" ]; then
-					# Check that it hasn't already been set. If it has, then we just ignore it.
-
-					test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
-
-					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
-
-						if [ -n "${RKHTMPVAR}" ]; then
-							FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
-							if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-								FNAME="${FNAME}
-${RKHTMPVAR}"
-							fi
-						elif [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-							LEAVE=1
-							echo "Invalid ${WHICH_OPT} configuration option: Broken link found: ${FNAME}"
-							continue
-						fi
 					fi
+				else
+					# It's an absolute pathname. This could be a file or a directory.
 
-					#
-					# Now add the file name.
-					#
+					if [ -f "${FNAME}" -o -h "${FNAME}" ]; then
+						# Check that it hasn't already been set. If it has, then we just ignore it.
 
-					test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
-${FNAME}"
-				elif [ -d "${FNAME}" ]; then
-					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
-						RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+						test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
-						if [ -z "${RKHTMPVAR}" ]; then
-							if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+						if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+							RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+							if [ -n "${RKHTMPVAR}" ]; then
+								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+								if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+									FNAME="${FNAME}
+${RKHTMPVAR}"
+								fi
+							elif [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 								LEAVE=1
-								echo "Invalid ${WHICH_OPT} configuration option: Broken link found: `name2text \"${FNAME}\"`"
+								echo "Invalid ${WHICH_OPT} configuration option: Broken link found: ${FNAME}"
 								continue
 							fi
-						elif [ "${RKHTMPVAR}" = "/" ]; then
-							LEAVE=1
-							echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: `name2text \"${FNAME}\"` -> /"
-							continue
 						fi
 
-						FNAME="${RKHTMPVAR}"
-					fi
+						#
+						# Now add the file name.
+						#
 
-					#
-					# Check that the name hasn't already been set. If it has, then we just ignore it.
-					#
-
-					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
-					if [ -z "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-						test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
+						test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
 ${FNAME}"
+					elif [ -d "${FNAME}" ]; then
+						if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+							RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+							if [ -z "${RKHTMPVAR}" ]; then
+								if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+									LEAVE=1
+									echo "Invalid ${WHICH_OPT} configuration option: Broken link found: `name2text \"${FNAME}\"`"
+									continue
+								fi
+							elif [ "${RKHTMPVAR}" = "/" ]; then
+								LEAVE=1
+								echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: `name2text \"${FNAME}\"` -> /"
+								continue
+							fi
+
+							FNAME="${RKHTMPVAR}"
+						fi
+
+						#
+						# Check that the name hasn't already been set. If it has, then we just ignore it.
+						#
+
+						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+						if [ -z "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+							test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
+${FNAME}"
+						fi
 					fi
 				fi
-			fi
-		done
+			done
 
-		IFS=$RKHIFS
+			IFS=$RKHIFS
+		fi
 	done
 
 
@@ -7149,6 +7150,29 @@ create_rkh_file_prop_list() {
 	#
 
 	if [ -n "${USER_FILE_LIST}" ]; then
+		#
+		# We need to create a file for the expanded excluded files
+		# and directories. We do this using a simple loop with the
+		# 'echo' command, as the 'expand_paths' function is too
+		# slow when there are very many files.
+		#
+
+		#
+		# We need to save and restore the current TEMPFILE value,
+		# which is used for the pathname of the file for the include
+		# expanded files.
+		#
+
+		RKHTMPVAR3=${TEMPFILE}
+		get_temp_file "${RKHTMPDIR}/rkh-tmp-file-excludes"
+		TEMPFILE2=${TEMPFILE}
+		TEMPFILE=${RKHTMPVAR3}
+		touch "${TEMPFILE2}"
+
+		for RKHTMPVAR in ${USER_EXCLUDE_PROP}; do
+			echo "$RKHTMPVAR" >>"${TEMPFILE2}"
+		done
+
 		for FNAME in ${USER_FILE_LIST}; do
 			#
 			# We must exclude any user requested files or directories.
@@ -7157,11 +7181,13 @@ create_rkh_file_prop_list() {
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "${USER_EXCLUDE_PROP}" ]; then
-				test -n "`echo \"${USER_EXCLUDE_PROP}\" | grep \"^${FNAMEGREP}$\"`" && continue
+				test -n "`grep \"^${FNAMEGREP}$\" ${TEMPFILE2}`" && continue
 			fi
 
 			test -z "`grep \"^${FNAMEGREP}$\" "${TEMPFILE}" 2>/dev/null`" && echo "${FNAME}" >>"${TEMPFILE}"
 		done
+
+		rm -f "${TEMPFILE2}" >/dev/null 2>&1
 	fi
 
 	IFS=$RKHIFS
@@ -20066,6 +20092,7 @@ PRELINK_DEP_ERR_CMDS=""
 
 # User provided files/dirs for the file properties check.
 USER_FILE_LIST=""
+USER_FILEPROP_OPTS=""
 USER_SIMPLE_FILE_LIST=""
 USER_DIR_LIST=""
 USER_EXCLUDE_PROP=""
@@ -21455,9 +21482,20 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 
 			IFS=$IFSNL
 
-			for FNAME in ${USER_FILE_LIST}; do
+			#
+			# We only display the configuration paths used, so we
+			# need to temporarily disable globbing. Displaying the
+			# fully expanded pathnames could take a long time if
+			# globbing and globstar has been used.
+			#
+
+			set -f
+
+			for FNAME in ${USER_FILEPROP_OPTS}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 			done
+
+			set +f
 
 			IFS=$RKHIFS
 		fi
@@ -21491,9 +21529,20 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 
 			IFS=$IFSNL
 
+			#
+			# We only display the configuration paths used, so we
+			# need to temporarily disable globbing. Displaying the
+			# fully expanded pathnames could take a long time if
+			# globbing and globstar has been used.
+			#
+
+			set -f
+
 			for FNAME in ${USER_EXCLUDE_PROP}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 			done
+
+			set +f
 
 			IFS=$RKHIFS
 		fi

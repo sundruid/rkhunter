@@ -42,6 +42,10 @@
    This now allows the file to be used if the MIRRORS_MODE option
    is set to 0 or 2. Previously it could only be used if the
    option was set to 0.
+ - For the file properties test, and the '--propupd' option, the log
+   file no longer shows a list of the expanded pathnames of files
+   included or excluded. Instead the configuration option values,
+   including globbing, are listed.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
@@ -51,6 +55,9 @@
    by SCL are handled correctly.
  - Added in a check that the shell supports the shopt command when
    using the GLOBSTAR configuration file option.
+ - Improved the overall performance of the file properties test, and
+   the '--propupd' option, when using globbing and globstar for the
+   file properties include and exclude configuration options.
 
  --
 
