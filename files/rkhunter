@@ -21491,7 +21491,9 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 
 			set -f
 
-			for FNAME in ${USER_FILEPROP_OPTS}; do
+			RKHTMPVAR=`echo "${USER_FILEPROP_OPTS}" | sort | uniq`
+
+			for FNAME in ${RKHTMPVAR}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 			done
 
@@ -21500,24 +21502,28 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			IFS=$RKHIFS
 		fi
 
-		if [ $VERBOSE_LOGGING -eq 1 -a -n "${USER_SIMPLE_FILE_LIST}" ]; then
+		if [ -n "${USER_SIMPLE_FILE_LIST}" ]; then
 			display --to LOG --type INFO USER_CMD_LIST
 
 			IFS=$IFSNL
 
-			for FNAME in ${USER_SIMPLE_FILE_LIST}; do
+			RKHTMPVAR=`echo "${USER_SIMPLE_FILE_LIST}" | sort | uniq`
+
+			for FNAME in ${RKHTMPVAR}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 			done
 
 			IFS=$RKHIFS
 		fi
 
-		if [ $VERBOSE_LOGGING -eq 1 -a -n "${USER_DIR_LIST}" ]; then
+		if [ -n "${USER_DIR_LIST}" ]; then
 			display --to LOG --type INFO USER_DIR_LIST
 
 			IFS=$IFSNL
 
-			for FNAME in ${USER_DIR_LIST}; do
+			RKHTMPVAR=`echo "${USER_DIR_LIST}" | sort | uniq`
+
+			for FNAME in ${RKHTMPVAR}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 			done
 
@@ -21538,7 +21544,9 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 
 			set -f
 
-			for FNAME in ${USER_EXCLUDE_PROP}; do
+			RKHTMPVAR=`echo "${USER_EXCLUDE_PROP}" | sort | uniq`
+
+			for FNAME in ${RKHTMPVAR}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 			done
 
