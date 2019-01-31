@@ -5665,9 +5665,11 @@ get_user_fileprop_list() {
 
 			#
 			# Keep a copy of the configured include pathnames.
+			# We exclude simple filenames as these are treated
+			# and displayed separately.
 			#
 
-			USER_FILEPROP_OPTS=$FILENAMES
+			USER_FILEPROP_OPTS=`echo "${FILENAMES}" | grep '^/'`
 
 			#
 			# Now expand any wildcards.
