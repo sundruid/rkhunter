@@ -11839,7 +11839,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 			# replacement check. The assumption is that to change a file
 			# with one value remaining the same is possible, but to change
 			# it such that both are the same is improbable. It would also
-			# require the package manager database having being corrupted
+			# require the package manager database having been corrupted
 			# as well.
 			#
 
