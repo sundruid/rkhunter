@@ -60,6 +60,8 @@
    file properties include and exclude configuration options.
  - The file properties test, and the '--propupd' option, were not
    handling directory symlinks very well. This has now been fixed.
+ - When using the '--list propfiles' command-line option, ensure that
+   the configuration file EXISTWHITELIST option has been processed.
 
  --
 
