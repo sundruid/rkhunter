@@ -1063,12 +1063,12 @@ check_paths() {
 		else
 			#
 			# It's an absolute pathname. This could be a file, a directory,
-			# some other file type, or a non-existent name.
+			# some other file type or a non-existent name.
 			#
 
 			#
 			# This is as far as we go for some options. These pathnames may,
-			# or may not exist, or may be things other than just files and
+			# or may not, exist or may be things other than just files and
 			# directories.
 			#
 
@@ -11049,7 +11049,7 @@ ${RKHLINE}"
 						# of packages we have already tested as verified?
 						#
 						# If multiple packages claim the same file, we use
-						# 64-bit over 32-bit, or simply the last one.
+						# 64-bit over 32-bit or simply the last one.
 						#
 
 						FILE_IS_PKGD=1
@@ -16495,7 +16495,7 @@ do_network_interface_checks() {
 	#
 	# For the packet capturing check, we must first see if we
 	# are able to run the test. We let the user know if the test
-	# was disabled, or if the lsof command is not present.
+	# was disabled, or if the 'lsof' command is not present.
 	#
 
 	if `check_test packet_cap_apps`; then
@@ -19535,7 +19535,7 @@ get_lock() {
 		#
 		# We need to be careful here. We do not want to display the message if the user
 		# has explicitly requested not to, but we must display it if the user has set
-		# the '--report-warnings-only' option (we treat it as a warning), or the
+		# the '--report-warnings-only' option (we treat it as a warning) or the
 		# '--cronjob' option. If we did not, then the user may think that rkhunter has
 		# run and that there were no warnings. If the user used the '--quiet' option,
 		# then this message won't be displayed. However, that is okay because they
