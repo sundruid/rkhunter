@@ -6126,6 +6126,8 @@ get_configfile_options() {
 
 	get_shell_options
 
+	get_existwl_option
+
 
 	#
 	# Some options are only required when checking the system.
@@ -6140,8 +6142,6 @@ get_configfile_options() {
 		get_disable_option
 
 		check_test_options
-
-		get_existwl_option
 	fi
 
 	if [ $CHECK -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
