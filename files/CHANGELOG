@@ -18,7 +18,7 @@
 
  -- 
 
- * 1.4.7 (xx/xx/2018)
+ * 1.4.7 (xx/xx/2019)
 
  New:
  - Added further checks on the shell being used. If neither bash
@@ -58,6 +58,8 @@
  - Improved the overall performance of the file properties test, and
    the '--propupd' option, when using globbing and globstar for the
    file properties include and exclude configuration options.
+ - The file properties test, and the '--propupd' option, were not
+   handling directory symlinks very well. This has now been fixed.
 
  --
 
