@@ -46,6 +46,9 @@
    file no longer shows a list of the expanded pathnames of files
    included or excluded. Instead the configuration option values,
    including globbing, are listed.
+ - Modified the inline help option (-h/--help), the man page and the
+   FAQ to say that the '--update' option does not update the rkhunter
+   command itself but just the data files.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option

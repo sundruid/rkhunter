@@ -67,6 +67,8 @@ The latest version of this FAQ can be found on the RKH web site.
    5.1) Rootkit Hunter tells me that I have multiple versions
         installed. How it this possible?
    5.2) Can I be notified when a new release will be available?
+   5.3) I ran 'rkhunter --update' but the '--versioncheck' option
+        still says that there is a newer version. Why?
 
 
  6. WHITELISTING EXAMPLES
@@ -593,6 +595,16 @@ A.   Yes, you can join the rkhunter-announce mailing list. This is
 
      Additionally, the '--versioncheck' option of rkhunter itself
      will indicate if a new version is available.
+
+
+5.3) I ran 'rkhunter --update' but the '--versioncheck' option
+     still says that there is a newer version. Why?
+
+A.   The '--versioncheck' option checks the version of the rkhunter
+     command. However, the '--update' option ONLY updates the data
+     files used by rkhunter. It does NOT update the rkhunter command.
+     To update the rkhunter command you must either download the
+     source files, and manually install it, or use a package manager.
 
 
 ===========================================================

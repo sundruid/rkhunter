@@ -19622,6 +19622,7 @@ help() {
 	echo $ECHOOPT "         --tmpdir <directory>          Use the specified temporary directory"
 	echo $ECHOOPT "         --unlock                      Unlock (remove) the lock file"
 	echo $ECHOOPT "         --update                      Check for updates to database files"
+	echo $ECHOOPT "                                       (Note: This option does NOT update the rkhunter command)"
 	echo $ECHOOPT "   --vl, --verbose-logging             Use verbose logging (on by default)"
 	echo $ECHOOPT "     -V, --version                     Display the version number, then exit"
 	echo $ECHOOPT "         --versioncheck                Check for latest version of program"
