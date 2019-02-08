@@ -88,6 +88,13 @@ fi
 
 
 #
+# We set the collating sequence to ensure that character ranges work as expected.
+#
+
+LC_COLLATE=C
+
+
+#
 # Check to see if we are using the '--debug' option. If so, then
 # we exec to log everything to the debug file.
 #

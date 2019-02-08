@@ -65,6 +65,9 @@
    handling directory symlinks very well. This has now been fixed.
  - When using the '--list propfiles' command-line option, ensure that
    the configuration file EXISTWHITELIST option has been processed.
+ - The collating sequence (LC_COLLATE) is now set to 'C'. This should
+   avoid problems with character ranges when a different value for
+   LC_COLLATE has been set.
 
  --
 
