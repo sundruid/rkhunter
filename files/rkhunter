@@ -9930,6 +9930,7 @@ do_system_check_initialisation() {
 		  file:/tmp/moni.lod:BillGates botnet component
 		  file:/tmp/notify.file:BillGates botnet component
 		  file:/usr/bin/.sshd:BillGates botnet component
+		  file:/usr/bin/bsd-port/.sshd:BillGates botnet component
 		  file:/usr/bin/bsd-port/getty:BillGates botnet component
 		  file:/usr/bin/bsd-port/getty.lock:BillGates botnet component
 		  file:/usr/bin/bsd-port/udevd.lock:BillGates botnet component
