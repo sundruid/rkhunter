@@ -8283,6 +8283,18 @@ do_system_check_initialisation() {
 	BOONANA_KSYMS=
 
 
+	# Brootkit (Linux rootkit)
+	BROOTKIT_FILES="/tmp/.br/br.conf
+			/tmp/.br/bashbd.sh
+			/tmp/.br/brootkit.sh
+			/tmp/.br/brconfig.sh
+			/tmp/.br/brdaemon.sh
+			/etc/init.d/brdaemon
+			/etc/rc.d/init.d/brdaemon"
+	BROOTKIT_DIRS="/tmp/.br"
+	BROOTKIT_KSYMS=
+
+
 	# cb Rootkit (w00tkit by ZeeN) 
 	# The '%' character represents a space.
 	# xC.o = Adore LKM
@@ -9749,6 +9761,7 @@ do_system_check_initialisation() {
 		    rcfile:/tmp/.sendmail:Flooder (Linux/Bckdr-RKC) component
 		    rcfile:IptabLex:malware component
 		    rcfile:IptabLes:malware component
+		    rcfile:/tmp/.br/:Brootkit (Linux rootkit)
 		    ssh:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh1:/lib/ldd.so/tkps:SHV4 Rootkit
 		    ssh:t0rnkit:T0rn Rootkit
@@ -12687,6 +12700,13 @@ rootkit_file_dir_checks() {
 		SCAN_KSYMS=${BOONANA_KSYMS}
 		scanrootkit
 	fi
+
+	# Brootkit (Linux rootkit)
+	SCAN_ROOTKIT="Brootkit"
+	SCAN_FILES=${BROOTKIT_FILES}
+	SCAN_DIRS=${BROOTKIT_DIRS}
+	SCAN_KSYMS=${BROOTKIT_KSYMS}
+	scanrootkit
 
 	# cb Rootkit
 	SCAN_ROOTKIT="cb Rootkit"
@@ -19975,7 +19995,7 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), cb, CiNIK Worm (Slapper.B variant), CX,
+  Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), Brootkit, cb, CiNIK Worm (Slapper.B variant), CX,
   Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
   Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mokes,

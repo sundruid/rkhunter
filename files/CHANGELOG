@@ -26,6 +26,7 @@
    either of these and switch to it. This should now allow the
    use of the GLOBSTAR configuration file option despite the
    default shell not being bash or ksh.
+ - Added Brootkit test.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in
