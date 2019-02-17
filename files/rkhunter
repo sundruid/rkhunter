@@ -8342,6 +8342,24 @@ do_system_check_initialisation() {
 	CINIK_KSYMS=
 
 
+	# Cryptominer Worm (unnamed)
+	CRYPTOMINER_FILES="/tmp/nemp
+			   /tmp/xrig_386
+			   /tmp/xrig_arm
+			   /tmp/bruteforce_ssh
+			   /tmp/bruteforce_ssh_386
+			   /tmp/bruteforce_ssh_arm
+			   /tmp/miner.sh
+			   /var/tmp/xrig_386
+			   /var/tmp/xrig_arm
+			   /var/tmp/bruteforce_ssh
+			   /var/tmp/bruteforce_ssh_386
+			   /var/tmp/bruteforce_ssh_arm
+			   /var/tmp/miner.sh"
+	CRYPTOMINER_DIRS=
+	CRYPTOMINER_KSYMS=
+
+
 	# CX Rootkit
 	CXKIT_FILES="/usr/lib/ldlibso
 		     /usr/lib/configlibso
@@ -12693,6 +12711,7 @@ rootkit_file_dir_checks() {
 	scanrootkit
 
 	# OSX Boonana Trojan
+
 	if [ $MACOSX -eq 1 ]; then
 		SCAN_ROOTKIT="Boonana Trojan"
 		SCAN_FILES=${BOONANA_FILES}
@@ -12702,6 +12721,7 @@ rootkit_file_dir_checks() {
 	fi
 
 	# Brootkit (Linux rootkit)
+
 	SCAN_ROOTKIT="Brootkit"
 	SCAN_FILES=${BROOTKIT_FILES}
 	SCAN_DIRS=${BROOTKIT_DIRS}
@@ -12709,6 +12729,7 @@ rootkit_file_dir_checks() {
 	scanrootkit
 
 	# cb Rootkit
+
 	SCAN_ROOTKIT="cb Rootkit"
 	SCAN_FILES=${CB_FILES}
 	SCAN_DIRS=${CB_DIRS}
@@ -12721,6 +12742,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${CINIK_FILES}
 	SCAN_DIRS=${CINIK_DIRS}
 	SCAN_KSYMS=${CINIK_KSYMS}
+	scanrootkit
+
+	# Cryptominer Worm (unnamed)
+
+	SCAN_ROOTKIT="Cryptominer Worm"
+	SCAN_FILES=${CRYPTOMINER_FILES}
+	SCAN_DIRS=${CRYPTOMINER_DIRS}
+	SCAN_KSYMS=${CRYPTOMINER_KSYMS}
 	scanrootkit
 
 	# CX Rootkit
@@ -13084,7 +13113,6 @@ rootkit_file_dir_checks() {
 	SCAN_DIRS=${PHALANX2_DIRS}
 	SCAN_KSYMS=${PHALANX2_KSYMS}
 	scanrootkit
-
 
 	# Phalanx2 Rootkit (extended tests)
 
@@ -19995,9 +20023,9 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), Brootkit, cb, CiNIK Worm (Slapper.B variant), CX,
-  Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux, FreeBSD, Fu,
-  Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
+  Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), Brootkit, cb, CiNIK Worm (Slapper.B variant), Cryptominer Worm,
+  CX, Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux,
+  FreeBSD Rootkit, Fu, Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mokes,
   Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, Proton, R3dstorm Toolkit,
   RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
