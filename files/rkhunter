@@ -8342,30 +8342,6 @@ do_system_check_initialisation() {
 	CINIK_KSYMS=
 
 
-	# Cryptominer Worm (various and unnamed)
-	CRYPTOMINER_FILES="/tmp/nemp
-			   /tmp/xrig_386
-			   /tmp/xrig_arm
-			   /tmp/bruteforce_ssh
-			   /tmp/bruteforce_ssh_386
-			   /tmp/bruteforce_ssh_arm
-			   /tmp/miner.sh
-			   /var/tmp/xrig_386
-			   /var/tmp/xrig_arm
-			   /var/tmp/bruteforce_ssh
-			   /var/tmp/bruteforce_ssh_386
-			   /var/tmp/bruteforce_ssh_arm
-			   /var/tmp/miner.sh
-			   /etc/root.sh
-			   /tmp/lower.sh
-			   /root/miner.tgz
-			   /opt/minerd
-			   /var/tmp/minerd"
-	CRYPTOMINER_DIRS="/opt/yam
-			  /root/yam-*-linux64-generic"
-	CRYPTOMINER_KSYMS=
-
-
 	# CX Rootkit
 	CXKIT_FILES="/usr/lib/ldlibso
 		     /usr/lib/configlibso
@@ -9853,6 +9829,14 @@ do_system_check_initialisation() {
 		  file:/etc/rc.d/init.d/system:Rootkit component
 		  file:/etc/rc.d/rc3.d/S93users:Rootkit component
 		  file:/tmp/.ush:Dica-Kit Rootkit
+		  file:/tmp/nemp:Cryptominer component
+		  file:/tmp/xrig_386:Cryptominer component
+		  file:/tmp/xrig_arm:Cryptominer component
+		  file:/tmp/bruteforce_ssh:Cryptominer component
+		  file:/tmp/bruteforce_ssh_386:Cryptominer component
+		  file:/tmp/bruteforce_ssh_arm:Cryptominer component
+		  file:/tmp/miner.sh:Cryptominer component
+		  file:/tmp/lower.sh:Cryptominer component
 		  file:/usr/lib/libhidefile.so:HIDEFILE envvar file-hiding library
 		  file:/etc/cron.d/kmod:Illogic Rootkit
 		  file:/usr/lib/dmis/dmisd:Trojaned SSH daemon
@@ -9990,6 +9974,16 @@ do_system_check_initialisation() {
 		  file:/lib/libgcc4.4.so:xorddos component
 		  file:/lib/udev/udev:xorddos component
 		  file:/lib/udev/debug:xorddos component
+		  file:/var/tmp/xrig_386:Cryptominer component
+		  file:/var/tmp/xrig_arm:Cryptominer component
+		  file:/var/tmp/bruteforce_ssh:Cryptominer component
+		  file:/var/tmp/bruteforce_ssh_386:Cryptominer component
+		  file:/var/tmp/bruteforce_ssh_arm:Cryptominer component
+		  file:/var/tmp/miner.sh:Cryptominer component
+		  file:/etc/root.sh:Cryptominer component
+		  file:/root/miner.tgz:Cryptominer component
+		  file:/opt/minerd:Cryptominer component
+		  file:/var/tmp/minerd:Cryptominer component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
@@ -10028,7 +10022,9 @@ do_system_check_initialisation() {
 		  dir:/usr/include/netda.h:Trojaned SSH daemon
 		  dir:/usr/include/.ssh:Trojaned SSH daemon
 		  dir:/usr/share/locale/jp/.%:IRC bot
-		  dir:/usr/share/.sqe:IRC bot"
+		  dir:/usr/share/.sqe:IRC bot
+		  dir:/opt/yam:Cryptominer component
+		  dir:/root/yam-*-linux64-generic:Cryptominer component"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -12748,14 +12744,6 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${CINIK_FILES}
 	SCAN_DIRS=${CINIK_DIRS}
 	SCAN_KSYMS=${CINIK_KSYMS}
-	scanrootkit
-
-	# Cryptominer Worm (various and unnamed)
-
-	SCAN_ROOTKIT="Cryptominer Worm"
-	SCAN_FILES=${CRYPTOMINER_FILES}
-	SCAN_DIRS=${CRYPTOMINER_DIRS}
-	SCAN_KSYMS=${CRYPTOMINER_KSYMS}
 	scanrootkit
 
 	# CX Rootkit
@@ -20029,8 +20017,8 @@ GROUPED_TESTS="system_commands:properties:strings:hashes:scripts:shared_libs:sha
 # NOTE: This is a COMMA separated list. Any single quotes need to be handled specially - i.e.
 # put between double-quotes.
 KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, Ambient (ark),
-  Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), Brootkit, cb, CiNIK Worm (Slapper.B variant), Cryptominer Worm,
-  CX, Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux,
+  Balaur, BeastKit, beX2, BOBKit, Boonana (Koobface.A), Brootkit, cb, CiNIK Worm (Slapper.B variant), CX,
+  Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux,
   FreeBSD Rootkit, Fu, Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mokes,
   Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, Proton, R3dstorm Toolkit,
