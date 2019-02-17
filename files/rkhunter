@@ -8342,7 +8342,7 @@ do_system_check_initialisation() {
 	CINIK_KSYMS=
 
 
-	# Cryptominer Worm (unnamed)
+	# Cryptominer Worm (various and unnamed)
 	CRYPTOMINER_FILES="/tmp/nemp
 			   /tmp/xrig_386
 			   /tmp/xrig_arm
@@ -8355,8 +8355,14 @@ do_system_check_initialisation() {
 			   /var/tmp/bruteforce_ssh
 			   /var/tmp/bruteforce_ssh_386
 			   /var/tmp/bruteforce_ssh_arm
-			   /var/tmp/miner.sh"
-	CRYPTOMINER_DIRS=
+			   /var/tmp/miner.sh
+			   /etc/root.sh
+			   /tmp/lower.sh
+			   /root/miner.tgz
+			   /opt/minerd
+			   /var/tmp/minerd"
+	CRYPTOMINER_DIRS="/opt/yam
+			  /root/yam-*-linux64-generic"
 	CRYPTOMINER_KSYMS=
 
 
@@ -12744,7 +12750,7 @@ rootkit_file_dir_checks() {
 	SCAN_KSYMS=${CINIK_KSYMS}
 	scanrootkit
 
-	# Cryptominer Worm (unnamed)
+	# Cryptominer Worm (various and unnamed)
 
 	SCAN_ROOTKIT="Cryptominer Worm"
 	SCAN_FILES=${CRYPTOMINER_FILES}
