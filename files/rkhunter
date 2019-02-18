@@ -8809,7 +8809,7 @@ do_system_check_initialisation() {
 	KOMPLEX_KSYMS=
 
 
-	# KORKERDS.AB coinminer trojan (Coinminer.Linux.KORKERDS.AB)
+	# KORKERDS.AB Coinminer Trojan (Coinminer.Linux.KORKERDS.AB)
 	KORKERDS_FILES="/tmp/kworkerds"
 	KORKERDS_DIRS=
 	KORKERDS_KSYMS=
@@ -8883,6 +8883,19 @@ do_system_check_initialisation() {
 		      /usr/lib/libmen.oo/.LJK2/sshconfig/RK1ssh"
 	LOCKIT_DIRS="/usr/lib/libmen.oo/.LJK2"
 	LOCKIT_KSYMS=
+
+
+	# MALXMR.UWEIU Coinminer Trojan (Trojan.SH.MALXMR.UWEIU - installs Coinminer.Linux.MALXMR.UWEIU
+	# based on XMR-Stak Cryptonight cryptocurrency miner)
+	MALXMR_FILES="/etc/cron.hourly/oanacroner
+		      /etc/cron.daily/oanacroner
+		      /etc/cron.monthly/oanacroner
+		      /opt/yilu/mservice
+		      /opt/yilu/work/xig/xig
+		      /opt/yilu/work/xige/xige
+		      /usr/bin/.sshd"
+	MALXMR_DIRS="/opt/yilu"
+	MALXMR_KSYMS=
 
 
 	# Mokes backdoor
@@ -9835,7 +9848,7 @@ do_system_check_initialisation() {
 
 	# Possible rootkit files and directories
 	# The '%' character represents a space.
-#jh - sort out specific named files.
+#jh - sort out specific named files and dirs.
 	FILESCAN="file:/dev/sdr0:T0rn Rootkit MD5 hash database
 		  file:/dev/pisu:Rootkit component
 		  file:/dev/xdta:Dica-Kit Rootkit
@@ -10028,6 +10041,7 @@ do_system_check_initialisation() {
 		  file:/root/miner.tgz:Cryptominer component
 		  file:/opt/minerd:Cryptominer component
 		  file:/var/tmp/minerd:Cryptominer component
+		  file:/usr/bin/bsd-port/getty:Possible MALXMR.UWEIU trojan component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
@@ -13084,6 +13098,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${LOCKIT_FILES}
 	SCAN_DIRS=${LOCKIT_DIRS}
 	SCAN_KSYMS=${LOCKIT_KSYMS}
+	scanrootkit
+
+	# MALXMR.UWEIU Coinminer Trojan
+
+	SCAN_ROOTKIT="MALXMR.UWEIU Coinminer Trojan"
+	SCAN_FILES=${MALXMR_FILES}
+	SCAN_DIRS=${MALXMR_DIRS}
+	SCAN_KSYMS=${MALXMR_KSYMS}
 	scanrootkit
 
 	# Mokes backdoor
@@ -20089,11 +20111,11 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   Danny-Boy'"'"'s Abuse Kit, Devil, Diamorphine LKM, Dica, Dreams, Duarawkz, Ebury, Enye LKM, Flea Linux,
   FreeBSD Rootkit, Fu, Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, Korkerds (AB) Trojan, ld-linuxv.so,
-  Li0n Worm, Linux.BtcMine.174 Trojan, Lockit/LJK2, Mokes, Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK,
-  Oz, Phalanx, Phalanx2, Portacelo, Proton, R3dstorm Toolkit, RH-Sharpe'"'"'s, Rocke Miner malware, RSHA'"'"'s,
-  Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP,
-  SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Turtle2, Tuxtendo,
-  URK, Vampire, VcKit, Volc, w00tkit, weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
+  Li0n Worm, Linux.BtcMine.174 Trojan, Lockit/LJK2, MALXMR.UWEIU Trojan, Mokes, Mood-NT, MRK, Ni0, Ohhara,
+  Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, Proton, R3dstorm Toolkit, RH-Sharpe'"'"'s,
+  Rocke Miner malware, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper, Sneakin, Solaris Wanuk,
+  Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor), TeLeKiT, Togroot, T0rn, trNkit,
+  Trojanit Kit, Turtle2, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit, weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'
 
 # A space-separated list of perl modules that may be required.
 LIST_MODULES="File::stat Getopt::Long Crypt::RIPEMD160 Digest::MD5 Digest::SHA Digest::SHA1 Digest::SHA256
