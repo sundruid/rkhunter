@@ -30,6 +30,7 @@
  - Added tests for various unnamed cryptominer malware.
  - Added basic test for Korkerds (AB) trojan.
  - Added test for Rocke Miner cryptomining malware.
+ - Added test for Linux.BtcMine.174 trojan.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in
