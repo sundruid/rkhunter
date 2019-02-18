@@ -9025,6 +9025,14 @@ do_system_check_initialisation() {
 	RHSHARPES_KSYMS=
 
 
+	# Rocke Miner cryptominer malware (aka Linux.Ekcorminer and Linux.Siggen.1242)
+	ROCKE_FILES="/tmp/.a7
+		     /etc/xig
+		     /etc/ld.so.pre"
+	ROCKE_DIRS=
+	ROCKE_KSYMS=
+
+
 	# RSHA's Rootkit
 	RSHA_FILES="/bin/kr4p
 		    /usr/bin/n3tstat
@@ -13290,6 +13298,14 @@ rootkit_file_dir_checks() {
 	SCAN_FILES=${RHSHARPES_FILES}
 	SCAN_DIRS=${RHSHARPES_DIRS}
 	SCAN_KSYMS=${RHSHARPES_KSYMS}
+	scanrootkit
+
+	# Rocke Miner cryptominer malware
+
+	SCAN_ROOTKIT="Rocke Miner malware"
+	SCAN_FILES=${ROCKE_FILES}
+	SCAN_DIRS=${ROCKE_DIRS}
+	SCAN_KSYMS=${ROCKE_KSYMS}
 	scanrootkit
 
 	# RSHA's Rootkit
@@ -20037,7 +20053,7 @@ KNOWN_ROOTKITS='55808 Trojan - Variant A, AjaKit, aPa Kit, Adore, Apache Worm, A
   FreeBSD Rootkit, Fu, Fuck`it, GasKit, Heroin LKM, HjC Kit, ignoKit, iLLogiC, Inqtana-A, Inqtana-B, Inqtana-C,
   IntoXonia-NG, Irix, Jynx, Jynx2, KBeast, Keydnap, Kitko, Knark, Komplex, Korkerds (AB) Trojan, ld-linuxv.so, Li0n Worm, Lockit/LJK2, Mokes,
   Mood-NT, MRK, Ni0, Ohhara, Optic Kit (Tux), OSXRK, Oz, Phalanx, Phalanx2, Portacelo, Proton, R3dstorm Toolkit,
-  RH-Sharpe'"'"'s, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
+  RH-Sharpe'"'"'s, Rocke Miner malware, RSHA'"'"'s, Scalper Worm, Shutdown, SHV4, SHV5, Sin, SInAR, Slapper,
   Sneakin, Solaris Wanuk, Spanish, Suckit, SunOS / NSDAP, SunOS Rootkit, Superkit, TBD (Telnet BackDoor),
   TeLeKiT, Togroot, T0rn, trNkit, Trojanit Kit, Turtle2, Tuxtendo, URK, Vampire, VcKit, Volc, w00tkit,
   weaponX, Xzibit, X-Org SunOS, zaRwT.KiT, ZK'

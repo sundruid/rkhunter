@@ -28,7 +28,8 @@
    default shell not being bash or ksh.
  - Added Brootkit test.
  - Added tests for various unnamed cryptominer malware.
- - Added basic test for Korkerds trojan.
+ - Added basic test for Korkerds (AB) trojan.
+ - Added test for Rocke Miner cryptomining malware.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in
