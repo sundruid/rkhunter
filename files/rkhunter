@@ -8780,6 +8780,12 @@ do_system_check_initialisation() {
 	KOMPLEX_KSYMS=
 
 
+	# KORKERDS.AB coinminer trojan (Coinminer.Linux.KORKERDS.AB)
+	KORKERDS_FILES="/tmp/kworkerds"
+	KORKERDS_DIRS=
+	KORKERDS_KSYMS=
+
+
 	# ld-linuxv.so (LD_PRELOAD shared library rootkit)
 	LINUXV_FILES="/lib/ld-linuxv.so.1"
 	LINUXV_DIRS="/var/opt/_so_cache
@@ -9792,6 +9798,7 @@ do_system_check_initialisation() {
 
 	# Possible rootkit files and directories
 	# The '%' character represents a space.
+#jh - sort out specific named files.
 	FILESCAN="file:/dev/sdr0:T0rn Rootkit MD5 hash database
 		  file:/dev/pisu:Rootkit component
 		  file:/dev/xdta:Dica-Kit Rootkit
@@ -13001,6 +13008,14 @@ rootkit_file_dir_checks() {
 		SCAN_KSYMS=${KOMPLEX_KSYMS}
 		scanrootkit
 	fi
+
+	# Korkerds Coinminer Trojan
+
+	SCAN_ROOTKIT="Korkerds Coinminer Trojan"
+	SCAN_FILES=${KORKERDS_FILES}
+	SCAN_DIRS=${KORKERDS_DIRS}
+	SCAN_KSYMS=${KORKERDS_KSYMS}
+	scanrootkit
 
 	# ld-linuxv.so (LD_PRELOAD shared library rootkit)
 
