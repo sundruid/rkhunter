@@ -9698,7 +9698,8 @@ do_system_check_initialisation() {
 
 	# Suspicious directories
 	SUSPICIOUS_DIRS="/usr/X11R6/bin/.,/copy
-			 /dev/rd/cdb"
+			 /dev/rd/cdb
+			 /usr/bin/dpkgd"
 
 
 	# Evil strings
@@ -10013,6 +10014,7 @@ do_system_check_initialisation() {
 		  file:/usr/bin/bsd-port/udevd.lock:BillGates botnet component
 		  file:/usr/bin/pojie:BillGates botnet component
 		  file:/usr/lib/libamplify.so:BillGates botnet component
+		  file:/etc/.SSH2:BillGates botnet component
 		  file:/etc/init.d/DbSecuritySpt:BillGates botnet component
 		  file:/etc/rc.d/init.d/DbSecuritySpt:BillGates botnet component
 		  file:/etc/cron.hourly/gcc.sh:BillGates botnet component
