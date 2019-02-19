@@ -9941,36 +9941,36 @@ do_system_check_initialisation() {
 		  file:/lib64/libkeyutils.so.1.9:Sniffer component
 		  file:/usr/lib/libkeyutils.so.1.9:Sniffer component
 		  file:/usr/lib64/libkeyutils.so.1.9:Sniffer component
-		  file:/IptabLes:malware component
-		  file:/.IptabLex:malware component
-		  file:/boot/.IptabLex:malware component
-		  file:/boot/.IptabLes:malware component
-		  file:/boot/IptabLes:malware component
-		  file:/tmp/IptabLes:malware component
-		  file:/etc/rc.d/init.d/IptabLex:malware component
-		  file:/etc/rc.d/init.d/IptabLes:malware component
-		  file:/etc/rc.d/rc0.d/S55IptabLex:malware component
-		  file:/etc/rc.d/rc1.d/S55IptabLex:malware component
-		  file:/etc/rc.d/rc2.d/S55IptabLex:malware component
-		  file:/etc/rc.d/rc3.d/S55IptabLex:malware component
-		  file:/etc/rc.d/rc4.d/S55IptabLex:malware component
-		  file:/etc/rc.d/rc5.d/S55IptabLex:malware component
-		  file:/etc/rc.d/rc6.d/S55IptabLex:malware component
-		  file:/var/lib/update-rc.d/IptabLex:malware component
-		  file:/delallmykkk:malware component
-		  file:/usr/.IptabLes:malware component
-		  file:/usr/IptabLes:malware component
-		  file:/tmp/.flush:malware component
-		  file:/var/log/.flush:malware component
-		  file:/usr/.flush:malware component
-		  file:/etc/init.d/bluetoothdaemon:malware component
-		  file:/usr/bin/btdaemon:malware component
-		  file:/etc/rc1.d/S90bluetooth:malware component
-		  file:/etc/rc2.d/S90bluetooth:malware component
-		  file:/etc/rc3.d/S90bluetooth:malware component
-		  file:/etc/rc4.d/S90bluetooth:malware component
-		  file:/etc/rc5.d/S90bluetooth:malware component
-		  file:/etc/rc6.d/S90bluetooth:malware component
+		  file:/IptabLes:Malware component
+		  file:/.IptabLex:Malware component
+		  file:/boot/.IptabLex:Malware component
+		  file:/boot/.IptabLes:Malware component
+		  file:/boot/IptabLes:Malware component
+		  file:/tmp/IptabLes:Malware component
+		  file:/etc/rc.d/init.d/IptabLex:Malware component
+		  file:/etc/rc.d/init.d/IptabLes:Malware component
+		  file:/etc/rc.d/rc0.d/S55IptabLex:Malware component
+		  file:/etc/rc.d/rc1.d/S55IptabLex:Malware component
+		  file:/etc/rc.d/rc2.d/S55IptabLex:Malware component
+		  file:/etc/rc.d/rc3.d/S55IptabLex:Malware component
+		  file:/etc/rc.d/rc4.d/S55IptabLex:Malware component
+		  file:/etc/rc.d/rc5.d/S55IptabLex:Malware component
+		  file:/etc/rc.d/rc6.d/S55IptabLex:Malware component
+		  file:/var/lib/update-rc.d/IptabLex:Malware component
+		  file:/delallmykkk:Malware component
+		  file:/usr/.IptabLes:Malware component
+		  file:/usr/IptabLes:Malware component
+		  file:/tmp/.flush:Malware component
+		  file:/var/log/.flush:Malware component
+		  file:/usr/.flush:Malware component
+		  file:/etc/init.d/bluetoothdaemon:Malware component
+		  file:/usr/bin/btdaemon:Malware component
+		  file:/etc/rc1.d/S90bluetooth:Malware component
+		  file:/etc/rc2.d/S90bluetooth:Malware component
+		  file:/etc/rc3.d/S90bluetooth:Malware component
+		  file:/etc/rc4.d/S90bluetooth:Malware component
+		  file:/etc/rc5.d/S90bluetooth:Malware component
+		  file:/etc/rc6.d/S90bluetooth:Malware component
 		  file:/boot/pro:BillGates botnet component
 		  file:/boot/proh:BillGates botnet component
 		  file:/etc/atdd:BillGates botnet component
@@ -10042,7 +10042,8 @@ do_system_check_initialisation() {
 		  file:/root/miner.tgz:Cryptominer component
 		  file:/opt/minerd:Cryptominer component
 		  file:/var/tmp/minerd:Cryptominer component
-		  file:/usr/bin/bsd-port/getty:Possible MALXMR.UWEIU trojan component
+		  file:/bin/httpdns:Cryptominer component
+		  file:/usr/bin/bsd-port/getty:Malware component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
@@ -10147,11 +10148,11 @@ do_system_check_initialisation() {
 			 atac:Port scanner component
 			 \[pdflush\]:IRC bot
 			 libkeyutils.so.1.9:Spam tool component
-			 .IptabLex:malware component
-			 .IptabLes:malware component
-			 .flush:malware component
-			 \[bluetooth\]:malware component
-			 \[flush:malware component
+			 .IptabLex:Malware component
+			 .IptabLes:Malware component
+			 .flush:Malware component
+			 \[bluetooth\]:Malware component
+			 \[flush:Malware component
 			 jynx2.so:Jynx2 Rootkit
 			 reality.so:Jynx2 Rootkit
 			 kernel_service:OSX KeRanger ransomware
