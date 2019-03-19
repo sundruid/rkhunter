@@ -7113,7 +7113,11 @@ ${DIR}:1"
 		RKHTMPVAR=`echo $DIR | cut -d: -f1`
 		RKHTMPVAR2=`echo $DIR | cut -d: -f2`
 
-		display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $RKHTMPVAR2 "${RKHTMPVAR}"
+		if [ $RKHTMPVAR2 -eq 1 ]; then
+			display --to LOG --type INFO SET_FILE_PROP_DIR_FILE_COUNT $RKHTMPVAR2 "${RKHTMPVAR}"
+		else
+			display --to LOG --type INFO SET_FILE_PROP_DIR_FILES_COUNT $RKHTMPVAR2 "${RKHTMPVAR}"
+		fi
 	done
 
 

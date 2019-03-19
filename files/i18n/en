@@ -1,4 +1,4 @@
-Version:2018021101
+Version:2019031901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -200,7 +200,8 @@ OSINFO_MSG2:You may need to re-run rkhunter with the '--propupd' option.
 OSINFO_DO_UPDT:The file properties file will be automatically updated.
 
 SET_FILE_PROP_START:Getting file properties...
-SET_FILE_PROP_DIR_FILE_COUNT:Found $1 files in $2
+SET_FILE_PROP_DIR_FILE_COUNT:Found $1 file in $2
+SET_FILE_PROP_DIR_FILES_COUNT:Found $1 files in $2
 SET_FILE_PROP_FILE_COUNT:File $1: searched for $2 files, found $3
 SET_FILE_PROP_FILE_COUNT_BL:File $1: searched for $2 files, found $3, broken links $4
 SET_FILE_PROP_FILE_COUNT_PROPOPT:File $1: searched for $2 files, found $3 of $4
