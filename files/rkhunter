@@ -11014,7 +11014,7 @@ file_properties_check() {
 
 		FNAME=`echo "${FNAME}" | sed -e 's/^"\(.*\)"$/\1/'`
 
-		if [ -f "${FNAME}" -o -h "${FNAME}" ]; then
+		if [ -f "${FNAME}" -o \( -h "${FNAME}" -a ! -e "${FNAME}" \) ]; then
 			FILE_EXISTS=1
 			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 		else
