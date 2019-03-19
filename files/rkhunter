@@ -6551,7 +6551,25 @@ rkh_dat_set_file_properties() {
 	PROP_FILE_LIST_COUNT=0
 	PROP_FILE_PROPOPT_COUNT=0
 
+
+	#
+	# We initialize the directory file count to the list of user-specified
+	# directories. Each with a value of zero. If there are no directories,
+	# then we just leave it set to the null string.
+	#
+
 	DIR_FILE_COUNT=""
+
+	if [ -n "${USER_DIR_LIST}" ]; then
+		IFS=$IFSNL
+
+		for DIR in ${USER_DIR_LIST}; do
+			test -z "${DIR_FILE_COUNT}" && DIR_FILE_COUNT="${DIR}:0" || DIR_FILE_COUNT="${DIR_FILE_COUNT}
+${DIR}:0"
+		done
+
+		IFS=$RKHIFS
+	fi
 
 	display --to LOG --type PLAIN SET_FILE_PROP_START
 
@@ -7081,8 +7099,13 @@ ${DIR}:1"
 
 
 	#
-	# Display the number of files found in the directories.
+	# Display the number of files found in the directories. We always include
+	# any user-specified directories regardless of how many files were found
+	# in them. We also try and sort the list by value, and then name.
 	#
+
+	RKHTMPVAR=`echo "${DIR_FILE_COUNT}" | sort -t : -k 2,2n -k 1,1f 2>/dev/null`
+	test -n "${RKHTMPVAR}" && DIR_FILE_COUNT=${RKHTMPVAR}
 
 	for DIR in ${DIR_FILE_COUNT}; do
 		test -z "${DIR}" && continue
