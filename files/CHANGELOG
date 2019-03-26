@@ -74,6 +74,8 @@
  - The collating sequence (LC_COLLATE) is now set to 'C'. This should
    avoid problems with character ranges when a different value for
    LC_COLLATE has been set.
+ - If a file changed file type (for example, to a symlink), then this
+   was not detected when running the file properties check.
 
  --
 

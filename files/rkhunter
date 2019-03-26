@@ -5740,6 +5740,20 @@ ${FNAME}"
 						# Check that it hasn't already been set. If it has, then we just ignore it.
 						test -n "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
+						#
+						# We must check if the entry is already in the 'rkhunter.dat' file, as this
+						# means it has changed from being a file to a directory (or a link to a
+						# directory). If so, then this needs to be reported and to do that it must
+						# be added to the file list. This is only done if the '--propupd' option
+						# is not also being used (as that will rewrite the 'rkhunter.dat' file anyway).
+						#
+
+#jh - check file format version? Create function to check if dat file exists/has size, if entry is in dat file and return entry?
+						if [ $PROP_UPDATE -eq 0 -a -n "`grep \"^File:[0-9][0-9]*:${FNAMEGREP}:\" \"${RKHDAT_FILE}\"`" ]; then
+							test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
+${FNAME}"
+						fi
+
 						# Skip this directory unless it was explicitly requested by the user.
 						test -z "`echo \"${USER_FILEPROP_OPTS}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
@@ -5771,6 +5785,19 @@ ${FNAME}"
 						# Broken links just get added to the file list.
 						test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
 ${FNAME}"
+					else
+						#
+						# If the entry exists in the 'rkhunter.dat' file, then it means that it has
+						# changed file type. This needs to be reported, and to do that we must add
+						# it to the file list. We only do this if the '--propupd' option is not being
+						# used, as that will rewrite the 'rkhunter.dat' file anyway.
+						#
+
+#jh - check file format version? Create function to check if dat file exists/has size, if entry is in dat file and return entry?
+						if [ $PROP_UPDATE -eq 0 -a -n "`grep \"^File:[0-9][0-9]*:${FNAMEGREP}:\" \"${RKHDAT_FILE}\"`" ]; then
+							test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
+${FNAME}"
+						fi
 					fi
 				fi
 			done
