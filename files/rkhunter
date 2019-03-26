@@ -6572,11 +6572,12 @@ rkh_dat_set_file_properties() {
 	# required before using them.
 	#
 
-	NODATFILE=0
 	NOHASH_COUNT=0
 	BROKEN_LINK_COUNT=0
 	PROP_FILE_LIST_COUNT=0
 	PROP_FILE_PROPOPT_COUNT=0
+
+	USE_DAT_FILE=1
 
 
 	#
@@ -6639,12 +6640,13 @@ ${DIR}:0"
 	# we are only updating one file and the format has changed.
 	#
 
-	if [ -s "${RKHDAT_FILE}" ]; then
+	if [ -f "${RKHDAT_FILE}" -a -s "${RKHDAT_FILE}" ]; then
 		OLD_FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
 
 		test -z "${OLD_FMTVERSION}" && OLD_FMTVERSION=0
 	else
-		NODATFILE=1
+		USE_DAT_FILE=0
+		OLD_FMTVERSION=0
 	fi
 
 
@@ -6706,7 +6708,7 @@ ${DIR}:0"
 			# through and process them as before.
 			#
 
-			if [ $NODATFILE -eq 0 ]; then
+			if [ $USE_DAT_FILE -eq 1 ]; then
 				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $OLD_FMTVERSION -eq 0 ]; then
 						RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
@@ -10627,15 +10629,17 @@ file_properties_check() {
 	# 'OK', and anything else is a 'Warning'.
 	#
 
+	ADDNEWENTRY=0
+	SKIP_IMMUT_OS=0
+	PROP_FILE_LIST_COUNT=0
+	SKIP_ATTR=0; SKIP_HASH=0; SKIP_IMMUT=0; SKIP_SCRIPT=0
+
 	TEST_RESULT=""
 	NEWRKHENTRIES=""
 	OLDRKHENTRIES=""
 	WHITELIST_RESULT=""
-	SKIP_ATTR=0; SKIP_HASH=0; SKIP_IMMUT=0; SKIP_SCRIPT=0
+
 	USE_DAT_FILE=1
-	SKIP_IMMUT_OS=0
-	PROP_FILE_LIST_COUNT=0
-	ADDNEWENTRY=0
 
 	#
 	# In order to disable the whole test we have to check if
