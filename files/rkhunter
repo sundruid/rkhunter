@@ -6318,9 +6318,13 @@ rkh_dat_set_version() {
 	# Note that the new temporary 'rkhunter.dat' file is used.
 	#
 
+	OLDVER=""
+
 	TODAY=`date +%Y%m%d 2>/dev/null`
 
-	OLDVER=`grep '^[Vv]ersion:' "${RKHDAT_FILE}" 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f2`
+	if [ $FMTVERSION -ge 0 ]; then
+		OLDVER=`grep '^[Vv]ersion:' "${RKHDAT_FILE}" 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f2`
+	fi
 
 	if [ -n "${OLDVER}" ]; then
 		OLDDATE=`echo "${OLDVER}" | cut -c1-8`
@@ -6577,8 +6581,6 @@ rkh_dat_set_file_properties() {
 	PROP_FILE_LIST_COUNT=0
 	PROP_FILE_PROPOPT_COUNT=0
 
-	USE_DAT_FILE=1
-
 
 	#
 	# We initialize the directory file count to the list of user-specified
@@ -6635,20 +6637,6 @@ ${DIR}:0"
 		HASH_CMD="${HASH_FUNC}"
 	fi
 
-	#
-	# Next dig out the old file format version. We may need this if
-	# we are only updating one file and the format has changed.
-	#
-
-	if [ -f "${RKHDAT_FILE}" -a -s "${RKHDAT_FILE}" ]; then
-		OLD_FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
-
-		test -z "${OLD_FMTVERSION}" && OLD_FMTVERSION=0
-	else
-		USE_DAT_FILE=0
-		OLD_FMTVERSION=0
-	fi
-
 
 	#
 	# Now loop through the pathnames looking for the files.
@@ -6669,17 +6657,18 @@ ${DIR}:0"
 
 		test -f "${FNAME}" -o \( -h "${FNAME}" -a ! -e "${FNAME}" \) || continue
 
+		SYSLNK_CC=0
+		NOVRFYFILE=0
+		COLON_COUNT=0
+		FILE_IS_PKGD=0
+		DEPENDENCY_ERR=0
+
 		FDATA=""
 		SYSLNK=""
 		SYSHASH=""
 		PKGNAME=""
 		FNAMEGREP=""
 		RPM_QUERY_RESULT=""
-		SYSLNK_CC=0
-		NOVRFYFILE=0
-		COLON_COUNT=0
-		FILE_IS_PKGD=0
-		DEPENDENCY_ERR=0
 
 		IFS=$RKHIFS
 
@@ -6708,12 +6697,12 @@ ${DIR}:0"
 			# through and process them as before.
 			#
 
-			if [ $USE_DAT_FILE -eq 1 ]; then
+			if [ $FMTVERSION -ge 0 ]; then
 				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					if [ $OLD_FMTVERSION -eq 0 ]; then
-						RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+					if [ $FMTVERSION -eq 0 ]; then
+						RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 					else
-						RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+						RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 					fi
 
 					if [ -n "${RKHTMPVAR}" ]; then
@@ -7119,7 +7108,21 @@ ${DIR}:1"
 		# Check if the symbolic link has any colon characters in it.
 		SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-		echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
+		#
+		# If we are only updating certain entries, then we must use the format in the file.
+		# If a full '--propupd' is being run, then we can update the entries to the current
+		# version.
+		#
+
+		if [ -n "${PROPUPD_OPT}" ]; then
+			if [ $FMTVERSION -eq 0 ]; then
+				echo "File:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
+			else
+				echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
+			fi
+		else
+			echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
+		fi
 
 		IFS=$IFSNL
 	done
@@ -7151,7 +7154,7 @@ ${DIR}:1"
 
 
 	#
-	# Finally put the new file in place.
+	# Finally, log the number of entries found.
 	#
 
 	if [ -f "${RKHDAT_FILE}" ]; then
@@ -7389,7 +7392,16 @@ do_prop_update() {
 		echo "Attributes:Stored" >>"${RKHDAT_TMPFILE}"
 	fi
 
-	echo "FormatVersion:1" >>"${RKHDAT_TMPFILE}"
+	#
+	# If we are doing a full '--propupd' then we set the file
+	# format version to the current version. If we are only
+	# updating specific entries, then we use the version currently
+	# in the 'rkhunter.dat' file.
+	#
+
+	test $FMTVERSION -eq -1 -o -z "${PROPUPD_OPT}" && FMTVERSION=$CURRENT_FMTVERSION
+
+	echo "FormatVersion:$FMTVERSION" >>"${RKHDAT_TMPFILE}"
 
 
 	#
@@ -10639,6 +10651,7 @@ file_properties_check() {
 	OLDRKHENTRIES=""
 	WHITELIST_RESULT=""
 
+#jh - check if USE_DAT_FILE is still required - use FMTVERSION instead?
 	USE_DAT_FILE=1
 
 	#
@@ -10743,7 +10756,7 @@ file_properties_check() {
 
 	if [ $SKIP_HASH -eq 0 ]; then
 		# Not sure about this one...!
-		if [ -z "${OLD_PKGMGR}" -a -s ${RKHDAT_FILE} -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) ]; then
+		if [ -z "${OLD_PKGMGR}" -a -s "${RKHDAT_FILE}" -a "${HASH_FUNC}" != "NONE" -a \( "${OLD_HASH_FUNC}" = "NONE" -o "${OLD_HASH_FUNC}" = "Disabled" -o -z "${OLD_HASH_FUNC}" \) ]; then
 			SKIP_HASH=1
 			RKHTMPVAR="${RKHTMPVAR} hash"
 
@@ -10830,7 +10843,7 @@ file_properties_check() {
 			RKHTMPVAR="${RKHTMPVAR} missing"
 		fi
 
-		if [ $USE_DAT_FILE -eq 1 -a ! -s ${RKHDAT_FILE} ]; then
+		if [ $USE_DAT_FILE -eq 1 -a ! -s "${RKHDAT_FILE}" ]; then
 			SKIP_HASH=1
 			SKIP_ATTR=1
 			USE_DAT_FILE=0
@@ -11017,19 +11030,6 @@ file_properties_check() {
 
 
 	#
-	# We need the current 'rkhunter.dat' file format.
-	#
-
-	if [ $USE_DAT_FILE -eq 1 ]; then
-		FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" | cut -d: -f2`
-
-		test -z "${FMTVERSION}" && FMTVERSION=0
-	else
-		FMTVERSION=0
-	fi
-
-
-	#
 	# Now loop through each of the files and perform the tests on each one.
 	#
 	# We must set IFS around this loop, otherwise any names in the file
@@ -11083,11 +11083,11 @@ file_properties_check() {
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ $FMTVERSION -eq 0 ]; then
-				RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+				RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 			else
 				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-				RKHLINE=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}"`
+				RKHLINE=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 			fi
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
@@ -12275,7 +12275,7 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 	if [ $USE_DAT_FILE -eq 1 ]; then
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^File:' "${RKHDAT_FILE}"`; do
+		for RKHTMPVAR in `grep '^File:' "${RKHDAT_FILE}" 2>/dev/null`; do
 			if [ $FMTVERSION -eq 0 ]; then
 				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
 			else
@@ -19173,7 +19173,9 @@ check_os_info() {
 		fi
 	fi
 
-	OLD_HOST=`grep '^Host:' "${RKHDAT_FILE}" | cut -d: -f2-`
+#jhjh - must check if rkhdat_file exists first (FMTVERSION -ge 0)
+#jhjh - repeat for other tests below.
+	OLD_HOST=`grep '^Host:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2-`
 
 	if [ "${HOST_NAME}" != "${OLD_HOST}" ]; then
 		OS_CHANGED=1
@@ -19186,7 +19188,7 @@ check_os_info() {
 	# Next check if the O/S name has changed.
 	#
 
-	OLD_OSNAME=`grep '^OS:' "${RKHDAT_FILE}" | cut -d: -f2-`
+	OLD_OSNAME=`grep '^OS:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2-`
 
 	if [ "${OSNAME}" != "${OLD_OSNAME}" ]; then
 		OS_CHANGED=1
@@ -19199,7 +19201,7 @@ check_os_info() {
 	# Check if the prelinking status has changed.
 	#
 
-	if [ -z "`grep '^Prelinked:Yes' \"${RKHDAT_FILE}\"`" ]; then
+	if [ -z "`grep '^Prelinked:Yes' \"${RKHDAT_FILE}\" 2>/dev/null`" ]; then
 		OLD_PRELINK=0
 	else
 		OLD_PRELINK=1
@@ -19221,7 +19223,7 @@ check_os_info() {
 	# the sun-type archictures the same as 'sparc'.
 	#
 
-	OLD_ARCH=`grep '^Arch:' "${RKHDAT_FILE}" | cut -d: -f2-`
+	OLD_ARCH=`grep '^Arch:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2-`
 
 	if [ -n "`echo ${OLD_ARCH} | grep 'i[0-9]86'`" ]; then
 		OLD_ARCH_TYPE="i386"
@@ -19751,6 +19753,29 @@ get_lock() {
 		test $SHOW_LOCK_MSGS -eq 1 -o $NOTTY -eq 0 && display --to SCREEN --type PLAIN ${RKHTMPVAR} LOCK_FAIL
 
 		exit 1
+	fi
+
+	return
+}
+
+
+get_rkhdat_format() {
+
+	#
+	# This function sets a variable indicating the format version of the
+	# 'rkhunter.dat' file. A value of '-1' indicates that the file must
+	# not be used.
+	#
+
+	if [ ! -e "${RKHDAT_FILE}" ]; then
+		FMTVERSION=-1
+	elif [ ! -f "${RKHDAT_FILE}" ]; then
+		FMTVERSION=-1
+	elif [ ! -s "${RKHDAT_FILE}" ]; then
+		FMTVERSION=-1
+	else
+		FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
+		test -z "${FMTVERSION}" && FMTVERSION=0
 	fi
 
 	return
@@ -20293,6 +20318,13 @@ RTKT_FILE_WHITELIST=""
 
 # The full pathname of the 'rkhunter.dat' file.
 RKHDAT_FILE=""
+
+# The format version of the 'rkhunter.dat' file. A value of
+# '-1' indicates that the 'rkhunter.dat' file cannot be used.
+FMTVERSION=-1
+
+# The current 'rkhunter.dat' file format version.
+CURRENT_FMTVERSION=1
 
 # The full pathname of the 'rkhunter_prop_list.dat' file.
 RKH_FILEPROP_LIST=""
@@ -21000,8 +21032,8 @@ fi
 if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	if [ -e "${RKHDAT_FILE}" ]; then
 		if [ -h "${RKHDAT_FILE}" ]; then
-			echo "The rkhunter.dat file is a symbolic link: ${RKHDAT_FILE}"
-			echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
+			echo "The rkhunter.dat file has been changed to a symbolic link: ${RKHDAT_FILE}"
+			echo "This is a security problem. If the link points to another file, then that file may be modified by rkhunter."
 			exit 1
 		elif [ ! -f "${RKHDAT_FILE}" ]; then
 			echo "The rkhunter.dat file is not a file: ${RKHDAT_FILE}"
@@ -21011,14 +21043,23 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 	if [ -e "${RKH_FILEPROP_LIST}" ]; then
 		if [ -h "${RKH_FILEPROP_LIST}" ]; then
-			echo "The rkhunter_prop_list.dat file is a symbolic link: ${RKH_FILEPROP_LIST}"
-			echo "This is a security problem. The link points to another file, and that file may be modified by rkhunter."
+			echo "The rkhunter_prop_list.dat file has been changed to a symbolic link: ${RKH_FILEPROP_LIST}"
+			echo "This is a security problem. If the link points to another file, then that file may be modified by rkhunter."
 			exit 1
 		elif [ ! -f "${RKH_FILEPROP_LIST}" ]; then
 			echo "The rkhunter_prop_list.dat file is not a file: ${RKH_FILEPROP_LIST}"
 			exit 1
 		fi
 	fi
+
+
+#jh - 1) No rkh.dat or link - does --propupd with file/pkg name reject this?
+#jh - 2) No rkh.dat or link - does -C, --propupd and properties check detect this?
+	#
+	# Get the current 'rkhunter.dat' file format version.
+	#
+
+	get_rkhdat_format
 
 
 	#
@@ -21029,19 +21070,10 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 	#
 
 	if [ -n "${PROPUPD_OPT}" ]; then
-		if [ ! -f "${RKHDAT_FILE}" ]; then
-			echo "The file properties file does not exist: ${RKHDAT_FILE}"
+		if [ $FMTVERSION -eq -1 ]; then
+			echo "The file properties file does not exist or is empty: ${RKHDAT_FILE}"
 			exit 1
 		fi
-
-		#
-		# We need the current 'rkhunter.dat' file format.
-		#
-
-		FMTVERSION=`grep '^FormatVersion:' "${RKHDAT_FILE}" | cut -d: -f2`
-
-		test -z "${FMTVERSION}" && FMTVERSION=0
-
 
 		LEAVE=0
 		RKHTMPVAR=""
@@ -21080,7 +21112,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 							IFS=$IFSNL
 
-							for RKHLINE in `grep "^File:[0-9]*:${FNAMEGREP}/" "${RKHDAT_FILE}"`; do
+							for RKHLINE in `grep "^File:[0-9]*:${FNAMEGREP}/" "${RKHDAT_FILE}" 2>/dev/null`; do
 								COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
 								COLON_COUNT=`expr 3 + $COLON_COUNT`
 
@@ -21125,7 +21157,7 @@ ${RKHTMPVAR2}"
 
 					IFS=$IFSNL
 
-					for RKHLINE in `grep "^File:[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}"`; do
+					for RKHLINE in `grep "^File:[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
 						COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
 						COLON_COUNT=`expr 3 + $COLON_COUNT`
 
@@ -21149,7 +21181,7 @@ ${PATHNAME}"
 
 						IFS=$IFSNL
 
-						for RKHLINE in `grep "^File:[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}"`; do
+						for RKHLINE in `grep "^File:[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
 							COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
 							COLON_COUNT=`expr 3 + $COLON_COUNT`
 
@@ -21416,7 +21448,7 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
 
-	if [ -s "${RKHDAT_FILE}" ]; then
+	if [ $FMTVERSION -ge 0 ]; then
 		RKHTMPVAR=`grep '^OS:' "${RKHDAT_FILE}" 2>/dev/null | sed -e 's/^OS://'`
 
 		if [ -n "${RKHTMPVAR}" ]; then
@@ -21551,7 +21583,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 		fi
 	fi
 
-	if [ -s "${RKHDAT_FILE}" ]; then
+	if [ $FMTVERSION -ge 0 ]; then
 		if [ "${OLD_HASH_FUNC}" = "Disabled" ]; then
 			display --to LOG --type INFO HASH_FUNC_OLD_DISABLED
 		else
@@ -21875,7 +21907,7 @@ if [ $CHECK -eq 1 ]; then
 	#
 
 	if `check_test properties`; then
-		if [ -s "${RKHDAT_FILE}" ]; then
+		if [ $FMTVERSION -ge 0 ]; then
 			#
 			# We perform a simple check on some of the stored
 			# O/S information, and compare it to the current
