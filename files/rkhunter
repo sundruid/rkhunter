@@ -7293,11 +7293,11 @@ get_old_prop_attrs() {
 	test -z "${FNAME}" -o ! -f "${FNAME}" && return
 
 	if [ -s "${FNAME}" ]; then
-		OLD_HASH_FUNC=`grep '^Hash:' "${FNAME}" | cut -d: -f2-`
+		OLD_HASH_FUNC=`grep '^Hash:' "${FNAME}" 2>/dev/null | cut -d: -f2-`
 
-		OLD_PKGMGR=`grep '^Pkgmgr:' "${FNAME}" | cut -d: -f2`
+		OLD_PKGMGR=`grep '^Pkgmgr:' "${FNAME}" 2>/dev/null | cut -d: -f2`
 
-		OLD_ATTRUPD=`grep '^Attributes:' "${FNAME}" | cut -d: -f2`
+		OLD_ATTRUPD=`grep '^Attributes:' "${FNAME}" 2>/dev/null | cut -d: -f2`
 	fi
 
 	return
@@ -21229,7 +21229,7 @@ ${RKHTMPVAR2}"
 	# hash function and package manager.
 	#
 
-	get_old_prop_attrs "${RKHDAT_FILE}"
+	test $FMTVERSION -ge 0 && get_old_prop_attrs "${RKHDAT_FILE}"
 fi
 
 
