@@ -60,8 +60,9 @@
    message is shown and rkhunter exits. Previously the file would have
    been silently ignored.
  - The configuration file check option (-C/--config-check) will now
-   give an error message if other options are also specified.
-   Previously they were silently ignored, which could be confusing.
+   give an error message if any options other than the '--debug'
+   option are also specified. Previously they were silently ignored,
+   which could be confusing.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
