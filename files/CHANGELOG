@@ -76,6 +76,8 @@
    LC_COLLATE has been set.
  - If a file changed file type (for example, to a symlink), then this
    was not detected when running the file properties check.
+ - Improved checks that the file properties '.dat' files were actually
+   files before accessing them.
 
  --
 
