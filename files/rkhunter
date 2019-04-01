@@ -20973,29 +20973,53 @@ if [ -z "${CONFIGFILE}" ]; then
 fi
 
 if [ ! -f "${CONFIGFILE}" ]; then
-	echo "Unable to find configuration file: ${CONFIGFILE}"
+	echo "Unable to find the configuration file: ${CONFIGFILE}"
 	exit 1
 elif [ ! -r "${CONFIGFILE}" ]; then
-	echo "Configuration file is not readable: ${CONFIGFILE}"
+	echo "The configuration file is not readable: ${CONFIGFILE}"
 	exit 1
 elif [ ! -s "${CONFIGFILE}" ]; then
-	echo "Configuration file is empty: ${CONFIGFILE}"
+	echo "The configuration file is empty: ${CONFIGFILE}"
 	exit 1
 fi
 
 RKHTMPVAR=`echo "${CONFIGFILE}" | sed -e 's:/[^/]*$::'`
 
-test -f "${RKHTMPVAR}/rkhunter.conf.local" -a ! -h "${RKHTMPVAR}/rkhunter.conf.local" -a -r "${RKHTMPVAR}/rkhunter.conf.local" && LOCALCONFIGFILE="${RKHTMPVAR}/rkhunter.conf.local"
+if [ -e "${RKHTMPVAR}/rkhunter.conf.local" ]; then
+	if [ -h "${RKHTMPVAR}/rkhunter.conf.local" ]; then
+		echo "The local configuration file cannot be a link: ${RKHTMPVAR}/rkhunter.conf.local"
+		exit 1
+	elif [ ! -f "${RKHTMPVAR}/rkhunter.conf.local" ]; then
+		echo "The local configuration file is not a file: ${RKHTMPVAR}/rkhunter.conf.local"
+		exit 1
+	elif [ ! -r "${RKHTMPVAR}/rkhunter.conf.local" ]; then
+		echo "The local configuration file is not readable: ${RKHTMPVAR}/rkhunter.conf.local"
+		exit 1
+	else
+		LOCALCONFIGFILE="${RKHTMPVAR}/rkhunter.conf.local"
+fi
 
 if [ -d "${RKHTMPVAR}/rkhunter.d" ]; then
+	LEAVE=0
 	LOCALCONFIGDIR="${RKHTMPVAR}/rkhunter.d"
 
 	for FNAME in ${LOCALCONFIGDIR}/*.conf; do
-		test ! -f "${FNAME}" -o -h "${FNAME}" -o ! -r "${FNAME}" && continue
+		if [ -h "${FNAME}" ]; then
+			LEAVE=1
+			echo "The local configuration file cannot be a link: ${FNAME}"
+		elif [ ! -f "${FNAME}" ]; then
+			LEAVE=1
+			echo "The local configuration file is not a file: ${FNAME}"
+		elif [ ! -r "${FNAME}" ]; then
+			LEAVE=1
+			echo "The local configuration file is not readable: ${FNAME}"
+		fi
 
 		LOCALCONFDIRCOUNT=`expr ${LOCALCONFDIRCOUNT} + 1`
 		LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
 	done
+
+	test $LEAVE -eq 1 && exit 1
 fi
 
 get_configfile_options
@@ -21006,6 +21030,7 @@ get_configfile_options
 #
 
 if [ $CONFIG_CHECK -eq 1 ]; then
+#jh
 	do_config_file_check
 	exit $RET_CODE
 fi

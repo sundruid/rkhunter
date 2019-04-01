@@ -55,6 +55,10 @@
  - Modified the inline help option (-h/--help), the man page and the
    FAQ to say that the '--update' option does not update the rkhunter
    command itself but just the data files.
+ - Initial checks on the configuration file(s) have improved to ensure
+   that they are actually files. If they are not a file, then an error
+   message is shown and rkhunter exits. Previously the file would have
+   been silently ignored.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
@@ -76,7 +80,7 @@
    LC_COLLATE has been set.
  - If a file changed file type (for example, to a symlink), then this
    was not detected when running the file properties check.
- - Improved checks that the file properties '.dat' files were actually
+ - Improved checks that the file properties '.dat' files are actually
    files before accessing them.
 
  --
