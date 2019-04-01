@@ -6587,11 +6587,25 @@ rkh_dat_set_file_properties() {
 
 	#
 	# This function obtains various bits of information about the files to
-	# be checked. The current format in the 'rkhunter.dat' file is:
+	# be checked. The different versions of the 'rkhunter.dat' file format
+	# are:
 	#
-	#     File:<colon count>:<pathname>:<hash value>:<inode>:<permissions>:
-	#	   <uid>:<gid>:<file size>:<date/time modified>:<package name>:
-	#	   <symbolic link colon count>:<symbolic link target>
+	# Version 0:
+	#	File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
+	#		<file size>:<date/time modified>
+	#
+	#	File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
+	#		<file size>:<date/time modified>:<package name>
+	#
+	# Version 1:
+	#	File:<colon count>:<pathname>:<hash value>:<inode>:<permissions>:
+	#		<uid>:<gid>:<file size>:<date/time modified>:<package name>:
+	#		<symbolic link colon count>:<symbolic link target>
+	#
+	# Version 2:
+	#	File|Link:<colon count>:<pathname>:<hash value>:<inode>:<permissions>:
+	#		<uid>:<gid>:<file size>:<date/time modified>:<package name>:
+	#		<symbolic link colon count>:<symbolic link target>
 	#
 	# The format is actually governed by the stat.pl file, and the output
 	# it produces. Changing the order of options does not change the order
