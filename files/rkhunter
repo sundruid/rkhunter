@@ -20204,9 +20204,6 @@ KSYMS_FILE=""
 # Record for logging the command-line being used.
 CMD_LINE="$0 $*"
 
-# Record the number of command options given.
-CMD_OPT_COUNT=$#
-
 # Create a spaced-separated PATH variable.
 RKHROOTPATH=`echo ${PATH} | tr ':' ' '`
 
@@ -20530,12 +20527,7 @@ while [ $# -ge 1 ]; do
 		CHECK=1
 		;;
 	-C | --config-check | --configcheck | --check-config | --checkconfig)
-		if [ $CMD_OPT_COUNT -gt 2 -o \( $CMD_OPT_COUNT -eq 2 -a $DEBUG_OPT -eq 0 \) ]; then
-			echo "Only the '--debug' command-line option is allowed with the '$1' option." >&2
-			exit 1
-		else
-			CONFIG_CHECK=1
-		fi
+		CONFIG_CHECK=1
 		;;
 	--configfile)
 		CONFIGFILE=""
