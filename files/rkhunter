@@ -20204,6 +20204,9 @@ KSYMS_FILE=""
 # Record for logging the command-line being used.
 CMD_LINE="$0 $*"
 
+# Record the number of command options given.
+CMD_OPT_COUNT=$#
+
 # Create a spaced-separated PATH variable.
 RKHROOTPATH=`echo ${PATH} | tr ':' ' '`
 
@@ -20527,7 +20530,12 @@ while [ $# -ge 1 ]; do
 		CHECK=1
 		;;
 	-C | --config-check | --configcheck | --check-config | --checkconfig)
-		CONFIG_CHECK=1
+		if [ $CMD_OPT_COUNT -gt 2 -o \( $CMD_OPT_COUNT -eq 2 -a $DEBUG_OPT -eq 0 \) ]; then
+			echo "Only the '--debug' command-line option is allowed with the '$1' option." >&2
+			exit 1
+		else
+			CONFIG_CHECK=1
+		fi
 		;;
 	--configfile)
 		CONFIGFILE=""
@@ -20680,7 +20688,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${LANGUAGE}" ]; then
-			echo "No language specified with '$1' option."
+			echo "No language specified with the '$1' option."
 			exit 1
 		fi
 		;;
@@ -20753,7 +20761,7 @@ while [ $# -ge 1 ]; do
 		esac
 
 		if [ -z "${PKGMGR}" ]; then
-			echo "No package manager specified with '--pkgmgr' option."
+			echo "No package manager specified with the '--pkgmgr' option."
 			exit 1
 		fi
 		;;
@@ -20972,8 +20980,11 @@ if [ -z "${CONFIGFILE}" ]; then
 	fi
 fi
 
-if [ ! -f "${CONFIGFILE}" ]; then
+if [ ! -e "${CONFIGFILE}" ]; then
 	echo "Unable to find the configuration file: ${CONFIGFILE}"
+	exit 1
+elif [ ! -f "${CONFIGFILE}" ]; then
+	echo "The configuration file is not a file: ${CONFIGFILE}"
 	exit 1
 elif [ ! -r "${CONFIGFILE}" ]; then
 	echo "The configuration file is not readable: ${CONFIGFILE}"
@@ -20986,17 +20997,20 @@ fi
 RKHTMPVAR=`echo "${CONFIGFILE}" | sed -e 's:/[^/]*$::'`
 
 if [ -e "${RKHTMPVAR}/rkhunter.conf.local" ]; then
-	if [ -h "${RKHTMPVAR}/rkhunter.conf.local" ]; then
-		echo "The local configuration file cannot be a link: ${RKHTMPVAR}/rkhunter.conf.local"
+	FNAME="${RKHTMPVAR}/rkhunter.conf.local"
+
+	if [ -h "${FNAME}" ]; then
+		echo "The local configuration file cannot be a link: ${FNAME}"
 		exit 1
-	elif [ ! -f "${RKHTMPVAR}/rkhunter.conf.local" ]; then
-		echo "The local configuration file is not a file: ${RKHTMPVAR}/rkhunter.conf.local"
+	elif [ ! -f "${FNAME}" ]; then
+		echo "The local configuration file is not a file: ${FNAME}"
 		exit 1
-	elif [ ! -r "${RKHTMPVAR}/rkhunter.conf.local" ]; then
-		echo "The local configuration file is not readable: ${RKHTMPVAR}/rkhunter.conf.local"
+	elif [ ! -r "${FNAME}" ]; then
+		echo "The local configuration file is not readable: ${FNAME}"
 		exit 1
 	else
-		LOCALCONFIGFILE="${RKHTMPVAR}/rkhunter.conf.local"
+		LOCALCONFIGFILE="${FNAME}"
+	fi
 fi
 
 if [ -d "${RKHTMPVAR}/rkhunter.d" ]; then
@@ -21013,10 +21027,10 @@ if [ -d "${RKHTMPVAR}/rkhunter.d" ]; then
 		elif [ ! -r "${FNAME}" ]; then
 			LEAVE=1
 			echo "The local configuration file is not readable: ${FNAME}"
+		else
+			LOCALCONFDIRCOUNT=`expr ${LOCALCONFDIRCOUNT} + 1`
+			LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
 		fi
-
-		LOCALCONFDIRCOUNT=`expr ${LOCALCONFDIRCOUNT} + 1`
-		LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
 	done
 
 	test $LEAVE -eq 1 && exit 1
@@ -21030,7 +21044,6 @@ get_configfile_options
 #
 
 if [ $CONFIG_CHECK -eq 1 ]; then
-#jh
 	do_config_file_check
 	exit $RET_CODE
 fi
@@ -21153,8 +21166,6 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 #jh
 #jh - link - rkhunter_prop_list.dat - using --list propfiles gives - overwrites file!
 #jh - broken link - rkhunter_prop_list.dat - using --list propfiles gives no output.
-#jh
-#jh run '-C --enable properties' gives no output - it should say that '-C' cannot be used with other options.
 #jh
 
 	#

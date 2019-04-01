@@ -59,6 +59,9 @@
    that they are actually files. If they are not a file, then an error
    message is shown and rkhunter exits. Previously the file would have
    been silently ignored.
+ - The configuration file check option (-C/--config-check) will now
+   give an error message if other options are also specified.
+   Previously they were silently ignored, which could be confusing.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
