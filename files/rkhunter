@@ -7236,8 +7236,6 @@ create_rkh_file_prop_list() {
 	# used for the file properties check.
 	#
 
-#jh - need to check that it is just a file or non-existent.
-
 	get_temp_file "${RKHTMPDIR}/rkh_prop_list.new"
 	touch "${TEMPFILE}"
 
@@ -19674,6 +19672,13 @@ display_propfiles() {
 	# would be searched for when using the '--propupd' function.
 	#
 
+	#
+	# We must first of all check that the relevant '.dat' files
+	# are usable.
+	#
+
+	check_prop_dat_files
+
 	# Get any user-supplied files and directories.
 	get_user_fileprop_list
 
@@ -21154,12 +21159,6 @@ fi
 
 
 if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
-
-#jh
-#jh - link - rkhunter_prop_list.dat - using --list propfiles gives - overwrites file!
-#jh - broken link - rkhunter_prop_list.dat - using --list propfiles gives no output.
-#jh
-
 	#
 	# Check if the file properties option has been set. If so, then
 	# check that the files and directories are valid. Once that has
