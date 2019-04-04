@@ -5754,7 +5754,12 @@ ${FNAME}"
 								RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 							else
 								COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
-								RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+
+								if [ $FMTVERSION -eq 1 ]; then
+									RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+								else
+									RKHTMPVAR=`egrep "^(File|Link):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+								fi
 							fi
 
 							if [ -n "${RKHTMPVAR}" ]; then
@@ -5808,7 +5813,12 @@ ${FNAME}"
 								RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 							else
 								COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
-								RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+
+								if [ $FMTVERSION -eq 1 ]; then
+									RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+								else
+									RKHTMPVAR=`egrep "^(File|Link):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+								fi
 							fi
 
 							if [ -n "${RKHTMPVAR}" ]; then
@@ -6595,7 +6605,8 @@ rkh_dat_set_file_properties() {
 	#		<file size>:<date/time modified>
 	#
 	#	File:<pathname>:<hash value>:<inode>:<permissions>:<uid>:<gid>:
-	#		<file size>:<date/time modified>:<package name>
+	#		<file size>:<date/time modified>:<package name>:
+	#		<symbolic link target>
 	#
 	# Version 1:
 	#	File:<colon count>:<pathname>:<hash value>:<inode>:<permissions>:
@@ -6723,6 +6734,8 @@ ${DIR}:0"
 
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
+		test -h "${FNAME}" -a $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+
 
 		#
 		# Test to see if we are looking for specific files or not.
@@ -6741,7 +6754,7 @@ ${DIR}:0"
 					if [ $FMTVERSION -eq 0 ]; then
 						RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 					else
-						RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+						RKHTMPVAR=`grep "^${FTYPE}:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 					fi
 
 					if [ -n "${RKHTMPVAR}" ]; then
@@ -7124,8 +7137,13 @@ ${DIR}:1"
 		fi
 
 
-		if [ -h "${FNAME}" -a -z "${SYSLNK}" ]; then
-			test $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+		if [ -h "${FNAME}" ]; then
+			test $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" && SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+			# Check if the symbolic link target has any colon characters in it.
+			if [ -n "${SYSLNK}" ]; then
+				SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
+			fi
 		fi
 
 
@@ -7144,9 +7162,6 @@ ${DIR}:1"
 			fi
 		fi
 
-		# Check if the symbolic link has any colon characters in it.
-		SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
-
 		#
 		# If we are only updating certain entries, then we must use the format in the file.
 		# If a full '--propupd' is being run, then we can update the entries to the current
@@ -7157,10 +7172,10 @@ ${DIR}:1"
 			if [ $FMTVERSION -eq 0 ]; then
 				echo "File:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
 			else
-				echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
+				echo "${FTYPE}:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
 			fi
 		else
-			echo "File:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
+			echo "${FTYPE}:${COLON_COUNT}:${FNAME}:${SYSHASH}:${FDATA}:${PKGNAME}:${SYSLNK_CC}:${SYSLNK}:" >>"${RKHDAT_TMPFILE}"
 		fi
 
 		IFS=$IFSNL
@@ -10600,14 +10615,7 @@ updt_rkhdat() {
 	OLDRKHENTRIES=`echo "${OLDRKHENTRIES}" | sed -e '/^$/d'`
 
 	for FNAME in ${OLDRKHENTRIES}; do
-		if [ $FMTVERSION -eq 0 ]; then
-			FILENAME=`echo "${FNAME}" | cut -d: -f2`
-		else
-			RKH_CC=`echo "${FNAME}" | cut -d: -f2`
-			RKH_CC2=`expr 3 + $RKH_CC`
-
-			FILENAME=`echo "${FNAME}" | cut -d: -f3-$RKH_CC2`
-		fi
+		FILENAME=`get_fname_from_rkh "${FNAME}"`
 
 		display --to LOG --type INFO RKHDAT_DEL_OLD_ENTRY "`name2text \"${FILENAME}\"`"
 
@@ -10622,14 +10630,7 @@ updt_rkhdat() {
 	NEWRKHENTRIES=`echo "${NEWRKHENTRIES}" | sed -e '/^$/d'`
 
 	for FNAME in ${NEWRKHENTRIES}; do
-		if [ $FMTVERSION -eq 0 ]; then
-			FILENAME=`echo "${FNAME}" | cut -d: -f2`
-		else
-			RKH_CC=`echo "${FNAME}" | cut -d: -f2`
-			RKH_CC2=`expr 3 + $RKH_CC`
-
-			FILENAME=`echo "${FNAME}" | cut -d: -f3-$RKH_CC2`
-		fi
+		FILENAME=`get_fname_from_rkh "${FNAME}"`
 
 		display --to LOG --type INFO RKHDAT_ADD_NEW_ENTRY "`name2text \"${FILENAME}\"`"
 
@@ -10690,7 +10691,7 @@ file_properties_check() {
 	OLDRKHENTRIES=""
 	WHITELIST_RESULT=""
 
-	USE_DAT_FILE=1
+	test $FMTVERSION -ge 0 && USE_DAT_FILE=1 || USE_DAT_FILE=0
 
 	#
 	# In order to disable the whole test we have to check if
@@ -11117,6 +11118,8 @@ file_properties_check() {
 			FILE_EXISTS=0
 		fi
 
+		test -h "${FNAME}" -a $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+
 		if [ $USE_DAT_FILE -eq 1 ]; then
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
@@ -11125,7 +11128,7 @@ file_properties_check() {
 			else
 				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-				RKHLINE=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+				RKHLINE=`egrep "^(File|Link):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 			fi
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
@@ -11145,8 +11148,7 @@ file_properties_check() {
 						RKHLINE="File:${FNAME}:1:1:1:1:1:1:1::${SYSLNK}:"
 					else
 						SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
-
-						RKHLINE="File:${COLON_COUNT}:${FNAME}:1:1:1:1:1:1:1::${SYSLNK_CC}:${SYSLNK}:"
+						RKHLINE="${FTYPE}:${COLON_COUNT}:${FNAME}:1:1:1:1:1:1:1::${SYSLNK_CC}:${SYSLNK}:"
 					fi
 				else
 					TEST_RESULT="${TEST_RESULT} norkhline"
@@ -11164,8 +11166,21 @@ ${RKHLINE}"
 				elif [ -n "${RKHLINE}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
+					test -n "`echo \"${RKHLINE}\" | grep '^File:'`" && RKHTMPVAR=1 || RKHTMPVAR=0
+
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
-					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
+
+					if [ $RKHTMPVAR -eq 1 ]; then
+						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
+					else
+						RKHTMPVAR=`get_lname_from_rkh "${RKHLINE}"`
+
+						if [ -z "${RKHTMPVAR}" ]; then
+							display --to LOG --type WARNING FILE_PROP_LINK_NOT_EXIST "`name2text \"${FNAME}\"`"
+						else
+							display --to LOG --type WARNING FILE_PROP_LINK_NOT_EXIST_TGT "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR}\"`"
+						fi
+					fi
 				fi
 
 				IFS=$IFSNL
@@ -11868,6 +11883,18 @@ ${RKHLINE}"
 
 
 					#
+					# Check to see if the file type has changed.
+					#
+
+					if [ $FILE_IS_PKGD -eq 0 ]; then
+						if [ "${FTYPE}" != "`echo ${RKHLINE} | cut -d: -f1`" ]; then
+							# Put the file type change at the front of the list.
+							TEST_RESULT=" ftypechanged${TEST_RESULT}"
+						fi
+					fi
+
+
+					#
 					# If the file is a link, then check that the target has not changed.
 					#
 
@@ -11896,13 +11923,7 @@ ${RKHLINE}"
 								fi
 							fi
 						else
-							RKH_CC2=`expr $RKH_CC + 8`
-							SYSLNK_CC=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
-
-							RKH_CC2=`expr $RKH_CC + 9`
-							SYSLNK_CC=`expr $RKH_CC2 + $SYSLNK_CC`
-
-							RKHLNK=`echo ${RKHLINE} | cut -d: -f${RKH_CC2}-${SYSLNK_CC}`
+							RKHLNK=`get_lname_from_rkh "${RKHLINE}"`
 
 							if [ $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" ]; then
 								SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
@@ -11921,7 +11942,8 @@ ${RKHLINE}"
 										TEST_RESULT="${TEST_RESULT} linkchanged"
 									fi
 								fi
-							else
+							elif [ -z "`echo \"${TEST_RESULT}\" | grep ' ftypechanged'`" ]; then
+								# Only show that the link is missing if the file type has not changed.
 								TEST_RESULT="${TEST_RESULT} norkhlnk"
 							fi
 						fi
@@ -11985,7 +12007,7 @@ File:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:$
 					SYSLNK_CC=`echo "${SYSLNK}" | tr -c -d ':' | wc -c | tr -d ' '`
 
 					NEWRKHENTRIES="${NEWRKHENTRIES}
-File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::${SYSLNK_CC}:${SYSLNK}:"
+${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${SYSSIZE}:${SYSDTM}::${SYSLNK_CC}:${SYSLNK}:"
 				fi
 			fi
 		fi
@@ -12093,14 +12115,36 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 			RKHTMPVAR3=0
 			for RKHTMPVAR in ${TEST_RESULT}; do
 				case "${RKHTMPVAR}" in
-				hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged|linkchanged)
+				ftypechanged|hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged|linkchanged)
 					if [ $RKHTMPVAR2 -eq 0 ]; then
 						RKHTMPVAR2=1
 						display --to LOG --type WARNING FILE_PROP_CHANGED
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
+
+						if [ $FMTVERSION -ge 2 -a -h "${FNAME}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED3 "`name2text \"${FNAME}\"`"
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
+						fi
 					fi
 
 					case "${RKHTMPVAR}" in
+					ftypechanged)
+						if [ "${FTYPE}" = "Link" ]; then
+							test -n "${SYSLNK}" && RKHTMPVAR4=" -> `name2text \"${SYSLNK}\"`" || RKHTMPVAR4=""
+
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_FTL "${RKHTMPVAR4}"
+						else
+							if [ $FMTVERSION -gt 0 ]; then
+								# Get the link target to which we used to point.
+								RKHTMPVAR5=`get_lname_from_rkh "${RKHLINE}"`
+								test -n "${RKHTMPVAR5}" && RKHTMPVAR4=" -> `name2text \"${RKHTMPVAR5}\"`" || RKHTMPVAR4=""
+							else
+								RKHTMPVAR4=""
+							fi
+
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_LTF "${RKHTMPVAR4}"
+						fi
+						;;
 					hashchanged)
 						if [ -z "${SYSHASH}" ]; then
 							if [ -h "${FNAME}" ]; then
@@ -12219,7 +12263,11 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 					esac
 					;;
 				norkhline)
-					display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "`name2text \"${FNAME}\"`"
+					if [ "${FTYPE}" = "File" ]; then
+						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC_LNK "`name2text \"${FNAME}\"`"
+					fi
 					;;
 				norkhhash)
 					display --to LOG --type WARNING FILE_PROP_NO_RKHHASH "`name2text \"${FNAME}\"`"
@@ -12313,15 +12361,8 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 	if [ $USE_DAT_FILE -eq 1 ]; then
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `grep '^File:' "${RKHDAT_FILE}" 2>/dev/null`; do
-			if [ $FMTVERSION -eq 0 ]; then
-				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f2`
-			else
-				RKH_CC=`echo "${RKHTMPVAR}" | cut -d: -f2`
-				RKH_CC2=`expr 3 + $RKH_CC`
-
-				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f3-$RKH_CC2`
-			fi
+		for RKHTMPVAR in `egrep '^(File|Link):' "${RKHDAT_FILE}" 2>/dev/null`; do
+			FNAME=`get_fname_from_rkh "${RKHTMPVAR}"`
 
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
@@ -12335,8 +12376,11 @@ File:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID}:${
 						OLDRKHENTRIES="${OLDRKHENTRIES}
 File:${FNAME}:.*"
 					else
+						FTYPE=`echo "${RKHTMPVAR}" | cut -d: -f1`
+						RKH_CC=`echo "${RKHTMPVAR}" | cut -d: -f2`
+
 						OLDRKHENTRIES="${OLDRKHENTRIES}
-File:${RKH_CC}:${FNAME}:.*"
+${FTYPE}:${RKH_CC}:${FNAME}:.*"
 					fi
 				elif [ ! -e "${FNAME}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
@@ -19895,6 +19939,61 @@ check_prop_dat_files() {
 }
 
 
+get_fname_from_rkh() {
+
+	#
+	# This function digs out the pathname of the file from the 'rkhunter.dat' file.
+	#
+
+	RKHFNAME=""
+	RKHTMPLINE=$1
+
+	if [ $FMTVERSION -lt 0 -o -z "${RKHTMPLINE}" ]; then
+		:
+	elif [ $FMTVERSION -eq 0 ]; then
+		RKHFNAME=`echo "${RKHTMPLINE}" | cut -d: -f2`
+	else
+		RKHTMPCCF=`echo "${RKHTMPLINE}" | cut -d: -f2`
+
+		RKHTMPFLD2=`expr 3 + $RKHTMPCCF`
+
+		RKHFNAME=`echo "${RKHTMPLINE}" | cut -d: -f3-${RKHTMPFLD2}`
+	fi
+
+	echo "${RKHFNAME}"
+
+	return
+}
+
+
+get_lname_from_rkh() {
+
+	#
+	# This function digs out the target of the link from the 'rkhunter.dat' file.
+	#
+
+	RKHLNAME=""
+	RKHTMPLINE=$1
+
+	if [ $FMTVERSION -lt 1 -o -z "${RKHTMPLINE}" ]; then
+		:
+	else
+		RKHTMPCCF=`echo "${RKHTMPLINE}" | cut -d: -f2`
+		RKHTMPCC=`expr 12 + $RKHTMPCCF`
+		RKHTMPCCL=`echo "${RKHTMPLINE}" | cut -d: -f$RKHTMPCC`
+
+		RKHTMPFLD1=`expr 1 + $RKHTMPCC`
+		RKHTMPFLD2=`expr $RKHTMPFLD1 + $RKHTMPCCL`
+
+		RKHLNAME=`echo "${RKHTMPLINE}" | cut -d: -f${RKHTMPFLD1}-${RKHTMPFLD2}`
+	fi
+
+	echo "${RKHLNAME}"
+
+	return
+}
+
+
 help() {
 
 	#
@@ -20437,7 +20536,7 @@ RKHDAT_FILE=""
 FMTVERSION=-1
 
 # The current 'rkhunter.dat' file format version.
-CURRENT_FMTVERSION=1
+CURRENT_FMTVERSION=2
 
 # The full pathname of the 'rkhunter_prop_list.dat' file.
 RKH_FILEPROP_LIST=""
@@ -21197,6 +21296,8 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				echo "Relative file or directory name specified: ${FNAME}"
 			elif [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
 				# Filename is absolute
+				test -h "${FNAME}" -a $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ $FMTVERSION -eq 0 ]; then
@@ -21204,7 +21305,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 				else
 					COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-					RKHTMPVAR2=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+					RKHTMPVAR2=`grep "^${FTYPE}:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 					test -n "${RKHTMPVAR2}" && RKHTMPVAR2="${FNAME}"
 				fi
 
@@ -21218,11 +21319,8 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 							IFS=$IFSNL
 
-							for RKHLINE in `grep "^File:[0-9]*:${FNAMEGREP}/" "${RKHDAT_FILE}" 2>/dev/null`; do
-								COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
-								COLON_COUNT=`expr 3 + $COLON_COUNT`
-
-								PATHNAME=`echo "${RKHLINE}" | cut -d: -f3-$COLON_COUNT`
+							for RKHLINE in `egrep "^(File|Link):[0-9]*:${FNAMEGREP}/" "${RKHDAT_FILE}" 2>/dev/null`; do
+								PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 								PATHS="${PATHS}
 ${PATHNAME}"
@@ -21263,11 +21361,8 @@ ${RKHTMPVAR2}"
 
 					IFS=$IFSNL
 
-					for RKHLINE in `grep "^File:[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
-						COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
-						COLON_COUNT=`expr 3 + $COLON_COUNT`
-
-						PATHNAME=`echo "${RKHLINE}" | cut -d: -f3-$COLON_COUNT`
+					for RKHLINE in `egrep "^(File|Link):[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
+						PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 						PATHS="${PATHS}
 ${PATHNAME}"
@@ -21287,11 +21382,8 @@ ${PATHNAME}"
 
 						IFS=$IFSNL
 
-						for RKHLINE in `grep "^File:[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
-							COLON_COUNT=`echo "${RKHLINE}" | cut -d: -f2`
-							COLON_COUNT=`expr 3 + $COLON_COUNT`
-
-							PATHNAME=`echo "${RKHLINE}" | cut -d: -f3-$COLON_COUNT`
+						for RKHLINE in `egrep "^(File|Link):[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
+							PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 							PATHS="${PATHS}
 ${PATHNAME}"

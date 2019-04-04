@@ -59,6 +59,10 @@
    that they are actually files. If they are not a file, then an error
    message is shown and rkhunter exits. Previously the file would have
    been silently ignored.
+ - As part of the file properties check warning message, it will now
+   log and display if the file type has changed. In the case of soft
+   links, it will try and show the link target. If the 'file' is now a
+   soft link, then it will say so (rather than saying it is a file).
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option

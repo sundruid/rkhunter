@@ -1,4 +1,4 @@
-Version:2019031901
+Version:2019040401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -284,12 +284,16 @@ FILE_PROP_SKIP_ALL:All file property checks are now being skipped.
 FILE_PROP_DAT_MISSING_INFO:The file properties check will still run as there are checks that can be performed without the 'rkhunter.dat' file.
 
 FILE_PROP_FILE_NOT_EXIST:The file '$1' does not exist on the system, but it is present in the 'rkhunter.dat' file.
+FILE_PROP_LINK_NOT_EXIST:The link '$1' does not exist on the system, but it is present in the 'rkhunter.dat' file.
+FILE_PROP_LINK_NOT_EXIST_TGT:The link '$1' -> '$2' does not exist on the system, but it is present in the 'rkhunter.dat' file.
 FILE_PROP_WL:Found file '$1': it is whitelisted for the '$2' check.
 FILE_PROP_WL_STR:Found file '$1' and string '$2': they are whitelisted for the '$3' check.
 FILE_PROP_WL_DIR:Found directory '$1': it is whitelisted for the '$2' check.
 FILE_PROP_NO_RKH_REC:The file '$1' exists on the system, but it is not present in the 'rkhunter.dat' file.
+FILE_PROP_NO_RKH_REC_LNK:The link '$1' exists on the system, but it is not present in the 'rkhunter.dat' file.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED2:File: $1
+FILE_PROP_CHANGED3:Link: $1
 FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
 FILE_PROP_NO_SYSHASH_BL:The file is a broken link: $1 -> $2
@@ -297,6 +301,8 @@ FILE_PROP_BROKEN_LINK_WL_TGT:Found a broken link, but the targets existence is w
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
 FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.
 FILE_PROP_IGNORE_PRELINK_DEP_ERR:Ignoring prelink dependency error for file '$1'
+FILE_PROP_FTYPE_FTL:Current file type: link$1    Stored file type: file
+FILE_PROP_FTYPE_LTF:Current file type: file    Stored file type: link$1
 FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
 FILE_PROP_SYSHASH_UNAVAIL_BL:Current hash: Unavailable (possible broken link)
 FILE_PROP_SYSHASH:Current hash: $1
