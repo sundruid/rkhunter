@@ -15740,9 +15740,9 @@ trojan_checks() {
 	FOUND=0
 	FOUNDFILES=""
 
-	MOD_DIRS="/etc/apache2/mods-enabled /etc/httpd/modules /usr/apache/libexec /usr/lib/modules /usr/local/apache/modules"
+	MOD_DIRS="/usr/lib/apache2/modules /etc/httpd/modules /usr/apache/libexec /usr/lib/modules /usr/local/apache/modules"
 
-	HTTPDDIRS="/usr/local/apache/conf /usr/local/etc/apache /etc/apache /etc/httpd/conf"
+	HTTPDDIRS="/usr/local/apache/conf /usr/local/etc/apache /etc/apache /etc/apache2 /etc/apache2/conf-enabled /etc/httpd /etc/httpd/conf /etc/httpd/conf.d"
 
 	for DIR in ${MOD_DIRS} ${HTTPDDIRS}; do
 		if [ -d "${DIR}" ]; then
@@ -15751,11 +15751,13 @@ trojan_checks() {
 			test -f "${DIR}/mod_rootme.so" && FOUNDFILES="${FOUNDFILES} ${DIR}/mod_rootme.so"
 			test -f "${DIR}/mod_rootme2.so" && FOUNDFILES="${FOUNDFILES} ${DIR}/mod_rootme2.so"
 
-			if [ -f "${DIR}/httpd.conf" ]; then
-				if [ -n "`egrep 'mod_rootme2?\.so' \"${DIR}/httpd.conf\"`" ]; then
-					FOUNDFILES="${FOUNDFILES} ${DIR}/httpd.conf"
+			for FNAME in ${DIR}/httpd.conf ${DIR}/apache2.conf; do
+				if [ -f "${FNAME}" ]; then
+					if [ -n "`egrep 'mod_rootme2?\.so' \"${FNAME}\"`" ]; then
+						FOUNDFILES="${FOUNDFILES} ${FNAME}"
+					fi
 				fi
-			fi
+			done
 		fi
 	done
 
