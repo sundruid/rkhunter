@@ -18324,7 +18324,7 @@ ${RKHTMPVAR}"
 
 	for DIR in ${LONGSEARCHDIRS}; do
 		if [ -d "${DIR}" ]; then
-			RKHTMPVAR=`${FIND_CMD} "${DIR}" -name ".*" 2>/dev/null`
+			RKHTMPVAR=`${FIND_CMD} "${DIR}" ! -type c -a ! -type b -a -name ".*" 2>/dev/null`
 			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS}
 ${RKHTMPVAR}"
 		fi
@@ -18358,7 +18358,7 @@ ${RKHTMPVAR}"
 
 		FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 
-		test -n "`echo \"${FTYPE}\" | egrep 'character special|block special|empty'`" && continue
+		test -n "`echo \"${FTYPE}\" | egrep '(character special|block special|empty)'`" && continue
 
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
