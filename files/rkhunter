@@ -18227,7 +18227,7 @@ do_filesystem_check() {
 
 		if [ "${SCAN_MODE_DEV}" = "LAZY" ]; then
 			for RKHTMPVAR in /dev/*; do
-				test -d "${RKHTMPVAR}" -o -h "${RKHTMPVAR}" && continue
+				test -d "${RKHTMPVAR}" -o -h "${RKHTMPVAR}" -o -c "${RKHTMPVAR}" -o -b "${RKHTMPVAR}" && continue
 
 				if [ $FDESCFS -eq 1 ]; then
 					test -n "`echo \"${RKHTMPVAR}/\" | grep '^/dev/fd/[0-9][0-9]*'`" && continue
@@ -18238,12 +18238,12 @@ do_filesystem_check() {
 		else
 			IFS=$IFSNL
 
-			for RKHTMPVAR in `${FIND_CMD} /dev ! -type d -a ! -type l 2>/dev/null`; do
+			for RKHTMPVAR in `${FIND_CMD} /dev ! -type d -a ! -type l -a ! -type c -a ! -type b -a ! -name '.*' 2>/dev/null`; do
 				if [ $FDESCFS -eq 1 ]; then
 					test -n "`echo \"${RKHTMPVAR}/\" | grep '^/dev/fd/[0-9][0-9]*'`" && continue
 				fi
 
-				test -z "`echo \"${RKHTMPVAR}\" | grep '/\.[^/]*$'`" && do_dev_whitelist_check
+				do_dev_whitelist_check
 			done
 
 			IFS=$RKHIFS
