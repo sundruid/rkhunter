@@ -29,7 +29,9 @@ can be run as a cron job or from the command\-line.
 .PP
 .SH COMMAND OPTIONS
 If no command option is given, then \fB\-\-help\fP is assumed.
-\fBrkhunter\fP will return a non-zero exit code if any error or warning occurs.
+\fBrkhunter\fP will set the exit code to zero if there are no errors or warnings,
+otherwise it is set to one. Some options may cause a different non-zero exit
+code to be set. The option descriptions below will indicate if they do this.
 
 .PP
 .IP "\fB\-c, \-\-check\fP"
@@ -140,7 +142,7 @@ order to check all the configured options, then use the \fB--enable all
 --disable none\fP options on the command line. Additionally, the program will
 check to see if there are any unrecognised configuration options. If any
 configuration problems are found, then they will be displayed and the return
-code will be set to 1.
+code will be set to one.
 
 It is suggested that this option is used whenever the configuration
 file(s) have been changed.
