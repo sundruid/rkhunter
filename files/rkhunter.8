@@ -432,6 +432,26 @@ THREE=three,three. Simple globbing (/dev/shm/file-*) works.
 .IP \fBtrojans\fP
 
 
+.SH EXIT STATUS
+If there was an error or warning from whatever command option \fBrkhunter\fP
+was running, then the exit status will be 1. When there are no errors or warnings
+the exit status will be 0, but some options (see below) may modify this meaning
+slightly or may set an exit status of 2.
+
+The \fB\-\-update\fP command option will set an exit status of 2 if there was no
+error but updates were installed. An exit status of 0 means that there was no error
+and no updates required.
+
+The \fB\-\-versioncheck\fP command option will set an exit status of 2 if there
+was no error but a new version is available. An exit status of 0 means that there
+was no error and no new version available.
+
+When multiple command options are specified on the same command-line, an exit
+status of 1 takes priority over any subsequent exit status. Where applicable,
+an exit status of 2 will only be set if the exit status is currently 0. That is,
+2 will only be set if there have been no errors or warnings from any previously
+actioned command option.
+
 .SH FILES
 (For a default installation)
 .br

@@ -32,6 +32,7 @@
  - Added test for Rocke Miner cryptomining malware.
  - Added test for Linux.BtcMine.174 trojan.
  - Added test for MALXMR.UWEIU coinminer trojan.
+ - Added an EXIT STATUS section to the man page.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in
