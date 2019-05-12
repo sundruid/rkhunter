@@ -328,7 +328,8 @@ this one, to force only specific items to be displayed.
 .IP "\fB\-\-rwo, \-\-report\-warnings\-only\fP"
 This option causes only warning messages to be displayed. This can be
 useful when \fBrkhunter\fP is run via cron. Other options may be used to
-force other items of information to be displayed.
+force other items of information to be displayed. This option will override
+the \fB\-q\fP option.
 
 .IP "\fB\-\-sk, \-\-skip\-keypress\fP"
 When the \fB\-\-check\fP command option is used, after certain sections of
@@ -343,7 +344,8 @@ the tests without prompting the user again (as if this option had been given).
 
 .IP \fB\-\-summary\fP
 This option will cause the summary of test results to be displayed. This is
-the default.
+the default. Specifying this option will cause it to override the \fB\-q\fP
+option.
 
 .IP "\fB\-\-syslog [facility.priority]\fP"
 When the \fB\-\-check\fP command option is used, this option will cause the
