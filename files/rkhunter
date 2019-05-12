@@ -1457,7 +1457,7 @@ suckit_extra_checks() {
 
 		SKDET=0
 		SKDETOPT=""
-		SKDETVER=`${SKDET_CMD} -v 2>&1 | grep '^skdet.v' | ${AWK_CMD} -F'.' '{ print $1 }'`
+		SKDETVER=`${SKDET_CMD} -v 2>&1 | grep '^skdet.v' | cut -d. -f1`
 
 		case "${SKDETVER}" in
 		*v0)
@@ -1473,7 +1473,7 @@ suckit_extra_checks() {
 		esac
 
 		if [ $SKDET -eq 0 ]; then
-			SKDET_OUTPUT=`${SKDET_CMD} ${SKDETOPT} 2>&1 | tr -s ' ' | grep -i 'invis'`
+			SKDET_OUTPUT=`${SKDET_CMD} ${SKDETOPT} 2>&1 | grep -i 'invis' | tr -s ' '`
 
 			test -n "${SKDET_OUTPUT}" && SKDET=1
 		fi
@@ -6431,7 +6431,7 @@ rkh_dat_get_os_info() {
 
 			case "${RELEASE}" in
 			/etc/os-release|/usr/lib/os-release)
-				OSNAME=`grep '^PRETTY_NAME=' "${RELEASE}" | sed -e 's/PRETTY_NAME=//' | tr -d '"'`
+				OSNAME=`grep '^PRETTY_NAME=' "${RELEASE}" | cut -d= -f2- | tr -d '"'`
 
 				if [ -z "${OSNAME}" ]; then
 					RKHTMPVAR=`grep '^NAME=' "${RELEASE}" | sed -e 's/NAME=//'`;
@@ -6447,7 +6447,7 @@ rkh_dat_get_os_info() {
 			/etc/lsb-release)
 				RKH_IN_LSB=1
 				RKH_LSB_SEEN=1
-				OSNAME=`grep '^DISTRIB_DESCRIPTION=' "${RELEASE}" | sed -e 's/DISTRIB_DESCRIPTION=//' | tr -d '"'`
+				OSNAME=`grep '^DISTRIB_DESCRIPTION=' "${RELEASE}" | cut -d= -f2- | tr -d '"'`
 				;;
 			/etc/gentoo-release)
 				if [ -h "/etc/make.profile" ]; then
@@ -18687,7 +18687,7 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 			case "${APPLICATION}" in
 			exim)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -bV 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | grep '^Exim version [0-9]' | ${AWK_CMD} '{ print $3 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep '^Exim version [0-9]' | cut -d' ' -f3`
 				;;
 			gpg)
 				WHOLE_VERSION=`${APP_CMD_FOUND} --version --homedir / 2>/dev/null`
@@ -21649,7 +21649,7 @@ if [ $NOLOG -eq 0 ]; then
 	display --to LOG --type INFO OPSYS "${OPERATING_SYSTEM}"
 
 	if [ $FMTVERSION -ge 0 ]; then
-		RKHTMPVAR=`grep '^OS:' "${RKHDAT_FILE}" 2>/dev/null | sed -e 's/^OS://'`
+		RKHTMPVAR=`grep '^OS:' "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2-`
 
 		if [ -n "${RKHTMPVAR}" ]; then
 			display --to LOG --type INFO PROPUPD_OSNAME_FOUND "${RKHTMPVAR}"
