@@ -22183,7 +22183,7 @@ test $CHECK -eq 1 -o $ENDIS_OPT -eq 1 && do_system_check
 
 COPIEDLOG=""
 
-if [ $RET_CODE -gt 0 -o $WARNING_COUNT -gt 0 ]; then
+if [ $RET_CODE -eq 1 -o $WARNING_COUNT -gt 0 ]; then
 	if [ $COPY_LOG_ON_ERROR -eq 1 -a $NOLOG -eq 0 ]; then
 		COPIEDLOG="${RKHLOGFILE}.`date +%Y-%m-%d_%H:%M:%S`"
 

@@ -87,6 +87,11 @@
    was not detected when running the file properties check.
  - Improved checks that the file properties '.dat' files are actually
    files before accessing them.
+ - If the COPY_LOG_ON_ERROR option was set, and the '--update' or
+   '--versioncheck' command options returned an exit status of 2, then
+   the log file was copied when it shouldn't have been. (An exit
+   status of 2 does not indicate an error.) The log file is no longer
+   copied when the exit status is set to 2.
 
  --
 
