@@ -19431,7 +19431,8 @@ ${LINKDIR}"
 		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-posix unhide-tcp"
 		;;
 	Linux)
-		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp numfmt"
+		PROP_FILE_LIST="${PROP_FILE_LIST} unhide unhide-linux unhide-posix unhide-tcp
+				numfmt inotifywait inotifywatch"
 
 		if [ -n "`echo \"${UNAME_R}\" | grep '^2\.6'`" ]; then
 			PROP_FILE_LIST="${PROP_FILE_LIST} unhide-linux26"

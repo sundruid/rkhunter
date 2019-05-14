@@ -33,6 +33,8 @@
  - Added test for Linux.BtcMine.174 trojan.
  - Added test for MALXMR.UWEIU coinminer trojan.
  - Added an EXIT STATUS section to the man page.
+ - Added the 'inotifywait' and 'inotifywatch' commands to the list
+   of standard Linux commands to be checked for file properties.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in
