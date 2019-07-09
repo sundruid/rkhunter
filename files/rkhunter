@@ -935,7 +935,7 @@ check_paths() {
 		if [ $MUSTEXIST -eq 1 ]; then
 			ERRCODE=1
 
-			echo "Invalid ${OPT_NAME} configuration option: No filename given, but it must exist."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: No filename given, but it must exist."
 		fi
 
 		return
@@ -959,7 +959,7 @@ check_paths() {
 
 		RKHTMPVAR=`make_space_list "${RKHTMPVAR}"`
 
-		echo "Invalid ${OPT_NAME} configuration option: Pathname begins with a hyphen: ${RKHTMPVAR}"
+		test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Pathname begins with a hyphen: ${RKHTMPVAR}"
 		return
 	fi
 
@@ -990,7 +990,7 @@ check_paths() {
 
 			RKHTMPVAR=`make_space_list "${RKHTMPVAR}"`
 
-			echo "Invalid ${OPT_NAME} configuration option: Pathname contains wildcard characters: ${RKHTMPVAR}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Pathname contains wildcard characters: ${RKHTMPVAR}"
 			return
 		fi
 	fi
@@ -1032,7 +1032,7 @@ check_paths() {
 		if [ -n "`echo \"${FNAME}\" | egrep '(^[./]*$)|[;&]|/\.\./'`" ]; then
 			ERRCODE=1
 
-			echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
 			continue
 		fi
 
@@ -1047,7 +1047,8 @@ check_paths() {
 				continue
 			else
 				ERRCODE=1
-				echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAME}"
+
+				test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAME}"
 			fi
 		elif [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 			#
@@ -1066,7 +1067,7 @@ check_paths() {
 
 			ERRCODE=1
 
-			echo "Invalid ${OPT_NAME} configuration option: Simple filename: ${FNAME}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Simple filename: ${FNAME}"
 		else
 			#
 			# It's an absolute pathname. This could be a file, a directory,
@@ -1094,7 +1095,7 @@ check_paths() {
 				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|RTKT_DIR_WHITELIST|LOCKDIR)
 					ERRCODE=1
 
-					echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
 					;;
 				esac
 			elif [ -d "${FNAME}" ]; then
@@ -1110,7 +1111,7 @@ check_paths() {
 				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|SHARED_LIB_WHITELIST|*_CMD)
 					ERRCODE=1
 
-					echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
 					;;
 				esac
 			elif [ -h "${FNAME}" ]; then
@@ -1123,7 +1124,7 @@ check_paths() {
 				if [ $NOBROKENLINK -eq 1 ]; then
 					ERRCODE=1
 
-					echo "Invalid ${OPT_NAME} configuration option: Broken link found: ${FNAME}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Broken link found: ${FNAME}"
 				fi
 			elif [ -e "${FNAME}" ]; then
 				#
@@ -1149,7 +1150,7 @@ check_paths() {
 					;;
 				esac
 
-				echo "Invalid ${OPT_NAME} configuration option: Not a ${RKHTMPVAR2}: ${FNAME}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a ${RKHTMPVAR2}: ${FNAME}"
 			else
 				#
 				# Some pathnames don't need to exist.
@@ -1173,7 +1174,7 @@ check_paths() {
 				if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					ERRCODE=1
 
-					echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: `name2text \"${FNAME}\"`"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: `name2text \"${FNAME}\"`"
 				fi
 			fi
 		fi
@@ -1269,7 +1270,7 @@ check_is_digit() {
 	if [ "${RKHTMPVAR}" = "0" -a "${OTHERS}" = "ANY1" ]; then
 		ERRCODE=1
 
-		echo "Invalid ${OPT_NAME} configuration option: not a valid number: ${RKHTMPVAR}"
+		test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: not a valid number: ${RKHTMPVAR}"
 	elif [ "${RKHTMPVAR}" != "0" -a "${RKHTMPVAR}" != "1" ]; then
 		#
 		# Some options may allow a slightly different value.
@@ -1287,7 +1288,7 @@ check_is_digit() {
 
 		ERRCODE=1
 
-		echo "Invalid ${OPT_NAME} configuration option: not a valid number: ${RKHTMPVAR}"
+		test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: not a valid number: ${RKHTMPVAR}"
 	fi
 
 	return
@@ -1779,7 +1780,7 @@ check_required_commands() {
 
 		if [ $SEEN -eq 0 ]; then
 			LEAVE=1
-			echo "The command '${CMD}' must be present on the system in order to run rkhunter."
+			test $QUIET_CONFIG -eq 0 && echo "The command '${CMD}' must be present on the system in order to run rkhunter."
 		fi
 	done
 
@@ -2004,18 +2005,22 @@ get_installdir_option() {
 	LEAVE=0
 	ERRCODE=0
 
+	ERRMSG=""
+
 	RKHINSTALLDIR=`get_option single INSTALLDIR` || exit $?
 
 	if [ -z "${RKHINSTALLDIR}" ]; then
 		LEAVE=1
-		echo "Invalid INSTALLDIR configuration option - no installation directory specified."
+		ERRMSG="Invalid INSTALLDIR configuration option - no installation directory specified."
 	elif [ ! -d "${RKHINSTALLDIR}" ]; then
 		LEAVE=1
-		echo "Installation directory does not exist: ${RKHINSTALLDIR}"
+		ERRMSG="Installation directory does not exist: ${RKHINSTALLDIR}"
 	elif [ ! -r "${RKHINSTALLDIR}" ]; then
 		LEAVE=1
-		echo "Installation directory is not readable: ${RKHINSTALLDIR}"
+		ERRMSG="Installation directory is not readable: ${RKHINSTALLDIR}"
 	fi
+
+	test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 
 
 	if [ $LEAVE -eq 1 ]; then
@@ -2046,7 +2051,7 @@ get_language_option() {
 
 		if [ -z "${LANGUAGE}" ]; then
 			LEAVE=1
-			echo "Invalid '--language' option - no language given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--language' option - no language given."
 		fi
 	else
 		LANGUAGE=`get_option single LANGUAGE` || exit $?
@@ -2065,7 +2070,7 @@ get_language_option() {
 
 	if [ ! -d "${DB_PATH}/i18n" ]; then
 		LEAVE=1
-		echo "The internationalisation directory does not exist: ${DB_PATH}/i18n"
+		test $QUIET_CONFIG -eq 0 && echo "The internationalisation directory does not exist: ${DB_PATH}/i18n"
 	fi
 
 	#
@@ -2080,16 +2085,22 @@ get_language_option() {
 				RKHLANGUPDT=1
 			else
 				LEAVE=1
-				echo "The language specified is not available: ${LANGUAGE}"
-				echo "Use the command 'rkhunter --lang en --list languages' to see the list of available languages."
+
+				if [ $QUIET_CONFIG -eq 0 ]; then
+					echo "The language specified is not available: ${LANGUAGE}"
+					echo "Use the command 'rkhunter --lang en --list languages' to see the list of available languages."
+				fi
 			fi
 		elif [ ! -s "${DB_PATH}/i18n/en" ]; then
 			if [ $UPDATE_ONLY -eq 1 ]; then
 				RKHLANGUPDT=1
 			else
 				LEAVE=1
-				echo "The English language file must be present: ${DB_PATH}/i18n/en"
-				echo "If it has been deleted, then you will need to run 'rkhunter --update' with no other options."
+
+				if [ $QUIET_CONFIG -eq 0 ]; then
+					echo "The English language file must be present: ${DB_PATH}/i18n/en"
+					echo "If it has been deleted, then you will need to run 'rkhunter --update' with no other options."
+				fi
 			fi
 		fi
 	fi
@@ -2159,7 +2170,7 @@ get_logfile_option() {
 
 		if [ -z "${RKHLOGFILE}" ]; then
 			LEAVE=1
-			echo "Invalid '--logfile' option - no logfile name given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--logfile' option - no logfile name given."
 		fi
 	else
 		RKHLOGFILE=`get_option single LOGFILE` || exit $?
@@ -2170,7 +2181,7 @@ get_logfile_option() {
 			if [ -z "${RKHLOGFILE}" ]; then
 				RET_CODE=1
 				RKHLOGFILE="${DFLT_LOGFILE}"
-				echo "The default logfile will be used: ${RKHLOGFILE}"
+				test $QUIET_CONFIG -eq 0 && echo "The default logfile will be used: ${RKHLOGFILE}"
 			fi
 		else
 			LEAVE=1
@@ -2186,6 +2197,8 @@ get_logfile_option() {
 	elif [ "${RKHLOGFILE}" = "/dev/null" ]; then
 		APPEND_LOG=0
 	else
+		ERRMSG=""
+
 		LOGDIR=`echo "${RKHLOGFILE}" | sed -e 's:/[^/][^/]*$::'`
 
 		if [ -z "`echo \"${LOGDIR}\" | grep '/'`" ]; then
@@ -2194,27 +2207,32 @@ get_logfile_option() {
 
 		if [ "${LOGDIR}" = "${RKHLOGFILE}" ]; then
 			LEAVE=1
-			echo "No log filename given: ${RKHLOGFILE}"
+			ERRMSG="No log filename given: ${RKHLOGFILE}"
 		elif [ ! -e "${LOGDIR}" ]; then
 			LEAVE=1
-			echo "Logfile directory does not exist: ${RKHLOGFILE}"
+			ERRMSG="Logfile directory does not exist: ${RKHLOGFILE}"
 		elif [ ! -d "${LOGDIR}" ]; then
 			LEAVE=1
-			echo "Logfile directory is not a directory: ${RKHLOGFILE}"
+			ERRMSG="Logfile directory is not a directory: ${RKHLOGFILE}"
 		elif [ ! -w "${LOGDIR}" ]; then
 			LEAVE=1
-			echo "Logfile directory is not writable: ${RKHLOGFILE}"
+			ERRMSG="Logfile directory is not writable: ${RKHLOGFILE}"
 		elif [ ! -r "${LOGDIR}" ]; then
 			LEAVE=1
-			echo "Logfile directory is not readable: ${RKHLOGFILE}"
+			ERRMSG="Logfile directory is not readable: ${RKHLOGFILE}"
 		elif [ -h "${RKHLOGFILE}" ]; then
 			LEAVE=1
-			echo "Logfile is a symbolic link: ${RKHLOGFILE}"
-			echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
+
+			if [ $QUIET_CONFIG -eq 0 ]; then
+				echo "Logfile is a symbolic link: ${RKHLOGFILE}"
+				echo "This is a security problem. The link points to another file, and that file is about to be modified by rkhunter."
+			fi
 		elif [ -e "${RKHLOGFILE}" -a ! -f "${RKHLOGFILE}" ]; then
 			LEAVE=1
-			echo "Logfile already exists but it is not a file: ${RKHLOGFILE}"
+			ERRMSG="Logfile already exists but it is not a file: ${RKHLOGFILE}"
 		fi
+
+		test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 	fi
 
 
@@ -2290,7 +2308,7 @@ get_tmpdir_option() {
 
 		if [ -z "${RKHTMPDIR}" ]; then
 			LEAVE=1
-			echo "Invalid '--tmpdir' option - no directory name given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--tmpdir' option - no directory name given."
 		fi
 	else
 		RKHTMPDIR=`get_option single TMPDIR` || exit $?
@@ -2301,7 +2319,7 @@ get_tmpdir_option() {
 			if [ -z "${RKHTMPDIR}" ]; then
 				RET_CODE=1
 				RKHTMPDIR="${RKHINSTALLDIR}/lib/rkhunter/tmp"
-				echo "The default temporary directory will be used: ${RKHTMPDIR}"
+				test $QUIET_CONFIG -eq 0 && echo "The default temporary directory will be used: ${RKHTMPDIR}"
 			fi
 		else
 			LEAVE=1
@@ -2312,29 +2330,39 @@ get_tmpdir_option() {
 	# Now check that the given option is usable.
 	#
 
+	ERRMSG=""
+
 	if [ $LEAVE -eq 1 ]; then
 		:
 	elif [ ! -e "${RKHTMPDIR}" ]; then
 		LEAVE=1
-		echo "Temporary directory does not exist: ${RKHTMPDIR}"
+		ERRMSG="Temporary directory does not exist: ${RKHTMPDIR}"
 	elif [ ! -d "${RKHTMPDIR}" ]; then
 		LEAVE=1
-		echo "Temporary directory is not a directory: ${RKHTMPDIR}"
+		ERRMSG="Temporary directory is not a directory: ${RKHTMPDIR}"
 	elif [ ! -w "${RKHTMPDIR}" ]; then
 		LEAVE=1
-		echo "Temporary directory is not writable: ${RKHTMPDIR}"
+		ERRMSG="Temporary directory is not writable: ${RKHTMPDIR}"
 	elif [ ! -r "${RKHTMPDIR}" ]; then
 		LEAVE=1
-		echo "Temporary directory is not readable: ${RKHTMPDIR}"
+		ERRMSG="Temporary directory is not readable: ${RKHTMPDIR}"
 	elif [ "${RKHTMPDIR}" = "/tmp" -o "${RKHTMPDIR}" = "/var/tmp" ]; then
 		LEAVE=1
-		echo "Do not use ${RKHTMPDIR} as the temporary directory."
-		echo "This directory will be used by rkhunter to contain system files, so the directory must be secure."
+
+		if [ $QUIET_CONFIG -eq 0 ]; then
+			echo "Do not use ${RKHTMPDIR} as the temporary directory."
+			echo "This directory will be used by rkhunter to contain system files, so the directory must be secure."
+		fi
 	elif [ "${RKHTMPDIR}" = "/etc" ]; then
 		LEAVE=1
-		echo "Do not use ${RKHTMPDIR} as the temporary directory."
-		echo "This directory will be used by rkhunter to copy and delete certain system files."
+
+		if [ $QUIET_CONFIG -eq 0 ]; then
+			echo "Do not use ${RKHTMPDIR} as the temporary directory."
+			echo "This directory will be used by rkhunter to copy and delete certain system files."
+		fi
 	fi
+
+	test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 
 
 	if [ $LEAVE -eq 1 ]; then
@@ -2365,7 +2393,7 @@ get_dbdir_option() {
 
 		if [ -z "${DB_PATH}" ]; then
 			LEAVE=1
-			echo "Invalid '--dbdir' option - no directory name given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--dbdir' option - no directory name given."
 		fi
 	else
 		DB_PATH=`get_option single DBDIR` || exit $?
@@ -2376,7 +2404,7 @@ get_dbdir_option() {
 			if [ -z "${DB_PATH}" ]; then
 				RET_CODE=1
 				DB_PATH="${RKHINSTALLDIR}/lib/rkhunter/db"
-				echo "The default database directory will be used: ${DB_PATH}"
+				test $QUIET_CONFIG -eq 0 && echo "The default database directory will be used: ${DB_PATH}"
 			fi
 		else
 			LEAVE=1
@@ -2387,23 +2415,27 @@ get_dbdir_option() {
 	# Now check that the given option is usable.
 	#
 
+	ERRMSG=""
+
 	if [ $LEAVE -eq 1 ]; then
 		:
 	elif [ ! -e "${DB_PATH}" ]; then
 		LEAVE=1
-		echo "Database directory does not exist: ${DB_PATH}"
+		ERRMSG="Database directory does not exist: ${DB_PATH}"
 	elif [ ! -d "${DB_PATH}" ]; then
 		LEAVE=1
-		echo "Database directory is not a directory: ${DB_PATH}"
+		ERRMSG="Database directory is not a directory: ${DB_PATH}"
 	elif [ ! -r "${DB_PATH}" ]; then
 		LEAVE=1
-		echo "Database directory is not readable: ${DB_PATH}"
+		ERRMSG="Database directory is not readable: ${DB_PATH}"
 	elif [ $PROP_UPDATE -eq 1 -o $UPDATE -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
 		if [ ! -w "${DB_PATH}" ]; then
 			LEAVE=1
-			echo "Database directory is not writable: ${DB_PATH}"
+			ERRMSG="Database directory is not writable: ${DB_PATH}"
 		fi
 	fi
+
+	test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 
 
 	if [ $LEAVE -eq 0 ]; then
@@ -2505,7 +2537,7 @@ get_bindir_option() {
 
 		if [ "${BINPATHS}" = " " ]; then
 			LEAVE=1
-			echo "Invalid '--bindir' option - no directory names given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--bindir' option - no directory names given."
 		fi
 	else
 		BINPATHS=`get_option space-list BINDIR` || exit $?
@@ -2567,7 +2599,7 @@ get_bindir_option() {
 			elif [ -z "`echo ${DIR} | grep '^/'`" ]; then
 				LEAVE=1
 				test $BINDIR_OPT -eq 1 && RKHTMPVAR2="'--bindir'" || RKHTMPVAR2="BINDIR configuration"
-				echo "Invalid ${RKHTMPVAR2} option: Invalid directory found: ${DIR}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid ${RKHTMPVAR2} option: Invalid directory found: ${DIR}"
 			elif [ -e "${DIR}" ]; then
 				if [ -d "${DIR}" ]; then
 					test -h "${DIR}" && BINISLINK=1
@@ -2580,7 +2612,7 @@ get_bindir_option() {
 				else
 					LEAVE=1
 					test $BINDIR_OPT -eq 1 && RKHTMPVAR2="'--bindir'" || RKHTMPVAR2="BINDIR configuration"
-					echo "Invalid ${RKHTMPVAR2} option: Not a directory: ${DIR}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${RKHTMPVAR2} option: Not a directory: ${DIR}"
 				fi
 			fi
 		done
@@ -2632,7 +2664,7 @@ get_scriptdir_option() {
 	if [ $ERRCODE -eq 0 ]; then
 		if [ -z "${SCRIPT_PATH}" ]; then
 			LEAVE=1
-			echo "The SCRIPTDIR configuration option has not been set by the installer."
+			test $QUIET_CONFIG -eq 0 && echo "The SCRIPTDIR configuration option has not been set by the installer."
 		fi
 	else
 		LEAVE=1
@@ -2646,7 +2678,7 @@ get_scriptdir_option() {
 		:
 	elif [ ! -r "${SCRIPT_PATH}" ]; then
 		LEAVE=1
-		echo "Script directory is not readable: ${SCRIPT_PATH}"
+		test $QUIET_CONFIG -eq 0 && echo "Script directory is not readable: ${SCRIPT_PATH}"
 	fi
 
 
@@ -2697,7 +2729,7 @@ get_rootdir_option() {
 	RKHTMPVAR=`get_option single ROOTDIR` || exit $?
 
 	if [ -n "${RKHTMPVAR}" ]; then
-		echo "The ROOTDIR configuration option is now deprecated."
+		test $QUIET_CONFIG -eq 0 && echo "The ROOTDIR configuration option is now deprecated."
 	fi
 
 	return
@@ -2791,7 +2823,7 @@ get_mailonwarn_option() {
 				fi
 			else
 				LEAVE=1
-				echo "Invalid MAIL_CMD configuration option: command is non-existent or not executable: ${MCMD}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid MAIL_CMD configuration option: command is non-existent or not executable: ${MCMD}"
 			fi
 		else
 			LEAVE=1
@@ -2855,7 +2887,7 @@ get_webcmd_option() {
 				test -n "${BASENAME_CMD}" && RKHWEBCMD_BASE=`${BASENAME_CMD} "${WC}"` || RKHWEBCMD_BASE=`echo "${WC}" | sed -e 's:^.*/::'`
 			else
 				LEAVE=1
-				echo "Invalid WEB_CMD configuration option: command is non-existent or not executable: ${WCMD}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid WEB_CMD configuration option: command is non-existent or not executable: ${WCMD}"
 			fi
 		else
 			LEAVE=1
@@ -2890,7 +2922,7 @@ get_syslog_option() {
 
 		if [ -z "${USE_SYSLOG}" ]; then
 			LEAVE=1
-			echo "Invalid '--syslog' option - no facility/priority names given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--syslog' option - no facility/priority names given."
 		fi
 	else
 		USE_SYSLOG=`get_option single USE_SYSLOG` || exit $?
@@ -2911,7 +2943,7 @@ get_syslog_option() {
 				:
 			elif [ -z "`echo \"${USE_SYSLOG}\" | grep '^[a-z][a-z0-7]*\.[a-z][a-z]*$'`" ]; then
 				LEAVE=1
-				echo "Invalid syslog facility/priority value: ${USE_SYSLOG}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid syslog facility/priority value: ${USE_SYSLOG}"
 			fi
 
 			if [ $LEAVE -eq 0 -a "${USE_SYSLOG}" != "none" ]; then
@@ -2929,7 +2961,7 @@ get_syslog_option() {
 
 				if [ $FOUND -eq 0 ]; then
 					LEAVE=1
-					echo "Invalid syslog facility name: ${SYSLOG_F}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid syslog facility name: ${SYSLOG_F}"
 				fi
 
 				FOUND=0
@@ -2943,7 +2975,7 @@ get_syslog_option() {
 
 				if [ $FOUND -eq 0 ]; then
 					LEAVE=1
-					echo "Invalid syslog priority name: ${SYSLOG_P}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid syslog priority name: ${SYSLOG_P}"
 				fi
 			fi
 		fi
@@ -3022,7 +3054,7 @@ get_ssh_options() {
 		if [ $ERRCODE -eq 0 ]; then
 			if [ ! -r "${SSH_CONFIG_DIR}" ]; then
 				LEAVE=1
-				echo "The SSH configuration file directory is not readable: ${SSH_CONFIG_DIR}"
+				test $QUIET_CONFIG -eq 0 && echo "The SSH configuration file directory is not readable: ${SSH_CONFIG_DIR}"
 			fi
 		else
 			LEAVE=1
@@ -3218,8 +3250,11 @@ get_locking_options() {
 
 		if [ -z "${LOCKDIR}" ]; then
 			LEAVE=1
-			echo "No suitable directory found for LOCKDIR configuration option."
-			echo "Locking directories checked: ${PATHNAMES}"
+
+			if [ $QUIET_CONFIG -eq 0 ]; then
+				echo "No suitable directory found for LOCKDIR configuration option."
+				echo "Locking directories checked: ${PATHNAMES}"
+			fi
 		fi
 	fi
 
@@ -3227,15 +3262,19 @@ get_locking_options() {
 	# Check that the directory we have is usable.
 	#
 
+	ERRMSG=""
+
 	if [ $LEAVE -eq 1 ]; then
 		:
 	elif [ ! -w "${LOCKDIR}" ]; then
 		LEAVE=1
-		echo "The LOCKDIR directory is not writable: `name2text \"${LOCKDIR}\"`"
+		ERRMSG="The LOCKDIR directory is not writable: `name2text \"${LOCKDIR}\"`"
 	elif [ ! -r "${LOCKDIR}" ]; then
 		LEAVE=1
-		echo "The LOCKDIR directory is not readable: `name2text \"${LOCKDIR}\"`"
+		ERRMSG="The LOCKDIR directory is not readable: `name2text \"${LOCKDIR}\"`"
 	fi
+
+	test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 
 
 	#
@@ -3305,8 +3344,7 @@ get_scanmode_option() {
 
 		if [ "${SCANROOTKITMODE}" != "THOROUGH" ]; then
 			LEAVE=1
-
-			echo "Invalid SCANROOTKITMODE configuration option: ${SCANROOTKITMODE}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid SCANROOTKITMODE configuration option: ${SCANROOTKITMODE}"
 		fi
 	else
 		SCANROOTKITMODE=""
@@ -3368,8 +3406,7 @@ get_shell_options() {
 				shopt -s globstar
 			else
 				LEAVE=1
-
-				echo "The current shell does not support the 'shopt' command for the GLOBSTAR configuration option."
+				test $QUIET_CONFIG -eq 0 && echo "The current shell does not support the 'shopt' command for the GLOBSTAR configuration option."
 			fi
 		fi
 	fi
@@ -3412,7 +3449,7 @@ sort_test_lists() {
 
 	if [ "${ENABLE_TESTS}" = "${DISABLE_TESTS}" ]; then
 		test $ENDIS_OPT -eq 0 && RKHTMPVAR=" configured" || RKHTMPVAR=""
-		echo "The${RKHTMPVAR} enabled and disabled tests are the same."
+		test $QUIET_CONFIG -eq 0 && echo "The${RKHTMPVAR} enabled and disabled tests are the same."
 
 		if [ $ENDIS_OPT -eq 1 -o $CONFIG_CHECK -eq 0 ]; then
 			exit 1
@@ -3446,20 +3483,24 @@ check_test_options() {
 	RKHTMPVAR=" `echo ${KNOWN_TESTS}` "
 
 	for TEST_NAME in ${ENABLE_TESTS}; do
+		ERRMSG=""
+
 		if [ "${TEST_NAME}" = "all" ]; then
 			SEEN=1
 		elif [ "${TEST_NAME}" = "none" ]; then
 			if [ $ENABLE_OPT -eq 1 ]; then
 				LEAVE=1
-				echo "'none' cannot be used in the enabled test list."
+				ERRMSG="'none' cannot be used in the enabled test list."
 			else
 				LEAVE=1
-				echo "'none' cannot be used in the configured enabled test list."
+				ERRMSG="'none' cannot be used in the configured enabled test list."
 			fi
 		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
 			LEAVE=1
-			echo "Unknown enabled test name given: ${TEST_NAME}"
+			ERRMSG="Unknown enabled test name given: ${TEST_NAME}"
 		fi
+
+		test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 	done
 
 	test $SEEN -eq 1 && ENABLE_TESTS="all"
@@ -3473,28 +3514,36 @@ check_test_options() {
 	SEEN=0
 
 	for TEST_NAME in ${CL_DISABLE_TESTS}; do
+		ERRMSG=""
+
 		if [ "${TEST_NAME}" = "none" ]; then
 			SEEN=1
 		elif [ "${TEST_NAME}" = "all" ]; then
 			LEAVE=1
-			echo "'all' cannot be used in the disabled test list."
+			ERRMSG="'all' cannot be used in the disabled test list."
 		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
 			LEAVE=1
-			echo "Unknown disabled test name given: ${TEST_NAME}"
+			ERRMSG="Unknown disabled test name given: ${TEST_NAME}"
 		fi
+
+		test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 	done
 
 	if [ $USECF -eq 1 ]; then
 		for TEST_NAME in ${CONFIG_DISABLE_TESTS}; do
+			ERRMSG=""
+
 			if [ "${TEST_NAME}" = "none" ]; then
 				SEEN=1
 			elif [ "${TEST_NAME}" = "all" ]; then
 				LEAVE=1
-				echo "'all' cannot be used in the configured disabled test list."
+				ERRMSG="'all' cannot be used in the configured disabled test list."
 			elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
 				LEAVE=1
-				echo "Unknown disabled test name in the configuration file: ${TEST_NAME}"
+				ERRMSG="Unknown disabled test name in the configuration file: ${TEST_NAME}"
 			fi
+
+			test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 		done
 	fi
 
@@ -3649,10 +3698,10 @@ check_test_options() {
 
 			if [ $ENABLE_OPT -eq 1 ]; then
 				LEAVE=1
-				echo "Invalid enabled test list - no tests to run."
+				test $QUIET_CONFIG -eq 0 && echo "Invalid enabled test list - no tests to run."
 			else
 				LEAVE=1
-				echo "Invalid configured enabled test list - no tests to run."
+				test $QUIET_CONFIG -eq 0 && echo "Invalid configured enabled test list - no tests to run."
 			fi
 
 			if [ $LEAVE -eq 1 ]; then
@@ -3691,7 +3740,7 @@ get_enable_option() {
 
 		if [ -z "${ENABLE_TESTS}" ]; then
 			LEAVE=1
-			echo "Invalid '--enable' option - no test names given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--enable' option - no test names given."
 		fi
 
 
@@ -3768,7 +3817,7 @@ get_disable_option() {
 
 		if [ -z "${CL_DISABLE_TESTS}" ]; then
 			LEAVE=1
-			echo "Invalid '--disable' option - no test names given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--disable' option - no test names given."
 		fi
 	fi
 
@@ -3890,13 +3939,15 @@ get_port_options() {
 		#
 
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
+			ERRMSG=""
+
 			if [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
 				PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
 				PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
 
 				if [ $PORT -gt 65535 ]; then
 					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
+					ERRMSG="Invalid PORT_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
 				fi
 
 				PORT_WHITELIST="${PORT_WHITELIST}
@@ -3906,12 +3957,14 @@ ${PROTO}:${PORT}"
 					PORT_WHITELIST_ALL_TRUSTED=1
 				else
 					LEAVE=1
-					echo "Invalid PORT_WHITELIST configuration option - '*' requires the 'lsof' command."
+					ERRMSG="Invalid PORT_WHITELIST configuration option - '*' requires the 'lsof' command."
 				fi
 			else
 				LEAVE=1
-				echo "Invalid entry specified in PORT_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
+				ERRMSG="Invalid entry specified in PORT_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
 			fi
+
+			test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 		done
 	fi
 
@@ -3925,7 +3978,7 @@ ${PROTO}:${PORT}"
 	if [ -z "${LSOF_CMD}" ]; then
 		if [ -n "${RKHTMPVAR}" ]; then
 			LEAVE=1
-			echo "Invalid PORT_PATH_WHITELIST configuration option - the 'lsof' command is required."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid PORT_PATH_WHITELIST configuration option - the 'lsof' command is required."
 		fi
 	elif [ -n "${RKHTMPVAR}" ]; then
 		#
@@ -3947,7 +4000,7 @@ ${PROTO}:${PORT}"
 
 					if [ $PORT -gt 65535 ]; then
 						LEAVE=1
-						echo "Invalid PORT_PATH_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
+						test $QUIET_CONFIG -eq 0 && echo "Invalid PORT_PATH_WHITELIST configuration option - invalid port specified: `name2text \"${RKHTMPVAR2}\"`"
 					fi
 
 					PROTO=`echo ${PROTO} | tr '[:lower:]' '[:upper:]'`
@@ -3977,7 +4030,7 @@ ${FNAME}"
 				fi
 			else
 				LEAVE=1
-				echo "Invalid entry specified in PORT_PATH_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid entry specified in PORT_PATH_WHITELIST configuration option: `name2text \"${RKHTMPVAR2}\"`"
 			fi
 		done
 
@@ -4374,7 +4427,7 @@ get_unhide_options() {
 
 	if [ -z "`echo \" ${UNHIDE_TESTS}\" | grep ' [a-zA-Z]'`" ]; then
 		LEAVE=1
-		echo "Invalid UNHIDE_TESTS configuration option - no tests specified: ${UNHIDE_TESTS}"
+		test $QUIET_CONFIG -eq 0 && echo "Invalid UNHIDE_TESTS configuration option - no tests specified: ${UNHIDE_TESTS}"
 	fi
 
 
@@ -4392,7 +4445,7 @@ get_unhide_options() {
 			if [ -z "`echo \"${RKHTMPVAR2} \" | grep '^-'`" ]; then
 				# Options must begin with a '-'.
 				LEAVE=1
-				echo "Invalid UNHIDETCP_OPTS configuration option - not a valid option: ${RKHTMPVAR}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid UNHIDETCP_OPTS configuration option - not a valid option: ${RKHTMPVAR}"
 			elif [ "${RKHTMPVAR2}" = "-V" -o "${RKHTMPVAR2}" = "-h" ]; then
 				# Ignore obvious invalid options.
 				continue
@@ -4492,7 +4545,7 @@ get_suspscan_options() {
 	if [ $ERRCODE -eq 0 ]; then
 		if [ ! -w "${SUSPSCAN_TEMP}" ]; then
 			LEAVE=1
-			echo "The suspscan temporary directory is not writable: ${SUSPSCAN_TEMP}"
+			test $QUIET_CONFIG -eq 0 && echo "The suspscan temporary directory is not writable: ${SUSPSCAN_TEMP}"
 		fi
 	else
 		LEAVE=1
@@ -4849,13 +4902,13 @@ get_hash_function() {
 		else
 			LEAVE=1
 			HASH_FUNC="NONE"
-			echo "Invalid '--hash' option: invalid pathname: ${HASH_CMD}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--hash' option: invalid pathname: ${HASH_CMD}"
 		fi
 
 		if [ -z "${HASH_FUNC}" ]; then
 			LEAVE=1
 			HASH_FUNC="NONE"
-			echo "Invalid '--hash' option: no hash function given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--hash' option: no hash function given."
 		fi
 	else
 		HASH_FUNC=`get_option single HASH_CMD` || exit $?
@@ -4954,23 +5007,25 @@ get_hash_function() {
 	# correctly, should they be needed.
 	#
 
+	ERRMSG=""
+
 	if [ "${HASH_FUNC}" = "NONE" ]; then
 		:
 	elif [ "${HASH_FUNC}" = "MD5" ]; then
 		LEAVE=1
 
 		if [ $HASH_OPT -eq 1 ]; then
-			echo "Invalid '--hash' option: no usable hash command or perl module for MD5 could be found."
+			ERRMSG="Invalid '--hash' option: no usable hash command or perl module for MD5 could be found."
 		else
-			echo "Invalid HASH_CMD configuration option: no usable hash command or perl module for MD5 could be found."
+			ERRMSG="Invalid HASH_CMD configuration option: no usable hash command or perl module for MD5 could be found."
 		fi
 	elif [ "${HASH_FUNC}" = "RIPEMD160" -o "${HASH_FUNC}" = "WHIRLPOOL" ]; then
 		LEAVE=1
 
 		if [ $HASH_OPT -eq 1 ]; then
-			echo "Invalid '--hash' option: no perl module for ${HASH_FUNC} could be found."
+			ERRMSG="Invalid '--hash' option: no perl module for ${HASH_FUNC} could be found."
 		else
-			echo "Invalid HASH_CMD configuration option: no perl module for ${HASH_FUNC} could be found."
+			ERRMSG="Invalid HASH_CMD configuration option: no perl module for ${HASH_FUNC} could be found."
 		fi
 	elif [ -n "${HASH_FUNC}" ]; then
 		HASH_CMD=`echo "${HASH_FUNC}" | cut -d' ' -f1`
@@ -4990,21 +5045,23 @@ get_hash_function() {
 			fi
 		elif [ $HASH_OPT -eq 1 ]; then
 			LEAVE=1
-			echo "Invalid '--hash' option: command is non-existent or not executable: ${HASH_CMD}"
+			ERRMSG="Invalid '--hash' option: command is non-existent or not executable: ${HASH_CMD}"
 		else
 			LEAVE=1
-			echo "Invalid HASH_CMD configuration option: command is non-existent or not executable: ${HASH_CMD}"
+			ERRMSG="Invalid HASH_CMD configuration option: command is non-existent or not executable: ${HASH_CMD}"
 		fi
 	elif [ $HASH_OPT -eq 1 ]; then
 		LEAVE=1
-		echo "Invalid '--hash' option: no usable hash command or perl module could be found."
+		ERRMSG="Invalid '--hash' option: no usable hash command or perl module could be found."
 	elif [ $SHA_SIZE -ge 1 ]; then
 		LEAVE=1
-		echo "Invalid HASH_CMD configuration option: no usable hash command or perl module for SHA${SHA_SIZE} could be found."
+		ERRMSG="Invalid HASH_CMD configuration option: no usable hash command or perl module for SHA${SHA_SIZE} could be found."
 	else
 		LEAVE=1
-		echo "Invalid HASH_CMD configuration option: no usable hash command or perl module could be found."
+		ERRMSG="Invalid HASH_CMD configuration option: no usable hash command or perl module could be found."
 	fi
+
+	test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 
 
 	#
@@ -5038,7 +5095,7 @@ get_hash_function() {
 
 		if [ -z "${PKGMGR}" ]; then
 			LEAVE=1
-			echo "Invalid '--pkgmgr' option: no package manager given."
+			test $QUIET_CONFIG -eq 0 && echo "Invalid '--pkgmgr' option: no package manager given."
 		fi
 	else
 		PKGMGR=`get_option single PKGMGR` || exit $?
@@ -5053,6 +5110,8 @@ get_hash_function() {
 	# Now check that the package manager we have been given is valid.
 	#
 
+	ERRMSG=""
+
 	case "${PKGMGR}" in
 	"")
 		;;
@@ -5061,7 +5120,7 @@ get_hash_function() {
 
 		if [ -z "${RPM_CMD}" ]; then
 			LEAVE=1
-			echo "Unable to find the 'rpm' command for package manager 'RPM'."
+			ERRMSG="Unable to find the 'rpm' command for package manager 'RPM'."
 		fi
 		;;
 	DPKG)
@@ -5071,10 +5130,10 @@ get_hash_function() {
 
 		if [ -z "${DPKG_CMD}" ]; then
 			LEAVE=1
-			echo "Unable to find 'dpkg-query' or 'dpkg' commands for package manager 'DPKG'."
+			ERRMSG="Unable to find 'dpkg-query' or 'dpkg' commands for package manager 'DPKG'."
 		elif [ ! -d "/var/lib/dpkg/info" ]; then
 			LEAVE=1
-			echo "Unable to find the package database directory (/var/lib/dpkg/info) for package manager 'DPKG'."
+			ERRMSG="Unable to find the package database directory (/var/lib/dpkg/info) for package manager 'DPKG'."
 		fi
 
 		if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
@@ -5082,7 +5141,7 @@ get_hash_function() {
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
 				LEAVE=1
-				echo "Unable to find an MD5 hash function command to assist package manager 'DPKG'."
+				ERRMSG="Unable to find an MD5 hash function command to assist package manager 'DPKG'."
 			fi
 		fi
 		;;
@@ -5091,10 +5150,10 @@ get_hash_function() {
 
 		if [ -z "${PKG_CMD}" ]; then
 			LEAVE=1
-			echo "Unable to find the 'pkg_info' command for package manager 'BSD'."
+			ERRMSG="Unable to find the 'pkg_info' command for package manager 'BSD'."
 		elif [ ! -d "/var/db/pkg" ]; then
 			LEAVE=1
-			echo "Unable to find the package database directory (/var/db/pkg) for package manager 'BSD'."
+			ERRMSG="Unable to find the package database directory (/var/db/pkg) for package manager 'BSD'."
 		fi
 
 		if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 -o $CONFIG_CHECK -eq 1 ]; then
@@ -5102,7 +5161,7 @@ get_hash_function() {
 
 			if [ -z "${PKGMGR_MD5_HASH}" ]; then
 				LEAVE=1
-				echo "Unable to find an MD5 hash function command to assist package manager 'BSD'."
+				ERRMSG="Unable to find an MD5 hash function command to assist package manager 'BSD'."
 			fi
 		fi
 		;;
@@ -5111,14 +5170,14 @@ get_hash_function() {
 
 		if [ -z "${PKG_CMD}" ]; then
 			LEAVE=1
-			echo "Unable to find the 'pkg' command for package manager 'BSDng'."
+			ERRMSG="Unable to find the 'pkg' command for package manager 'BSDng'."
 		else
 			${PKG_CMD} -N >/dev/null 2>&1
 			ERRCODE=$?
 
 			if [ $ERRCODE -ne 0 ]; then
 				LEAVE=1
-				echo "System not set up for use with package manager 'BSDng'."
+				ERRMSG="System not set up for use with package manager 'BSDng'."
 			fi
 		fi
 
@@ -5127,7 +5186,7 @@ get_hash_function() {
 
 			if [ -z "${PKGMGR_SHA_HASH}" ]; then
 				LEAVE=1
-				echo "Unable to find a SHA256 hash function command to assist package manager 'BSDng'."
+				ERRMSG="Unable to find a SHA256 hash function command to assist package manager 'BSDng'."
 			fi
 		fi
 		;;
@@ -5147,7 +5206,7 @@ get_hash_function() {
 
 				if [ -z "${SUM_CMD}" ]; then
 					LEAVE=1
-					echo "Unable to find the 'sum' command for package manager 'SOLARIS'."
+					ERRMSG="Unable to find the 'sum' command for package manager 'SOLARIS'."
 				fi
 			else
 				LEAVE=1
@@ -5158,14 +5217,16 @@ get_hash_function() {
 
 		if [ ! -f "/var/sadm/install/contents" ]; then
 			LEAVE=1
-			echo "Unable to find the package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
+			ERRMSG="Unable to find the package database file (/var/sadm/install/contents) for package manager 'SOLARIS'."
 		fi
 		;;
 	*)
 		LEAVE=1
-		echo "Invalid package manager given: ${PKGMGR}"
+		ERRMSG="Invalid package manager given: ${PKGMGR}"
 		;;
 	esac
+
+	test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 
 
 	#
@@ -5221,8 +5282,10 @@ get_scan_mode_dev_option() {
 		THOROUGH|LAZY)
 			;;
 		*)	# Don't make this fatal.
-			echo "Invalid SCAN_MODE_DEV configuration option: ${SCAN_MODE_DEV}"
-			echo "Defaulting to THOROUGH mode."
+			if [ $QUIET_CONFIG -eq 0 ]; then
+				echo "Invalid SCAN_MODE_DEV configuration option: ${SCAN_MODE_DEV}"
+				echo "Defaulting to THOROUGH mode."
+			fi
 
 			SCAN_MODE_DEV="THOROUGH"
 			;;
@@ -5272,18 +5335,22 @@ get_startup_paths_option() {
 
 			if [ $ERRCODE -eq 0 ]; then
 				for FNAME in ${STARTUP_PATHS}; do
+					ERRMSG=""
+
 					test -f "${FNAME}" && RKHTMPVAR="file" || RKHTMPVAR="directory"
 
 					if [ -h "${FNAME}" ]; then
 						LEAVE=1
-						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is a link: ${FNAME}"
+						ERRMSG="Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is a link: ${FNAME}"
 					elif [ ! -r "${FNAME}" ]; then
 						LEAVE=1
-						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is not readable: ${FNAME}"
+						ERRMSG="Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is not readable: ${FNAME}"
 					elif [ ! -s "${FNAME}" ]; then
 						LEAVE=1
-						echo "Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is empty: ${FNAME}"
+						ERRMSG="Invalid STARTUP_PATHS configuration option: the ${RKHTMPVAR} is empty: ${FNAME}"
 					fi
+
+					test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 				done
 			else
 				LEAVE=1
@@ -5434,7 +5501,7 @@ get_mirror_options() {
 
 	if [ -e "${DB_PATH}/mirrors.dat" -a \( ! -f "${DB_PATH}/mirrors.dat" -o -h "${DB_PATH}/mirrors.dat" \) ]; then
 		LEAVE=1
-		echo "The mirrors file is not a file: ${DB_PATH}/mirrors.dat"
+		test $QUIET_CONFIG -eq 0 && echo "The mirrors file is not a file: ${DB_PATH}/mirrors.dat"
 	fi
 
 	if [ $LEAVE -eq 0 -a $VERSIONCHECK -eq 1 ]; then
@@ -5442,19 +5509,24 @@ get_mirror_options() {
 			# The mirrors file only needs to be readable.
 			if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
 				LEAVE=1
-				echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
-				echo "Run 'rkhunter --update'" to restore the default mirrors file.
-				echo "The default mirror will be used."
+
+				if [ $QUIET_CONFIG -eq 0 ]; then
+					echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
+					echo "Run 'rkhunter --update'" to restore the default mirrors file.
+					echo "The default mirror will be used."
+				fi
 			fi
 		else
 			# The mirrors file needs to be writable.
 			if [ ! -e "${DB_PATH}/mirrors.dat" -o ! -s "${DB_PATH}/mirrors.dat" ]; then
 				LEAVE=1
-				echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
-				echo "Run 'rkhunter --update'" to restore the default mirrors file.
+				if [ $QUIET_CONFIG -eq 0 ]; then
+					echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
+					echo "Run 'rkhunter --update'" to restore the default mirrors file.
+				fi
 			elif [ ! -w "${DB_PATH}/mirrors.dat" ]; then
 				LEAVE=1
-				echo "The mirrors file is not writable: ${DB_PATH}/mirrors.dat"
+				test $QUIET_CONFIG -eq 0 && echo "The mirrors file is not writable: ${DB_PATH}/mirrors.dat"
 			fi
 		fi
 	fi
@@ -5537,13 +5609,17 @@ get_os_info_options() {
 		check_paths OS_VERSION_FILE OS_VERSION_FILE "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
+			ERRMSG=""
+
 			if [ ! -r "${OS_VERSION_FILE}" ]; then
 				LEAVE=1
-				echo "Invalid OS_VERSION_FILE configuration option: File is not readable: ${OS_VERSION_FILE}"
+				ERRMSG="Invalid OS_VERSION_FILE configuration option: File is not readable: ${OS_VERSION_FILE}"
 			elif [ ! -s "${OS_VERSION_FILE}" ]; then
 				LEAVE=1
-				echo "Invalid OS_VERSION_FILE configuration option: File is empty: ${OS_VERSION_FILE}"
+				ERRMSG="Invalid OS_VERSION_FILE configuration option: File is empty: ${OS_VERSION_FILE}"
 			fi
+
+			test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 		else
 			LEAVE=1
 		fi
@@ -5644,7 +5720,7 @@ get_user_fileprop_list() {
 			# Make a space-separated list but without expanding the wildcards.
 			RKHTMPVAR=`make_space_list "${RKHTMPVAR}"`
 
-			echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname(s): ${RKHTMPVAR}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname(s): ${RKHTMPVAR}"
 		fi
 
 
@@ -5779,7 +5855,7 @@ ${FNAME}"
 
 							if [ "${RKHTMPVAR}" = "/" ]; then
 								LEAVE=1
-								echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: `name2text \"${FNAME}\"` -> /"
+								test $QUIET_CONFIG -eq 0 && echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: `name2text \"${FNAME}\"` -> /"
 								continue
 							elif [ -n "${RKHTMPVAR}" ]; then
 								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -6026,7 +6102,7 @@ get_summary_options() {
 		if [ $ERRCODE -eq 0 ]; then
 			if [ $SHOW_SUMMARY_TIME -gt 3 ]; then
 				LEAVE=1
-				echo "Invalid SHOW_SUMMARY_TIME configuration option: not a valid number: ${SHOW_SUMMARY_TIME}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid SHOW_SUMMARY_TIME configuration option: not a valid number: ${SHOW_SUMMARY_TIME}"
 			fi
 		else
 			LEAVE=1
@@ -8235,7 +8311,7 @@ do_config_file_check() {
 				# Check to see if the command is one we now about.
 				if [ -z "`echo \" ${CMDLIST} \" | grep -i \" ${CFG_CMD} \"`" ]; then
 					RET_CODE=1
-					echo "Unknown configuration file option: ${CONFIGOPT}"
+					test $QUIET_CONFIG -eq 0 && echo "Unknown configuration file option: ${CONFIGOPT}"
 				fi
 				;;
 			esac
@@ -8245,7 +8321,7 @@ do_config_file_check() {
 
 		if [ -z "`echo \"${VALIDOPTS}\" | grep \" ${CONFIGCMD} \"`" ]; then
 			RET_CODE=1
-			echo "Unknown configuration file option: ${CONFIGOPT}"
+			test $QUIET_CONFIG -eq 0 && echo "Unknown configuration file option: ${CONFIGOPT}"
 		fi
 	done
 
@@ -20136,6 +20212,7 @@ LOGGER_TAG="rkhunter"
 
 LEAVE=0
 ERRCODE=0
+ERRMSG=""
 
 # Set to run as a cron job.
 CRONJOB=0
@@ -20575,8 +20652,10 @@ UNLOCK=0
 # whitelisting from 'existence' checks.
 EXISTWHITELIST=""
 
-# This will be set if we are just doing a config file check.
+# The first will be set if we are doing a config file check.
+# The second will also be set if the quiet option is being used.
 CONFIG_CHECK=0
+QUIET_CONFIG=0
 
 # Network interface whitelist.
 IFWLIST=""
@@ -21057,6 +21136,14 @@ fi
 
 test $UPDATE -eq 1 -a $CHECK -eq 0 -a $PROP_UPDATE -eq 0 -a $VERSIONCHECK -eq 0 && UPDATE_ONLY=1
 
+#
+# See if we are running a configuration check with the quiet option.
+# If so, then no error messages should be displayed. Only the return
+# code will indicate if there was a problem.
+#
+
+test $CONFIG_CHECK -eq 1 -a $QUIET -eq 1 && QUIET_CONFIG=1
+
 
 #
 # Before going too much further we need to ensure that some basic
@@ -21095,36 +21182,43 @@ if [ -z "${CONFIGFILE}" ]; then
 	fi
 fi
 
+ERRMSG=""
+
 if [ ! -e "${CONFIGFILE}" ]; then
-	echo "Unable to find the configuration file: ${CONFIGFILE}"
-	exit 1
+	ERRMSG="Unable to find the configuration file: ${CONFIGFILE}"
 elif [ ! -f "${CONFIGFILE}" ]; then
-	echo "The configuration file is not a file: ${CONFIGFILE}"
-	exit 1
+	ERRMSG="The configuration file is not a file: ${CONFIGFILE}"
 elif [ ! -r "${CONFIGFILE}" ]; then
-	echo "The configuration file is not readable: ${CONFIGFILE}"
-	exit 1
+	ERRMSG="The configuration file is not readable: ${CONFIGFILE}"
 elif [ ! -s "${CONFIGFILE}" ]; then
-	echo "The configuration file is empty: ${CONFIGFILE}"
+	ERRMSG="The configuration file is empty: ${CONFIGFILE}"
+fi
+
+if [ -n "${ERRMSG}" ]; then
+	test $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 	exit 1
 fi
 
 RKHTMPVAR=`echo "${CONFIGFILE}" | sed -e 's:/[^/]*$::'`
 
 if [ -e "${RKHTMPVAR}/rkhunter.conf.local" ]; then
+	ERRMSG=""
+
 	FNAME="${RKHTMPVAR}/rkhunter.conf.local"
 
 	if [ -h "${FNAME}" ]; then
-		echo "The local configuration file cannot be a link: ${FNAME}"
-		exit 1
+		ERRMSG="The local configuration file cannot be a link: ${FNAME}"
 	elif [ ! -f "${FNAME}" ]; then
-		echo "The local configuration file is not a file: ${FNAME}"
-		exit 1
+		ERRMSG="The local configuration file is not a file: ${FNAME}"
 	elif [ ! -r "${FNAME}" ]; then
-		echo "The local configuration file is not readable: ${FNAME}"
-		exit 1
+		ERRMSG="The local configuration file is not readable: ${FNAME}"
 	else
 		LOCALCONFIGFILE="${FNAME}"
+	fi
+
+	if [ -n "${ERRMSG}" ]; then
+		test $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
+		exit 1
 	fi
 fi
 
@@ -21133,19 +21227,23 @@ if [ -d "${RKHTMPVAR}/rkhunter.d" ]; then
 	LOCALCONFIGDIR="${RKHTMPVAR}/rkhunter.d"
 
 	for FNAME in ${LOCALCONFIGDIR}/*.conf; do
+		ERRMSG=""
+
 		if [ -h "${FNAME}" ]; then
 			LEAVE=1
-			echo "The local configuration file cannot be a link: ${FNAME}"
+			ERRMSG="The local configuration file cannot be a link: ${FNAME}"
 		elif [ ! -f "${FNAME}" ]; then
 			LEAVE=1
-			echo "The local configuration file is not a file: ${FNAME}"
+			ERRMSG="The local configuration file is not a file: ${FNAME}"
 		elif [ ! -r "${FNAME}" ]; then
 			LEAVE=1
-			echo "The local configuration file is not readable: ${FNAME}"
+			ERRMSG="The local configuration file is not readable: ${FNAME}"
 		else
 			LOCALCONFDIRCOUNT=`expr ${LOCALCONFDIRCOUNT} + 1`
 			LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
 		fi
+
+		test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
 	done
 
 	test $LEAVE -eq 1 && exit 1
