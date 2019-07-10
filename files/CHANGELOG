@@ -35,6 +35,8 @@
  - Added an EXIT STATUS section to the man page.
  - Added the 'inotifywait' and 'inotifywatch' commands to the list
    of standard Linux commands to be checked for file properties.
+ - Added the '--cloe' and '--nocloe' command-line options to
+   correspond to the COPY_LOG_ON_ERROR configuration option.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in

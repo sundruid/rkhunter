@@ -144,6 +144,8 @@ check to see if there are any unrecognised configuration options. If any
 configuration problems are found, then they will be displayed, unless the
 \fB\-\-quiet\fP option is used, and the return code will be set to one.
 
+No output is written to the log file when this command option is used.
+
 It is suggested that this option is used whenever the configuration
 file(s) have been changed.
 
@@ -179,7 +181,7 @@ unless explicitly stated as the configuration file default.
 
 .PP
 
-.IP \fB\-\-appendlog\fP
+.IP \fB\-\-append\-log\fP
 By default a new log file will be created when \fBrkhunter\fP runs, and the
 previous log file will be renamed by having \fI.old\fP appended to its name.
 This option tells \fBrkhunter\fP to append to the existing log file. If the
@@ -192,6 +194,11 @@ PATH, and an internal list of some common command directories. By default
 a specified directory will be appended to the default list. However, if the
 directory name begins with the '+' character, then it will be prepended to
 the list (that is, it will be put at the start of the list).
+
+.IP "\fB\-\-cloe, \-\-copy\-log\-on\-error\fP"
+This option tells \fBrkhunter\fP to take a copy of the current log file if
+an error or warning occurs during an \fBrkhunter\fP check. The copied log
+file will have the date and time appended to its name.
 
 .IP "\fB\-\-cs2, \-\-color\-set2\fP"
 By default \fBrkhunter\fP will display its test results in color. The colors
@@ -288,6 +295,11 @@ When the \fB\-\-disable\fP option is used, by default, the configuration file
 option to disable tests is also used to determine which tests to run. If only the
 \fB\-\-disable\fP option is to be used to determine which tests to run, then
 \fB\-\-nocf\fP must be given.
+
+.IP "\fB\-\-nocloe, \-\-no\-copy\-log\-on\-error\fP"
+This option tells \fBrkhunter\fP not to take a copy of the log file, even if an
+error or warning occurs during an \fBrkhunter\fP check. This is the configuration
+file default.
 
 .IP \fB\-\-nocolors\fP
 This option causes the result of each test to not be displayed in a specific

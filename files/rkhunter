@@ -2154,7 +2154,7 @@ get_language_option() {
 }
 
 
-get_logfile_option() {
+get_logfile_options() {
 
 	#
 	# First get the option from the command-line or the
@@ -2196,6 +2196,7 @@ get_logfile_option() {
 		:
 	elif [ "${RKHLOGFILE}" = "/dev/null" ]; then
 		APPEND_LOG=0
+		COPY_LOG_ON_ERROR=0
 	else
 		ERRMSG=""
 
@@ -2263,20 +2264,22 @@ get_logfile_option() {
 	# copy is done if no logfile is used.
 	#
 
-	ERRCODE=0
+	if [ $CLOE_OPT -eq 0 ]; then
+		ERRCODE=0
 
-	RKHTMPVAR=`get_option single COPY_LOG_ON_ERROR` || exit $?
+		RKHTMPVAR=`get_option single COPY_LOG_ON_ERROR` || exit $?
 
-	if [ -n "${RKHTMPVAR}" ]; then
-		check_is_digit RKHTMPVAR COPY_LOG_ON_ERROR
+		if [ -n "${RKHTMPVAR}" ]; then
+			check_is_digit RKHTMPVAR COPY_LOG_ON_ERROR
 
-		if [ $ERRCODE -eq 0 ]; then
-			COPY_LOG_ON_ERROR=$RKHTMPVAR
+			if [ $ERRCODE -eq 0 ]; then
+				COPY_LOG_ON_ERROR=$RKHTMPVAR
+			else
+				LEAVE=1
+			fi
 		else
-			LEAVE=1
+			COPY_LOG_ON_ERROR=0
 		fi
-	else
-		COPY_LOG_ON_ERROR=0
 	fi
 
 
@@ -6250,7 +6253,7 @@ get_configfile_options() {
 
 	get_rootdir_option
 
-	get_logfile_option
+	get_logfile_options
 
 	get_tmpdir_option
 
@@ -20088,63 +20091,65 @@ help() {
 	echo $ECHOOPT ""
 
 	echo $ECHOOPT "Current options are:"
-	echo $ECHOOPT "         --append-log                  Append to the logfile, do not overwrite"
-	echo $ECHOOPT "         --bindir <directory>...       Use the specified command directories"
-	echo $ECHOOPT "     -c, --check                       Check the local system"
-	echo $ECHOOPT "     -C, --config-check                Check the configuration file(s), then exit"
-	echo $ECHOOPT "  --cs2, --color-set2                  Use the second color set for output"
-	echo $ECHOOPT "         --configfile <file>           Use the specified configuration file"
-	echo $ECHOOPT "         --cronjob                     Run as a cron job"
-	echo $ECHOOPT "                                       (implies -c, --sk and --nocolors options)"
-	echo $ECHOOPT "         --dbdir <directory>           Use the specified database directory"
-	echo $ECHOOPT "         --debug                       Debug mode"
-	echo $ECHOOPT "                                       (Do not use unless asked to do so)"
-	echo $ECHOOPT "         --disable <test>[,<test>...]  Disable specific tests"
-	echo $ECHOOPT "                                       (Default is to disable no tests)"
-	echo $ECHOOPT "         --display-logfile             Display the logfile at the end"
-	echo $ECHOOPT "         --enable  <test>[,<test>...]  Enable specific tests"
-	echo $ECHOOPT "                                       (Default is to enable all tests)"
-	echo $ECHOOPT "         --hash {MD5 | SHA1 | SHA224 | SHA256 | SHA384 | SHA512 |"
-	echo $ECHOOPT "                 NONE | <command>}     Use the specified file hash function"
-	echo $ECHOOPT "                                       (Default is SHA256)"
-	echo $ECHOOPT "     -h, --help                        Display this help menu, then exit"
-	echo $ECHOOPT " --lang, --language <language>         Specify the language to use"
-	echo $ECHOOPT "                                       (Default is English)"
-	echo $ECHOOPT "         --list [tests | languages |   List the available test names, languages,"
-	echo $ECHOOPT "                 rootkits | perl |     rootkit names, perl module status"
-	echo $ECHOOPT "                 propfiles]            or file properties database, then exit"
-	echo $ECHOOPT "     -l, --logfile [file]              Write to a logfile"
-	echo $ECHOOPT "                                       (Default is $DFLT_LOGFILE)"
-	echo $ECHOOPT "         --noappend-log                Do not append to the logfile, overwrite it"
-	echo $ECHOOPT "         --nocf                        Do not use the configuration file entries"
-	echo $ECHOOPT "                                       for disabled tests (only valid with --disable)"
-	echo $ECHOOPT "         --nocolors                    Use black and white output"
-	echo $ECHOOPT "         --nolog                       Do not write to a logfile"
-	echo $ECHOOPT "--nomow, --no-mail-on-warning          Do not send a message if warnings occur"
-	echo $ECHOOPT "   --ns, --nosummary                   Do not show the summary of check results"
-	echo $ECHOOPT " --novl, --no-verbose-logging          No verbose logging"
-	echo $ECHOOPT "         --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain"
-	echo $ECHOOPT "                   BSDng | SOLARIS |   or verify file property values."
-	echo $ECHOOPT "                   NONE}               (Default is NONE)"
-	echo $ECHOOPT "         --propupd [file | directory | Update the entire file properties database,"
-	echo $ECHOOPT "                    package]...        or just for the specified entries"
-	echo $ECHOOPT "     -q, --quiet                       Quiet mode (no output at all)"
-	echo $ECHOOPT "  --rwo, --report-warnings-only        Show only warning messages. (This overrides the '-q' option)"
-	echo $ECHOOPT "   --sk, --skip-keypress               Don't wait for a keypress after each test"
-	echo $ECHOOPT "         --summary                     Show the summary of system check results"
-	echo $ECHOOPT "                                       (This is the default. Specifying this option will override"
-	echo $ECHOOPT "                                       the '-q' option)"
-	echo $ECHOOPT "         --syslog [facility.priority]  Log the check start and finish times to syslog"
-	echo $ECHOOPT "                                       (Default level is $SYSLOG_DFLT_PRIO)"
-	echo $ECHOOPT "         --tmpdir <directory>          Use the specified temporary directory"
-	echo $ECHOOPT "         --unlock                      Unlock (remove) the lock file"
-	echo $ECHOOPT "         --update                      Check for updates to database files"
-	echo $ECHOOPT "                                       (Note: This option does NOT update the rkhunter command)"
-	echo $ECHOOPT "   --vl, --verbose-logging             Use verbose logging (on by default)"
-	echo $ECHOOPT "     -V, --version                     Display the version number, then exit"
-	echo $ECHOOPT "         --versioncheck                Check for latest version of program"
-	echo $ECHOOPT "     -x, --autox                       Automatically detect if X is in use"
-	echo $ECHOOPT "     -X, --no-autox                    Do not automatically detect if X is in use"
+	echo $ECHOOPT "            --append-log                  Append to the logfile, do not overwrite"
+	echo $ECHOOPT "            --bindir <directory>...       Use the specified command directories"
+	echo $ECHOOPT "        -c, --check                       Check the local system"
+	echo $ECHOOPT "        -C, --config-check                Check the configuration file(s), then exit"
+	echo $ECHOOPT "    --cloe, --copy-log-on-error           Copy the log file if an error occurs"
+	echo $ECHOOPT "            --configfile <file>           Use the specified configuration file"
+	echo $ECHOOPT "            --cronjob                     Run as a cron job"
+	echo $ECHOOPT "     --cs2, --color-set2                  Use the second color set for output"
+	echo $ECHOOPT "                                          (implies -c, --sk and --nocolors options)"
+	echo $ECHOOPT "            --dbdir <directory>           Use the specified database directory"
+	echo $ECHOOPT "            --debug                       Debug mode"
+	echo $ECHOOPT "                                          (Do not use unless asked to do so)"
+	echo $ECHOOPT "            --disable <test>[,<test>...]  Disable specific tests"
+	echo $ECHOOPT "                                          (Default is to disable no tests)"
+	echo $ECHOOPT "            --display-logfile             Display the logfile at the end"
+	echo $ECHOOPT "            --enable  <test>[,<test>...]  Enable specific tests"
+	echo $ECHOOPT "                                          (Default is to enable all tests)"
+	echo $ECHOOPT "        -h, --help                        Display this help menu, then exit"
+	echo $ECHOOPT "            --hash {MD5 | SHA1 | SHA224 | SHA256 | SHA384 | SHA512 |"
+	echo $ECHOOPT "                    NONE | <command>}     Use the specified file hash function"
+	echo $ECHOOPT "                                          (Default is SHA256)"
+	echo $ECHOOPT "        -l, --logfile [file]              Write to a logfile"
+	echo $ECHOOPT "                                          (Default is $DFLT_LOGFILE)"
+	echo $ECHOOPT "    --lang, --language <language>         Specify the language to use"
+	echo $ECHOOPT "                                          (Default is English)"
+	echo $ECHOOPT "            --list [tests | languages |   List the available test names, languages,"
+	echo $ECHOOPT "                    rootkits | perl |     rootkit names, perl module status"
+	echo $ECHOOPT "                    propfiles]            or file properties database, then exit"
+	echo $ECHOOPT "            --noappend-log                Do not append to the logfile, overwrite it"
+	echo $ECHOOPT "            --nocf                        Do not use the configuration file entries"
+	echo $ECHOOPT "                                          for disabled tests (only valid with --disable)"
+	echo $ECHOOPT "  --nocloe, --no-copy-log-on-error        Disable copying the log file on errors"
+	echo $ECHOOPT "            --nocolors                    Use black and white output"
+	echo $ECHOOPT "            --nolog                       Do not write to a logfile"
+	echo $ECHOOPT "   --nomow, --no-mail-on-warning          Do not send a message if warnings occur"
+	echo $ECHOOPT "    --novl, --no-verbose-logging          No verbose logging"
+	echo $ECHOOPT "      --ns, --nosummary                   Do not show the summary of check results"
+	echo $ECHOOPT "            --pkgmgr {RPM | DPKG | BSD |  Use the specified package manager to obtain"
+	echo $ECHOOPT "                      BSDng | SOLARIS |   or verify file property values."
+	echo $ECHOOPT "                      NONE}               (Default is NONE)"
+	echo $ECHOOPT "            --propupd [file | directory | Update the entire file properties database,"
+	echo $ECHOOPT "                       package]...        or just for the specified entries"
+	echo $ECHOOPT "        -q, --quiet                       Quiet mode (no output at all)"
+	echo $ECHOOPT "     --rwo, --report-warnings-only        Show only warning messages. (This overrides the '-q' option)"
+	echo $ECHOOPT "      --sk, --skip-keypress               Don't wait for a keypress after each test"
+	echo $ECHOOPT "            --summary                     Show the summary of system check results"
+	echo $ECHOOPT "                                          (This is the default. Specifying this option will override"
+	echo $ECHOOPT "                                          the '-q' option)"
+	echo $ECHOOPT "            --syslog [facility.priority]  Log the check start and finish times to syslog"
+	echo $ECHOOPT "                                          (Default level is $SYSLOG_DFLT_PRIO)"
+	echo $ECHOOPT "            --tmpdir <directory>          Use the specified temporary directory"
+	echo $ECHOOPT "            --unlock                      Unlock (remove) the lock file"
+	echo $ECHOOPT "            --update                      Check for updates to database files"
+	echo $ECHOOPT "                                          (Note: This option does NOT update the rkhunter command)"
+	echo $ECHOOPT "        -V, --version                     Display the version number, then exit"
+	echo $ECHOOPT "      --vl, --verbose-logging             Use verbose logging (on by default)"
+	echo $ECHOOPT "            --versioncheck                Check for latest version of program"
+	echo $ECHOOPT "        -x, --autox                       Automatically detect if X is in use"
+	echo $ECHOOPT "        -X, --no-autox                    Do not automatically detect if X is in use"
 	echo $ECHOOPT ""
 
 	return
@@ -20230,6 +20235,7 @@ APPEND_LOG=0
 APPEND_OPT=0
 
 # Set to have the logfile copied if there was an error.
+CLOE_OPT=0
 COPY_LOG_ON_ERROR=0
 
 # Set to have rkhunter start/finish messages, and warnings,
@@ -20731,6 +20737,10 @@ while [ $# -ge 1 ]; do
 	-C | --config-check | --configcheck | --check-config | --checkconfig)
 		CONFIG_CHECK=1
 		;;
+	--cloe | --copy-log-on-error)
+		CLOE_OPT=1
+		COPY_LOG_ON_ERROR=1
+		;;
 	--configfile)
 		CONFIGFILE=""
 
@@ -20923,6 +20933,10 @@ while [ $# -ge 1 ]; do
 		;;
 	--nocf)
 		USECF=0
+		;;
+	--nocloe | --no-cloe | --no-copy-log-on-error)
+		CLOE_OPT=1
+		COPY_LOG_ON_ERROR=0
 		;;
 	--nocolors | --no-colors | --nocolor | --no-color)
 		COLORS=0
@@ -21325,6 +21339,7 @@ fi
 
 if [ "${RKHLOGFILE}" = "/dev/null" ]; then
 	NOLOG=1
+	APPEND_LOG=0
 	VERBOSE_LOGGING=0
 	COPY_LOG_ON_ERROR=0
 
