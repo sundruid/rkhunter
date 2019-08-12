@@ -37,6 +37,10 @@
    of standard Linux commands to be checked for file properties.
  - Added the '--cloe' and '--nocloe' command-line options to
    correspond to the COPY_LOG_ON_ERROR configuration option.
+ - It is now possible to specify directories themselves for the
+   file properties check. To enable this the USER_FILEPROP_FILES_DIRS
+   option is used, and the directory name is appended with a '/'
+   character.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in

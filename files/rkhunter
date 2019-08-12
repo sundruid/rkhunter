@@ -1006,8 +1006,15 @@ check_paths() {
 		IFS=$IFSNL
 	fi
 
-	for FNAME in ${OPT_VALUE}; do
-		test -z "${FNAME}" && continue
+	for FNAM in ${OPT_VALUE}; do
+		test -z "${FNAM}" && continue
+
+		#
+		# If a trailing slash ('/') is present, then we need to
+		# remove it as it can interfere with certain file tests.
+		#
+
+		FNAME=`echo "${FNAM}" | sed -e 's:/$::'`
 
 		#
 		# For some options we may have to remove the leading character.
@@ -1032,7 +1039,7 @@ check_paths() {
 		if [ -n "`echo \"${FNAME}\" | egrep '(^[./]*$)|[;&]|/\.\./'`" ]; then
 			ERRCODE=1
 
-			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAME}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAM}"
 			continue
 		fi
 
@@ -1048,7 +1055,7 @@ check_paths() {
 			else
 				ERRCODE=1
 
-				test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAME}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Relative pathname: ${FNAM}"
 			fi
 		elif [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 			#
@@ -1067,7 +1074,7 @@ check_paths() {
 
 			ERRCODE=1
 
-			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Simple filename: ${FNAME}"
+			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Simple filename: ${FNAM}"
 		else
 			#
 			# It's an absolute pathname. This could be a file, a directory,
@@ -1095,7 +1102,7 @@ check_paths() {
 				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|RTKT_DIR_WHITELIST|LOCKDIR)
 					ERRCODE=1
 
-					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAME}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a directory: ${FNAM}"
 					;;
 				esac
 			elif [ -d "${FNAME}" ]; then
@@ -1111,7 +1118,7 @@ check_paths() {
 				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|SHARED_LIB_WHITELIST|*_CMD)
 					ERRCODE=1
 
-					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAME}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAM}"
 					;;
 				esac
 			elif [ -h "${FNAME}" ]; then
@@ -1124,7 +1131,7 @@ check_paths() {
 				if [ $NOBROKENLINK -eq 1 ]; then
 					ERRCODE=1
 
-					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Broken link found: ${FNAME}"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Broken link found: ${FNAM}"
 				fi
 			elif [ -e "${FNAME}" ]; then
 				#
@@ -1150,7 +1157,7 @@ check_paths() {
 					;;
 				esac
 
-				test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a ${RKHTMPVAR2}: ${FNAME}"
+				test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a ${RKHTMPVAR2}: ${FNAM}"
 			else
 				#
 				# Some pathnames don't need to exist.
@@ -1174,7 +1181,7 @@ check_paths() {
 				if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					ERRCODE=1
 
-					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: `name2text \"${FNAME}\"`"
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Non-existent pathname: `name2text \"${FNAM}\"`"
 				fi
 			fi
 		fi
@@ -2444,6 +2451,7 @@ get_dbdir_option() {
 	if [ $LEAVE -eq 0 ]; then
 		RKHDAT_FILE="${DB_PATH}/rkhunter.dat"
 		RKH_FILEPROP_LIST="${DB_PATH}/rkhunter_prop_list.dat"
+		RKH_FILEPROP_EXCLUDE="${DB_PATH}/rkhunter_prop_list_exclude.dat"
 	else
 		if [ $CONFIG_CHECK -eq 0 ]; then
 			exit 1
@@ -5682,18 +5690,20 @@ get_user_fileprop_list() {
 	# found in different variables. Only basic syntax checking is
 	# done here, further checking will be done later on.
 	#
-	# The configuration options can have three basic values:
+	# The configuration options can have four basic values:
 	#
 	#    1) A simple file (command) name - for example, 'top'
-	#    2) A directory - for example, '/usr/local/sbin'
+	#    2) A command directory - for example, '/usr/local/sbin'
 	#    3) A full file pathname - for example, '/usr/local/sbin/backup'
+	#    4) A full directory pathname - for example, '/usr/local/sbin/'
 	#
 	# The first two are simply added to the internal lists of files
 	# and directories. These are then used to build the file properties
-	# file list. The third type is added directly to the end of the file.
+	# file list. The third and fourth types are added directly to the
+	# end of the file list.
 	#
-	# The second and third types may be wildcarded. They may also be
-	# excluded from the checks by including them in the
+	# The second, third and fourth types may be wildcarded. They may also
+	# be excluded from the checks by including them in the
 	# EXCLUDE_USER_FILEPROP_FILES_DIRS option. Only files and directories
 	# matching user added ones can be excluded. This prevents users from
 	# excluding anything in the internal list.
@@ -5736,7 +5746,44 @@ get_user_fileprop_list() {
 			# Keep a copy of the configured exclude pathnames.
 			#
 
-			USER_EXCLUDE_PROP=$FILENAMES
+			USER_EXCLUDE_FILEPROP_OPTS=$FILENAMES
+
+			#
+			# We must remove any trailing slash characters
+			# in order for the exclusion tests to work.
+			#
+
+#jh - is this too slow when there are lots of files (from globbing/globstar)?
+			USER_EXCLUDE_PROP=`expand_paths FILENAMES | sed -e 's:/$::'`
+
+			#
+			# We now loop through the entries checking for any
+			# links. Any that are found will have the target
+			# added to the list.
+			#
+
+			if [ $HAVE_READLINK -eq 1 ]; then
+				RKHTMPVAR=""
+
+				IFS=$IFSNL
+
+				for FNAME in ${USER_EXCLUDE_PROP}; do
+					if [ -h "${FNAME}" ]; then
+						RKHTMPVAR2=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+						if [ -n "${RKHTMPVAR2}" ]; then
+							RKHTMPVAR="${RKHTMPVAR}
+${RKHTMPVAR2}"
+						fi
+					fi
+				done
+
+				# Add the link entries to the list.
+				test -n "${RKHTMPVAR}" && USER_EXCLUDE_PROP="${USER_EXCLUDE_PROP}
+${RKHTMPVAR}"
+
+				IFS=$RKHIFS
+			fi
 		else
 			#
 			# First we check the pathnames to ensure they are basically valid.
@@ -5753,8 +5800,7 @@ get_user_fileprop_list() {
 			# Keep a copy of the configured include pathnames.
 			# We exclude simple filenames as these are treated
 			# and displayed separately. We assume everything
-			# else is a filename. Directory names will be
-			# removed below.
+			# else is a filename or directory.
 			#
 
 			USER_FILEPROP_OPTS=`echo "${FILENAMES}" | grep '^/'`
@@ -5773,9 +5819,22 @@ get_user_fileprop_list() {
 
 			IFS=$IFSNL
 
-			for FNAME in ${FNAMES}; do
+			for FNAM in ${FNAMES}; do
 				#
-				# First check to see if it is a simple file name.
+				# First we must remove any trailing slash ('/') from
+				# entries as this can affect various file tests.
+				#
+
+				if [ -n "`echo \"${FNAM}\" | grep '/\$'`" ]; then
+					TRAILING_SLASH=1
+					FNAME=`echo "${FNAM}" | sed -e 's:/$::'`
+				else
+					TRAILING_SLASH=0
+					FNAME="${FNAM}"
+				fi
+
+				#
+				# Next we check to see if it is a simple file name.
 				#
 
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -5789,10 +5848,32 @@ ${FNAME}"
 					fi
 				else
 					#
-					# It's an absolute pathname. This could be a file, directory or a broken link.
+					# It's an absolute pathname. This could be a file, a directory or a broken link.
 					#
 
 					if [ -f "${FNAME}" ]; then
+						#
+						# We must check if the entry is already in the 'rkhunter.dat' file, as this
+						# means it may have changed from being a directory to a file. If so, then this
+						# needs to be reported and to do that it must be added to the directory list.
+						# This is only done if the '--propupd' option is not also being used (as that
+						# will rewrite the 'rkhunter.dat' file anyway). It can also only be done if
+						# the 'rkhunter.dat' file exists.
+						#
+
+#jh - can exclude a whole directory contents (as said in config file) but can include the directory itself?
+						if [ $FMTVERSION -ge 3 -a $PROP_UPDATE -eq 0 ]; then
+							COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
+
+							RKHTMPVAR=`grep "^Dir:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+
+							if [ -n "${RKHTMPVAR}" ]; then
+#jh - test this
+								test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
+${FNAME}"
+							fi
+						fi
+
 						# Check that it hasn't already been set. If it has, then we just ignore it.
 						test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
@@ -5816,16 +5897,28 @@ ${RKHTMPVAR}"
 						test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
 ${FNAME}"
 					elif [ -d "${FNAME}" ]; then
-						# Check that it hasn't already been set. If it has, then we just ignore it.
-						test -n "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
+						#
+						# We need to see if this is a command directory, which will just be the
+						# directory name, or if it is a user specified directory. That is, a
+						# directory which is itself to be stored in the properties file. These
+						# names end with a '/' character.
+						#
 
+						if [ $TRAILING_SLASH -eq 1 ]; then
+							# Check that it hasn't already been set. If it has, then we just ignore it.
+							test -n "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
+						else
+							# Check that it hasn't already been set. If it has, then we just ignore it.
+							test -n "`echo \"${USER_CMD_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
+						fi
+							
 						#
 						# We must check if the entry is already in the 'rkhunter.dat' file, as this
-						# means it has changed from being a file to a directory (or a link to a
-						# directory). If so, then this needs to be reported and to do that it must
-						# be added to the file list. This is only done if the '--propupd' option
-						# is not also being used (as that will rewrite the 'rkhunter.dat' file anyway).
-						# It can also only be done if the 'rkhunter.dat' file exists.
+						# means it may have changed from being a file to a directory. If so, then
+						# this needs to be reported and to do that it must be added to the file list.
+						# This is only done if the '--propupd' option is not also being used (as that
+						# will rewrite the 'rkhunter.dat' file anyway). It can also only be done if
+						# the 'rkhunter.dat' file exists.
 						#
 
 						if [ $FMTVERSION -ge 0 -a $PROP_UPDATE -eq 0 ]; then
@@ -5834,11 +5927,7 @@ ${FNAME}"
 							else
 								COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-								if [ $FMTVERSION -eq 1 ]; then
-									RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
-								else
-									RKHTMPVAR=`egrep "^(File|Link):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
-								fi
+								RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 							fi
 
 							if [ -n "${RKHTMPVAR}" ]; then
@@ -5847,11 +5936,19 @@ ${FNAME}"
 							fi
 						fi
 
-						# Skip this directory unless it was explicitly requested by the user.
-						test -z "`echo \"${USER_FILEPROP_OPTS}\" | grep \"^${FNAMEGREP}$\"`" && continue
+						#
+						# Remove any specified command directories from the user file list.
+						# Other directory entries will have a trailing slash, and be handled
+						# when the list is being logged.
+						#
 
-						# The user requested this directory. Remove it from the file list.
-						USER_FILEPROP_OPTS=`echo "${USER_FILEPROP_OPTS}" | sed -e "/^${FNAMEGREP}$/d"`
+						if [ $TRAILING_SLASH -eq 0 ]; then
+							# Skip this directory unless it was explicitly requested by the user.
+							test -z "`echo \"${USER_FILEPROP_OPTS}\" | grep \"^${FNAMEGREP}$\"`" && continue
+
+							# The user requested this directory. Remove it from the file list.
+							USER_FILEPROP_OPTS=`echo "${USER_FILEPROP_OPTS}" | sed -e "/^${FNAMEGREP}$/d"`
+						fi
 
 						if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
 							RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
@@ -5863,8 +5960,20 @@ ${FNAME}"
 							elif [ -n "${RKHTMPVAR}" ]; then
 								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-								# Remove the target name from the file list.
+								# Remove the target name from the file list (just in case it is there).
 								USER_FILEPROP_OPTS=`echo "${USER_FILEPROP_OPTS}" | sed -e "/^${FNAMEGREP}$/d"`
+
+								if [ $TRAILING_SLASH -eq 0 ]; then
+									if [ -z "`echo \"${USER_CMD_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+										FNAME="${FNAME}
+${RKHTMPVAR}"
+									fi
+								else
+									if [ -z "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+										FNAME="${FNAME}
+${RKHTMPVAR}"
+									fi
+								fi
 							fi
 						fi
 
@@ -5872,8 +5981,13 @@ ${FNAME}"
 						# Now add the directory name.
 						#
 
-						test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
+						if [ $TRAILING_SLASH -eq 0 ]; then
+							test -z "${USER_CMD_DIR_LIST}" && USER_CMD_DIR_LIST="${FNAME}" || USER_CMD_DIR_LIST="${USER_CMD_DIR_LIST}
 ${FNAME}"
+						else
+							test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
+${FNAME}"
+						fi
 					elif [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
 						# Broken links just get added to the file list.
 						test -z "${USER_FILE_LIST}" && USER_FILE_LIST="${FNAME}" || USER_FILE_LIST="${USER_FILE_LIST}
@@ -5893,11 +6007,7 @@ ${FNAME}"
 							else
 								COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-								if [ $FMTVERSION -eq 1 ]; then
-									RKHTMPVAR=`grep "^File:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
-								else
-									RKHTMPVAR=`egrep "^(File|Link):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
-								fi
+								RKHTMPVAR=`egrep "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 							fi
 
 							if [ -n "${RKHTMPVAR}" ]; then
@@ -6697,6 +6807,11 @@ rkh_dat_set_file_properties() {
 	#		<uid>:<gid>:<file size>:<date/time modified>:<package name>:
 	#		<symbolic link colon count>:<symbolic link target>
 	#
+	# Version 3:
+	#	File|Link|Dir:<colon count>:<pathname>:<hash value>:<inode>:<permissions>:
+	#		<uid>:<gid>:<file size>:<date/time modified>:<package name>:
+	#		<symbolic link colon count>:<symbolic link target>
+	#
 	# The format is actually governed by the stat.pl file, and the output
 	# it produces. Changing the order of options does not change the order
 	# of the output.
@@ -6713,16 +6828,16 @@ rkh_dat_set_file_properties() {
 
 	#
 	# We initialize the directory file count to the list of user-specified
-	# directories. Each with a value of zero. If there are no directories,
+	# command directories. Each with a value of zero. If there are no directories,
 	# then we just leave it set to the null string.
 	#
 
 	DIR_FILE_COUNT=""
 
-	if [ -n "${USER_DIR_LIST}" ]; then
+	if [ -n "${USER_CMD_DIR_LIST}" ]; then
 		IFS=$IFSNL
 
-		for DIR in ${USER_DIR_LIST}; do
+		for DIR in ${USER_CMD_DIR_LIST}; do
 			test -z "${DIR_FILE_COUNT}" && DIR_FILE_COUNT="${DIR}:0" || DIR_FILE_COUNT="${DIR_FILE_COUNT}
 ${DIR}:0"
 		done
@@ -6768,7 +6883,7 @@ ${DIR}:0"
 
 
 	#
-	# Now loop through the pathnames looking for the files.
+	# Now loop through the pathnames looking for the files and directories.
 	#
 	# We must set IFS around this loop, otherwise any names in the file
 	# properties list containing whitespace will be separated out.
@@ -6781,16 +6896,20 @@ ${DIR}:0"
 
 	for FNAME in `cat "${RKH_FILEPROP_LIST}" 2>/dev/null`; do
 		#
-		# Only files and broken links are allowed through.
+		# Only files, directories and broken links are allowed through.
 		#
 
-		test -f "${FNAME}" -o \( -h "${FNAME}" -a ! -e "${FNAME}" \) || continue
+		test -f "${FNAME}" -o -d "${FNAME}" -o \( -h "${FNAME}" -a ! -e "${FNAME}" \) || continue
 
 		SYSLNK_CC=0
 		NOVRFYFILE=0
 		COLON_COUNT=0
 		FILE_IS_PKGD=0
 		DEPENDENCY_ERR=0
+
+		IS_A_DIR=0
+		IS_A_FILE=0
+		IS_A_LINK=0
 
 		FDATA=""
 		SYSLNK=""
@@ -6813,7 +6932,23 @@ ${DIR}:0"
 
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-		test -h "${FNAME}" -a $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+
+		if [ -h "${FNAME}" ]; then
+			IS_A_LINK=1
+			test $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+		elif [ $FMTVERSION -lt 3 ]; then
+			FTYPE="File"
+		elif [ -d "${FNAME}" ]; then
+			FTYPE="Dir"
+		else
+			FTYPE="File"
+		fi
+
+		if [ -d "${FNAME}" ]; then
+			IS_A_DIR=1
+		elif [ -e "${FNAME}" ]; then
+			IS_A_FILE=1
+		fi
 
 
 		#
@@ -6829,6 +6964,7 @@ ${DIR}:0"
 			#
 
 			if [ $FMTVERSION -ge 0 ]; then
+#jh - test this
 				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $FMTVERSION -eq 0 ]; then
 						RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
@@ -6852,20 +6988,22 @@ ${DIR}:0"
 		# Sort out the directory counters.
 		#
 
-		test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} "${FNAME}"` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
+		if [ $IS_A_DIR -eq 0 ]; then
+			test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} "${FNAME}"` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
 
-		RKHTMPVAR2=`echo "${DIR}" | sed -e 's/\./\\\./g'`
+			RKHTMPVAR2=`echo "${DIR}" | sed -e 's/\./\\\./g'`
 
-		RKHTMPVAR=`echo "${DIR_FILE_COUNT}" | grep "^${RKHTMPVAR2}:"`
+			RKHTMPVAR=`echo "${DIR_FILE_COUNT}" | grep "^${RKHTMPVAR2}:"`
 
-		if [ -z "${RKHTMPVAR}" ]; then
-			DIR_FILE_COUNT="${DIR_FILE_COUNT}
+			if [ -z "${RKHTMPVAR}" ]; then
+				DIR_FILE_COUNT="${DIR_FILE_COUNT}
 ${DIR}:1"
-		else
-			RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^.*:\([0-9]*\)$/\1/'`
-			RKHTMPVAR=`expr ${RKHTMPVAR} + 1`
+			else
+				RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^.*:\([0-9]*\)$/\1/'`
+				RKHTMPVAR=`expr ${RKHTMPVAR} + 1`
 
-			DIR_FILE_COUNT=`echo "${DIR_FILE_COUNT}" | sed -e "s;^\(${DIR}:\).*;\1${RKHTMPVAR};"`
+				DIR_FILE_COUNT=`echo "${DIR_FILE_COUNT}" | sed -e "s;^\(${DIR}:\).*;\1${RKHTMPVAR};"`
+			fi
 		fi
 
 
@@ -6874,6 +7012,17 @@ ${DIR}:1"
 		#
 
 		if [ -n "`echo \"${PKGMGRNOVRFY}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+			NOVRFYFILE=1
+		fi
+
+		#
+		# For the moment we only let the RPM package manager work on
+		# directories. Others, such as DPKG, will list a whole load of
+		# packages for certain directories (e.g '/etc'), and we have
+		# no way of handling that currently.
+		#
+
+		if [ $IS_A_DIR -eq 1 -a "${PKGMGR}" != "RPM" ]; then
 			NOVRFYFILE=1
 		fi
 
@@ -6890,6 +7039,8 @@ ${DIR}:1"
 			#
 			# First see if the file is exempt or belongs to a package.
 			#
+
+			PKGNAME=""
 
 			if [ $NOVRFYFILE -eq 0 ]; then
 				RKHTMPVAR=`${RPM_CMD} -qf "${FNAME}" --queryformat '%{NAME}\n' 2>/dev/null`
@@ -6962,7 +7113,7 @@ ${DIR}:1"
 
 						RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
 
-						if [ -h "${FNAME}" ]; then
+						if [ $IS_A_LINK -eq 1 ]; then
 							test -n "${DIRNAME_CMD}" && DIR=`${DIRNAME_CMD} "${FNAME}"` || DIR=`echo "${FNAME}" | sed -e 's:/[^/]*$::'`
 
 							SYSLNK=`echo "${RPM_QUERY_RESULT}" | cut -d: -f8`
@@ -6995,6 +7146,8 @@ ${DIR}:1"
 			#
 			# First see if the file is exempt or part of a known package.
 			#
+
+			PKGNAME=""
 
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
@@ -7041,6 +7194,8 @@ ${DIR}:1"
 			# First see if the file is exempt or part of a known package.
 			#
 
+			PKGNAME=""
+
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
 			else
@@ -7054,6 +7209,8 @@ ${DIR}:1"
 			#
 			# First see if the file is exempt or belongs to a package.
 			#
+
+			PKGNAME=""
 
 			if [ $NOVRFYFILE -eq 1 ]; then
 				ERRCODE=1
@@ -7101,7 +7258,11 @@ ${DIR}:1"
 		esac
 
 
-		if [ -n "${HASH_CMD}" ]; then
+		#
+		# Get the file hash value, but not for directories.
+		#
+
+		if [ $IS_A_DIR -eq 0 -a -n "${HASH_CMD}" ]; then
 			if [ -n "`echo \"${PRELINK_DEP_ERR_CMDS}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				FILE_IS_PKGD=1
 				SYSHASH="ignore-prelink-dep-err"
@@ -7176,7 +7337,7 @@ ${DIR}:1"
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
 							display --to LOG --type INFO FILE_PROP_NO_PKGMGR_FILE "`name2text \"${FNAME}\"`"
 						fi
-					elif [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
+					elif [ $IS_A_LINK -eq 1 -a ! -e "${FNAME}" ]; then
 						if [ $HAVE_READLINK -eq 1 ]; then
 							SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
@@ -7216,7 +7377,7 @@ ${DIR}:1"
 		fi
 
 
-		if [ -h "${FNAME}" ]; then
+		if [ $IS_A_LINK -eq 1 ]; then
 			test $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" && SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 			# Check if the symbolic link target has any colon characters in it.
@@ -7340,8 +7501,36 @@ ${DIR}:1"
 create_rkh_file_prop_list() {
 
 	#
-	# This function creates the file of pathnames
-	# used for the file properties check.
+	# This function creates both the file of pathnames used
+	# for the file properties check, and the exclusion file.
+	#
+
+	#
+	# We must create the exclusion file first as it is
+	# used by the main file properties file below. If no
+	# exclusion entries have been configured, then an
+	# empty file will still be created.
+	#
+
+	get_temp_file "${RKHTMPDIR}/rkh_prop_list_exclude.new"
+	touch "${TEMPFILE}"
+
+	IFS=$IFSNL
+
+	for FNAME in ${USER_EXCLUDE_PROP}; do
+		echo "${FNAME}" >>"${TEMPFILE}"
+	done
+
+	IFS=$RKHIFS
+
+	cp -f "${TEMPFILE}" "${RKH_FILEPROP_EXCLUDE}" >/dev/null 2>&1
+	chmod 600 "${RKH_FILEPROP_EXCLUDE}" >/dev/null 2>&1
+
+	rm -f "${TEMPFILE}" >/dev/null 2>&1
+
+
+	#
+	# We can now create the main file properties file.
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkh_prop_list.new"
@@ -7351,7 +7540,10 @@ create_rkh_file_prop_list() {
 
 	for DIR in ${PROP_DIR_LIST}; do
 		for FNAME in ${PROP_FILE_LIST}; do
-			echo "${DIR}/${FNAME}" >>"${TEMPFILE}"
+			RKHTMPVAR3="${DIR}/${FNAME}"
+
+			# The file should only contain non-directory entries.
+			test -d "${RKHTMPVAR3}" || echo "${RKHTMPVAR3}" >>"${TEMPFILE}"
 		done
 	done
 
@@ -7361,31 +7553,8 @@ create_rkh_file_prop_list() {
 	# pathnames to be included in the list.
 	#
 
-	if [ -n "${USER_FILE_LIST}" ]; then
-		#
-		# We need to create a file for the expanded excluded files.
-		# We do this using a simple loop with the 'echo' command,
-		# as the 'expand_paths' function is too slow when there
-		# are very many files.
-		#
-
-		#
-		# We need to save and restore the current TEMPFILE value,
-		# which is used for the pathname of the file for the include
-		# expanded files.
-		#
-
-		RKHTMPVAR3=${TEMPFILE}
-		get_temp_file "${RKHTMPDIR}/rkh-tmp-file-excludes"
-		TEMPFILE2=${TEMPFILE}
-		TEMPFILE=${RKHTMPVAR3}
-		touch "${TEMPFILE2}"
-
-		for RKHTMPVAR in ${USER_EXCLUDE_PROP}; do
-			echo "${RKHTMPVAR}" >>"${TEMPFILE2}"
-		done
-
-		for FNAME in ${USER_FILE_LIST}; do
+	if [ -n "${USER_FILE_LIST}" -o -n "${USER_DIR_LIST}" ]; then
+		for FNAME in ${USER_FILE_LIST} ${USER_DIR_LIST}; do
 			#
 			# We must exclude any user requested files or directories.
 			#
@@ -7393,13 +7562,11 @@ create_rkh_file_prop_list() {
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "${USER_EXCLUDE_PROP}" ]; then
-				test -n "`grep \"^${FNAMEGREP}$\" ${TEMPFILE2}`" && continue
+				test -n "`grep \"^${FNAMEGREP}$\" ${RKH_FILEPROP_EXCLUDE}`" && continue
 			fi
 
 			test -z "`grep \"^${FNAMEGREP}$\" "${TEMPFILE}" 2>/dev/null`" && echo "${FNAME}" >>"${TEMPFILE}"
 		done
-
-		rm -f "${TEMPFILE2}" >/dev/null 2>&1
 	fi
 
 	IFS=$RKHIFS
@@ -11169,6 +11336,10 @@ file_properties_check() {
 		TEST_RESULT=""
 		WHITELIST_RESULT=""
 
+		IS_A_DIR=0
+		IS_A_FILE=0
+		IS_A_LINK=0
+
 		RKH_CC=0
 		SYSLNK_CC=0
 		NOVRFYFILE=0
@@ -11179,26 +11350,43 @@ file_properties_check() {
 		HASH_TEST_PASSED=0
 		SIZE_TEST_PASSED=0
 
+		OLD_FTYPE="File"
+
 		IFS=$RKHIFS
 
 
 		#
-		# We first need to test if the file exists or not,
-		# and if the file is listed in the 'rkhunter.dat'
-		# file or not. This can indicate files that have
+		# We first need to test if the file/directory exists or not,
+		# and if the file/directory is listed in the 'rkhunter.dat'
+		# file or not. This can indicate files/directories that have
 		# appeared on, or disappeared from, the system.
 		#
 
 		FNAME=`echo "${FNAME}" | sed -e 's/^"\(.*\)"$/\1/'`
 
-		if [ -f "${FNAME}" -o \( -h "${FNAME}" -a ! -e "${FNAME}" \) ]; then
+		if [ -f "${FNAME}" -o -d "${FNAME}" -o \( -h "${FNAME}" -a ! -e "${FNAME}" \) ]; then
 			FILE_EXISTS=1
 			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 		else
 			FILE_EXISTS=0
 		fi
 
-		test -h "${FNAME}" -a $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+		if [ -h "${FNAME}" ]; then
+			IS_A_LINK=1
+			test $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+		elif [ $FMTVERSION -lt 3 ]; then
+			FTYPE="File"
+		elif [ -d "${FNAME}" ]; then
+			FTYPE="Dir"
+		else
+			FTYPE="File"
+		fi
+
+		if [ -d "${FNAME}" ]; then
+			IS_A_DIR=1
+		elif [ $FILE_EXISTS -eq 1 ]; then
+			IS_A_FILE=1
+		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -11208,7 +11396,7 @@ file_properties_check() {
 			else
 				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-				RKHLINE=`egrep "^(File|Link):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+				RKHLINE=`egrep "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 			fi
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
@@ -11220,7 +11408,7 @@ file_properties_check() {
 
 					ADDNEWENTRY=1
 
-					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+					if [ $IS_A_LINK -eq 1 -a $HAVE_READLINK -eq 1 ]; then
 						SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 					fi
 
@@ -11237,7 +11425,7 @@ file_properties_check() {
 				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ -n "${RKHLINE}" ]; then
 						#
-						# We need to remove the file from the 'rkhunter.dat' file.
+						# We need to remove the entry from the 'rkhunter.dat' file.
 						#
 
 						OLDRKHENTRIES="${OLDRKHENTRIES}
@@ -11246,12 +11434,20 @@ ${RKHLINE}"
 				elif [ -n "${RKHLINE}" ]; then
 					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
 
-					test -n "`echo \"${RKHLINE}\" | grep '^File:'`" && RKHTMPVAR=1 || RKHTMPVAR=0
+					if [ -n "`echo \"${RKHLINE}\" | grep '^File:'`" ]; then
+						RKHTMPVAR=1
+					elif [ -n "`echo \"${RKHLINE}\" | grep '^Dir:'`" ]; then
+						RKHTMPVAR=2
+					else
+						RKHTMPVAR=0
+					fi
 
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
 
 					if [ $RKHTMPVAR -eq 1 ]; then
 						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
+					elif [ $RKHTMPVAR -eq 2 ]; then
+						display --to LOG --type WARNING FILE_PROP_DIR_NOT_EXIST "`name2text \"${FNAME}\"`"
 					else
 						RKHTMPVAR=`get_lname_from_rkh "${RKHLINE}"`
 
@@ -11315,6 +11511,9 @@ ${RKHLINE}"
 				NOVRFYFILE=1
 			fi
 
+			# Keep a record of the previous file type.
+			OLD_FTYPE=`echo ${RKHLINE} | cut -d: -f1`
+			test -z "${OLD_FTYPE}" && OLD_FTYPE="File"
 
 			#
 			# Because the RPM package manager can verify most of the tests we are
@@ -11404,7 +11603,7 @@ ${RKHLINE}"
 						#
 						# If we still have an error, then check to make sure that the pathname
 						# does not contain a soft symlink somewhere in it. This is possible if,
-						# for example, the RedHat software collections is used.
+						# for example, the RedHat Software Collection is used.
 						#
 
 						if [ $ERRCODE -eq 1 -a $HAVE_READLINK -eq 1 ]; then
@@ -11430,7 +11629,7 @@ ${RKHLINE}"
 
 							RKHDTM=`echo "${RPM_QUERY_RESULT}" | cut -d: -f5`
 
-							if [ -h "${FNAME}" ]; then
+							if [ $IS_A_LINK -eq 1 ]; then
 								RKHLNK=`echo "${RPM_QUERY_RESULT}" | cut -d: -f7`
 
 								if [ -z "`echo \"${RKHLNK}\" | grep '^/'`" ]; then
@@ -11469,6 +11668,7 @@ ${RKHLINE}"
 					fi
 				fi
 			elif [ "${PKGMGR}" = "SOLARIS" ]; then
+#jh - the use of 'Dir' should be tested with other package managers too.
 				#
 				# First we see if the file is exempt or part of a package.
 				#
@@ -11527,6 +11727,8 @@ ${RKHLINE}"
 					#
 
 					RKHLINE="${RKHTMPVAR2}:${RKHHASH}:${RKHTMPVAR}:${FPERM}:${RKHUID}:${RKHGID}:${RKHSIZE}:${RKHDTM}"
+
+					OLD_FTYPE=`echo ${RKHLINE} | cut -d: -f1`
 				fi
 			fi
 
@@ -11535,7 +11737,7 @@ ${RKHLINE}"
 			# Do the file hash value check.
 			#
 
-			if [ $SKIP_HASH -eq 0 ]; then
+			if [ $SKIP_HASH -eq 0 -a "${FTYPE}" != "Dir" ]; then
 				#
 				# First we get all the package manager results.
 				#
@@ -11713,7 +11915,7 @@ ${RKHLINE}"
 							# Broken links may not give a hash value, so we must check to see if the link is whitelisted.
 							#
 
-							if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+							if [ $IS_A_LINK -eq 1 -a $HAVE_READLINK -eq 1 ]; then
 								# Check the link target to see if it is whitelisted.
 
 								if [ -z "${SYSLNK}" ]; then
@@ -11761,7 +11963,7 @@ ${RKHLINE}"
 							# If it was whitelisted, then we should not give a warning.
 							#
 
-							if [ -h "${FNAME}" -a ! -e "${FNAME}" ]; then
+							if [ $IS_A_LINK -eq 1 -a ! -e "${FNAME}" ]; then
 								if [ $HAVE_READLINK -eq 1 ]; then
 									# Check the link target to see if it is whitelisted.
 
@@ -11967,7 +12169,7 @@ ${RKHLINE}"
 					#
 
 					if [ $FILE_IS_PKGD -eq 0 ]; then
-						if [ "${FTYPE}" != "`echo ${RKHLINE} | cut -d: -f1`" ]; then
+						if [ "${FTYPE}" != "${OLD_FTYPE}" ]; then
 							# Put the file type change at the front of the list.
 							TEST_RESULT=" ftypechanged${TEST_RESULT}"
 						fi
@@ -11978,7 +12180,7 @@ ${RKHLINE}"
 					# If the file is a link, then check that the target has not changed.
 					#
 
-					if [ -h "${FNAME}" ]; then
+					if [ $IS_A_LINK -eq 1 ]; then
 						if [ $FILE_IS_PKGD -eq 1 ]; then
 							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep 'L|(^....\?)'`" ]; then
 								if [ $HAVE_READLINK -eq 1 ]; then
@@ -12013,6 +12215,7 @@ ${RKHLINE}"
 								if [ "${RKHLNK}" != "${SYSLNK}" ]; then
 									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
+#jh - check that existwhitelist can include directories.
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR="${SYSLNK}"
@@ -12039,7 +12242,10 @@ ${RKHLINE}"
 				# links are ignored.
 				#
 
-				if [ ! -h "${FNAME}" -a $FILE_IS_PKGD -eq 0 ]; then
+#jh - test this for a file.
+#jh - not specifically here, but what happens if a socket is included for testing when propupd is run?
+#jh - does the socket appear in the rkhdat file ?
+				if [ $FILE_IS_PKGD -eq 0 -a $IS_A_LINK -eq 0 -a \( $IS_A_FILE -eq 1 -o $IS_A_DIR -eq 1 \) ]; then
 					WL_FILE=""
 
 					if [ -n "`echo \"${WRITEWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -12117,11 +12323,21 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 
 			if [ -z "${WL_FILE}" ]; then
 				if [ $BSDOS -eq 0 ]; then
-					if [ ! -h "${FNAME}" ]; then
-						RKHTMPVAR=`${LSATTR_CMD} "${FNAME}" 2>&1 | cut -d' ' -f1 | grep 'i'`
+					if [ $IS_A_LINK -eq 0 ]; then
+#jh - test this
+						if [ $IS_A_DIR -eq 1 ]; then
+							RKHTMPVAR=`${LSATTR_CMD} -d "${FNAME}" 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+						else
+							RKHTMPVAR=`${LSATTR_CMD} "${FNAME}" 2>/dev/null | cut -d' ' -f1 | grep 'i'`
+						fi
 					fi
 				else
-					RKHTMPVAR=`ls -lno "${FNAME}" 2>&1 | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+#jh - can test this?
+					if [ $IS_A_DIR -eq 1 ]; then
+						RKHTMPVAR=`ls -ldno "${FNAME}" 2>&1 | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+					else
+						RKHTMPVAR=`ls -lno "${FNAME}" 2>&1 | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+					fi
 				fi
 
 				#
@@ -12151,30 +12367,34 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 			# require the package manager database having been corrupted
 			# as well.
 			#
+			# This test is only run on files.
+			#
 
-			if [ $HASH_TEST_PASSED -eq 0 -o $SIZE_TEST_PASSED -eq 0 ]; then
-				#
-				# See if the file is whitelisted.
-				#
+			if [ $IS_A_LINK -eq 0 -a $IS_A_FILE -eq 1 ]; then
+				if [ $HASH_TEST_PASSED -eq 0 -o $SIZE_TEST_PASSED -eq 0 ]; then
+					#
+					# See if the file is whitelisted.
+					#
 
-				WL_FILE=""
-				SYSSCRIPT=""
+					WL_FILE=""
+					SYSSCRIPT=""
 
-				if [ -n "`echo \"${SCRIPTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-					WL_FILE="whitelisted"
-					WHITELIST_RESULT="${WHITELIST_RESULT} script"
-				fi
-
-				if [ -z "${WL_FILE}" ]; then
-					test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
-
-					if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
-					else
-						SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i ' script( |,|$)'`
+					if [ -n "`echo \"${SCRIPTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
+						WL_FILE="whitelisted"
+						WHITELIST_RESULT="${WHITELIST_RESULT} script"
 					fi
 
-					test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
+					if [ -z "${WL_FILE}" ]; then
+						test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
+
+						if [ "${RKHTMPVAR}" = "rkhunter" ]; then
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
+						else
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i ' script( |,|$)'`
+						fi
+
+						test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
+					fi
 				fi
 			fi
 		fi
@@ -12198,11 +12418,15 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 				ftypechanged|hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged|linkchanged)
 					if [ $RKHTMPVAR2 -eq 0 ]; then
 						RKHTMPVAR2=1
-						display --to LOG --type WARNING FILE_PROP_CHANGED
 
-						if [ $FMTVERSION -ge 2 -a -h "${FNAME}" ]; then
+						if [ "${OLD_FTYPE}" = "Link" ]; then
+							display --to LOG --type WARNING FILE_PROP_CHANGED_LINK
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED3 "`name2text \"${FNAME}\"`"
+						elif [ "${OLD_FTYPE}" = "Dir" ]; then
+							display --to LOG --type WARNING FILE_PROP_CHANGED_DIR
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED4 "`name2text \"${FNAME}\"`"
 						else
+							display --to LOG --type WARNING FILE_PROP_CHANGED
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
 						fi
 					fi
@@ -12212,8 +12436,12 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 						if [ "${FTYPE}" = "Link" ]; then
 							test -n "${SYSLNK}" && RKHTMPVAR4=" -> `name2text \"${SYSLNK}\"`" || RKHTMPVAR4=""
 
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_FTL "${RKHTMPVAR4}"
-						else
+							if [ "${OLD_FTYPE}" = "File" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_FTL "${RKHTMPVAR4}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_DTL "${RKHTMPVAR4}"
+							fi
+						elif [ "${FTYPE}" = "File" ]; then
 							if [ $FMTVERSION -gt 0 ]; then
 								# Get the link target to which we used to point.
 								RKHTMPVAR5=`get_lname_from_rkh "${RKHLINE}"`
@@ -12222,12 +12450,31 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 								RKHTMPVAR4=""
 							fi
 
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_LTF "${RKHTMPVAR4}"
+							if [ "${OLD_FTYPE}" = "Link" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_LTF "${RKHTMPVAR4}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_DTF
+							fi
+						else
+							# It's changed to a directory.
+							if [ $FMTVERSION -gt 0 ]; then
+								# Get the link target to which we used to point.
+								RKHTMPVAR5=`get_lname_from_rkh "${RKHLINE}"`
+								test -n "${RKHTMPVAR5}" && RKHTMPVAR4=" -> `name2text \"${RKHTMPVAR5}\"`" || RKHTMPVAR4=""
+							else
+								RKHTMPVAR4=""
+							fi
+
+							if [ "${OLD_FTYPE}" = "Link" ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_LTD "${RKHTMPVAR4}"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_FTYPE_FTD
+							fi
 						fi
 						;;
 					hashchanged)
 						if [ -z "${SYSHASH}" ]; then
-							if [ -h "${FNAME}" ]; then
+							if [ $IS_A_LINK -eq 1 ]; then
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_UNAVAIL_BL
 							else
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_UNAVAIL
@@ -12306,36 +12553,61 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					esac
 					;;
 				verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged|verify:sizechanged|verify:dtmchanged|verify:linkchanged)
+#jhjh - sort this out - if the package contains a link, and the link perms (e.g) change then what is reported?
+#jhjh - may need to test file type and set error msg accordingly.
+#jhjh - if /tmp/jhd is a dir and exists in rkhunter.dat; then deleted and replaced by link to file. Nothing gets shown when properties check run.
+#jhjh - if /tmp/jhd is created a afile then propupd run. change /tmp/jhd to a dir. prop check says that the 'directory' has changed. It should say what the type was originally not what it is now.
 					if [ $RKHTMPVAR3 -eq 0 ]; then
 						RKHTMPVAR3=1
 						display --to LOG --type WARNING FILE_PROP_VRFY
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
+
+						if [ $FMTVERSION -ge 2 ]; then
+							if [ $IS_A_LINK -eq 1 ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED3 "`name2text \"${FNAME}\"`"
+							elif [ $IS_A_DIR -eq 1 ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED4 "`name2text \"${FNAME}\"`"
+							else
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
+							fi
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED2 "`name2text \"${FNAME}\"`"
+						fi
 
 						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text \"${FNAME}\"`"
 					fi
 
+					RKHTMPVAR4="file"
+
+					if [ $FMTVERSION -ge 2 ]; then
+						if [ $IS_A_LINK -eq 1 ]; then
+							RKHTMPVAR4="link"
+						elif [ $IS_A_DIR -eq 1 ]; then
+							RKHTMPVAR4="directory"
+						fi
+					fi
+
 					case "${RKHTMPVAR}" in
 					verify:hashchanged)
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_HASH "${RKHTMPVAR4}"
 
 						if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
 							display --to LOG --type INFO --log-indent 9 FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text \"${FNAME}\"`"
 						fi
 						;;
 					verify:permchanged)
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_PERM
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_PERM "${RKHTMPVAR4}"
 						;;
 					verify:uidchanged)
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_UID
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_UID "${RKHTMPVAR4}"
 						;;
 					verify:gidchanged)
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_GID
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_GID "${RKHTMPVAR4}"
 						;;
 					verify:sizechanged)
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_SIZE
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_SIZE "${RKHTMPVAR4}"
 						;;
 					verify:dtmchanged)
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM
+						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_DTM "${RKHTMPVAR4}"
 						;;
 					verify:linkchanged)
 						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_VRFY_LNK
@@ -12345,6 +12617,8 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 				norkhline)
 					if [ "${FTYPE}" = "File" ]; then
 						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC "`name2text \"${FNAME}\"`"
+					elif [ $IS_A_DIR -eq 1 ]; then
+						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC_DIR "`name2text \"${FNAME}\"`"
 					else
 						display --to LOG --type WARNING FILE_PROP_NO_RKH_REC_LNK "`name2text \"${FNAME}\"`"
 					fi
@@ -12384,9 +12658,9 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					;;
 				immutable)
 					if [ $IMMUTABLE_SET -eq 0 ]; then
-						display --to LOG --type WARNING FILE_PROP_IMMUT "`name2text \"${FNAME}\"`"
+						display --to LOG --type WARNING FILE_PROP_IMMUT "${FTYPE}" "`name2text \"${FNAME}\"`"
 					else
-						display --to LOG --type WARNING FILE_PROP_IMMUT_NOT_SET "`name2text \"${FNAME}\"`"
+						display --to LOG --type WARNING FILE_PROP_IMMUT_NOT_SET "${FTYPE}" "`name2text \"${FNAME}\"`"
 					fi
 					;;
 				script)
@@ -12422,7 +12696,13 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					;;
 				esac
 
-				display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" "${RKHTMPVAR}"
+#jhjh - should the following also apply to links?
+#jhjh - what happens - is logged - when a link is whitelisted?
+				if [ $IS_A_DIR -eq 1 ]; then
+					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" "${RKHTMPVAR}"
+				else
+					display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" "${RKHTMPVAR}"
+				fi
 			done
 		fi
 
@@ -12435,13 +12715,13 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 	#
 	# We must now loop through the 'rkhunter.dat' file and see if any filenames
 	# are missing from the 'rkhunter_prop_list.dat' file. If so, then this
-	# indicates a (probably wildcarded) file has been removed from the system.
+	# indicates a (possibly wildcarded) file has been removed from the system.
 	#
 
 	if [ $USE_DAT_FILE -eq 1 ]; then
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `egrep '^(File|Link):' "${RKHDAT_FILE}" 2>/dev/null`; do
+		for RKHTMPVAR in `egrep '^(File|Link|Dir):' "${RKHDAT_FILE}" 2>/dev/null`; do
 			FNAME=`get_fname_from_rkh "${RKHTMPVAR}"`
 
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -12467,7 +12747,16 @@ ${FTYPE}:${RKH_CC}:${FNAME}:.*"
 					PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
-					display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
+
+					FTYPE=`echo "${RKHTMPVAR}" | cut -d: -f1`
+
+					if [ "${FTYPE}" = "Link" ]; then
+						display --to LOG --type WARNING FILE_PROP_LINK_NOT_EXIST "`name2text \"${FNAME}\"`"
+					elif [ "${FTYPE}" = "Dir" ]; then
+						display --to LOG --type WARNING FILE_PROP_DIR_NOT_EXIST "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
+					fi
 				fi
 			fi
 		done
@@ -14425,6 +14714,8 @@ malware_checks() {
 
 			ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
+#jh - need to cater for ';<hex>' appended to pathname.
+#jh - also change 'dele' below to 'delete)'.
 			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele' 2>/dev/null | head ${HEAD_OPT}1`
 
 			if [ -n "${DELE_FILES}" ]; then
@@ -19432,8 +19723,8 @@ set_file_prop_dirs_files() {
 
 	#
 	# This function sets up the list of directories we look in,
-	# and the list of files we look for, in order to perform
-	# the file properties checks.
+	# and the list of files and directories we look for, in order
+	# to perform the file properties checks.
 	#
 	# Any non-existent files are simply left in for the checks
 	# to skip over. However, any symbolic links are expanded and
@@ -19442,22 +19733,22 @@ set_file_prop_dirs_files() {
 	# detected by the file hash value check.
 	#
 	# We also check to see if any of the directories are links.
-	# If it is then we add the link target directory.
+	# If it is, then we add the link target directory.
 	#
 
 	PROP_DIR_LIST=""
 
 	#
-	# We have to change BINDIR to a newline-separated list here
-	# because USER_DIR_LIST is one. If USER_DIR_LIST contained
-	# a space anywhere, then the directories would not be searched.
+	# We have to change BINDIR to a newline-separated list here because
+	# USER_CMD_DIR_LIST is one. If USER_CMD_DIR_LIST contained a space
+	# anywhere, then the directories would not be searched.
 	#
 
 	BINPS=`echo ${BINPATHS} | tr ' ' '\n'`
 
 	IFS=$IFSNL
 
-	for DIR in ${BINPS} ${USER_DIR_LIST}; do
+	for DIR in ${BINPS} ${USER_CMD_DIR_LIST}; do
 		test ! -d "${DIR}" && continue
 
 		if [ -h "${DIR}" -a $HAVE_READLINK -eq 1 ]; then
@@ -19618,6 +19909,31 @@ ${LINKFNAME}"
 				fi
 			done
 		done
+
+
+		#
+		# We now repeat the link check using the
+		# user-supplied list of directories.
+		#
+
+		for DIR in ${USER_DIR_LIST}; do
+			if [ -h "${DIR}" ]; then
+				RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${DIR}"`
+
+				test ! -d "${RKHTMPVAR}" && continue
+
+				#
+				# Now see if we already have the directory listed.
+				# If not, then we add it on.
+				#
+
+				if [ -z "`echo \"${USER_DIR_LIST}\" | grep \"^${RKHTMPVAR}$\"`" ]; then
+					USER_DIR_LIST="${USER_DIR_LIST}
+${RKHTMPVAR}"
+				fi
+			fi
+		done
+
 
 		IFS=$RKHIFS
 
@@ -19830,6 +20146,8 @@ display_propfiles() {
 	create_rkh_file_prop_list
 
 	# Finally just dump out the list of file names.
+# TODO:
+# Really this output should exclude anything in the exclusion list.
 	${AWK_CMD} -F'/' '{ print $NF }' "${RKH_FILEPROP_LIST}" 2>/dev/null | sort | uniq
 
 	return
@@ -20007,6 +20325,33 @@ check_prop_dat_files() {
 			LEAVE=1
 			echo "The rkhunter_prop_list.dat file is empty. Run 'rkhunter --propupd' to recreate the file."
 		fi
+	fi
+
+
+	#
+	# We now run similar tests on the 'rkhunter_prop_list_exclude.dat' file.
+	#
+
+	if [ -h "${RKH_FILEPROP_EXCLUDE}" ]; then
+		LEAVE=1
+
+		if [ $HAVE_READLINK -eq 1 ]; then
+			RKHTMPVAR2=`${READLINK_CMD} ${READLINK_OPT} "${RKH_FILEPROP_EXCLUDE}"`
+			RKHTMPVAR="${RKH_FILEPROP_EXCLUDE} -> ${RKHTMPVAR2}"
+		else
+			RKHTMPVAR="${RKH_FILEPROP_EXCLUDE}"
+		fi
+
+		echo "The rkhunter_prop_list_exclude.dat file has been changed to a symbolic link: ${RKHTMPVAR}"
+		echo "This is a security problem. If the link points to another file, then that file may be modified by rkhunter."
+	elif [ ! -e "${RKH_FILEPROP_EXCLUDE}" ]; then
+		if [ -n "${PROPUPD_OPT}" ]; then
+			LEAVE=1
+			echo "The rkhunter_prop_list_exclude.dat file does not exist. Run 'rkhunter --propupd' to create the file."
+		fi
+	elif [ ! -f "${RKH_FILEPROP_EXCLUDE}" ]; then
+		LEAVE=1
+		echo "The rkhunter_prop_list_exclude.dat file is not a file: ${RKH_FILEPROP_EXCLUDE}"
 	fi
 
 
@@ -20624,10 +20969,13 @@ RKHDAT_FILE=""
 FMTVERSION=-1
 
 # The current 'rkhunter.dat' file format version.
-CURRENT_FMTVERSION=2
+CURRENT_FMTVERSION=3
 
 # The full pathname of the 'rkhunter_prop_list.dat' file.
 RKH_FILEPROP_LIST=""
+
+# The full pathname of the 'rkhunter_prop_list_exclude.dat' file.
+RKH_FILEPROP_EXCLUDE=""
 
 # This gets set if we have a working readlink command.
 HAVE_READLINK=0
@@ -20637,10 +20985,13 @@ PRELINK_DEP_ERR_CMDS=""
 
 # User provided files/dirs for the file properties check.
 USER_FILE_LIST=""
-USER_FILEPROP_OPTS=""
 USER_SIMPLE_FILE_LIST=""
 USER_DIR_LIST=""
+USER_CMD_DIR_LIST=""
+
+USER_FILEPROP_OPTS=""
 USER_EXCLUDE_PROP=""
+USER_EXCLUDE_FILEPROP_OPTS=""
 
 # This gets set if any shared libraries are to be whitelisted.
 SHARED_LIB_WHITELIST=""
@@ -21407,14 +21758,29 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 		IFS=$IFSNL
 
-		for FNAME in ${PROPUPD_OPT}; do
-			if [ -n "`echo \"${FNAME}\" | grep '^[^/].*/'`" ]; then
+		for FNAM in ${PROPUPD_OPT}; do
+			if [ -n "`echo \"${FNAM}\" | grep '^[^/].*/'`" ]; then
 				# Filename is relative
 				LEAVE=1
-				echo "Relative file or directory name specified: ${FNAME}"
-			elif [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
+				echo "Relative file or directory name specified: ${FNAM}"
+			elif [ -n "`echo \"${FNAM}\" | grep '^/'`" ]; then
 				# Filename is absolute
-				test -h "${FNAME}" -a $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+
+				if [ -n "`echo \"${FNAM}\" | grep '/\$'`" ]; then
+					FNAME=`echo "${FNAM}" | sed -e 's:/$::'`
+				else
+					FNAME="${FNAM}"
+				fi
+
+				if [ -h "${FNAME}" ]; then
+					test $FMTVERSION -ge 2 && FTYPE="Link" || FTYPE="File"
+				elif [ $FMTVERSION -lt 3 ]; then
+					FTYPE="File"
+				elif [ -d "${FNAME}" ]; then
+					FTYPE="Dir"
+				else
+					FTYPE="File"
+				fi
 
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
@@ -21454,11 +21820,11 @@ ${PATHNAME}"
 ${RKHTMPVAR2}"
 						else
 							LEAVE=1
-							echo "Directory is not in the \"rkhunter.dat\" file: ${FNAME}"
+							echo "Directory is not in the \"rkhunter.dat\" file: ${FNAM}"
 						fi
 					else
 						LEAVE=1
-						echo "Filename is not in the \"rkhunter.dat\" file: ${FNAME}"
+						echo "Filename is not in the \"rkhunter.dat\" file: ${FNAM}"
 					fi
 				else
 					RKHTMPVAR="${RKHTMPVAR}
@@ -21470,6 +21836,8 @@ ${RKHTMPVAR2}"
 				# The package names are currently in field 11 in the 'rkhunter.dat' file.
 				#
 
+				FNAME="${FNAM}"
+
 				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ $FMTVERSION -eq 0 ]; then
@@ -21479,7 +21847,7 @@ ${RKHTMPVAR2}"
 
 					IFS=$IFSNL
 
-					for RKHLINE in `egrep "^(File|Link):[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
+					for RKHLINE in `egrep "^(File|Link|Dir):[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
 						PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 						PATHS="${PATHS}
@@ -21500,7 +21868,7 @@ ${PATHNAME}"
 
 						IFS=$IFSNL
 
-						for RKHLINE in `egrep "^(File|Link):[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
+						for RKHLINE in `egrep "^(File|Link|Dir):[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
 							PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 							PATHS="${PATHS}
@@ -21517,7 +21885,7 @@ ${PATHNAME}"
 ${RKHTMPVAR2}"
 					else
 						LEAVE=1
-						echo "File or package name is not in the \"rkhunter.dat\" file: ${FNAME}"
+						echo "File or package name is not in the \"rkhunter.dat\" file: ${FNAM}"
 					fi
 				else
 					RKHTMPVAR="${RKHTMPVAR}
@@ -22049,12 +22417,47 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			# the fully expanded pathnames could take a long time
 			# if globbing and globstar have been used.
 			#
+			# We also ignore any user-specified directories (with a
+			# trailing slash), and log those afterwards.
+			#
 
 			set -f
 
 			RKHTMPVAR=`echo "${USER_FILEPROP_OPTS}" | sort | uniq`
 
 			for FNAME in ${RKHTMPVAR}; do
+				test -n "`echo \"${FNAME}\" | grep '/$'`" && continue
+
+				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+			done
+
+			set +f
+
+			IFS=$RKHIFS
+		fi
+
+		if [ -n "${USER_DIR_LIST}" ]; then
+			display --to LOG --type INFO USER_DIR_LIST
+
+			IFS=$IFSNL
+
+			#
+			# We only display the configuration paths specified, so
+			# we need to temporarily disable globbing. Displaying
+			# the fully expanded pathnames could take a long time
+			# if globbing and globstar have been used.
+			#
+			# We only display user-specified directories (with a
+			# trailing slash).
+			#
+
+			set -f
+
+			RKHTMPVAR=`echo "${USER_FILEPROP_OPTS}" | sort | uniq`
+
+			for FNAME in ${RKHTMPVAR}; do
+				test -z "`echo \"${FNAME}\" | grep '/$'`" && continue
+
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
 			done
 
@@ -22077,12 +22480,12 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			IFS=$RKHIFS
 		fi
 
-		if [ -n "${USER_DIR_LIST}" ]; then
-			display --to LOG --type INFO USER_DIR_LIST
+		if [ -n "${USER_CMD_DIR_LIST}" ]; then
+			display --to LOG --type INFO USER_CMD_DIR_LIST
 
 			IFS=$IFSNL
 
-			RKHTMPVAR=`echo "${USER_DIR_LIST}" | sort | uniq`
+			RKHTMPVAR=`echo "${USER_CMD_DIR_LIST}" | sort | uniq`
 
 			for FNAME in ${RKHTMPVAR}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
@@ -22091,7 +22494,7 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			IFS=$RKHIFS
 		fi
 
-		if [ -n "${USER_EXCLUDE_PROP}" ]; then
+		if [ -n "${USER_EXCLUDE_FILEPROP_OPTS}" ]; then
 			display --to LOG --type INFO USER_EXCLUDE_PROP
 
 			IFS=$IFSNL
@@ -22100,12 +22503,12 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			# We only display the configuration paths used, so we
 			# need to temporarily disable globbing. Displaying the
 			# fully expanded pathnames could take a long time if
-			# globbing and globstar has been used.
+			# globbing and globstar have been used.
 			#
 
 			set -f
 
-			RKHTMPVAR=`echo "${USER_EXCLUDE_PROP}" | sort | uniq`
+			RKHTMPVAR=`echo "${USER_EXCLUDE_FILEPROP_OPTS}" | sort | uniq`
 
 			for FNAME in ${RKHTMPVAR}; do
 				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
