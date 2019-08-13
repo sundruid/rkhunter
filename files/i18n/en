@@ -1,4 +1,4 @@
-Version:2019080901
+Version:2019081301
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -307,16 +307,18 @@ FILE_PROP_BROKEN_LINK_WL_TGT:Found a broken link, but the targets existence is w
 FILE_PROP_NO_SYSHASH_CMD:Hash command output: $1
 FILE_PROP_NO_SYSHASH_DEPENDENCY:Try running the command 'prelink $1' to resolve dependency errors.
 FILE_PROP_IGNORE_PRELINK_DEP_ERR:Ignoring prelink dependency error for file '$1'
-FILE_PROP_FTYPE_FTL:Current type: link$1    Stored file type: file
-FILE_PROP_FTYPE_DTL:Current type: link$1    Stored file type: directory
-FILE_PROP_FTYPE_LTF:Current type: file    Stored file type: link$1
-FILE_PROP_FTYPE_DTF:Current type: file    Stored file type: directory
-FILE_PROP_FTYPE_LTD:Current type: directory    Stored file type: link$1
-FILE_PROP_FTYPE_FTD:Current type: directory    Stored file type: file
+FILE_PROP_FTYPE_FTL:Current type: link$1    Stored type: file
+FILE_PROP_FTYPE_DTL:Current type: link$1    Stored type: directory
+FILE_PROP_FTYPE_LTF:Current type: file    Stored type: link$1
+FILE_PROP_FTYPE_DTF:Current type: file    Stored type: directory
+FILE_PROP_FTYPE_LTD:Current type: directory    Stored type: link$1
+FILE_PROP_FTYPE_FTD:Current type: directory    Stored type: file
+FILE_PROP_SYSHASH_NONE:Current hash: (None)
 FILE_PROP_SYSHASH_UNAVAIL:Current hash: Unavailable
 FILE_PROP_SYSHASH_UNAVAIL_BL:Current hash: Unavailable (possible broken link)
 FILE_PROP_SYSHASH:Current hash: $1
 FILE_PROP_RKHHASH:Stored  hash: $1
+FILE_PROP_RKHHASH_NONE:Stored  hash: (None)
 FILE_PROP_NO_RKHHASH:No hash value found for '$1' in the 'rkhunter.dat' file.
 FILE_PROP_NO_RKHPERM:No permissions value found for '$1' in the 'rkhunter.dat' file.
 FILE_PROP_PERM_UNAVAIL:Current permissions: Unavailable    Stored permissions: $1

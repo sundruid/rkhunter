@@ -5837,7 +5837,7 @@ ${RKHTMPVAR}"
 				# Next we check to see if it is a simple file name.
 				#
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 					# Check that the file name hasn't already been set. If it has, then we just ignore it.
@@ -5881,7 +5881,7 @@ ${FNAME}"
 							RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 							if [ -n "${RKHTMPVAR}" ]; then
-								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 								if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 									FNAME="${FNAME}
@@ -7280,6 +7280,7 @@ ${DIR}:1"
 
 					if [ -n "${PKGNAME}" ]; then
 						if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
+#jh4 because of egrep must also escape + and {} ? * etc. Use FNGREP (if not used) rather than FILNAM
 							FILNAM=`echo "${FNAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
 							SYSHASH=`egrep "( |\./)${FILNAM}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" 2>/dev/null | cut -d' ' -f1`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
@@ -11389,7 +11390,8 @@ file_properties_check() {
 		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+#jh4 - see other jh4
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ $FMTVERSION -eq 0 ]; then
 				RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
@@ -11465,7 +11467,7 @@ ${RKHLINE}"
 			fi
 		elif [ $FILE_EXISTS -eq 1 ]; then
 			RKHLINE=""
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 		else
 			IFS=$IFSNL
 			continue
@@ -11737,7 +11739,7 @@ ${RKHLINE}"
 			# Do the file hash value check.
 			#
 
-			if [ $SKIP_HASH -eq 0 -a "${FTYPE}" != "Dir" ]; then
+			if [ $SKIP_HASH -eq 0 ]; then
 				#
 				# First we get all the package manager results.
 				#
@@ -11910,6 +11912,9 @@ ${RKHLINE}"
 					if [ -z "${RKHHASH}" ]; then
 						if [ "${HASH_CMD}" = "NONE" ]; then
 							:
+						elif [ "${OLD_FTYPE}" = "Dir" ]; then
+							# Directories won't have a hash value.
+							:
 						else
 							#
 							# Broken links may not give a hash value, so we must check to see if the link is whitelisted.
@@ -11940,6 +11945,9 @@ ${RKHLINE}"
 
 					if [ $RKHTMPVAR -eq 0 -a -z "${TEST_RESULT}" ]; then
 						if [ "${HASH_CMD}" = "NONE" ]; then
+							SYSHASH=""
+						elif [ $IS_A_DIR -eq 1 ]; then
+							# Directories won't have a hash value.
 							SYSHASH=""
 						else
 							SYSHASH=`${HASH_CMD} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
@@ -12243,8 +12251,6 @@ ${RKHLINE}"
 				#
 
 #jh - test this for a file.
-#jh - not specifically here, but what happens if a socket is included for testing when propupd is run?
-#jh - does the socket appear in the rkhdat file ?
 				if [ $FILE_IS_PKGD -eq 0 -a $IS_A_LINK -eq 0 -a \( $IS_A_FILE -eq 1 -o $IS_A_DIR -eq 1 \) ]; then
 					WL_FILE=""
 
@@ -12476,6 +12482,8 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 						if [ -z "${SYSHASH}" ]; then
 							if [ $IS_A_LINK -eq 1 ]; then
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_UNAVAIL_BL
+							elif [ $IS_A_DIR -eq 1 ]; then
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_NONE
 							else
 								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH_UNAVAIL
 							fi
@@ -12483,7 +12491,11 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_SYSHASH "${SYSHASH}"
 						fi
 
-						display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH "${RKHHASH}"
+						if [ -z "${RKHHASH}" ]; then
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH_NONE
+						else
+							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_RKHHASH "${RKHHASH}"
+						fi
 
 						test $DEPENDENCY_ERR -eq 1 && display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_DEPENDENCY "`name2text \"${FNAME}\"`"
 						;;
@@ -12553,10 +12565,6 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					esac
 					;;
 				verify:hashchanged|verify:permchanged|verify:uidchanged|verify:gidchanged|verify:sizechanged|verify:dtmchanged|verify:linkchanged)
-#jhjh - sort this out - if the package contains a link, and the link perms (e.g) change then what is reported?
-#jhjh - may need to test file type and set error msg accordingly.
-#jhjh - if /tmp/jhd is a dir and exists in rkhunter.dat; then deleted and replaced by link to file. Nothing gets shown when properties check run.
-#jhjh - if /tmp/jhd is created a afile then propupd run. change /tmp/jhd to a dir. prop check says that the 'directory' has changed. It should say what the type was originally not what it is now.
 					if [ $RKHTMPVAR3 -eq 0 ]; then
 						RKHTMPVAR3=1
 						display --to LOG --type WARNING FILE_PROP_VRFY
@@ -12965,7 +12973,7 @@ suspscan() {
 				test ! -e "${SUSPSCAN_ITEM}" && continue
 
 				#
-				# Adding "text" to the egrep below widens scope at the expense of more false-positives and extending running time.
+				# Adding "text" to the egrep below widens the scope at the expense of more false-positives and extending the run time.
 				#
 
 				if [ -n "`echo \"${FTYPE}\" | grep -v -i 'compres' | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
@@ -14810,6 +14818,7 @@ malware_checks() {
 								FNAMEGREP=""
 
 								for FN in ${RKHTMPVAR3}; do
+#jh4
 									FNGREP=`echo "${FN}" | sed -e 's/\([.^+]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
 									FNAMEGREP="${FNAMEGREP}|${FNGREP}"
 								done
@@ -16419,6 +16428,7 @@ linux_avail_modules() {
 		LKM_NAMES=""
 
 		for RKHTMPVAR in ${LKM_BADNAMES}; do
+#jh4
 			RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/\./\\\./g'`
 
 			LKM_NAMES="${LKM_NAMES} ${RKHTMPVAR}"
@@ -16443,6 +16453,7 @@ linux_avail_modules() {
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 			for RKHTMPVAR in ${FOUNDFILES}; do
+#jh4
 				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/\\\././g'`
 
 				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_FOUND "${LKM_PATH}" "${RKHTMPVAR}"
@@ -19129,6 +19140,7 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 			# Now see if the application version is known to be bad.
 			#
 
+#jh4
 			RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\./\\\./g'`
 
 			if [ -n "`echo \"${APP_WHITELIST}\" | grep -i \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
@@ -21782,7 +21794,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 					FTYPE="File"
 				fi
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ $FMTVERSION -eq 0 ]; then
 					RKHTMPVAR2=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
@@ -21838,7 +21850,7 @@ ${RKHTMPVAR2}"
 
 				FNAME="${FNAM}"
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ $FMTVERSION -eq 0 ]; then
 					RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
