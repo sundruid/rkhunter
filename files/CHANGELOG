@@ -104,6 +104,9 @@
    display any configuration errors. This has now been corrected. If
    the '-q/--quiet' option is used, then no errors will be displayed,
    but the return code will be set (as before).
+ - Due to a change in the code, from using 'grep' to 'egrep', the file
+   properties check could fail to recognize a file if it contained
+   extended regex characters in its name. This has now been corrected.
 
  --
 

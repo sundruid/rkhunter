@@ -7280,9 +7280,8 @@ ${DIR}:1"
 
 					if [ -n "${PKGNAME}" ]; then
 						if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-#jh4 because of egrep must also escape + and {} ? * etc. Use FNGREP (if not used) rather than FILNAM
-							FILNAM=`echo "${FNAME}" | sed -e 's:^/::; s:\.:\\\.:g'`
-							SYSHASH=`egrep "( |\./)${FILNAM}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" 2>/dev/null | cut -d' ' -f1`
+							FNGREP=`echo "${FNAME}" | sed -e 's:^/::; s/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+							SYSHASH=`egrep "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" 2>/dev/null | cut -d' ' -f1`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
 					fi
@@ -7294,8 +7293,8 @@ ${DIR}:1"
 					#
 
 					if [ -n "${PKGNAME}" ]; then
-						FILNAM=`echo "${FNAME}" | sed -e 's:^/usr/pkg/::; s:^/usr/local/::; s:\.:\\\.:g'`
-						SYSHASH=`${PKG_CMD} -v -L "${PKGNAME}" 2>/dev/null | grep -A 1 "File: ${FILNAM}\$" 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f3`
+						FNGREP=`echo "${FNAME}" | sed -e 's:^/usr/pkg/::; s:^/usr/local/::; s:\.:\\\.:g'`
+						SYSHASH=`${PKG_CMD} -v -L "${PKGNAME}" 2>/dev/null | grep -A 1 "File: ${FNGREP}\$" 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f3`
 						test -n "${SYSHASH}" && FILE_IS_PKGD=1
 					fi
 					;;
@@ -11390,7 +11389,6 @@ file_properties_check() {
 		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
-#jh4 - see other jh4
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ $FMTVERSION -eq 0 ]; then
@@ -14818,8 +14816,7 @@ malware_checks() {
 								FNAMEGREP=""
 
 								for FN in ${RKHTMPVAR3}; do
-#jh4
-									FNGREP=`echo "${FN}" | sed -e 's/\([.^+]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
+									FNGREP=`echo "${FN}" | sed -e 's/\([.^$*?+{}]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
 									FNAMEGREP="${FNAMEGREP}|${FNGREP}"
 								done
 
@@ -16428,8 +16425,7 @@ linux_avail_modules() {
 		LKM_NAMES=""
 
 		for RKHTMPVAR in ${LKM_BADNAMES}; do
-#jh4
-			RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/\./\\\./g'`
+			RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			LKM_NAMES="${LKM_NAMES} ${RKHTMPVAR}"
 		done
@@ -16453,8 +16449,7 @@ linux_avail_modules() {
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 			for RKHTMPVAR in ${FOUNDFILES}; do
-#jh4
-				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/\\\././g'`
+				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/\\\([.$*?+{}\\/]\)/\1/g; s/\\\[/[/g; s/\\\]/]/g'`
 
 				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_FOUND "${LKM_PATH}" "${RKHTMPVAR}"
 			done
@@ -19140,8 +19135,7 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 			# Now see if the application version is known to be bad.
 			#
 
-#jh4
-			RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\./\\\./g'`
+			RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${APP_WHITELIST}\" | grep -i \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
 				APP_RESULTS="${APP_RESULTS}
