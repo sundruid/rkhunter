@@ -10787,10 +10787,10 @@ ${VARNAME}=\"${VARNAME_VALUE_ORIG}\""
 				for RKHTMPVAR in ${RKHTMPVAR_BIN}; do
 					LD_LIBRARY_PATH="${LD_LIBRARY_PATH_SAVED}"
 					export LD_LIBRARY_PATH
-					RKHTMPVAR_WITH=`${LDD_CMD} ${RKHTMPVAR} | sed -e 's/(0x[0-9a-f]*)/0xHEX/' 2>&1`
+					RKHTMPVAR_WITH=`${LDD_CMD} ${RKHTMPVAR} | sed -e 's/(0x[0-9a-fA-F]*)/0xHEX/' 2>&1`
 
 					unset LD_LIBRARY_PATH
-					RKHTMPVAR_WITHOUT=`${LDD_CMD} ${RKHTMPVAR} | sed -e 's/(0x[0-9a-f]*)/0xHEX/' 2>&1`
+					RKHTMPVAR_WITHOUT=`${LDD_CMD} ${RKHTMPVAR} | sed -e 's/(0x[0-9a-fA-F]*)/0xHEX/' 2>&1`
 
 					if [ "${RKHTMPVAR_WITH}" != "${RKHTMPVAR_WITHOUT}" ]; then
 						#
@@ -14718,150 +14718,159 @@ malware_checks() {
 			WHITEPROC=""
 			BLACKPROC=""
 
+			PIDLIST=" "
+
 			ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
-#jh - need to cater for ';<hex>' appended to pathname.
-#jh - also change 'dele' below to 'delete)'.
-			DELE_FILES=`${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele' 2>/dev/null | head ${HEAD_OPT}1`
+			IFS=$IFSNL
 
-			if [ -n "${DELE_FILES}" ]; then
-				PIDLIST=" "
+			for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele'`; do
+				PROC=""
 
-				IFS=$IFSNL
+				PID=`echo "${LINE}" | ${AWK_CMD} '{ print $2 }'`
+				NODE=`echo "${LINE}" | ${AWK_CMD} '{ if ($8 ~ /[^0-9]/) { print $10 } else { print $8 } }'`
+				FNAME=`echo "${LINE}" | ${AWK_CMD} '{ if ($9 ~ /^[0-9][0-9]*$/) { print $11 } else { print $9 } }'`
 
-				for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele'`; do
-					PROC=""
+				#
+				# Skip any PID's we have already seen.
+				#
 
-					PID=`echo "${LINE}" | ${AWK_CMD} '{ print $2 }'`
-					NODE=`echo "${LINE}" | ${AWK_CMD} '{ print $8 }'`
-					FNAME=`echo "${LINE}" | ${AWK_CMD} '{ print $9 }'`
+				test -n "`echo \"${PIDLIST}\" | grep \" $PID \"`" && continue
 
-					#
-					# Skip any PID's we have already seen.
-					#
+				#
+				# Try and get the running process name.
+				#
 
-					test -n "`echo \"${PIDLIST}\" | grep \" $PID \"`" && continue
+				if [ $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR=""
 
-					#
-					# Try and get the running process name.
-					#
-
-					if [ $HAVE_READLINK -eq 1 ]; then
-						RKHTMPVAR=""
-
-						if [ $SOL_PROC -eq 1 ]; then
-							test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/path/a.out"`
-						elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
-							test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/exe"`
-						fi
-
-						test -n "${RKHTMPVAR}" && PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+					if [ $SOL_PROC -eq 1 ]; then
+						test -h "/proc/${PID}/path/a.out" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/path/a.out"`
+					elif [ $SUNOS -eq 0 -o -h "/proc/${PID}/exe" ]; then
+						test -h "/proc/${PID}/exe" && RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "/proc/${PID}/exe"`
 					fi
 
-					if [ -z "${PROC}" ]; then
-						if [ $SUNOS -eq 1 ]; then
-							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' 2>/dev/null | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
-						else
-							PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | ${AWK_CMD} '{ print $NF }'`
-						fi
+					test -n "${RKHTMPVAR}" && PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+				fi
 
-						test -z "${PROC}" && PROC=`echo "${LINE}" | ${AWK_CMD} '{ print $1 }'`
+				if [ -z "${PROC}" ]; then
+					if [ $SUNOS -eq 1 ]; then
+						PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' 2>/dev/null | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
+					else
+						PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | ${AWK_CMD} '{ print $NF }'`
 					fi
 
-					#
-					# If FNAME is not a pathname then look at the NODE.
-					#
+					test -z "${PROC}" && PROC=`echo "${LINE}" | ${AWK_CMD} '{ print $1 }'`
+				fi
 
-					if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
-						if [ -n "`echo \"${NODE}\" | grep '^/'`" ]; then
-							FNAME="${NODE}"
-						fi
+				#
+				# Skip any shared memory files (since they are not really files).
+				#
+
+				test -n "`echo \"${FNAME}\" | egrep '^(/memfd:|/dev/shm/)'`" && continue
+
+				#
+				# If FNAME is not a pathname then look at the NODE.
+				#
+
+				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+					if [ -n "`echo \"${NODE}\" | grep '^/'`" ]; then
+						FNAME="${NODE}"
 					fi
+				fi
 
-					#
-					# Strip anything after the pathname.
-					#
+				#
+				# Strip anything after the pathname.
+				#
 
-					if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
-						FNAME=`echo "${FNAME}" | cut -d' ' -f1`
-					fi
+				if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
+					FNAME=`echo "${FNAME}" | cut -d' ' -f1`
+				fi
 
-					#
-					# Now see if the process is whitelisted.
-					#
+				#
+				# Remove any hex characters from the end of the process name and filename.
+				# These seem to indicate that the relevant file has been recently updated.
+				# The hex value seems to be the epoch time the package/file was updated.
+				#
 
-					PROCWHITELISTED=0
-					PROCDELFILES_GIVEN=0
+				PROC=`echo "${PROC}" | sed -e 's/;[0-9a-fA-F][0-9a-fA-F]*$//'`
+				FNAME=`echo "${FNAME}" | sed -e 's/;[0-9a-fA-F][0-9a-fA-F]*$//'`
 
-					#
-					# For this test we do not want to use globbing because it may match with
-					# files that actually exist. This could then lead to a false-positive for
-					# what should have been a whitelisted pathname. Instead we disable globbing,
-					# and then change the glob characters to regular expression ones. We also
-					# escape typical grep regex characters (e.g. '.'). The resulting regular
-					# expression is then matched against the deleted file pathname.
-					#
+				#
+				# Now see if the process is whitelisted.
+				#
 
-					set -f
+				PROCWHITELISTED=0
+				PROCDELFILES_GIVEN=0
 
-					for RKHTMPVAR in ${ALLOWPROCDELFILES}; do
-						RKHTMPVAR2=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F ':/' '{ print $1 }'`
+				#
+				# For this test we do not want to use globbing because it may match with
+				# files that actually exist. This could then lead to a false-positive for
+				# what should have been a whitelisted pathname. Instead we disable globbing,
+				# and then change the glob characters to regular expression ones. We also
+				# escape typical grep regex characters (e.g. '.'). The resulting regular
+				# expression is then matched against the deleted file pathname.
+				#
 
-						test "${RKHTMPVAR}" = "${RKHTMPVAR2}" && PROCDELFILES_GIVEN=0 || PROCDELFILES_GIVEN=1
+				set -f
 
-						if [ "${PROC}" = "${RKHTMPVAR2}" ]; then
-							if [ $PROCDELFILES_GIVEN -eq 1 ]; then
-								RKHTMPVAR3=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F ':/' '{ for (i = 2; i <= NF; i++) { a[i] = $i } } END { for (i in a) { print "/" a[i] } }'`
+				for RKHTMPVAR in ${ALLOWPROCDELFILES}; do
+					RKHTMPVAR2=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F ':/' '{ print $1 }'`
 
-								FNAMEGREP=""
+					test "${RKHTMPVAR}" = "${RKHTMPVAR2}" && PROCDELFILES_GIVEN=0 || PROCDELFILES_GIVEN=1
 
-								for FN in ${RKHTMPVAR3}; do
-									FNGREP=`echo "${FN}" | sed -e 's/\([.^$*?+{}]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
-									FNAMEGREP="${FNAMEGREP}|${FNGREP}"
-								done
+					if [ "${PROC}" = "${RKHTMPVAR2}" ]; then
+						if [ $PROCDELFILES_GIVEN -eq 1 ]; then
+							RKHTMPVAR3=`echo "${RKHTMPVAR}" | ${AWK_CMD} -F ':/' '{ for (i = 2; i <= NF; i++) { a[i] = $i } } END { for (i in a) { print "/" a[i] } }'`
 
-								FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's/^|//;'`
+							FNAMEGREP=""
 
-								if [ -n "`echo \"${FNAME}\" | egrep \"^(${FNAMEGREP})$\"`" ]; then
-									PROCWHITELISTED=1
-								fi
-							else
+							for FN in ${RKHTMPVAR3}; do
+								FNGREP=`echo "${FN}" | sed -e 's/\([.^$*?+{}]\)/\\\\\1/g; s/\([^\\]\)\*/\1.*/g; s/\([^\\]\)?/\1./g;'`
+								FNAMEGREP="${FNAMEGREP}|${FNGREP}"
+							done
+
+							FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's/^|//;'`
+
+							if [ -n "`echo \"${FNAME}\" | egrep \"^(${FNAMEGREP})$\"`" ]; then
 								PROCWHITELISTED=1
 							fi
-
-							test $PROCWHITELISTED -eq 1 && break
+						else
+							PROCWHITELISTED=1
 						fi
-					done
 
-					set +f
-
-
-					test $HAVE_READLINK -eq 0 && PROC="\"${PROC}\""
-
-					if [ $PROCWHITELISTED -eq 1 ]; then
-						if [ $PROCDELFILES_GIVEN -eq 1 ]; then
-							if [ -z "`echo \"${WHITEPROC}\" | grep \"^${PROC} ${FNAME}$\"`" ]; then
-								WHITEPROC="${WHITEPROC}
-${PROC} ${FNAME}"
-							fi
-						elif [ -z "`echo \"${WHITEPROC}\" | grep \"^${PROC}$\"`" ]; then
-							WHITEPROC="${WHITEPROC}
-${PROC}"
-						fi
-					else
-						FOUND=1
-						BLACKPROC="${BLACKPROC}
-${PROC} ${PID} ${FNAME}"
+						test $PROCWHITELISTED -eq 1 && break
 					fi
-
-
-					#
-					# Finally add the PID to the seen PID list.
-					#
-
-					PIDLIST="$PIDLIST $PID "
 				done
-			fi
+
+				set +f
+
+
+				test $HAVE_READLINK -eq 0 && PROC="\"${PROC}\""
+
+				if [ $PROCWHITELISTED -eq 1 ]; then
+					if [ $PROCDELFILES_GIVEN -eq 1 ]; then
+						if [ -z "`echo \"${WHITEPROC}\" | grep \"^${PROC} ${FNAME}$\"`" ]; then
+							WHITEPROC="${WHITEPROC}
+${PROC} ${FNAME}"
+						fi
+					elif [ -z "`echo \"${WHITEPROC}\" | grep \"^${PROC}$\"`" ]; then
+						WHITEPROC="${WHITEPROC}
+${PROC}"
+					fi
+				else
+					FOUND=1
+					BLACKPROC="${BLACKPROC}
+${PROC} ${PID} ${FNAME}"
+				fi
+
+
+				#
+				# Finally add the PID to the seen PID list.
+				#
+
+				PIDLIST="$PIDLIST $PID "
+			done
 
 
 			#

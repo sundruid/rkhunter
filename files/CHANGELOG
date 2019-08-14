@@ -107,6 +107,11 @@
  - Due to a change in the code, from using 'grep' to 'egrep', the file
    properties check could fail to recognize a file if it contained
    extended regex characters in its name. This has now been corrected.
+ - The 'deleted_files' check was not handling the process list
+   correctly and missing some processes. This has now been corrected.
+ - The 'deleted_files' check now corrects the file name of files
+   which have been updated and appended with a hex character string.
+   The hex string is removed.
 
  --
 
