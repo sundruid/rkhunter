@@ -1,4 +1,4 @@
-Version:2019081301
+Version:2019081401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -345,6 +345,8 @@ FILE_PROP_NO_RKHLNK:No symbolic link target found for link '$1' in the 'rkhunter
 FILE_PROP_LINK_WL:The symbolic link target has changed, but it is whitelisted: '$1' -> '$2'
 FILE_PROP_NO_SYSATTR:Unable to obtain current properties for file '$1'
 FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
+FILE_PROP_WRITE_DIR:Write permission is set on directory '$1' for all users.
+FILE_PROP_SYSPERM_UNAVAIL_DIR:Unable to obtain current write permission for directory '$1'
 FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file '$1'
 FILE_PROP_IMMUT:$1 '$2' has the immutable-bit set.
 FILE_PROP_IMMUT_NOT_SET:$1 '$2' does not have the immutable-bit set.

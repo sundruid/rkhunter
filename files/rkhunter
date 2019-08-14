@@ -12252,7 +12252,6 @@ ${RKHLINE}"
 				# links are ignored.
 				#
 
-#jh - test this for a file.
 				if [ $FILE_IS_PKGD -eq 0 -a $IS_A_LINK -eq 0 -a \( $IS_A_FILE -eq 1 -o $IS_A_DIR -eq 1 \) ]; then
 					WL_FILE=""
 
@@ -12661,10 +12660,18 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					display --to LOG --type WARNING FILE_PROP_NO_SYSATTR "`name2text \"${FNAME}\"`"
 					;;
 				write)
-					display --to LOG --type WARNING FILE_PROP_WRITE "`name2text \"${FNAME}\"`"
+					if [ $IS_A_DIR -eq 1 ]; then
+						display --to LOG --type WARNING FILE_PROP_WRITE_DIR "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type WARNING FILE_PROP_WRITE "`name2text \"${FNAME}\"`"
+					fi
 					;;
 				syspermunavail)
-					display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "`name2text \"${FNAME}\"`"
+					if [ $IS_A_DIR -eq 1 ]; then
+						display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL_DIR "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type WARNING FILE_PROP_SYSPERM_UNAVAIL "`name2text \"${FNAME}\"`"
+					fi
 					;;
 				immutable)
 					if [ $IMMUTABLE_SET -eq 0 ]; then
