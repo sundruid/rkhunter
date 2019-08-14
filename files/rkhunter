@@ -6276,8 +6276,12 @@ get_os_specific_options() {
 		LKM_PATH=`get_option single MODULES_DIR` || exit $?
 
 		if [ -z "${LKM_PATH}" ]; then
-			LKM_PATH="/lib/modules/${UNAME_R}"
-			test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
+			LKM_PATH="/usr/lib/modules/${UNAME_R}"
+
+			if [ ! -d "${LKM_PATH}" ]; then
+				LKM_PATH="/lib/modules/${UNAME_R}"
+				test ! -d "${LKM_PATH}" && LKM_PATH="/lib/modules"
+			fi
 		fi
 
 		check_paths LKM_PATH MODULES_DIR "NOBROKENLINK NOWILD"
@@ -15853,7 +15857,7 @@ xinetd_include() {
 
 	for FNAME in `grep '^[ 	]*include[ 	]' "${FILENAME}" | ${AWK_CMD} '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDE "${FNAME}"
+			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDE "`name2text \"${FNAME}\"`"
 		fi
 
 		xinetd_include "${FNAME}"
@@ -15866,7 +15870,7 @@ xinetd_include() {
 
 	for DIR in `grep '^[ 	]*includedir[ 	]' "${FILENAME}" | ${AWK_CMD} '{ print $2 }'`; do
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
-			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDEDIR "${DIR}"
+			display --to LOG --type PLAIN --log-indent 6 ROOTKIT_TROJAN_XINETD_INCLUDEDIR "`name2text \"${DIR}\"`"
 		fi
 
 		xinetd_includedir "${DIR}"
@@ -17550,15 +17554,15 @@ pwdgrp_changes() {
 		if [ \( -n "${RKHTMPVAR}" -a -z "${RKHTMPVAR2}" \) -o \( -z "${RKHTMPVAR}" -a -n "${RKHTMPVAR2}" \) ]; then
 			if [ -n "${RKHTMPVAR}" ]; then
 				if [ "${FNAME}" = "passwd" ]; then
-					display --to LOG --type WARNING --log-indent 4 PWD_CHANGES_IDREM "${PWDGRPID}"
+					display --to LOG --type WARNING --log-indent 4 PWD_CHANGES_IDREM "`name2text \"${PWDGRPID}\"`"
 				else
-					display --to LOG --type WARNING --log-indent 4 GROUP_CHANGES_IDREM "${PWDGRPID}"
+					display --to LOG --type WARNING --log-indent 4 GROUP_CHANGES_IDREM "`name2text \"${PWDGRPID}\"`"
 				fi
 			else
 				if [ "${FNAME}" = "passwd" ]; then
-					display --to LOG --type WARNING --log-indent 4 PWD_CHANGES_IDADD "${PWDGRPID}"
+					display --to LOG --type WARNING --log-indent 4 PWD_CHANGES_IDADD "`name2text \"${PWDGRPID}\"`"
 				else
-					display --to LOG --type WARNING --log-indent 4 GROUP_CHANGES_IDADD "${PWDGRPID}"
+					display --to LOG --type WARNING --log-indent 4 GROUP_CHANGES_IDADD "`name2text \"${PWDGRPID}\"`"
 				fi
 			fi
 
@@ -17579,9 +17583,9 @@ pwdgrp_changes() {
 		STR=${OLD_LINE}
 
 		if [ "${FNAME}" = "passwd" ]; then
-			display --to LOG --type WARNING PWD_CHANGES_FOUND "${PWDGRPID}"
+			display --to LOG --type WARNING PWD_CHANGES_FOUND "`name2text \"${PWDGRPID}\"`"
 		else
-			display --to LOG --type WARNING GROUP_CHANGES_FOUND "${PWDGRPID}"
+			display --to LOG --type WARNING GROUP_CHANGES_FOUND "`name2text \"${PWDGRPID}\"`"
 		fi
 
 		while test -n "${STR}"; do
@@ -17592,34 +17596,34 @@ pwdgrp_changes() {
 				if [ "${FNAME}" = "passwd" ]; then
 					case $FIELD_IDX in
 					1)
-						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_PWD "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_PWD "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					2)
-						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_UID "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_UID "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					3)
-						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_GID "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_GID "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					4)
-						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_COMM "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_COMM "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					5)
-						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_HOME "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_HOME "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					6)
-						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_SHL "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWD_CHANGES_SHL "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					*)
-						display --to LOG --type PLAIN --log-indent 9 PWDGRP_CHANGES_UNK "${FNAME}" "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWDGRP_CHANGES_UNK "${FNAME}" "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					esac
 				else
 					case $FIELD_IDX in
 					1)
-						display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_PWD "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_PWD "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					2)
-						display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GID "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GID "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					3)
 						OLD_GRPUSRS=" `echo ${OLD_FIELD} | tr ',' ' '` "
@@ -17633,16 +17637,16 @@ pwdgrp_changes() {
 							RKHTMPVAR3=`echo "${NEW_GRPUSRS}" | grep " ${RKHTMPVAR} "`
 
 							if [ -n "${RKHTMPVAR2}" -a -z "${RKHTMPVAR3}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GRPREM "${GRPUSR}"
+								display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GRPREM "`name2text \"${GRPUSR}\"`"
 							elif [ -z "${RKHTMPVAR2}" -a -n "${RKHTMPVAR3}" ]; then
-								display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GRPADD "${GRPUSR}"
+								display --to LOG --type PLAIN --log-indent 9 GROUP_CHANGES_GRPADD "`name2text \"${GRPUSR}\"`"
 							fi
 						done
 
 						IFS=$IFSNL
 						;;
 					*)
-						display --to LOG --type PLAIN --log-indent 9 PWDGRP_CHANGES_UNK "${FNAME}" "${OLD_FIELD}" "${NEW_FIELD}"
+						display --to LOG --type PLAIN --log-indent 9 PWDGRP_CHANGES_UNK "${FNAME}" "`name2text \"${OLD_FIELD}\"`" "`name2text \"${NEW_FIELD}\"`"
 						;;
 					esac
 				fi
@@ -17766,7 +17770,7 @@ ${RKHTMPVAR}"
 
 			for RKHTMPVAR in ${UID_LIST}; do
 				test -z "${RKHTMPVAR}" && continue
-				display --to LOG --type WARNING ACCOUNTS_UID0_FOUND "${RKHTMPVAR}"
+				display --to LOG --type WARNING ACCOUNTS_UID0_FOUND "`name2text \"${RKHTMPVAR}\"`"
 			done
 
 			IFS=$RKHIFS
@@ -17911,7 +17915,7 @@ ${RKHTMPVAR}"
 
 			for RKHTMPVAR in ${SHAD_PWDLESS_LIST}; do
 				test -z "${RKHTMPVAR}" && continue
-				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND 'shadow' "${RKHTMPVAR}"
+				display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND 'shadow' "`name2text \"${RKHTMPVAR}\"`"
 			done
 		fi
 
@@ -17923,7 +17927,7 @@ ${RKHTMPVAR}"
 
 		for RKHTMPVAR in ${PWD_PWDLESS_LIST}; do
 			test -z "${RKHTMPVAR}" && continue
-			display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND 'passwd' "${RKHTMPVAR}"
+			display --to LOG --type WARNING ACCOUNTS_PWDLESS_FOUND 'passwd' "`name2text \"${RKHTMPVAR}\"`"
 		done
 
 		IFS=$RKHIFS
@@ -18191,8 +18195,8 @@ do_system_config_files_check() {
 					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
 
 					display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
-					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND1 "${RKHTMPVAR2}"
-					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND2 "${ALLOW_SSH_ROOT_USER}"
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND1 "`name2text \"${RKHTMPVAR2}\"`"
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_ROOT_FOUND2 "`name2text \"${ALLOW_SSH_ROOT_USER}\"`"
 				fi
 			elif [ "${ALLOW_SSH_ROOT_USER}" = "unset" ]; then
 				display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
@@ -18224,8 +18228,8 @@ do_system_config_files_check() {
 					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
 
 					display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
-					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF1 "${RKHTMPVAR2}"
-					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF2 "${ALLOW_SSH_PROT_V1}"
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF1 "`name2text \"${RKHTMPVAR2}\"`"
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF2 "`name2text \"${ALLOW_SSH_PROT_V1}\"`"
 				fi
 			elif [ $ALLOW_SSH_PROT_V1 -eq 2 ]; then
 				display --to SCREEN+LOG --type PLAIN --result UNSET --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
@@ -18442,7 +18446,7 @@ do_system_config_files_check() {
 
 					if [ -n "${RKHTMPVAR}" ]; then
 						REM_LOGGING_FOUND=1
-						display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG "${FTYPE}" "${RKHTMPVAR}"
+						display --to LOG --type INFO SYSTEM_CONFIGS_SYSLOG_REMOTE_LOG "${FTYPE}" "`name2text \"${RKHTMPVAR}\"`"
 					fi
 				fi
 			done
