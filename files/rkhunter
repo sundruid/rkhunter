@@ -5852,6 +5852,9 @@ ${FNAME}"
 					#
 
 					if [ -f "${FNAME}" ]; then
+						# Check that it hasn't already been set. If it has, then we just ignore it.
+						test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
+
 						#
 						# We must check if the entry is already in the 'rkhunter.dat' file, as this
 						# means it may have changed from being a directory to a file. If so, then this
@@ -5867,15 +5870,10 @@ ${FNAME}"
 							RKHTMPVAR=`grep "^Dir:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 
 							if [ -n "${RKHTMPVAR}" ]; then
-#jh - test this
-#echo "JH4: In here - fname: $FNAME"
 								test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
 ${FNAME}"
 							fi
 						fi
-
-						# Check that it hasn't already been set. If it has, then we just ignore it.
-						test -n "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
 						if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
 							RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
@@ -6968,7 +6966,6 @@ ${DIR}:0"
 			#
 
 			if [ $FMTVERSION -ge 0 ]; then
-#jh - test this
 				if [ -z "`echo \"${PROPUPD_OPT}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $FMTVERSION -eq 0 ]; then
 						RKHTMPVAR=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
