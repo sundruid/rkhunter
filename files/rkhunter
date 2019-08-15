@@ -1115,7 +1115,7 @@ check_paths() {
 
 
 				case "${OPT_NAME}" in
-				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|WRITEWHITELIST|IMMUTWHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|SHARED_LIB_WHITELIST|*_CMD)
+				ALLOWHIDDENFILE|RTKT_FILE_WHITELIST|SCRIPTWHITELIST|LOGFILE|SYSLOG_CONFIG_FILE|INETD_CONF_PATH|XINETD_CONF_PATH|PASSWORD_FILE|OS_VERSION_FILE|IGNORE_PRELINK_DEP_ERR|MISSING_LOGFILES|EMPTY_LOGFILES|PORT_PATH_WHITELIST|ALLOWIPCPROC|SHARED_LIB_WHITELIST|*_CMD)
 					ERRCODE=1
 
 					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Not a file: ${FNAM}"
@@ -6056,7 +6056,7 @@ get_properties_options() {
 	ATTRWL_OPT=`get_option newline-list ATTRWHITELIST` || exit $?
 
 	if [ -n "${ATTRWL_OPT}" ]; then
-		ATTRWHITELIST=`expand_paths ATTRWL_OPT`
+		ATTRWHITELIST=`expand_paths ATTRWL_OPT | sed -e 's:/$::g'`
 
 		check_paths ATTRWHITELIST ATTRWHITELIST "EXIST"
 
@@ -6069,7 +6069,7 @@ get_properties_options() {
 	WRITEWL_OPT=`get_option newline-list WRITEWHITELIST` || exit $?
 
 	if [ -n "${WRITEWL_OPT}" ]; then
-		WRITEWHITELIST=`expand_paths WRITEWL_OPT`
+		WRITEWHITELIST=`expand_paths WRITEWL_OPT | sed -e 's:/$::g'`
 
 		check_paths WRITEWHITELIST WRITEWHITELIST "EXIST"
 
@@ -6082,7 +6082,7 @@ get_properties_options() {
 	IMMUTWL_OPT=`get_option newline-list IMMUTWHITELIST` || exit $?
 
 	if [ -n "${IMMUTWL_OPT}" ]; then
-		IMMUTWHITELIST=`expand_paths IMMUTWL_OPT`
+		IMMUTWHITELIST=`expand_paths IMMUTWL_OPT | sed -e 's:/$::g'`
 
 		check_paths IMMUTWHITELIST IMMUTWHITELIST "EXIST"
 
@@ -12020,9 +12020,9 @@ ${RKHLINE}"
 
 			if [ $SKIP_ATTR -eq 0 ]; then
 				#
-				# First check to see if the file is whitelisted here,
-				# just the once. It is better than checking after
-				# each individual attribute test.
+				# First check to see if the file or directory is whitelisted
+				# here, just the once. It is better than checking after each
+				# individual attribute test.
 				#
 
 				WL_FILE=""
@@ -12307,7 +12307,7 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 		#
 
 		#
-		# Do the file immutable-bit check.
+		# Do the immutable-bit check.
 		#
 
 		if [ $SKIP_IMMUT -eq 0 ]; then
@@ -12326,7 +12326,6 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 			if [ -z "${WL_FILE}" ]; then
 				if [ $BSDOS -eq 0 ]; then
 					if [ $IS_A_LINK -eq 0 ]; then
-#jh - test this
 						if [ $IS_A_DIR -eq 1 ]; then
 							RKHTMPVAR=`${LSATTR_CMD} -d "${FNAME}" 2>/dev/null | cut -d' ' -f1 | grep 'i'`
 						else
@@ -12334,7 +12333,7 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 						fi
 					fi
 				else
-#jh - can test this?
+#jh - can test this? Need BSDOS?
 					if [ $IS_A_DIR -eq 1 ]; then
 						RKHTMPVAR=`ls -ldno "${FNAME}" 2>&1 | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 					else
@@ -12669,10 +12668,18 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					fi
 					;;
 				immutable)
-					if [ $IMMUTABLE_SET -eq 0 ]; then
-						display --to LOG --type WARNING FILE_PROP_IMMUT "${FTYPE}" "`name2text \"${FNAME}\"`"
+					if [ $IS_A_DIR -eq 1 ]; then
+						if [ $IMMUTABLE_SET -eq 0 ]; then
+							display --to LOG --type WARNING FILE_PROP_IMMUT_DIR "`name2text \"${FNAME}\"`"
+						else
+							display --to LOG --type WARNING FILE_PROP_IMMUT_DIR_NOT_SET "`name2text \"${FNAME}\"`"
+						fi
 					else
-						display --to LOG --type WARNING FILE_PROP_IMMUT_NOT_SET "${FTYPE}" "`name2text \"${FNAME}\"`"
+						if [ $IMMUTABLE_SET -eq 0 ]; then
+							display --to LOG --type WARNING FILE_PROP_IMMUT "`name2text \"${FNAME}\"`"
+						else
+							display --to LOG --type WARNING FILE_PROP_IMMUT_NOT_SET "`name2text \"${FNAME}\"`"
+						fi
 					fi
 					;;
 				script)
@@ -12695,13 +12702,13 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					RKHTMPVAR="file hash"
 					;;
 				attr)
-					RKHTMPVAR="file attributes"
+					RKHTMPVAR="attributes"
 					;;
 				write)
-					RKHTMPVAR="file write permission"
+					RKHTMPVAR="write permission"
 					;;
 				immutable)
-					RKHTMPVAR="file immutable-bit"
+					RKHTMPVAR="immutable-bit"
 					;;
 				script)
 					RKHTMPVAR="script replacement"

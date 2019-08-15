@@ -1,4 +1,4 @@
-Version:2019081401
+Version:2019081501
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -348,8 +348,10 @@ FILE_PROP_WRITE:Write permission is set on file '$1' for all users.
 FILE_PROP_WRITE_DIR:Write permission is set on directory '$1' for all users.
 FILE_PROP_SYSPERM_UNAVAIL_DIR:Unable to obtain current write permission for directory '$1'
 FILE_PROP_SYSPERM_UNAVAIL:Unable to obtain current write permission for file '$1'
-FILE_PROP_IMMUT:$1 '$2' has the immutable-bit set.
-FILE_PROP_IMMUT_NOT_SET:$1 '$2' does not have the immutable-bit set.
+FILE_PROP_IMMUT:File '$1' has the immutable-bit set.
+FILE_PROP_IMMUT_DIR:Directory '$1' has the immutable-bit set.
+FILE_PROP_IMMUT_NOT_SET:File '$1' does not have the immutable-bit set.
+FILE_PROP_IMMUT_DIR_NOT_SET:Directory '$1' does not have the immutable-bit set.
 FILE_PROP_SCRIPT:The command '$1' has been replaced by a script: $2
 FILE_PROP_SCRIPT_RKH:The command '$1' has been replaced and is not a script: $2
 
