@@ -2615,7 +2615,7 @@ get_bindir_option() {
 				if [ -d "${DIR}" ]; then
 					test -h "${DIR}" && BINISLINK=1
 
-					DIR=`echo "${DIR}" | tr -s '/' | sed -e 's:/$::'`
+					DIR=`echo "${DIR}" | sed -e 's:/$::'`
 
 					if [ -z "`echo \" ${RKHTMPVAR} \" | grep \" ${DIR} \"`" ]; then
 						RKHTMPVAR="${RKHTMPVAR} ${DIR}"
@@ -2765,7 +2765,7 @@ get_existwl_option() {
 	EXISTWL_OPT=`get_option newline-list EXISTWHITELIST` || exit $?
 
 	if [ -n "${EXISTWL_OPT}" ]; then
-		EXISTWHITELIST=`expand_paths EXISTWL_OPT`
+		EXISTWHITELIST=`expand_paths EXISTWL_OPT | sed -e 's:/$::g'`
 
 		check_paths EXISTWHITELIST EXISTWHITELIST
 
@@ -5754,7 +5754,7 @@ get_user_fileprop_list() {
 			#
 
 #jh - is this too slow when there are lots of files (from globbing/globstar)?
-			USER_EXCLUDE_PROP=`expand_paths FILENAMES | sed -e 's:/$::'`
+			USER_EXCLUDE_PROP=`expand_paths FILENAMES | sed -e 's:/$::g'`
 
 			#
 			# We now loop through the entries checking for any
@@ -12221,7 +12221,6 @@ ${RKHLINE}"
 								if [ "${RKHLNK}" != "${SYSLNK}" ]; then
 									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-#jh - check that existwhitelist can include directories.
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
 											test -z "${SYSLNK}" && RKHTMPVAR="Unavailable" || RKHTMPVAR="${SYSLNK}"
