@@ -5861,7 +5861,6 @@ ${FNAME}"
 						# the 'rkhunter.dat' file exists.
 						#
 
-#jh - can exclude a whole directory contents (as said in config file) but can include the directory itself?
 						if [ $FMTVERSION -ge 3 -a $PROP_UPDATE -eq 0 ]; then
 							COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
@@ -5869,6 +5868,7 @@ ${FNAME}"
 
 							if [ -n "${RKHTMPVAR}" ]; then
 #jh - test this
+#echo "JH4: In here - fname: $FNAME"
 								test -z "${USER_DIR_LIST}" && USER_DIR_LIST="${FNAME}" || USER_DIR_LIST="${USER_DIR_LIST}
 ${FNAME}"
 							fi
@@ -10393,7 +10393,6 @@ do_system_check_initialisation() {
 		  file:/root/2016ttfacai:BillGates botnet component
 		  file:/proc/rs_dev:xorddos component
 		  file:/var/run/sftp.pid:xorddos component
-		  file:/var/run/udev.pid:xorddos component
 		  file:/var/run/mount.pid:xorddos component
 		  file:/etc/cron.hourly/cron.sh:xorddos component
 		  file:/etc/cron.hourly/udev.sh:xorddos component
