@@ -22573,7 +22573,6 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			RKHTMPVAR=`echo "${USER_EXCLUDE_FILEPROP_OPTS}" | sort | uniq`
 
 			for FNAME in ${RKHTMPVAR}; do
-#jh4 - Test this for links.
 				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
 					RKHTMPVAR2=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
