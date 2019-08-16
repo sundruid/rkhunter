@@ -5609,7 +5609,7 @@ get_os_info_options() {
 		# then we get its real pathname before any further tests.
 		#
 
-		if [ $HAVE_READLINK -eq 1 -a -h "${OS_VERSION_FILE}" ]; then
+		if [ -h "${OS_VERSION_FILE}" -a $HAVE_READLINK -eq 1 ]; then
 			OS_VERSION_FILE=`${READLINK_CMD} ${READLINK_OPT} "${OS_VERSION_FILE}"`
 		fi
 
@@ -5961,12 +5961,13 @@ ${FNAME}"
 								# Remove the target name from the file list (just in case it is there).
 								USER_FILEPROP_OPTS=`echo "${USER_FILEPROP_OPTS}" | sed -e "/^${FNAMEGREP}$/d"`
 
-								if [ $TRAILING_SLASH -eq 0 ]; then
-									if [ -z "`echo \"${USER_CMD_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
-										FNAME="${FNAME}
-${RKHTMPVAR}"
-									fi
-								else
+								#
+								# We only add the link target name for directories to be monitored. For command
+								# directories, the directory or link will be searched as required. So there is
+								# no point in getting them both searched.
+								#
+
+								if [ $TRAILING_SLASH -eq 1 ]; then
 									if [ -z "`echo \"${USER_DIR_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 										FNAME="${FNAME}
 ${RKHTMPVAR}"
@@ -7379,7 +7380,7 @@ ${DIR}:1"
 
 
 		if [ $IS_A_LINK -eq 1 ]; then
-			test $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" && SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+			test -z "${SYSLNK}" -a $HAVE_READLINK -eq 1 && SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 			# Check if the symbolic link target has any colon characters in it.
 			if [ -n "${SYSLNK}" ]; then
@@ -12213,7 +12214,7 @@ ${RKHLINE}"
 						else
 							RKHLNK=`get_lname_from_rkh "${RKHLINE}"`
 
-							if [ $HAVE_READLINK -eq 1 -a -z "${SYSLNK}" ]; then
+							if [ -z "${SYSLNK}" -a $HAVE_READLINK -eq 1 ]; then
 								SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 							fi
 
@@ -12335,9 +12336,9 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 				else
 #jh - can test this? Need BSDOS?
 					if [ $IS_A_DIR -eq 1 ]; then
-						RKHTMPVAR=`ls -ldno "${FNAME}" 2>&1 | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+						RKHTMPVAR=`ls -ldno "${FNAME}" 2>/dev/null | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 					else
-						RKHTMPVAR=`ls -lno "${FNAME}" 2>&1 | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+						RKHTMPVAR=`ls -lno "${FNAME}" 2>/dev/null | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 					fi
 				fi
 
@@ -12715,8 +12716,6 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					;;
 				esac
 
-#jhjh - should the following also apply to links?
-#jhjh - what happens - is logged - when a link is whitelisted?
 				if [ $IS_A_DIR -eq 1 ]; then
 					display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" "${RKHTMPVAR}"
 				else
@@ -22456,7 +22455,17 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			for FNAME in ${RKHTMPVAR}; do
 				test -n "`echo \"${FNAME}\" | grep '/$'`" && continue
 
-				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR2=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+					if [ -z "${RKHTMPVAR2}" -o "${FNAME}" = "${RKHTMPVAR2}" ]; then
+						display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type PLAIN --log-indent 6 NAME_LINK "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR2}\"`"
+					fi
+				else
+					display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+				fi
 			done
 
 			set +f
@@ -22484,9 +22493,24 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			RKHTMPVAR=`echo "${USER_FILEPROP_OPTS}" | sort | uniq`
 
 			for FNAME in ${RKHTMPVAR}; do
-				test -z "`echo \"${FNAME}\" | grep '/$'`" && continue
+				if [ -z "`echo \"${FNAME}\" | grep '/$'`" ]; then
+					continue
+				else
+					FNAME=`echo "${FNAME}" | sed -e 's:/$::'`
+				fi
 
-				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR2=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+					# Don't forget to add the '/' back onto the end of the name.
+					if [ -z "${RKHTMPVAR2}" -o "${FNAME}" = "${RKHTMPVAR2}" ]; then
+						display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`/"
+					else
+						display --to LOG --type PLAIN --log-indent 6 NAME_LINK "`name2text \"${FNAME}\"`/" "`name2text \"${RKHTMPVAR2}\"`"
+					fi
+				else
+					display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`/"
+				fi
 			done
 
 			set +f
@@ -22516,7 +22540,17 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			RKHTMPVAR=`echo "${USER_CMD_DIR_LIST}" | sort | uniq`
 
 			for FNAME in ${RKHTMPVAR}; do
-				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR2=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+					if [ -z "${RKHTMPVAR2}" -o "${FNAME}" = "${RKHTMPVAR2}" ]; then
+						display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type PLAIN --log-indent 6 NAME_LINK "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR2}\"`"
+					fi
+				else
+					display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+				fi
 			done
 
 			IFS=$RKHIFS
@@ -22539,7 +22573,18 @@ if `check_test properties` || test $PROP_UPDATE -eq 1; then
 			RKHTMPVAR=`echo "${USER_EXCLUDE_FILEPROP_OPTS}" | sort | uniq`
 
 			for FNAME in ${RKHTMPVAR}; do
-				display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+#jh4 - Test this for links.
+				if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+					RKHTMPVAR2=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+					if [ -z "${RKHTMPVAR2}" -o "${FNAME}" = "${RKHTMPVAR2}" ]; then
+						display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+					else
+						display --to LOG --type PLAIN --log-indent 6 NAME_LINK "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR2}\"`"
+					fi
+				else
+					display --to LOG --type PLAIN --log-indent 6 NAME "`name2text \"${FNAME}\"`"
+				fi
 			done
 
 			set +f

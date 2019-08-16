@@ -136,6 +136,7 @@ SYSLOG_DISABLED:Disabling use of syslog at users request.
 SYSLOG_NO_LOGGER:Disabling use of syslog - unable to find 'logger' command.
 
 NAME:$1
+NAME_LINK:$1 -> $2
 PRESSENTER:[Press <ENTER> to continue]
 TEST_SKIPPED_OS:Test '$1' skipped due to O/S: $2
 
