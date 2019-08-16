@@ -75,6 +75,10 @@
  - More warning messages now include in their output any spaces or
    control characters that are present. This should help debug any
    problems.
+ - The log file will now show symlink targets when listing the files
+   and directories for the file properties check or the '--propupd'
+   option. Previously the target was omitted, which was potentially
+   confusing when other log entries referred to it.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
