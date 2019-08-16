@@ -1010,13 +1010,6 @@ check_paths() {
 		test -z "${FNAM}" && continue
 
 		#
-		# If a trailing slash ('/') is present, then we need to
-		# remove it as it can interfere with certain file tests.
-		#
-
-		FNAME=`echo "${FNAM}" | sed -e 's:/$::'`
-
-		#
 		# For some options we may have to remove the leading character.
 		#
 
@@ -1043,6 +1036,32 @@ check_paths() {
 			continue
 		fi
 
+#jh4
+		#
+		# Next we test for a trailing forward slash ('/')
+		# character, as this is only allowed for a few options.
+		#
+		# We must, however, remove the trailing slash as this
+		# can affect various file tests.
+		#
+
+		if [ -n "`echo \"${FNAM}\" | grep '/$'`" ]; then
+			case "${OPT_NAME}" in
+			USER_FILEPROP_FILES_DIRS|EXCLUDE_USER_FILEPROP_FILES_DIRS|EXISTWHITELIST|ATTRWHITELIST|WRITEWHITELIST|IMMUTWHITELIST)
+				TRAILING_SLASH=1
+				FNAME=`echo "${FNAM}" | sed -e 's:/$::'`
+				;;
+			*)
+				ERRCODE=1
+				test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: A trailing forward slash is not allowed for this option: ${FNAM}"
+				continue
+				;;
+			esac
+		else
+			TRAILING_SLASH=0
+			FNAME="${FNAM}"
+		fi
+
 		#
 		# Next we check to see if it is a relative pathname. However, for
 		# the SHARED_LIB_WHITELIST option, the pathname may begin with a
@@ -1067,7 +1086,19 @@ check_paths() {
 			#
 
 			case "${OPT_NAME}" in
-			USER_FILEPROP_FILES_DIRS|SHARED_LIB_WHITELIST|*_CMD)
+			USER_FILEPROP_FILES_DIRS)
+				#
+				# A trailing slash is not allowed for a simple filename.
+				#
+
+				if [ $TRAILING_SLASH -eq 1 ]; then
+					ERRCODE=1
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: A trailing forward slash is not allowed for simple names: ${FNAM}"
+				fi
+
+				continue
+				;;
+			SHARED_LIB_WHITELIST|*_CMD)
 				continue
 				;;
 			esac
@@ -1098,6 +1129,13 @@ check_paths() {
 			#
 
 			if [ -f "${FNAME}" ]; then
+				if [ $TRAILING_SLASH -eq 1 ]; then
+					ERRCODE=1
+
+					test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: A trailing forward slash is not allowed for file names: ${FNAM}"
+					continue
+				fi
+
 				case "${OPT_NAME}" in
 				ALLOWHIDDENDIR|TMPDIR|DBDIR|BINDIR|SCRIPTDIR|SSH_CONFIG_DIR|SUSPSCAN_DIRS|SUSPSCAN_TEMP|RTKT_DIR_WHITELIST|LOCKDIR)
 					ERRCODE=1
@@ -5789,6 +5827,7 @@ ${RKHTMPVAR}"
 			# First we check the pathnames to ensure they are basically valid.
 			#
 
+#jh4
 			check_paths FILENAMES ${WHICH_OPT} "EXIST"
 
 			if [ $ERRCODE -eq 1 ]; then
@@ -5825,7 +5864,7 @@ ${RKHTMPVAR}"
 				# entries as this can affect various file tests.
 				#
 
-				if [ -n "`echo \"${FNAM}\" | grep '/\$'`" ]; then
+				if [ -n "`echo \"${FNAM}\" | grep '/$'`" ]; then
 					TRAILING_SLASH=1
 					FNAME=`echo "${FNAM}" | sed -e 's:/$::'`
 				else
