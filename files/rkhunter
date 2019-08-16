@@ -7439,6 +7439,10 @@ ${DIR}:1"
 		test -z "${DIR}" && continue
 
 		RKHTMPVAR=`echo $DIR | cut -d: -f1`
+
+		# For links, the target will contain the number of files.
+		test -h "${RKHTMPVAR}" && continue
+
 		RKHTMPVAR2=`echo $DIR | cut -d: -f2`
 
 		if [ $RKHTMPVAR2 -eq 1 ]; then
