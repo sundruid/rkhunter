@@ -14792,13 +14792,31 @@ malware_checks() {
 				FNAME=`echo "${LINE}" | ${AWK_CMD} '{ if ($9 ~ /^[0-9][0-9]*$/) { print $11 } else { print $9 } }'`
 
 				#
-				# Skip any PID's we have already seen.
+				# Skip any PID's which don't look right or we have already seen.
 				#
 
+				test -n "`echo "${PID}" | grep '[^0-9]'`" && continue
 				test -n "`echo \"${PIDLIST}\" | grep \" $PID \"`" && continue
 
 				#
-				# Try and get the running process name.
+				# Also skip any NODE or FNAME entries which do not seem right.
+				#
+
+				# If FNAME is not a pathname then look at the NODE.
+				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
+					FNAME="${NODE}"
+
+					test -z "`echo \"${FNAME}\" | grep '^/'`" && continue
+				fi
+
+				# Skip any shared memory files (since they are not really files).
+				test -n "`echo \"${FNAME}\" | egrep '^(/memfd:|/dev/shm/)'`" && continue
+
+				# Now strip anything after the pathname.
+				FNAME=`echo "${FNAME}" | cut -d' ' -f1`
+
+				#
+				# Next we try and get the running process name.
 				#
 
 				if [ $HAVE_READLINK -eq 1 ]; then
@@ -14811,41 +14829,22 @@ malware_checks() {
 					fi
 
 					test -n "${RKHTMPVAR}" && PROC=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
+
+					# Make sure the process name looks reasonable.
+					test -z "`echo \"${PROC}\" | grep '^/'`" && PROC=""
 				fi
 
 				if [ -z "${PROC}" ]; then
 					if [ $SUNOS -eq 1 ]; then
-						PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' 2>/dev/null | head ${HEAD_OPT}1 | ${AWK_CMD} '{ print $NF }'`
+						PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*VREG[ 	]' 2>/dev/null | head ${HEAD_OPT}1 | ${AWK_CMD} '/^\// { print $NF }'`
 					else
-						PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | ${AWK_CMD} '{ print $NF }'`
+						PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | ${AWK_CMD} '/^\// { print $NF }'`
 					fi
 
-					test -z "${PROC}" && PROC=`echo "${LINE}" | ${AWK_CMD} '{ print $1 }'`
+					test -z "${PROC}" && PROC=`echo "${LINE}" | ${AWK_CMD} '/^\// { print $1 }'`
 				fi
 
-				#
-				# Skip any shared memory files (since they are not really files).
-				#
-
-				test -n "`echo \"${FNAME}\" | egrep '^(/memfd:|/dev/shm/)'`" && continue
-
-				#
-				# If FNAME is not a pathname then look at the NODE.
-				#
-
-				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
-					if [ -n "`echo \"${NODE}\" | grep '^/'`" ]; then
-						FNAME="${NODE}"
-					fi
-				fi
-
-				#
-				# Strip anything after the pathname.
-				#
-
-				if [ -n "`echo \"${FNAME}\" | grep '^/'`" ]; then
-					FNAME=`echo "${FNAME}" | cut -d' ' -f1`
-				fi
+				test -z "${PROC}" && continue
 
 				#
 				# Remove any hex characters from the end of the process name and filename.
@@ -15586,7 +15585,7 @@ ${FOUND_PROCS}"
 							fi
 
 							# Strip off the '(deleted)' part from the pathname if present.
-							RKH_SHM_PATH_STRIPPED=`echo "${RKH_SHM_PATH}" | sed -e 's/ (deleted)$//'`
+							RKH_SHM_PATH_STRIPPED=`echo "${RKH_SHM_PATH}" | sed -e 's/ (dele.*$//'`
 
 							#
 							# First check to see if this segment is whitelisted.
@@ -19841,7 +19840,7 @@ ${LINKDIR}"
 	IFS=$RKHIFS
 
 	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
-	    chkconfig chmod chown chroot cp cron csh curl cut date depmod df
+	    chkconfig chmod chown chroot cksum cp cron csh curl cut date depmod df
 	    diff dirname dmesg dpkg dpkg-query du echo ed egrep elinks env fgrep
 	    file find fsck fuser GET grep groupadd groupdel groupmod groups grpck head id
 	    ifconfig ifdown ifstatus ifup inetd init insmod ip ipcs kallsyms kill
