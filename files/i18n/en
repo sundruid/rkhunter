@@ -1,4 +1,4 @@
-Version:2019081501
+Version:2019081901
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -442,6 +442,7 @@ ROOTKIT_MALWARE_SNIFFER_FOUND:Found possible sniffer log file: $1
 ROOTKIT_MALWARE_IPCS:Checking for suspicious (large) shared memory segments
 ROOTKIT_MALWARE_IPCS_FOUND:The following suspicious (large) shared memory segments have been found:
 ROOTKIT_MALWARE_IPCS_DETAILS:Process: $1    PID: $2    Owner: $3    Size: $4 (configured size allowed: $5)
+ROOTKIT_MALWARE_IPCS_DETAILS_DEL:Process: $1 (deleted)    PID: $2    Owner: $3    Size: $4 (configured size allowed: $5)
 ROOTKIT_MALWARE_IPCS_DETACHED:Detached segment with no pathname: Owner: $1    PID: $2    Segment ID: $3    Size: $4 (configured size allowed: $5)
 ROOTKIT_MALWARE_IPCS_ATTACHED:Attached segment with no pathname: Owner: $1    Segment ID: $2    Attached processes: $3    Creator PID: $4    Last PID: $5    Size: $4 (configured size allowed: $5)
 ROOTKIT_MALWARE_IPCS_WL_PATH:Found process pathname '$1': it is whitelisted.

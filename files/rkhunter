@@ -15677,7 +15677,7 @@ ${FOUND_PROCS}"
 						2) # A segment with a deleted pathname.
 							set -- ${SHM_LINE}
 							# Display $RKH_SHM_PATH, $RKH_SHM_CPID, $RKH_SHM_OWNER, $RKH_SHM_SIZE, $IPC_SEG_SIZE
-							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS "$1 (deleted)" "$2" "$3" "$4" "$5"
+							display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_IPCS_DETAILS_DEL "$1" "$2" "$3" "$4" "$5"
 							;;
 						3) # A detached segment with no pathname.
 							set -- ${SHM_LINE}
