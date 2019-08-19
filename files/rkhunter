@@ -14972,7 +14972,7 @@ ${PROC} ${PID} ${FNAME}"
 			RKHLSOF_FILE="${TEMPFILE}"
 			touch "${RKHLSOF_FILE}"
 
-			${LSOF_CMD} -wnlP +c 0 2>&1 | egrep -v ' (FIFO|V?DIR|IPv[46]) ' | sort | uniq >"${RKHLSOF_FILE}"
+			${LSOF_CMD} -wnlP +c 0 2>/dev/null | egrep -v ' (FIFO|V?DIR|IPv[46]) ' | sort | uniq >"${RKHLSOF_FILE}"
 
 			#
 			# Now loop through the known suspicious filenames,
