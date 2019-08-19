@@ -14784,39 +14784,17 @@ malware_checks() {
 
 			IFS=$IFSNL
 
-			for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | grep '(dele'`; do
+			for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | ${AWK_CMD} '/ \(deleted\)$/ { if (NF == 10 ) {print $2, $9 }}'`; do
 				PROC=""
 
-				PID=`echo "${LINE}" | ${AWK_CMD} '{ print $2 }'`
-				NODE=`echo "${LINE}" | ${AWK_CMD} '{ if ($8 ~ /[^0-9]/) { print $10 } else { print $8 } }'`
-				FNAME=`echo "${LINE}" | ${AWK_CMD} '{ if ($9 ~ /^[0-9][0-9]*$/) { print $11 } else { print $9 } }'`
-
-				#
-				# Skip any PID's which don't look right or we have already seen.
-				#
-
-				test -n "`echo "${PID}" | grep '[^0-9]'`" && continue
-				test -n "`echo \"${PIDLIST}\" | grep \" $PID \"`" && continue
-
-				#
-				# Also skip any NODE or FNAME entries which do not seem right.
-				#
-
-				# If FNAME is not a pathname then look at the NODE.
-				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
-					FNAME="${NODE}"
-
-					test -z "`echo \"${FNAME}\" | grep '^/'`" && continue
-				fi
+				PID=`echo "${LINE}" | cut -d' ' -f1`
+				FNAME=`echo "${LINE}" | cut -d' ' -f2`
 
 				# Skip any shared memory files (since they are not really files).
 				test -n "`echo \"${FNAME}\" | egrep '^(/memfd:|/dev/shm/)'`" && continue
 
-				# Now strip anything after the pathname.
-				FNAME=`echo "${FNAME}" | cut -d' ' -f1`
-
 				#
-				# Next we try and get the running process name.
+				# Now we try and get the running process name.
 				#
 
 				if [ $HAVE_READLINK -eq 1 ]; then
@@ -14840,8 +14818,6 @@ malware_checks() {
 					else
 						PROC=`${LSOF_CMD} -wnlP +c 0 -p $PID 2>/dev/null | grep '[ 	]txt[ 	][ 	]*REG[ 	]' | ${AWK_CMD} '/^\// { print $NF }'`
 					fi
-
-					test -z "${PROC}" && PROC=`echo "${LINE}" | ${AWK_CMD} '/^\// { print $1 }'`
 				fi
 
 				test -z "${PROC}" && continue
@@ -14922,13 +14898,6 @@ ${PROC}"
 					BLACKPROC="${BLACKPROC}
 ${PROC} ${PID} ${FNAME}"
 				fi
-
-
-				#
-				# Finally add the PID to the seen PID list.
-				#
-
-				PIDLIST="$PIDLIST $PID "
 			done
 
 
