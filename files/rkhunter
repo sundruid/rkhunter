@@ -3567,8 +3567,13 @@ check_test_options() {
 		if [ "${TEST_NAME}" = "none" ]; then
 			SEEN=1
 		elif [ "${TEST_NAME}" = "all" ]; then
-			LEAVE=1
-			ERRMSG="'all' cannot be used in the disabled test list."
+			if [ $USECF -eq 1 ]; then
+				LEAVE=1
+				ERRMSG="'all' cannot be used in the disabled test list."
+			elif [ -z "${CL_ENABLE_TESTS}" ]; then
+				LEAVE=1
+				ERRMSG="'all' cannot be used in the disabled test list without using the '--enable' option."
+			fi
 		elif [ -z "`echo \"${RKHTMPVAR}\" | grep \" ${TEST_NAME} \"`" ]; then
 			LEAVE=1
 			ERRMSG="Unknown disabled test name given: ${TEST_NAME}"

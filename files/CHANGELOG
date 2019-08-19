@@ -79,6 +79,9 @@
    and directories for the file properties check or the '--propupd'
    option. Previously the target was omitted, which was potentially
    confusing when other log entries referred to it.
+ - It is now possible to disable all tests from the command-line, but
+   only if the '--enable' and '--nocf' options are also used. This is
+   more intuitive in order to run only specific (enabled) tests.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
