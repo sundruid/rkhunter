@@ -1036,7 +1036,6 @@ check_paths() {
 			continue
 		fi
 
-#jh4
 		#
 		# Next we test for a trailing forward slash ('/')
 		# character, as this is only allowed for a few options.
@@ -1063,7 +1062,7 @@ check_paths() {
 		fi
 
 		#
-		# Next we check to see if it is a relative pathname. However, for
+		# Now we check to see if it is a relative pathname. However, for
 		# the SHARED_LIB_WHITELIST option, the pathname may begin with a
 		# variable ($ORIGIN, ${LIB} etc). We must ignore these entries.
 		#
@@ -5827,7 +5826,6 @@ ${RKHTMPVAR}"
 			# First we check the pathnames to ensure they are basically valid.
 			#
 
-#jh4
 			check_paths FILENAMES ${WHICH_OPT} "EXIST"
 
 			if [ $ERRCODE -eq 1 ]; then
@@ -6972,7 +6970,7 @@ ${DIR}:0"
 
 		COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 
 		if [ -h "${FNAME}" ]; then
@@ -7190,7 +7188,7 @@ ${DIR}:1"
 
 			PKGNAME=""
 
-			if [ $NOVRFYFILE -eq 1 ]; then
+			if [ $NOVRFYFILE -eq 1 -o "${FTYPE}" != "File" ]; then
 				ERRCODE=1
 			else
 				RKHTMPVAR=`${DPKG_CMD} --search "${FNAME}" 2>/dev/null`
@@ -7212,7 +7210,7 @@ ${DIR}:1"
 
 			PKGNAME=""
 
-			if [ $NOVRFYFILE -eq 0 ]; then
+			if [ $NOVRFYFILE -eq 0 -a "${FTYPE}" = "File" ]; then
 				RKHTMPVAR=`${PKG_CMD} -F -e "${FNAME}" 2>/dev/null`
 				ERRCODE=$?
 
@@ -7237,7 +7235,7 @@ ${DIR}:1"
 
 			PKGNAME=""
 
-			if [ $NOVRFYFILE -eq 1 ]; then
+			if [ $NOVRFYFILE -eq 1 -o "${FTYPE}" != "File" ]; then
 				ERRCODE=1
 			else
 				RKHTMPVAR=`${PKG_CMD} which -q "${FNAME}" 2>/dev/null`
@@ -7253,10 +7251,10 @@ ${DIR}:1"
 
 			PKGNAME=""
 
-			if [ $NOVRFYFILE -eq 1 ]; then
+			if [ $NOVRFYFILE -eq 1 -o $IS_A_LINK -eq 1 ]; then
 				ERRCODE=1
 			else
-				RKHTMPVAR=`grep "^${FNAMEGREP} " /var/sadm/install/contents 2>/dev/null`
+				RKHTMPVAR=`grep "^${FNAMEGREP} [fdl] " /var/sadm/install/contents 2>/dev/null`
 				test -n "${RKHTMPVAR}" && ERRCODE=0 || ERRCODE=1
 			fi
 
@@ -7275,15 +7273,17 @@ ${DIR}:1"
 				RKHGID=`echo "${RKHTMPVAR}" | cut -d' ' -f6`
 				RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-				RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
+				if [ $IS_A_FILE -eq 1 ]; then
+					RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
 
-				if [ $USE_SUNSUM -eq 1 ]; then
-					# Treat this as a fully packaged file.
-					FILE_IS_PKGD=1
-					SYSHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f8`
+					if [ $USE_SUNSUM -eq 1 ]; then
+						# Treat this as a fully packaged file.
+						FILE_IS_PKGD=1
+						SYSHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f8`
+					fi
+
+					RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
 				fi
-
-				RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
 
 				#
 				# Now get the inode value.
@@ -11712,15 +11712,14 @@ ${RKHLINE}"
 					fi
 				fi
 			elif [ "${PKGMGR}" = "SOLARIS" ]; then
-#jh - the use of 'Dir' should be tested with other package managers too.
 				#
 				# First we see if the file is exempt or part of a package.
 				#
 
-				if [ $NOVRFYFILE -eq 1 ]; then
+				if [ $NOVRFYFILE -eq 1 -o $IS_A_LINK -eq 1 ]; then
 					ERRCODE=1
 				else
-					RKHTMPVAR=`grep "^${FNAMEGREP} " /var/sadm/install/contents 2>/dev/null`
+					RKHTMPVAR=`grep "^${FNAMEGREP} [fdl] " /var/sadm/install/contents 2>/dev/null`
 					test -n "${RKHTMPVAR}" && ERRCODE=0 || ERRCODE=1
 				fi
 
@@ -11739,17 +11738,19 @@ ${RKHLINE}"
 					RKHGID=`echo "${RKHTMPVAR}" | cut -d' ' -f6`
 					RKHGID=`grep "^${RKHGID}:" /etc/group 2>/dev/null | cut -d: -f3`
 
-					RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
+					if [ $IS_A_FILE -eq 1 ]; then
+						RKHSIZE=`echo "${RKHTMPVAR}" | cut -d' ' -f7`
 
-					if [ $USE_SUNSUM -eq 1 ]; then
-						# Treat this as a fully packaged file.
-						FILE_IS_PKGD=1
-						RKHHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f8`
-					else
-						RKHHASH=`echo "${RKHLINE}" | cut -d: -f$RKH_CC`
+						if [ $USE_SUNSUM -eq 1 ]; then
+							# Treat this as a fully packaged file.
+							FILE_IS_PKGD=1
+							RKHHASH=`echo "${RKHTMPVAR}" | cut -d' ' -f8`
+						else
+							RKHHASH=`echo "${RKHLINE}" | cut -d: -f$RKH_CC`
+						fi
+
+						RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
 					fi
-
-					RKHDTM=`echo "${RKHTMPVAR}" | cut -d' ' -f9`
 
 					#
 					# Now get the inode value.
@@ -11794,7 +11795,7 @@ ${RKHLINE}"
 					# First see if the file is exempt or part of a known package.
 					#
 
-					if [ $NOVRFYFILE -eq 1 ]; then
+					if [ $NOVRFYFILE -eq 1 -o "${FTYPE}" != "File" ]; then
 						PKGNAME=""
 					else
 						PKGNAME=`${DPKG_CMD} --search "${FNAME}" 2>/dev/null | cut -d: -f1`
@@ -11826,7 +11827,7 @@ ${RKHLINE}"
 
 					PKGNAME=""
 
-					if [ $NOVRFYFILE -eq 0 ]; then
+					if [ $NOVRFYFILE -eq 0 -a "${FTYPE}" = "File" ]; then
 						RKHTMPVAR=`${PKG_CMD} -F -e "${FNAME}" 2>/dev/null`
 						ERRCODE=$?
 
@@ -11873,7 +11874,7 @@ ${RKHLINE}"
 					# First see if the file is exempt or part of a known package.
 					#
 
-					if [ $NOVRFYFILE -eq 1 ]; then
+					if [ $NOVRFYFILE -eq 1 -o "${FTYPE}" != "File" ]; then
 						PKGNAME=""
 					else
 						RKHTMPVAR=`${PKG_CMD} which -q "${FNAME}" 2>/dev/null`
@@ -11905,7 +11906,7 @@ ${RKHLINE}"
 					# hash value if we have been told to do so.
 					#
 
-					if [ $NOVRFYFILE -eq 0 -a $USE_SUNSUM -eq 1 ]; then
+					if [ $NOVRFYFILE -eq 0 -a $USE_SUNSUM -eq 1 -a "${FTYPE}" = "File" ]; then
 						SYSHASH="${RKHHASH}"
 
 						RKHTMPVAR=`${SUM_CMD} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
@@ -12377,7 +12378,6 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 						fi
 					fi
 				else
-#jh - can test this? Need BSDOS?
 					if [ $IS_A_DIR -eq 1 ]; then
 						RKHTMPVAR=`ls -ldno "${FNAME}" 2>/dev/null | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 					else
