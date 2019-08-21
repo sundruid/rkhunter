@@ -5795,7 +5795,6 @@ get_user_fileprop_list() {
 			# in order for the exclusion tests to work.
 			#
 
-#jh - is this too slow when there are lots of files (from globbing/globstar)?
 			USER_EXCLUDE_PROP=`expand_paths FILENAMES | sed -e 's:/$::g'`
 
 			#
@@ -7559,19 +7558,15 @@ create_rkh_file_prop_list() {
 	# We must create the exclusion file first as it is
 	# used by the main file properties file below. If no
 	# exclusion entries have been configured, then an
-	# empty file will still be created.
+	# empty file will still be created. As the exclusion
+	# list is already a newline list, we can just copy
+	# the whole list into the file in one go.
 	#
 
 	get_temp_file "${RKHTMPDIR}/rkh_prop_list_exclude.new"
 	touch "${TEMPFILE}"
 
-	IFS=$IFSNL
-
-	for FNAME in ${USER_EXCLUDE_PROP}; do
-		echo "${FNAME}" >>"${TEMPFILE}"
-	done
-
-	IFS=$RKHIFS
+	test -n "${USER_EXCLUDE_PROP}" && echo "${USER_EXCLUDE_PROP}" >"${TEMPFILE}"
 
 	cp -f "${TEMPFILE}" "${RKH_FILEPROP_EXCLUDE}" >/dev/null 2>&1
 	chmod 600 "${RKH_FILEPROP_EXCLUDE}" >/dev/null 2>&1
@@ -7592,8 +7587,8 @@ create_rkh_file_prop_list() {
 		for FNAME in ${PROP_FILE_LIST}; do
 			RKHTMPVAR3="${DIR}/${FNAME}"
 
-			# The file should only contain non-directory entries.
-			test -d "${RKHTMPVAR3}" || echo "${RKHTMPVAR3}" >>"${TEMPFILE}"
+			# The file should only contain certain entries.
+			test -f "${RKHTMPVAR3}" -o -d "${RKHTMPVAR3}" -o \( -h "${RKHTMPVAR3}" -a ! -e "${RKHTMPVAR3}" \) && echo "${RKHTMPVAR3}" >>"${TEMPFILE}"
 		done
 	done
 
@@ -7603,6 +7598,8 @@ create_rkh_file_prop_list() {
 	# pathnames to be included in the list.
 	#
 
+	test -n "${USER_EXCLUDE_PROP}" && USE_EXCLUDE=1 || USE_EXCLUDE=0
+
 	if [ -n "${USER_FILE_LIST}" -o -n "${USER_DIR_LIST}" ]; then
 		for FNAME in ${USER_FILE_LIST} ${USER_DIR_LIST}; do
 			#
@@ -7611,11 +7608,11 @@ create_rkh_file_prop_list() {
 
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-			if [ -n "${USER_EXCLUDE_PROP}" ]; then
-				test -n "`grep \"^${FNAMEGREP}$\" ${RKH_FILEPROP_EXCLUDE}`" && continue
+			if [ $USE_EXCLUDE -eq 1 ]; then
+				grep "^${FNAMEGREP}$" "${RKH_FILEPROP_EXCLUDE}" >/dev/null 2>&1 && continue
 			fi
 
-			test -z "`grep \"^${FNAMEGREP}$\" "${TEMPFILE}" 2>/dev/null`" && echo "${FNAME}" >>"${TEMPFILE}"
+			grep "^${FNAMEGREP}$" "${TEMPFILE}" >/dev/null 2>&1 || echo "${FNAME}" >>"${TEMPFILE}"
 		done
 	fi
 
@@ -17477,7 +17474,7 @@ ${STRING}:${INFO}"
 			RKHTMPVAR=`grep "${STRING}" "${FNAME}"`
 
 			if [ -n "${RKHTMPVAR}" ]; then
-				test -z "`echo \"${RKHTMPVAR}\" | egrep -v '^[ 	]*#'`" && continue
+				test -z "`echo \"${RKHTMPVAR}\" | grep -v '^[ 	]*#'`" && continue
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRING}$\"`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -20556,6 +20553,7 @@ help() {
 # we need to enable tracing in each of the functions.
 #
 
+#JH - why is init so slow?
 if [ $DEBUG_OPT -eq 1 -a "${MYSHELL}" = "ksh" ]; then
 	RKHTMPVAR=`typeset +f`
 
