@@ -80,10 +80,10 @@ with the current values.
 
 If the \fIfilename\fP option is used, then it must either be a full pathname,
 or a plain file name (for example, 'awk'). When used, then only the entry in
-the file properties database for that file will be updated. If the
-\fIdirectory\fP option is used, then only those files listed in the database
+the file properties database for that entry will be updated. If the
+\fIdirectory\fP option is used, then only those entries listed in the database
 that are in the given directory will be updated. Similarly, if the
-\fIpackage name\fP option is used, then only those files in the database
+\fIpackage name\fP option is used, then only those entries in the database
 which are part of the specified package will be updated. The package name
 must be the base part of the name, no version numbers should be included - for
 example, 'coreutils'. Package names will, of course, only be stored in the
@@ -91,7 +91,9 @@ file properties database if a package manager is being used. If a package
 name is the same as a file name - for example, 'file' could refer to the 'file'
 command or to the RPM 'file' package (which contains the 'file' command) - the
 package name will be used.
-If no specific option is given, then the entire database is updated.
+
+If no specific option is given, then the entire database is updated. If multiple
+options are given, then they must be separated by a single comma (',') character.
 
 \fIWARNING:\fP It is the users responsibility to ensure that the files on the
 system are genuine and from a reliable source. \fBrkhunter\fP can only report

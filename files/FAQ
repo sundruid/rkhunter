@@ -455,7 +455,8 @@ A.   The problem only occurs when the '--update' or '--versioncheck'
       that it had found more files than it was searching for. How
       is this possible?
 
-A.    The output from rkhunter probably shows something like this:
+A.    [Versions prior to 1.4.7]
+      The output from rkhunter probably shows something like this:
 
            File updated: searched for 149 files, found 171
 

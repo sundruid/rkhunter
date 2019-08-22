@@ -124,6 +124,8 @@
  - The 'deleted_files' check now corrects the file name of files
    which have been updated and appended with a hex character string.
    The hex string is removed.
+ - The '--propupd' option was not handling links at all if it was
+   specified on the command-line. (For example, '--propupd <link>')
 
  --
 
