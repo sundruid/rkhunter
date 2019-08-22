@@ -448,7 +448,7 @@ display() {
 	# Before anything we must record if this is a warning message.
 	#
 
-	test $WARN_MSG -eq 1 && WARNING_COUNT=`expr ${WARNING_COUNT} + 1`
+	test $WARN_MSG -eq 1 && WARNING_COUNT=`expr $WARNING_COUNT + 1`
 
 
 	#
@@ -1402,7 +1402,7 @@ suckit_extra_checks() {
 	NLINKS=-1
 
 	if [ -n "${STAT_CMD}" ]; then
-		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 		if [ -n "`echo \"${STAT_CMD}\" | grep '\.pl$'`" ]; then
 			NLINKS=`${STAT_CMD} --nlink /sbin/init 2>/dev/null`
@@ -1443,7 +1443,7 @@ suckit_extra_checks() {
 
 	HIDDEN=""
 
-	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+	ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 	for EXT in xrk mem; do
 		get_temp_file "${RKHTMPDIR}/suckitexttest"
@@ -1490,7 +1490,7 @@ suckit_extra_checks() {
 	SKDET_CMD=`find_cmd skdet`
 
 	if [ -n "${SKDET_CMD}" ]; then
-		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
 			display --to LOG --type INFO FOUND_CMD 'skdet' "${SKDET_CMD}"
@@ -1543,7 +1543,7 @@ suckit_extra_checks() {
 	if [ \( $NLINKS -eq 1 -o $NLINKS -eq -1 \) -a -z "${HIDDEN}" -a $SKDET -le 0 ]; then
 		display --to SCREEN+LOG --type PLAIN --result OK --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_ADD_SUCKIT
 	else
-		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+		ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}Suckit Rootkit (additional checks), "
 
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_ADD_SUCKIT
@@ -1586,7 +1586,7 @@ scanrootkit() {
 
 	SCAN_STATUS=0
 
-	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+	ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 	display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
@@ -1754,7 +1754,7 @@ ${KS}"
 	if [ $SCAN_STATUS -eq 0 ]; then
 		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 	else
-		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+		ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
@@ -6601,7 +6601,7 @@ rkh_dat_set_version() {
 		if [ "${OLDVER}" = "99" -o "${OLDDATE}" != "${TODAY}" -o -z "${OLDVER}" -o -n "`echo \"${OLDVER}\" | grep '[^0-9]'`" ]; then
 			NEWVER="00"
 		else
-			NEWVER=`expr ${OLDVER} + 1`
+			NEWVER=`expr $OLDVER + 1`
 			test $NEWVER -lt 10 && NEWVER="0${NEWVER}"
 		fi
 	else
@@ -6866,7 +6866,9 @@ rkh_dat_set_file_properties() {
 
 	NOHASH_COUNT=0
 	BROKEN_LINK_COUNT=0
+	PROP_DIR_LIST_COUNT=0
 	PROP_FILE_LIST_COUNT=0
+	PROP_DIR_PROPOPT_COUNT=0
 	PROP_FILE_PROPOPT_COUNT=0
 
 
@@ -6964,8 +6966,6 @@ ${DIR}:0"
 
 		IFS=$RKHIFS
 
-		PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
-
 
 		#
 		# Set up some variables here based on the file name. We will
@@ -6990,8 +6990,13 @@ ${DIR}:0"
 
 		if [ -d "${FNAME}" ]; then
 			IS_A_DIR=1
+			PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
 		elif [ -e "${FNAME}" ]; then
 			IS_A_FILE=1
+			PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+		else
+			# Broken links are counted as files.
+			PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
 		fi
 
 
@@ -7023,7 +7028,11 @@ ${DIR}:0"
 				fi
 			fi
 
-			PROP_FILE_PROPOPT_COUNT=`expr ${PROP_FILE_PROPOPT_COUNT} + 1`
+			if [ $IS_A_DIR -eq 1 ]; then
+				PROP_DIR_PROPOPT_COUNT=`expr $PROP_DIR_PROPOPT_COUNT + 1`
+			else
+				PROP_FILE_PROPOPT_COUNT=`expr $PROP_FILE_PROPOPT_COUNT + 1`
+			fi
 		fi
 
 
@@ -7043,7 +7052,7 @@ ${DIR}:0"
 ${DIR}:1"
 			else
 				RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^.*:\([0-9]*\)$/\1/'`
-				RKHTMPVAR=`expr ${RKHTMPVAR} + 1`
+				RKHTMPVAR=`expr $RKHTMPVAR + 1`
 
 				DIR_FILE_COUNT=`echo "${DIR_FILE_COUNT}" | sed -e "s;^\(${DIR}:\).*;\1${RKHTMPVAR};"`
 			fi
@@ -7400,14 +7409,14 @@ ${DIR}:1"
 							fi
 						else
 							# Treat a broken link simply as a file with no hash.
-							BROKEN_LINK_COUNT=`expr ${BROKEN_LINK_COUNT} + 1`
+							BROKEN_LINK_COUNT=`expr $BROKEN_LINK_COUNT + 1`
 
 							display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "`name2text \"${FNAME}\"`"
 
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_NO_SYSHASH_BL "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR}\"`"
 						fi
 					else
-						NOHASH_COUNT=`expr ${NOHASH_COUNT} + 1`
+						NOHASH_COUNT=`expr $NOHASH_COUNT + 1`
 
 						display --to LOG --type WARNING FILE_PROP_NO_SYSHASH "`name2text \"${FNAME}\"`"
 
@@ -7515,29 +7524,30 @@ ${DIR}:1"
 		if [ $NOHASH_COUNT -eq 0 ]; then
 			if [ $BROKEN_LINK_COUNT -eq 0 ]; then
 				if [ -n "${PROPUPD_OPT}" ]; then
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT "${RKHTMPVAR}" $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $PROP_DIR_PROPOPT_COUNT $PROP_DIR_LIST_COUNT
 				else
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT
+#JH - can run '--propupd /usr/local/bin/' ? Does the dir only get updated in rkhunter,dat?
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_COUNT $PROP_DIR_LIST_COUNT
 				fi
 			else
 				if [ -n "${PROPUPD_OPT}" ]; then
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT_BL "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $BROKEN_LINK_COUNT
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT_BL "${RKHTMPVAR}" $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $PROP_DIR_PROPOPT_COUNT $PROP_DIR_LIST_COUNT  $BROKEN_LINK_COUNT
 				else
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_BL "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $BROKEN_LINK_COUNT
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_BL "${RKHTMPVAR}" $PROP_FILE_LIST_COUNT $PROP_DIR_LIST_COUNT $BROKEN_LINK_COUNT
 				fi
 			fi
 		else
 			if [ $BROKEN_LINK_COUNT -eq 0 ]; then
 				if [ -n "${PROPUPD_OPT}" ]; then
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT "${RKHTMPVAR}" $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $PROP_DIR_PROPOPT_COUNT $PROP_DIR_LIST_COUNT $NOHASH_COUNT
 				else
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH "${RKHTMPVAR}" $PROP_FILE_LIST_COUNT $PROP_DIR_LIST_COUNT $NOHASH_COUNT
 				fi
 			else
 				if [ -n "${PROPUPD_OPT}" ]; then
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT_BL "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $NOHASH_COUNT $BROKEN_LINK_COUNT
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT_BL "${RKHTMPVAR}" $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $PROP_DIR_PROPOPT_COUNT $PROP_DIR_LIST_COUNT $NOHASH_COUNT $BROKEN_LINK_COUNT
 				else
-					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_BL "${RKHTMPVAR}" $PROP_FILE_LIST_TOTAL $PROP_FILE_LIST_COUNT $NOHASH_COUNT $BROKEN_LINK_COUNT
+					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_NOHASH_BL "${RKHTMPVAR}" $PROP_FILE_LIST_COUNT $PROP_DIR_LIST_COUNT $NOHASH_COUNT $BROKEN_LINK_COUNT
 				fi
 			fi
 		fi
@@ -7587,8 +7597,8 @@ create_rkh_file_prop_list() {
 		for FNAME in ${PROP_FILE_LIST}; do
 			RKHTMPVAR3="${DIR}/${FNAME}"
 
-			# The file should only contain certain entries.
-			test -f "${RKHTMPVAR3}" -o -d "${RKHTMPVAR3}" -o \( -h "${RKHTMPVAR3}" -a ! -e "${RKHTMPVAR3}" \) && echo "${RKHTMPVAR3}" >>"${TEMPFILE}"
+			# For the internal command list we only want files or broken links.
+			test -f "${RKHTMPVAR3}" -o \( -h "${RKHTMPVAR3}" -a ! -e "${RKHTMPVAR3}" \) && echo "${RKHTMPVAR3}" >>"${TEMPFILE}"
 		done
 	done
 
@@ -7617,6 +7627,14 @@ create_rkh_file_prop_list() {
 	fi
 
 	IFS=$RKHIFS
+
+	PROP_FILE_LIST_TOTAL=`wc -l "${TEMPFILE}" | cut -d' ' -f1`
+
+	# We need to remove the number of directories in the list.
+	if [ -n "${USER_DIR_LIST}" ]; then
+		PROP_DIR_LIST_TOTAL=`echo "${USER_DIR_LIST}" | wc -l | tr -d ' '`
+		PROP_FILE_LIST_TOTAL=`expr $PROP_FILE_LIST_TOTAL - $PROP_DIR_LIST_TOTAL`
+	fi
 
 
 	cp -f "${TEMPFILE}" "${RKH_FILEPROP_LIST}" >/dev/null 2>&1
@@ -10976,6 +10994,7 @@ file_properties_check() {
 
 	ADDNEWENTRY=0
 	SKIP_IMMUT_OS=0
+	PROP_DIR_LIST_COUNT=0
 	PROP_FILE_LIST_COUNT=0
 	SKIP_ATTR=0; SKIP_HASH=0; SKIP_IMMUT=0; SKIP_SCRIPT=0
 
@@ -11412,7 +11431,6 @@ file_properties_check() {
 
 		if [ -f "${FNAME}" -o -d "${FNAME}" -o \( -h "${FNAME}" -a ! -e "${FNAME}" \) ]; then
 			FILE_EXISTS=1
-			PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
 		else
 			FILE_EXISTS=0
 		fi
@@ -11430,8 +11448,10 @@ file_properties_check() {
 
 		if [ -d "${FNAME}" ]; then
 			IS_A_DIR=1
+			PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
 		elif [ $FILE_EXISTS -eq 1 ]; then
 			IS_A_FILE=1
+			PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
 		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
@@ -11478,7 +11498,7 @@ file_properties_check() {
 ${RKHLINE}"
 					fi
 				elif [ -n "${RKHLINE}" ]; then
-					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
+					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
 
 					if [ -n "`echo \"${RKHLINE}\" | grep '^File:'`" ]; then
 						RKHTMPVAR=1
@@ -12456,7 +12476,7 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 		else
 			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
 
-			PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
+			PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
 
 			RKHTMPVAR2=0
 			RKHTMPVAR3=0
@@ -12806,8 +12826,8 @@ File:${FNAME}:.*"
 ${FTYPE}:${RKH_CC}:${FNAME}:.*"
 					fi
 				elif [ ! -e "${FNAME}" ]; then
-					PROP_FAILED_COUNT=`expr ${PROP_FAILED_COUNT} + 1`
-					PROP_FILE_LIST_COUNT=`expr ${PROP_FILE_LIST_COUNT} + 1`
+					PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
 
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
 
@@ -13077,16 +13097,16 @@ suspscan() {
 						if [ $ERRCODE -eq 0 ]; then
 
 							if [ "$SUSPSCAN_CLASS" = "$SUSPSCAN_CLASS_PREV" ]; then
-								SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + 10`
+								SUSPSCAN_SCORE=`expr $SUSPSCAN_SCORE + 10`
 							fi
 
 							SUSPSCAN_HITS="$SUSPSCAN_NUM ${SUSPSCAN_HITS}"
 
 							if [ -n "$SUSPSCAN_MULTIPLIER" ]; then
-								SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + ${SUSPSCAN_MULTIPLIER}` 
+								SUSPSCAN_SCORE=`expr $SUSPSCAN_SCORE + $SUSPSCAN_MULTIPLIER` 
 								unset SUSPSCAN_MULTIPLIER
 							else
-								SUSPSCAN_SCORE=`expr ${SUSPSCAN_SCORE} + 1`
+								SUSPSCAN_SCORE=`expr $SUSPSCAN_SCORE + 1`
 							fi
 
 							SUSPSCAN_HITCOUNT=`expr $SUSPSCAN_HITCOUNT + 1`
@@ -13096,7 +13116,7 @@ suspscan() {
 							SUSPSCAN_CLASS_PREV="$SUSPSCAN_CLASS"
 						fi
 
-						SUSPSCAN_NUM=`expr ${SUSPSCAN_NUM} + 1`
+						SUSPSCAN_NUM=`expr $SUSPSCAN_NUM + 1`
 					done
 
 					if [ $SUSPSCAN_DEBUG -eq 1 ]; then
@@ -13172,7 +13192,7 @@ suspscan() {
 	if [ -z "${FOUNDDIRS}" ]; then
 		display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 SUSPSCAN_CHECK
 	else
-		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+		ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 		# The 'type' here should be PLAIN, but the loop prevents RKH from seeing that a warning has occurred.
 		display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 SUSPSCAN_CHECK
@@ -13247,7 +13267,7 @@ rootkit_file_dir_checks() {
 
 	SCAN_ROOTKIT="ADM Worm"
 
-	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+	ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 	display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
@@ -13258,7 +13278,7 @@ rootkit_file_dir_checks() {
 			display --to LOG --type PLAIN --result NOT_FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		else
-			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+			ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
 			display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_STR 'w0rm'
@@ -13768,7 +13788,7 @@ rootkit_file_dir_checks() {
 	if [ $LINUXOS -eq 1 ]; then
 		SCAN_ROOTKIT="Phalanx2 Rootkit (extended tests)"
 
-		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 		ROOTKIT_PHALANX2_TEST=0
 
@@ -13892,7 +13912,7 @@ rootkit_file_dir_checks() {
 		if [ $ROOTKIT_PHALANX2_TEST -eq 0 ]; then
 			display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 		else
-			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+			ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 		fi
 
@@ -13960,7 +13980,7 @@ rootkit_file_dir_checks() {
 
 	SCAN_ROOTKIT="Sebek LKM"
 
-	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+	ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 	display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
@@ -13981,7 +14001,7 @@ rootkit_file_dir_checks() {
 
 		display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 	else
-		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+		ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 		ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
 		display --to LOG --type PLAIN --result FOUND --log-indent 2 ROOTKIT_FILES_DIRS_KSYM 'adore or sebek'
@@ -14030,7 +14050,7 @@ rootkit_file_dir_checks() {
 
 		SCAN_ROOTKIT="SInAR Rootkit"
 
-		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 		display --to LOG --type PLAIN --nl ROOTKIT_FILES_DIRS_NAME_LOG "${SCAN_ROOTKIT}"
 
@@ -14063,7 +14083,7 @@ rootkit_file_dir_checks() {
 			if [ $FOUND -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NOT_FOUND --color GREEN --screen-indent 4 NAME "${SCAN_ROOTKIT}"
 			else
-				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 				ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${SCAN_ROOTKIT}, "
 
 				display --to SCREEN+LOG --type WARNING --result WARNING --color RED --screen-indent 4 NAME "${SCAN_ROOTKIT}"
@@ -14333,7 +14353,7 @@ possible_rootkit_file_dir_checks() {
 	IFS=$IFSNL
 
 	for RKHTMPVAR in ${FILESCAN}; do
-		ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+		ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 		RKHTMPVAR=`echo ${RKHTMPVAR} | sed -e 's/^[ 	]*//'`
 
@@ -14414,7 +14434,7 @@ ${FNAME}:${INFO}"
 			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
-			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+			ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_FILE_FOUND "`name2text \"${FILE}\"`" "${INFO}"
@@ -14426,7 +14446,7 @@ ${FNAME}:${INFO}"
 			FILE=`echo "${RKHTMPVAR}" | cut -d: -f1`
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f2`
 
-			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+			ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_FILES_DIR_FOUND "`name2text \"${FILE}\"`" "${INFO}"
@@ -14664,7 +14684,7 @@ ${FNAME}:${FILESTRING}:${INFO}"
 		fi
 
 		if [ $FOUNDFILE -eq 1 ]; then
-			ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+			ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 			if [ $STRINGFOUND -eq 0 ]; then
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -14704,7 +14724,7 @@ ${FNAME}:${FILESTRING}:${INFO}"
 
 			INFO=`echo "${RKHTMPVAR}" | cut -d: -f3`
 
-			ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+			ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 			ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 
 			display --to LOG --type PLAIN --log-indent 9 ROOTKIT_POSS_STRINGS_FOUND "${STRING}" "`name2text \"${FNAME}\"`" "${INFO}"
@@ -14905,7 +14925,7 @@ ${PROC} ${PID} ${FNAME}"
 			if [ $FOUND -eq 0 ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
 			else
-				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 ROOTKIT_MALWARE_DELETED_FILES
 
@@ -15031,7 +15051,7 @@ ${RKHTMPVAR}:${FNAME}"
 					done
 
 					if [ $FOUND -eq 1 ]; then
-						ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+						ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 						ROOTKIT_FAILED_NAMES="${ROOTKIT_FAILED_NAMES}${INFO}, "
 					fi
 				fi
@@ -15177,7 +15197,7 @@ ${RKHTMPVAR}:${FNAME}"
 					# Nothing found.
 					display --to LOG --type PLAIN --result NONE_FOUND --log-indent 4 ROOTKIT_MALWARE_HIDDEN_PROCS_UNHIDE_CMD "${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR}"
 				else
-					ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+					ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 					# For newer versions we can sort the messages.
 					if [ $UNHIDE_VERS -ge 20100919 ]; then
@@ -15310,7 +15330,7 @@ ${FOUND_PROCS}"
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_LOGIN_BDOOR
 
 			for FNAME in ${FOUNDFILES}; do
-				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 				display --to LOG --type WARNING ROOTKIT_MALWARE_LOGIN_BDOOR_FOUND "`name2text \"${FNAME}\"`"
 			done
@@ -15364,7 +15384,7 @@ ${FOUND_PROCS}"
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SNIFFER
 
 			for FNAME in ${FOUNDFILES}; do
-				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 				display --to LOG --type WARNING ROOTKIT_MALWARE_SNIFFER_FOUND "`name2text \"${FNAME}\"`"
 			done
@@ -15389,7 +15409,7 @@ ${FOUND_PROCS}"
 			if [ -z "`grep ${GREP_OPT} 'Tripwire segment-faulted !' \"${TRIPWIREFILE}\"`" ]; then
 				display --to SCREEN+LOG --type PLAIN --result NONE_FOUND --color GREEN --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION
 			else
-				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION
 				display --to LOG --type WARNING --log-indent 2 ROOTKIT_MALWARE_SFW_INTRUSION_FOUND "${TRIPWIREFILE}" 'Tripwire segment-faulted'
@@ -15452,7 +15472,7 @@ ${FOUND_PROCS}"
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --screen-indent 4 --log-indent 2 ROOTKIT_MALWARE_SUSP_DIR
 
 			for DIR in ${FOUNDDIRS}; do
-				ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+				ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 				display --to LOG --type WARNING ROOTKIT_MALWARE_SUSP_DIR_FOUND "`name2text \"${DIR}\"`"
 			done
@@ -15625,7 +15645,7 @@ ${FOUND_PROCS}"
 					for SHM_LINE in ${SEGS_FOUND}; do
 						test -z "${SHM_LINE}" && continue
 
-						ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+						ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 						# We need to do this to ensure the 'set' below works correctly.
 						IFS=$RKHIFS
@@ -17444,7 +17464,7 @@ do_system_startup_file_checks() {
 
 	RCSTRINGS=""
 
-	ROOTKIT_COUNT=`expr ${ROOTKIT_COUNT} + 1`
+	ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 	IFS=$IFSNL
 
@@ -17508,7 +17528,7 @@ ${FNAME}:${STRING}:${INFO}"
 	if [ $FOUND -eq 0 ]; then
 		display --to SCREEN+LOG --type PLAIN --color GREEN --result NONE_FOUND --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_MALWARE
 	else
-		ROOTKIT_FAILED_COUNT=`expr ${ROOTKIT_FAILED_COUNT} + 1`
+		ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
 		display --to SCREEN+LOG --type PLAIN --color RED --result WARNING --log-indent 2 --screen-indent 4 STARTUP_CHECK_FILES_MALWARE
 
@@ -19081,7 +19101,7 @@ ${APPLICATION}%${APPLICATION_DESC}%-1"
 		# Find out the version of the application.
 		#
 
-		APPS_COUNT=`expr ${APPS_COUNT} + 1`
+		APPS_COUNT=`expr $APPS_COUNT + 1`
 
 		VERSION=""
 		WHOLE_VERSION=""
@@ -19175,7 +19195,7 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 				APP_RESULTS="${APP_RESULTS}
 ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%-1"
 			elif [ -n "`egrep -i \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" \"${DB_PATH}/programs_bad.dat\" 2>&1`" ]; then
-				APPS_FAILED_COUNT=`expr ${APPS_FAILED_COUNT} + 1`
+				APPS_FAILED_COUNT=`expr $APPS_FAILED_COUNT + 1`
 
 				APP_RESULTS="${APP_RESULTS}
 ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%1"
@@ -19287,11 +19307,18 @@ display_check_summary() {
 			display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_REQCMDS
 		fi
 
-		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_COUNT $PROP_FILE_LIST_COUNT
-		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_FAILED $PROP_FAILED_COUNT
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_FILE_COUNT $PROP_FILE_LIST_COUNT
+
+#JH - should do the below for dirs too?
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_FILE_FAILED $PROP_FILE_FAILED_COUNT
+
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_DIR_COUNT $PROP_DIR_LIST_COUNT
+#JH - the failed count needs sorting out.
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_DIR_FAILED $PROP_DIR_FAILED_COUNT
 	else
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_CHKS_SKIPPED
 	fi
+#JH - using '--propupd /home/jhl,/usr/local/bin/mktime' does not update the link target
 
 
 	#
@@ -19499,9 +19526,9 @@ do_system_check() {
 			ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
 		fi
 
-		TOTAL_SCANTIME=`expr ${ENDTIME} - ${BEGINTIME}`
-		TOTALMINS=`expr ${TOTAL_SCANTIME} / 60`
-		TOTALSECS=`expr ${TOTAL_SCANTIME} % 60`
+		TOTAL_SCANTIME=`expr $ENDTIME - $BEGINTIME`
+		TOTALMINS=`expr $TOTAL_SCANTIME / 60`
+		TOTALSECS=`expr $TOTAL_SCANTIME % 60`
 
 		if [ $TOTALMINS -gt 0 ]; then
 			if [ $TOTALMINS -eq 1 ]; then
@@ -19891,7 +19918,7 @@ ${USER_SIMPLE_FILE_LIST}"
 	#
 	# Now loop through the file list and look for any
 	# symbolic links. If a link is found, then add on
-	# the file and directory that the link points to.
+	# the file and directory of the link target.
 	#
 
 	if [ $HAVE_READLINK -eq 1 ]; then
@@ -19985,8 +20012,6 @@ ${EXTRA_DIRS}"
 		test -n "${EXTRA_FILES}" && PROP_FILE_LIST="${PROP_FILE_LIST}
 ${EXTRA_FILES}"
 	fi
-
-	PROP_FILE_LIST_TOTAL=`echo "${PROP_FILE_LIST}" | wc -l | tr -d ' '`
 
 	return
 }
@@ -20145,7 +20170,7 @@ display_perl_modules() {
 		fi
 
 		MODLEN=`echo "${MODNAME}" | wc -c | tr -d ' '`
-		NUM_SPACES=`expr 28 - ${MODLEN}`
+		NUM_SPACES=`expr 28 - $MODLEN`
 		test $NUM_SPACES -lt 1 && NUM_SPACES=1
 		SPACES=`echo "${BLANK_LINE}" | cut -c1-$NUM_SPACES`
 
@@ -20242,7 +20267,7 @@ get_lock() {
 
 			sleep 10;
 
-			RKHTMPVAR=`expr ${RKHTMPVAR} + 10`
+			RKHTMPVAR=`expr $RKHTMPVAR + 10`
 
 			test $SHOW_LOCK_MSGS -eq 1 && display --to SCREEN --type PLAIN --nonl NAME "..${RKHTMPVAR}"
 		else
@@ -20553,7 +20578,6 @@ help() {
 # we need to enable tracing in each of the functions.
 #
 
-#JH - why is init so slow?
 if [ $DEBUG_OPT -eq 1 -a "${MYSHELL}" = "ksh" ]; then
 	RKHTMPVAR=`typeset +f`
 
@@ -20644,8 +20668,12 @@ SHA_SIZE=0
 HASH_FLD_IDX=1
 PROP_DIR_LIST=""
 PROP_FILE_LIST=""
+PROP_DIR_LIST_COUNT=0
+PROP_DIR_LIST_TOTAL=0
 PROP_FILE_LIST_COUNT=0
 PROP_FILE_LIST_TOTAL=0
+PROP_DIR_PROPOPT_COUNT=0
+PROP_FILE_PROPOPT_COUNT=0
 
 PRELINKED=0
 PRELINK_CMD=""
@@ -20776,7 +20804,8 @@ ROOTKIT_COUNT=0
 ROOTKIT_FAILED_COUNT=0
 ROOTKIT_FAILED_NAMES=""
 
-PROP_FAILED_COUNT=0
+PROP_DIR_FAILED_COUNT=0
+PROP_FILE_FAILED_COUNT=0
 SUMMARY_PROP_REQCMDS=0
 
 APPS_COUNT=0
@@ -21645,7 +21674,7 @@ if [ -d "${RKHTMPVAR}/rkhunter.d" ]; then
 			LEAVE=1
 			ERRMSG="The local configuration file is not readable: ${FNAME}"
 		else
-			LOCALCONFDIRCOUNT=`expr ${LOCALCONFDIRCOUNT} + 1`
+			LOCALCONFDIRCOUNT=`expr $LOCALCONFDIRCOUNT + 1`
 			LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
 		fi
 
@@ -21865,7 +21894,7 @@ ${RKHTMPVAR2}"
 						fi
 					else
 						LEAVE=1
-						echo "Filename is not in the \"rkhunter.dat\" file: ${FNAM}"
+						echo "File is not in the \"rkhunter.dat\" file: ${FNAM}"
 					fi
 				else
 					RKHTMPVAR="${RKHTMPVAR}

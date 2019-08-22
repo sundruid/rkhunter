@@ -1,4 +1,4 @@
-Version:2019081901
+Version:2019082201
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -144,8 +144,10 @@ SUMMARY_TITLE1:System checks summary
 SUMMARY_TITLE2:=====================
 SUMMARY_PROP_SCAN:File properties checks...
 SUMMARY_PROP_REQCMDS:Required commands check failed
-SUMMARY_PROP_COUNT:Files checked: $1
-SUMMARY_PROP_FAILED:Suspect files: $1
+SUMMARY_PROP_FILE_COUNT:Files checked: $1
+SUMMARY_PROP_FILE_FAILED:Suspect files: $1
+SUMMARY_PROP_DIR_COUNT:Directories checked: $1
+SUMMARY_PROP_DIR_FAILED:Suspect directories: $1
 SUMMARY_CHKS_SKIPPED:All checks skipped
 SUMMARY_RKT_SCAN:Rootkit checks...
 SUMMARY_RKT_COUNT:Rootkits checked : $1
@@ -203,14 +205,14 @@ OSINFO_DO_UPDT:The file properties file will be automatically updated.
 SET_FILE_PROP_START:Getting file properties...
 SET_FILE_PROP_DIR_FILE_COUNT:Found $1 file in $2
 SET_FILE_PROP_DIR_FILES_COUNT:Found $1 files in $2
-SET_FILE_PROP_FILE_COUNT:File $1: searched for $2 files, found $3
-SET_FILE_PROP_FILE_COUNT_BL:File $1: searched for $2 files, found $3, broken links $4
-SET_FILE_PROP_FILE_COUNT_PROPOPT:File $1: searched for $2 files, found $3 of $4
-SET_FILE_PROP_FILE_COUNT_PROPOPT_BL:File $1: searched for $2 files, found $3 of $4, broken links $5
-SET_FILE_PROP_FILE_COUNT_NOHASH:File $1: searched for $2 files, found $3, missing hashes $4
-SET_FILE_PROP_FILE_COUNT_NOHASH_BL:File $1: searched for $2 files, found $3, missing hashes $4, broken links $5
-SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT:File $1: searched for $2 files, found $3 of $4, missing hashes $5
-SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT_BL:File $1: searched for $2 files, found $3 of $4, missing hashes $5, broken links $6
+SET_FILE_PROP_FILE_COUNT:File $1: found $2 files, $3 directories
+SET_FILE_PROP_FILE_COUNT_BL:File $1: found $2 files, $3 directories and $4 broken links
+SET_FILE_PROP_FILE_COUNT_PROPOPT:File $1: found $2 of $3 files, $4 of $5 directories
+SET_FILE_PROP_FILE_COUNT_PROPOPT_BL:File $1: found $2 of $3 files, $4 of $5 directories and $6 broken links
+SET_FILE_PROP_FILE_COUNT_NOHASH:File $1: found $2 files, $3 directories and $4 missing hashes
+SET_FILE_PROP_FILE_COUNT_NOHASH_BL:File $1: found $2 files, $3 directories, $4 missing hashes and $5 broken links
+SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT:File $1: found $2 of $3 files, $4 of $5 directories and $6 missing hashes
+SET_FILE_PROP_FILE_COUNT_NOHASH_PROPOPT_BL:File $1: found $2 of $3 files, $4 of $5 directories, $6 missing hashes and $7 broken links
 
 PROPUPD_START:Starting file properties data update...
 PROPUPD_OSINFO_START:Collecting O/S info...
