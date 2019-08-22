@@ -82,6 +82,14 @@
  - It is now possible to disable all tests from the command-line, but
    only if the '--enable' and '--nocf' options are also used. This is
    more intuitive in order to run only specific (enabled) tests.
+ - The log file and command-line output of the '--propupd' option has
+   changed to simply show the number of files and directories found.
+   As before, any missing hashes or broken links will also be shown.
+   Due to code changes the previous 'searched for' number is no longer
+   used. (It was somewhat misleading since the number of found files
+   could be a lot higher.) The numbers now reported will include any
+   symbolic links pointing to the relevant type. That is, a symlink
+   pointing to a file will be counted as a file and so on.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
