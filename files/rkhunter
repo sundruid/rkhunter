@@ -7006,9 +7006,9 @@ ${DIR}:0"
 
 		if [ -n "${PROPUPD_OPT}" ]; then
 			#
-			# If we are looking for specific files, then just copy the
-			# entries from the current 'rkhunter.dat' file for the files
-			# we aren't looking for. For the ones we do want, we fall
+			# If we are looking for specific entries, then just copy
+			# the entries that we aren't looking for from the current
+			# 'rkhunter.dat' file. For the ones we do want, we fall
 			# through and process them as before.
 			#
 
@@ -7522,11 +7522,11 @@ ${DIR}:1"
 		:
 	else
 		if [ $NOHASH_COUNT -eq 0 ]; then
+#JH - Add in entry for when just 1 directory?
 			if [ $BROKEN_LINK_COUNT -eq 0 ]; then
 				if [ -n "${PROPUPD_OPT}" ]; then
 					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT "${RKHTMPVAR}" $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $PROP_DIR_PROPOPT_COUNT $PROP_DIR_LIST_COUNT
 				else
-#JH - can run '--propupd /usr/local/bin/' ? Does the dir only get updated in rkhunter,dat?
 					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT "${RKHTMPVAR}" $PROP_FILE_LIST_COUNT $PROP_DIR_LIST_COUNT
 				fi
 			else
@@ -11498,14 +11498,15 @@ file_properties_check() {
 ${RKHLINE}"
 					fi
 				elif [ -n "${RKHLINE}" ]; then
-					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
-
 					if [ -n "`echo \"${RKHLINE}\" | grep '^File:'`" ]; then
 						RKHTMPVAR=1
+						PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
 					elif [ -n "`echo \"${RKHLINE}\" | grep '^Dir:'`" ]; then
 						RKHTMPVAR=2
+						PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
 					else
 						RKHTMPVAR=0
+						PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
 					fi
 
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
@@ -11977,7 +11978,7 @@ ${RKHLINE}"
 					if [ -z "${RKHHASH}" ]; then
 						if [ "${HASH_CMD}" = "NONE" ]; then
 							:
-						elif [ "${OLD_FTYPE}" = "Dir" ]; then
+						elif [ \( $IS_A_LINK -eq 1 -a $IS_A_DIR -eq 1 \) -o "${OLD_FTYPE}" = "Dir" ]; then
 							# Directories won't have a hash value.
 							:
 						else
@@ -12476,7 +12477,11 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 		else
 			display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
 
-			PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+			if [ "${OLD_FTYPE}" = "Dir" ]; then
+				PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+			else
+				PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+			fi
 
 			RKHTMPVAR2=0
 			RKHTMPVAR3=0
@@ -19308,17 +19313,14 @@ display_check_summary() {
 		fi
 
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_FILE_COUNT $PROP_FILE_LIST_COUNT
-
-#JH - should do the below for dirs too?
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_FILE_FAILED $PROP_FILE_FAILED_COUNT
 
-		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_DIR_COUNT $PROP_DIR_LIST_COUNT
 #JH - the failed count needs sorting out.
+		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_DIR_COUNT $PROP_DIR_LIST_COUNT
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_DIR_FAILED $PROP_DIR_FAILED_COUNT
 	else
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_CHKS_SKIPPED
 	fi
-#JH - using '--propupd /home/jhl,/usr/local/bin/mktime' does not update the link target
 
 
 	#
@@ -20678,16 +20680,16 @@ PROP_FILE_PROPOPT_COUNT=0
 PRELINKED=0
 PRELINK_CMD=""
 PRELINK_HASH=""
+PKGMGRNOVRFY=""
 PKGMGR_MD5_HASH=""
 PKGMGR_SHA_HASH=""
 MD5_CMD=""
 EPOCH_DATE_CMD=""
-PKGMGRNOVRFY=""
 
 UPDATE=0
 PROP_UPDATE=0
-PROPUPD_OPT=""
 VERSIONCHECK=0
+PROPUPD_OPT=""
 
 # By default use coloured output.
 COLORS=1
@@ -21824,7 +21826,11 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 		PROPUPD_OPT=`echo "${PROPUPD_OPT}" | tr ',' "\n" | sed -e '/^$/d'`
 
-		test "${PROPUPD_OPT}" = "/" && PROPUPD_OPT=""
+		if [ -n "`echo \"${PROPUPD_OPT}\" | grep '^/$'`" ]; then
+			LEAVE=1
+			PROPUPD_OPT=""
+			echo "Invalid pathname given: /"
+		fi
 
 		IFS=$IFSNL
 
@@ -21863,9 +21869,22 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 					test -n "${RKHTMPVAR2}" && RKHTMPVAR2="${FNAME}"
 				fi
 
+				#
+				# If it is a known link, then we need to include the target.
+				#
+
+				if [ -n "${RKHTMPVAR2}" ]; then
+					if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
+						PATHNAME=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
+
+						test -n "${PATHNAME}" && RKHTMPVAR2="${RKHTMPVAR2}
+${PATHNAME}"
+					fi
+				fi
+
 				if [ -z "${RKHTMPVAR2}" ]; then
-					if [ -d "${FNAME}" ]; then
-						# Filename is a directory
+					if [ -d "${FNAME}" -a ! -h "${FNAME}" ]; then
+						# Filename is a directory and not a link.
 						if [ $FMTVERSION -eq 0 ]; then
 							RKHTMPVAR2=`grep "^File:${FNAMEGREP}/[^:]*:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
 						else
@@ -21873,7 +21892,7 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 
 							IFS=$IFSNL
 
-							for RKHLINE in `egrep "^(File|Link):[0-9]*:${FNAMEGREP}/" "${RKHDAT_FILE}" 2>/dev/null`; do
+							for RKHLINE in `egrep "^(File|Link|Dir):[0-9]*:${FNAMEGREP}[/:]" "${RKHDAT_FILE}" 2>/dev/null`; do
 								PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 								PATHS="${PATHS}
@@ -21892,6 +21911,9 @@ ${RKHTMPVAR2}"
 							LEAVE=1
 							echo "Directory is not in the \"rkhunter.dat\" file: ${FNAM}"
 						fi
+					elif [ -h "${FNAME}" ]; then
+						LEAVE=1
+						echo "Link is not in the \"rkhunter.dat\" file: ${FNAM}"
 					else
 						LEAVE=1
 						echo "File is not in the \"rkhunter.dat\" file: ${FNAM}"
