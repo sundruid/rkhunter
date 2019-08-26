@@ -7493,7 +7493,23 @@ ${DIR}:1"
 		RKHTMPVAR=`echo $DIR | cut -d: -f1`
 
 		# For links, the target will contain the number of files.
+#JH4 - this is only true for command directories.
+#JH4 - if we try and include the directory, then the name and link name appears in most cases. I.e - makes the situation worse.
+#JH4 - however if '/home/jhl/*' is used, then the count of files is right but there is no 'found 3 files in...'
+
 		test -h "${RKHTMPVAR}" && continue
+
+#JH5 - add /home/jhl/* to config, create link in dir (jhf5->jhf44) - warning msg about new file shows up twice.
+#JH5 [17:36:33]   /home/jhl/jhf44                                 [ Warning ]
+#JH5 [17:36:33] Warning: The file '/home/jhl/jhf44' exists on the system, but it is not present in the 'rkhunter.dat' file.
+#JH5 [17:36:33]   /home/jhl/jhf5                                  [ Warning ]
+#JH5 [17:36:33] Warning: The link '/home/jhl/jhf5' exists on the system, but it is not present in the 'rkhunter.dat' file.
+#JH5 [17:36:33]   /home/jhd/jhf44                                 [ Warning ]
+#JH5 [17:36:33] Warning: The file '/home/jhd/jhf44' exists on the system, but it is not present in the 'rkhunter.dat' file.
+
+#JH6 - add '/home/jhl/' to config, then move the actual dir out of the way. Properties test says no has for link found and
+#JH6 - directory /home/jhd not on system but is in rkhunter.dat.
+#JH6: Log file says there is 1 directory, but 2 suspect ones. Should check target of both and add to the dir count.
 
 		RKHTMPVAR2=`echo $DIR | cut -d: -f2`
 
@@ -11446,12 +11462,12 @@ file_properties_check() {
 			FTYPE="File"
 		fi
 
-		if [ -d "${FNAME}" ]; then
-			IS_A_DIR=1
-			PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
-		elif [ $FILE_EXISTS -eq 1 ]; then
+		if [ -f "${FNAME}" ]; then
 			IS_A_FILE=1
 			PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+		elif [ -d "${FNAME}" ]; then
+			IS_A_DIR=1
+			PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
 		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
@@ -11498,30 +11514,51 @@ file_properties_check() {
 ${RKHLINE}"
 					fi
 				elif [ -n "${RKHLINE}" ]; then
-					if [ -n "`echo \"${RKHLINE}\" | grep '^File:'`" ]; then
-						RKHTMPVAR=1
-						PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
-					elif [ -n "`echo \"${RKHLINE}\" | grep '^Dir:'`" ]; then
-						RKHTMPVAR=2
-						PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
-					else
-						RKHTMPVAR=0
-						PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
-					fi
+					FTYPE=`echo "${RKHLINE}" | cut -d: -f1`
 
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
 
-					if [ $RKHTMPVAR -eq 1 ]; then
+					if [ "${FTYPE}" = "File" ]; then
+						PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+						PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+
 						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
-					elif [ $RKHTMPVAR -eq 2 ]; then
+					elif [ "${FTYPE}" = "Dir" ]; then
+						PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
+						PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+
 						display --to LOG --type WARNING FILE_PROP_DIR_NOT_EXIST "`name2text \"${FNAME}\"`"
 					else
+#JH - when propupd and using /home/jhl/* and jhl is link, the total number is correct but the dir count is not shown. (179 is count, but no 'found 2 files in /home/jhl'
+#jh - if the link pointed to a dir then adjust the failed counters.
+						# This is now a broken link - get the link target.
 						RKHTMPVAR=`get_lname_from_rkh "${RKHLINE}"`
 
 						if [ -z "${RKHTMPVAR}" ]; then
+							PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+							PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+
 							display --to LOG --type WARNING FILE_PROP_LINK_NOT_EXIST "`name2text \"${FNAME}\"`"
 						else
 							display --to LOG --type WARNING FILE_PROP_LINK_NOT_EXIST_TGT "`name2text \"${FNAME}\"`" "`name2text \"${RKHTMPVAR}\"`"
+
+							#
+							# Since the link is now broken, the only way we can find if we were
+							# pointing to a file or directory is by looking in the 'rkhunter.dat'
+							# file for the link target.
+							#
+
+							FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+							RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+
+							if [ "${RKHTMPVAR2}" = "Dir" ]; then
+								PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
+								PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+							else
+								PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+								PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+							fi
 						fi
 					fi
 				fi
@@ -12479,12 +12516,40 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 
 			if [ "${OLD_FTYPE}" = "Dir" ]; then
 				PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+			elif [ "${OLD_FTYPE}" = "Link" ]; then
+				# Get the link target.
+				RKHTMPVAR=`get_lname_from_rkh "${RKHLINE}"`
+
+				if [ -z "${RKHTMPVAR}" ]; then
+					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+				elif [ -f "${RKHTMPVAR}" ]; then
+					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+				elif [ -d "${RKHTMPVAR}" ]; then
+					PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+				else
+					#
+					# Since the link is now broken, the only way we can find if we were
+					# pointing to a file or directory is by looking in the 'rkhunter.dat'
+					# file for the link target.
+					#
+
+					FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+					RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+
+					if [ "${RKHTMPVAR2}" = "Dir" ]; then
+						PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+					else
+						PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+					fi
+				fi
 			else
 				PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
 			fi
 
 			RKHTMPVAR2=0
 			RKHTMPVAR3=0
+
 			for RKHTMPVAR in ${TEST_RESULT}; do
 				case "${RKHTMPVAR}" in
 				ftypechanged|hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged|linkchanged)
@@ -12831,19 +12896,36 @@ File:${FNAME}:.*"
 ${FTYPE}:${RKH_CC}:${FNAME}:.*"
 					fi
 				elif [ ! -e "${FNAME}" ]; then
-					PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
-					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+					FTYPE=`echo "${RKHTMPVAR}" | cut -d: -f1`
 
 					display --to SCREEN+LOG --type PLAIN --screen-indent 4 --log-indent 2 --result WARNING --color RED NAME "`name2text \"${FNAME}\"`"
 
-					FTYPE=`echo "${RKHTMPVAR}" | cut -d: -f1`
+					if [ "${FTYPE}" = "File" ]; then
+						PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+						PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
 
-					if [ "${FTYPE}" = "Link" ]; then
-						display --to LOG --type WARNING FILE_PROP_LINK_NOT_EXIST "`name2text \"${FNAME}\"`"
+						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
 					elif [ "${FTYPE}" = "Dir" ]; then
+						PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
+						PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+
 						display --to LOG --type WARNING FILE_PROP_DIR_NOT_EXIST "`name2text \"${FNAME}\"`"
 					else
-						display --to LOG --type WARNING FILE_PROP_FILE_NOT_EXIST "`name2text \"${FNAME}\"`"
+						display --to LOG --type WARNING FILE_PROP_LINK_NOT_EXIST "`name2text \"${FNAME}\"`"
+
+						FNAME=`get_lname_from_rkh "${RKHTMPVAR}"`
+
+						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+						RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+
+						if [ "${RKHTMPVAR2}" = "Dir" ]; then
+							PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
+							PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
+						else
+							PROP_FILE_LIST_COUNT=`expr $PROP_FILE_LIST_COUNT + 1`
+							PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
+						fi
 					fi
 				fi
 			fi
