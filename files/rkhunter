@@ -14806,7 +14806,7 @@ malware_checks() {
 
 			IFS=$IFSNL
 
-			for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | ${AWK_CMD} '/ \(deleted\)$/ { if (NF == 10 ) {print $2, $9 }}'`; do
+			for LINE in `${LSOF_CMD} -wnlP +c 0 ${SOLARISX} 2>/dev/null | ${AWK_CMD} '/ \(deleted\)$/ { if (NF == 10) { print $2, $9 }}'`; do
 				PROC=""
 
 				PID=`echo "${LINE}" | cut -d' ' -f1`
@@ -14994,7 +14994,7 @@ ${PROC} ${PID} ${FNAME}"
 			RKHLSOF_FILE="${TEMPFILE}"
 			touch "${RKHLSOF_FILE}"
 
-			${LSOF_CMD} -wnlP +c 0 2>/dev/null | egrep -v ' (FIFO|V?DIR|IPv[46]) ' | sort | uniq >"${RKHLSOF_FILE}"
+			${LSOF_CMD} -wnlP +c 0 2>/dev/null | ${AWK_CMD} '$0 !~ / (FIFO|V?DIR|IPv[46]) / { if (NF == 8 && $8 ~ /^\//) { print $1, $2, $3, $NF }}' >"${RKHLSOF_FILE}"
 
 			#
 			# Now loop through the known suspicious filenames,
@@ -15033,7 +15033,7 @@ ${PROC} ${PID} ${FNAME}"
 
 					#
 					# It is possible that more than one line of output was found.
-					# So we must loop through them and record them all.
+					# So we must loop through them all and record them all.
 					#
 
 					for FNAME in ${FOUNDFILES}; do
@@ -15080,14 +15080,14 @@ ${RKHTMPVAR}:${FNAME}"
 					INFO=`echo ${FILENAME} | cut -d: -f2`
 					RKHTMPVAR=`echo ${FILENAME} | cut -d: -f3-`
 
-					FOUNDINFO=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $1 }'`
+					FOUNDINFO=`echo "${RKHTMPVAR}" | cut -d' ' -f1`
 					display --to LOG --type PLAIN --log-indent 9 ROOTKIT_MALWARE_SUSP_FILES_FOUND_CMD "${FOUNDINFO}"
 
-					FOUNDINFO=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $3 }'`
-					RKHTMPVAR2=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $2 }'`
+					FOUNDINFO=`echo "${RKHTMPVAR}" | cut -d' ' -f3`
+					RKHTMPVAR2=`echo "${RKHTMPVAR}" | cut -d' ' -f2`
 					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_UID "${FOUNDINFO}" "${RKHTMPVAR2}"
 
-					FOUNDINFO=`echo "${RKHTMPVAR}" | ${AWK_CMD} '{ print $9 }'`
+					FOUNDINFO=`echo "${RKHTMPVAR}" | cut -d' ' -f4`
 					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_PATH "${FOUNDINFO}"
 
 					display --to LOG --type PLAIN --log-indent 11 ROOTKIT_MALWARE_SUSP_FILES_FOUND_RTKT "${INFO}"
@@ -19316,6 +19316,7 @@ display_check_summary() {
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_FILE_FAILED $PROP_FILE_FAILED_COUNT
 
 #JH - the failed count needs sorting out.
+#JH - go through propupd code - can't check old rkhdat file for broken links as the data may have changed.
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_DIR_COUNT $PROP_DIR_LIST_COUNT
 		display --to SCREEN+LOG --type PLAIN --screen-indent 4 SUMMARY_PROP_DIR_FAILED $PROP_DIR_FAILED_COUNT
 	else
