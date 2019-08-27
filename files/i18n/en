@@ -1,4 +1,4 @@
-Version:2019082201
+Version:2019082701
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -323,6 +323,7 @@ FILE_PROP_SYSHASH:Current hash: $1
 FILE_PROP_RKHHASH:Stored  hash: $1
 FILE_PROP_RKHHASH_NONE:Stored  hash: (None)
 FILE_PROP_NO_RKHHASH:No hash value found for '$1' in the 'rkhunter.dat' file.
+FILE_PROP_NO_RKHHASH_DIR_BL:The directory is a broken link: $1 -> $2
 FILE_PROP_NO_RKHPERM:No permissions value found for '$1' in the 'rkhunter.dat' file.
 FILE_PROP_PERM_UNAVAIL:Current permissions: Unavailable    Stored permissions: $1
 FILE_PROP_PERM:Current permissions: $1    Stored permissions: $2
