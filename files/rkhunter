@@ -1010,21 +1010,6 @@ check_paths() {
 		test -z "${FNAM}" && continue
 
 		#
-		# For some options we may have to remove the leading character.
-		#
-
-# TODO:
-# This is no longer needed since we moved the check_paths for bindir paths.
-# The code is left here since we may need something very similar for overloaded options.
-#   overloaded options - ALLOWPROCDELFILE PORT_PATH_WHITELIST RTKT_FILE_WHITELIST
-#		if [ "${OPT_NAME}" = "BINDIR" ]; then
-#			if [ -n "`echo \"${FNAME}\" | grep '^\+'`" ]; then
-#				FNAME=`echo "${FNAME}" | cut -c2-`
-#			fi
-#		fi
-
-
-		#
 		# First check for anything which contains just dots.
 		# Also check that '/' has not been set.
 		#
@@ -7532,7 +7517,18 @@ ${DIR}:1"
 		:
 	else
 		if [ $NOHASH_COUNT -eq 0 ]; then
-#JH - Add in entry for when just 1 directory?
+			#
+			# We now display the number of found files, directories etc. Currently we make the
+			# assumption of multiple files, directories, broken links etc. As such the wording
+			# is shown as plural (e.g. 'files', 'directories' and so on). To cater for each
+			# situation where a single file, directory etc is found would require creating a
+			# whole load of new display messages in order to cater for each combination. That
+			# is, if there was one file but many directories or vice versa; one file, many
+			# directories but one broken link; the same but with multiple broken links, and
+			# so on for the missing hashes too. It would be very messy.
+			#
+# TODO: see if we can devise a method for resolving the above problem.
+
 			if [ $BROKEN_LINK_COUNT -eq 0 ]; then
 				if [ -n "${PROPUPD_OPT}" ]; then
 					display --to SCREEN+LOG --type INFO SET_FILE_PROP_FILE_COUNT_PROPOPT "${RKHTMPVAR}" $PROP_FILE_PROPOPT_COUNT $PROP_FILE_LIST_COUNT $PROP_DIR_PROPOPT_COUNT $PROP_DIR_LIST_COUNT
@@ -20338,8 +20334,6 @@ display_propfiles() {
 	create_rkh_file_prop_list
 
 	# Finally just dump out the list of file names.
-# TODO:
-# Really this output should exclude anything in the exclusion list.
 	${AWK_CMD} -F'/' '{ print $NF }' "${RKH_FILEPROP_LIST}" 2>/dev/null | sort | uniq
 
 	return
