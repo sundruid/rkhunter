@@ -25,7 +25,7 @@
 # Unfortunately we must do some O/S checks at the very beginning,
 # otherwise SunOS will complain about some of the ksh/bash syntax.
 # By default the SunOS root account uses a simple Bourne shell,
-# which does not work with RKH. So we exec to use the Bash shell
+# which does not work with RKH. So we exec to use the bash shell
 # if it is present, or the Korn shell which is usually installed
 # by default on Solaris systems.
 #
@@ -33,7 +33,6 @@
 BSDOS=0
 SUNOS=0
 BUSYBOX=0
-UNKNOWNSH=0
 
 OPERATING_SYSTEM=`uname 2>/dev/null`
 
@@ -58,9 +57,20 @@ SunOS)
 		MYSHELL=`readlink /bin/sh 2>/dev/null`
 	fi
 
-	MYSHELL=`basename ${MYSHELL} 2>/dev/null`
+	RKHTMPVAR=`basename ${MYSHELL} 2>/dev/null`
+	test -z "${RKHTMPVAR}" && RKHTMPVAR="unknown"
 
-	test "$MYSHELL" != "bash" -a "$MYSHELL" != "ksh" && UNKNOWNSH=1
+# TODO - option to specify shell to use? We may by default use dash but want to use bash (for globstar).
+	case "${RKHTMPVAR}" in
+	bash|ksh|ksh93)
+		MYSHELL=${RKHTMPVAR}
+		;;
+	*)
+		UNKNOWNSH=1
+		OLD_MYSHELL=${MYSHELL}
+		MYSHELL=${RKHTMPVAR}
+		;;
+	esac
 	;;
 esac
 
@@ -69,16 +79,16 @@ esac
 # and switch to either the bash or ksh shell.
 #
 
-if [ $SUNOS -eq 1 -o $UNKNOWNSH -eq 1 ]; then
+if [ $SUNOS -eq 1 -o "${UNKNOWNSH}" = "1" ]; then
 	# Simple SunOS test of RANDOM to see if we are now running bash or ksh.
 	if [ -z "$RANDOM" ]; then
 		# If the 'which' output contains a space, then it is probably an error.
 		if [ -n "`which bash 2>/dev/null | grep -v ' '`" ]; then
-			exec bash $0 $*
+			exec env UNKNOWNSH="${UNKNOWNSH}" env OLD_MYSHELL="${OLD_MYSHELL}" env NEW_MYSHELL="bash" bash $0 $*
 		elif [ -n "`which ksh 2>/dev/null | grep -v ' '`" ]; then
-			exec ksh $0 $*
+			exec env UNKNOWNSH="${UNKNOWNSH}" env OLD_MYSHELL="${OLD_MYSHELL}" env NEW_MYSHELL="ksh" ksh $0 $*
 		else
-			echo "Unable to find the bash or ksh shell to run rkhunter."
+			echo "Unable to find a bash or ksh shell to run rkhunter."
 			exit 1
 		fi
 
@@ -3425,7 +3435,7 @@ get_shell_options() {
 	#
 
 	if [ $GLOBSTAR -eq 1 ]; then
-		if [ "${MYSHELL}" = "ksh" ]; then
+		if [ "${MYSHELL}" = "ksh" -o "${MYSHELL}" = "ksh93" ]; then
 			set -o globstar
 		else
 			#
@@ -3439,7 +3449,7 @@ get_shell_options() {
 				shopt -s globstar
 			else
 				LEAVE=1
-				test $QUIET_CONFIG -eq 0 && echo "The current shell does not support the 'shopt' command for the GLOBSTAR configuration option."
+				test $QUIET_CONFIG -eq 0 && echo "The current shell (${MYSHELL}) does not support the 'shopt' command for the GLOBSTAR configuration option."
 			fi
 		fi
 	fi
@@ -19583,7 +19593,7 @@ do_system_check() {
 
 	if [ -n "$SECONDS" ]; then
 		BEGINTIME=`echo $SECONDS | cut -d. -f1`
-	elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 ]; then
+	elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 -o "${MYSHELL}" = "dash" ]; then
 		BEGINTIME=`date +%s`
 	elif [ -n "${PERL_CMD}" ]; then
 		BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
@@ -19643,7 +19653,7 @@ do_system_check() {
 	if [ $BEGINTIME -ne 0 ]; then
 		if [ -n "$SECONDS" ]; then
 			ENDTIME=`echo $SECONDS | cut -d. -f1`
-		elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 ]; then
+		elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 -o "${MYSHELL}" = "dash" ]; then
 			ENDTIME=`date +%s`
 		else
 			ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
@@ -19956,11 +19966,11 @@ ${LINKDIR}"
 	IFS=$RKHIFS
 
 	PROP_FILE_LIST="adduser amd awk basename bash bget cat chattr checkproc
-	    chkconfig chmod chown chroot cksum cp cron csh curl cut date depmod df
+	    chkconfig chmod chown chroot cksum cp cron csh curl cut dash date depmod df
 	    diff dirname dmesg dpkg dpkg-query du echo ed egrep elinks env fgrep
 	    file find fsck fuser GET grep groupadd groupdel groupmod groups grpck head id
 	    ifconfig ifdown ifstatus ifup inetd init insmod ip ipcs kallsyms kill
-	    killall ksyms kudzu last lastlog ldd less links locate logger login
+	    killall ksh ksyms kudzu last lastlog ldd less links locate logger login
 	    ls lsattr lsmod lsof lynx mail md5 md5sum mktemp mlocate modinfo
 	    modload modprobe modstat modunload more mount mv netstat newgrp
 	    newsyslog nologin passwd perl pgrep ping pkg pkgdb pkg_info pkill prelink ps pstree
@@ -20699,7 +20709,7 @@ help() {
 # we need to enable tracing in each of the functions.
 #
 
-if [ $DEBUG_OPT -eq 1 -a "${MYSHELL}" = "ksh" ]; then
+if [ $DEBUG_OPT -eq 1 -a \( "${MYSHELL}" = "ksh" -o "${MYSHELL}" = "ksh93" \) ]; then
 	RKHTMPVAR=`typeset +f`
 
 	for RKHTMPVAR2 in ${RKHTMPVAR}; do
@@ -22360,6 +22370,10 @@ if [ $NOLOG -eq 0 ]; then
 	test $DEBUG_OPT -eq 1 && display --to LOG --type INFO CONFIG_DEBUGFILE "${RKHDEBUGFILE}"
 
 	display --to LOG --type INFO CONFIG_ENVSHELL "${SHELL}" "${MYSHELL}"
+
+	if [ "${UNKNOWNSH}" = "1" ]; then
+		display --to LOG --type INFO CONFIG_UNKSHELL "${OLD_MYSHELL}" "${NEW_MYSHELL}"
+	fi
 
 	display --to LOG --type INFO CONFIG_CONFIGFILE "${CONFIGFILE}"
 

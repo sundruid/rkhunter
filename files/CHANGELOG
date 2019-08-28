@@ -33,14 +33,16 @@
  - Added test for Linux.BtcMine.174 trojan.
  - Added test for MALXMR.UWEIU coinminer trojan.
  - Added an EXIT STATUS section to the man page.
- - Added the 'inotifywait', 'inotifywatch' and 'cksum' commands to
-   the list of standard commands to be checked for file properties.
+ - Added the 'inotifywait', 'inotifywatch', 'cksum', 'dash' and 'ksh'
+   commands to the list of standard commands to be checked for file
+   properties.
  - Added the '--cloe' and '--nocloe' command-line options to
    correspond to the COPY_LOG_ON_ERROR configuration option.
  - It is now possible to specify directories themselves for the
    file properties check. To enable this the USER_FILEPROP_FILES_DIRS
    option is used, and the directory name is appended with a '/'
    character.
+ - Added further Korn shell support so that 'ksh93' is recognized.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in
