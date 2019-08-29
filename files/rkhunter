@@ -25,7 +25,7 @@
 # Unfortunately we must do some O/S checks at the very beginning,
 # otherwise SunOS will complain about some of the ksh/bash syntax.
 # By default the SunOS root account uses a simple Bourne shell,
-# which does not work with RKH. So we exec to use the bash shell
+# which does not work with RKH. So we exec to use the Bash shell
 # if it is present, or the Korn shell which is usually installed
 # by default on Solaris systems.
 #
@@ -33,6 +33,9 @@
 BSDOS=0
 SUNOS=0
 BUSYBOX=0
+
+UNKSHELL_OPT=0
+UNKSHELL_SECS=0
 
 OPERATING_SYSTEM=`uname 2>/dev/null`
 
@@ -60,7 +63,6 @@ SunOS)
 	RKHTMPVAR=`basename ${MYSHELL} 2>/dev/null`
 	test -z "${RKHTMPVAR}" && RKHTMPVAR="unknown"
 
-# TODO - option to specify shell to use? We may by default use dash but want to use bash (for globstar).
 	case "${RKHTMPVAR}" in
 	bash|ksh|ksh93)
 		MYSHELL=${RKHTMPVAR}
@@ -75,11 +77,31 @@ SunOS)
 esac
 
 #
+# We must check very early on to see if an unknown shell is to be accepted.
+#
+
+if [ -n "`echo \"$*\" | grep '\-\-shell'`" ]; then
+	UNKNOWNSH=0
+	UNKSHELL_OPT=1
+
+	#
+	# Run a quick check to see if we can get the SECONDS
+	# counter or its equivalent for this shell.
+	#
+
+	if [ -n "$SECONDS" ]; then
+		:
+	elif [ -n "`date +%s 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
+		UNKSHELL_SECS=1
+	fi
+fi
+
+#
 # For SunOS and unknown shells, we should try
 # and switch to either the bash or ksh shell.
 #
 
-if [ $SUNOS -eq 1 -o "${UNKNOWNSH}" = "1" ]; then
+if [ $UNKSHELL_OPT -eq 0 -a \( $SUNOS -eq 1 -o "${UNKNOWNSH}" = "1" \) ]; then
 	# Simple SunOS test of RANDOM to see if we are now running bash or ksh.
 	if [ -z "$RANDOM" ]; then
 		# If the 'which' output contains a space, then it is probably an error.
@@ -118,7 +140,7 @@ if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 	#
 
 	if [ -n "`which mktemp 2>/dev/null | grep -v ' '`" ]; then
-		RKHDEBUGFILE=`mktemp ${RKHDEBUGBASE}.XXXXXXXXXX`
+		RKHDEBUGFILE=`mktemp ${RKHDEBUGBASE}.XXXXXXXXXX 2>/dev/null`
 	elif [ -n "$RANDOM" ]; then
 		RKHDEBUGFILE="${RKHDEBUGBASE}.$RANDOM"
 	elif [ -n "`date +%N%s 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
@@ -129,13 +151,18 @@ if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
 		RKHDEBUGFILE="${RKHDEBUGBASE}.$$"
 	fi
 
-	if [ -e "${RKHDEBUGFILE}" ]; then
-		if [ -f "${RKHDEBUGFILE}" -a ! -h "${RKHDEBUGFILE}" ]; then
-			rm -f "${RKHDEBUGFILE}" >/dev/null 2>&1
-		else
-			echo "Cannot use '--debug' option. Debug file \"${RKHDEBUGFILE}\" already exists, but it is not a file."
-			exit 1
+	if [ -n "${RKHDEBUGFILE}" ]; then
+		if [ -e "${RKHDEBUGFILE}" ]; then
+			if [ -f "${RKHDEBUGFILE}" -a ! -h "${RKHDEBUGFILE}" ]; then
+				rm -f "${RKHDEBUGFILE}" >/dev/null 2>&1
+			else
+				echo "Cannot use '--debug' option. Debug file \"${RKHDEBUGFILE}\" already exists, but it is not a file."
+				exit 1
+			fi
 		fi
+	else
+		echo "Unable to create temporary debug file."
+		exit 1
 	fi
 
 	DEBUG_OPT=1
@@ -165,10 +192,10 @@ test $BSDOS -eq 1 && alias print=false
 if [ "`print "rkh-ksh-string-test" 2>/dev/null`" = "rkh-ksh-string-test" ]; then
 	alias echo='print'
 	ECHOOPT="--"
-	MYSHELL=ksh
+	test -z "${MYSHELL}" && MYSHELL=ksh
 elif [ $SUNOS -eq 1 ]; then
 	# For Solaris, if we are not running ksh, then it must be bash.
-	MYSHELL=bash
+	test -z "${MYSHELL}" && MYSHELL=bash
 	ECHOOPT="-e"
 else
 	#
@@ -176,9 +203,11 @@ else
 	# so we need to test /bin/sh.
 	#
 
-	MYSHELL=/bin/sh
-	test -h ${MYSHELL} && MYSHELL=`readlink ${MYSHELL} 2>/dev/null`
-	MYSHELL=`basename ${MYSHELL} 2>/dev/null`
+	if [ -z "${MYSHELL}" ]; then
+		MYSHELL=/bin/sh
+		test -h ${MYSHELL} && MYSHELL=`readlink ${MYSHELL} 2>/dev/null`
+		MYSHELL=`basename ${MYSHELL} 2>/dev/null`
+	fi
 
 	# Assume 'bash' if we have problems finding the real shell.
 	test -z "${MYSHELL}" && MYSHELL=bash
@@ -1350,24 +1379,33 @@ get_temp_file() {
 	TEMPFILE_BASE=$1
 
 
-	if [ -n "${MKTEMP_CMD}" ]; then
-		TEMPFILE=`${MKTEMP_CMD} "${TEMPFILE_BASE}.XXXXXXXXXX"`
-	elif [ -n "$RANDOM" ]; then
-		TEMPFILE="${TEMPFILE_BASE}.$RANDOM"
-	elif [ $BSDOS -eq 1 ]; then
-		TEMPFILE="${TEMPFILE_BASE}.`date +%s`"
-	elif [ -n "`date +%N%s 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
-		TEMPFILE="${TEMPFILE_BASE}.`date +%N%s%N`"
+	if [ -n "${TEMPFILE_BASE}" ]; then
+		if [ -n "${MKTEMP_CMD}" ]; then
+			TEMPFILE=`${MKTEMP_CMD} "${TEMPFILE_BASE}.XXXXXXXXXX" 2>/dev/null`
+		elif [ -n "$RANDOM" ]; then
+			TEMPFILE="${TEMPFILE_BASE}.$RANDOM"
+		elif [ $BSDOS -eq 1 -o $UNKSHELL_SECS -eq 1 ]; then
+			TEMPFILE="${TEMPFILE_BASE}.`date +%s 2>/dev/null`"
+		elif [ -n "`date +%N%s 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
+			TEMPFILE="${TEMPFILE_BASE}.`date +%N%s%N`"
+		elif [ -n "`date +%Y%m%d%H%M%S 2>/dev/null | grep '^[0-9][0-9]*$'`" ]; then
+			TEMPFILE="${TEMPFILE_BASE}.`date +%Y%m%d%H%M%S`"
+		else
+			TEMPFILE="${TEMPFILE_BASE}.$$"
+		fi
 	else
-		TEMPFILE="${TEMPFILE_BASE}.`date +%Y%m%d%H%M%S`"
+		echo "Unable to create a temporary file: no base name given"
+		exit 1
 	fi
 
 
-	#
-	# Remove the file just in case it already exists!
-	#
-
-	rm -f "${TEMPFILE}" >/dev/null 2>&1
+	if [ -n "${TEMPFILE}" ]; then
+		# Remove the file just in case it already exists!
+		rm -f "${TEMPFILE}" >/dev/null 2>&1
+	else
+		echo "Unable to create a temporary file."
+		exit 1
+	fi
 
 	return
 }
@@ -4226,13 +4264,13 @@ get_epoch_date_cmd_option() {
 	elif [ "${EPOCH_DATE_CMD}" = "NONE" ]; then
 		return
 	elif [ -n "${EPOCH_DATE_CMD}" ]; then
-		RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
-
-		check_paths RKHTMPVAR EPOCH_DATE_CMD "EXIST NOWILD NOBROKENLINK"
-
 		#
 		# Check that the command exists and is executable.
 		#
+
+		RKHTMPVAR=`echo "${EPOCH_DATE_CMD}" | cut -d' ' -f1`
+
+		check_paths RKHTMPVAR EPOCH_DATE_CMD "EXIST NOWILD NOBROKENLINK"
 
 		if [ $ERRCODE -eq 0 ]; then
 			FNAME=`find_cmd ${RKHTMPVAR}`
@@ -19593,7 +19631,7 @@ do_system_check() {
 
 	if [ -n "$SECONDS" ]; then
 		BEGINTIME=`echo $SECONDS | cut -d. -f1`
-	elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 -o "${MYSHELL}" = "dash" ]; then
+	elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 -o $UNKSHELL_SECS -eq 1 ]; then
 		BEGINTIME=`date +%s`
 	elif [ -n "${PERL_CMD}" ]; then
 		BEGINTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
@@ -19653,7 +19691,7 @@ do_system_check() {
 	if [ $BEGINTIME -ne 0 ]; then
 		if [ -n "$SECONDS" ]; then
 			ENDTIME=`echo $SECONDS | cut -d. -f1`
-		elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 -o "${MYSHELL}" = "dash" ]; then
+		elif [ $BSDOS -eq 1 -o $BUSYBOX -eq 1 -o $UNKSHELL_SECS -eq 1 ]; then
 			ENDTIME=`date +%s`
 		else
 			ENDTIME=`${PERL_CMD} -e 'printf "%d\n", time;'`
@@ -20676,6 +20714,7 @@ help() {
 	echo $ECHOOPT "                       package]...        or just for the specified entries"
 	echo $ECHOOPT "        -q, --quiet                       Quiet mode (no output at all)"
 	echo $ECHOOPT "     --rwo, --report-warnings-only        Show only warning messages. (This overrides the '-q' option)"
+	echo $ECHOOPT "            --shell                       Do not switch to a Bash or Korn shell from an unknown shell"
 	echo $ECHOOPT "      --sk, --skip-keypress               Don't wait for a keypress after each test"
 	echo $ECHOOPT "            --summary                     Show the summary of system check results"
 	echo $ECHOOPT "                                          (This is the default. Specifying this option will override"
@@ -21551,6 +21590,9 @@ while [ $# -ge 1 ]; do
 		echo "The '$1' option is now deprecated."
 		shift
 		;;
+	--shell)
+		UNKSHELL_OPT=1
+		;;
 	-sk | --sk | --skip-keypress | --skipkeypress)
 		SKIP_KEY_PRESS=1
 		;;
@@ -22371,7 +22413,7 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO CONFIG_ENVSHELL "${SHELL}" "${MYSHELL}"
 
-	if [ "${UNKNOWNSH}" = "1" ]; then
+	if [ "${UNKNOWNSH}" = "1" -a -n "${NEW_MYSHELL}" ]; then
 		display --to LOG --type INFO CONFIG_UNKSHELL "${OLD_MYSHELL}" "${NEW_MYSHELL}"
 	fi
 

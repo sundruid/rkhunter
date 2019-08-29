@@ -347,6 +347,14 @@ useful when \fBrkhunter\fP is run via cron. Other options may be used to
 force other items of information to be displayed. This option will override
 the \fB\-q\fP option.
 
+.IP "\fB\-\-shell\fP"
+If a non-Bash and non-Korn shell is used, then \fBrkhunter\fP will try and
+switch to one of those shells (the log file will record this). The program
+will stop if neither shell is found. This option will prevent \fBrkhunter\fP
+from trying to switch shells. Although this option should not generally be
+used, it does allow users with restrictive systems to try and get
+\fBrkhunter\fP to run with other shells.
+
 .IP "\fB\-\-sk, \-\-skip\-keypress\fP"
 When the \fB\-\-check\fP command option is used, after certain sections of
 tests, the user will be prompted to press the \fIreturn\fP key in order to
