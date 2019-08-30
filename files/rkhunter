@@ -65,6 +65,7 @@ SunOS)
 
 	case "${RKHTMPVAR}" in
 	bash|ksh|ksh93)
+		UNKNOWNSH=0
 		MYSHELL=${RKHTMPVAR}
 		;;
 	*)
@@ -22485,7 +22486,7 @@ if [ $NOLOG -eq 0 ]; then
 
 	display --to LOG --type INFO CONFIG_ENVSHELL "${SHELL}" "${MYSHELL}"
 
-	if [ "${UNKNOWNSH}" = "1" -a -n "${NEW_MYSHELL}" ]; then
+	if [ -n "${NEW_MYSHELL}" ]; then
 		display --to LOG --type INFO CONFIG_UNKSHELL "${OLD_MYSHELL}" "${NEW_MYSHELL}"
 	fi
 
