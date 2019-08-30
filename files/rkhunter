@@ -8247,7 +8247,7 @@ do_i18n_update() {
 			fi
 
 			if [ -s "${DB_PATH}/i18n/${LANGFILE}" ]; then
-				PROG_VERS=`grep ${GREP_OPT} '^[Vv]ersion:[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' "${DB_PATH}/i18n/${LANGFILE}" 2>/dev/null | tail ${TAIL_OPT}1 | cut -d: -f2`
+				PROG_VERS=`grep ${GREP_OPT} '^Version:20[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$' "${DB_PATH}/i18n/${LANGFILE}" 2>/dev/null | head ${HEAD_OPT}1 | cut -d: -f2`
 
 				if [ -z "${PROG_VERS}" ]; then
 					PROG_VERS=0
@@ -8300,8 +8300,15 @@ do_i18n_update() {
 		display --to LOG --type WARNING UPDATE_DOWNLOAD_FAIL 'i18n.ver'
 	fi
 
-
 	rm -f "${RKHUPD_FILE}" >/dev/null 2>&1
+
+
+	#
+	# Finally we run through a check of all the language
+	# files present to ensure that they are valid.
+	#
+
+	check_lang_files
 
 	return
 }
@@ -20601,6 +20608,60 @@ check_prop_dat_files() {
 }
 
 
+check_lang_files() {
+
+	#
+	# This function checks the various language files that may be present
+	# on the system. The checks are mainly to see if there are any forms
+	# of variable expansion or command substitution present.
+	#
+
+	FOUND=0
+
+	IFS=$IFSNL
+
+	for FILENAMES in ${DB_PATH}/i18n/*; do
+		test -n "${BASENAME_CMD}" && FNAME=`${BASENAME_CMD} "${FILENAMES}"` || FNAME=`echo "${FILENAMES}" | sed -e 's:^.*/::'`
+
+		# Check that the version number on the first line is correctly formatted.
+		LINE=`head ${HEAD_OPT}1 "${FILENAMES}"`
+
+		if [ -z "`echo \"${LINE}\" | grep ${GREP_OPT} '^Version:20[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$'`" ]; then
+			FOUND=1
+			echo "Invalid '${FNAME}' language file: Invalid version number: ${LINE}"
+		fi
+
+		#
+		# Next check for any backticks, there shouldn't be any, and for any expansion
+		# being used which is not referring to parameter variables.
+		#
+		# The 'zh' language file contains backtick characters, so we have to omit
+		# the check for that file.
+		#
+
+		if [ "${FNAME}" = "zh" ]; then
+			LINE=`grep ${GREP_OPT} '\\$[^{1-9]' "${FILENAMES}" 2>/dev/null`
+		else
+			LINE=`egrep ${GREP_OPT} '(\`|\\$[^{1-9])' "${FILENAMES}" 2>/dev/null`
+		fi
+
+		if [ -n "${LINE}" ]; then
+			FOUND=1
+
+			for RKHTMPVAR in ${LINE}; do
+				echo "Invalid '${FNAME}' language file: Invalid expansion found: ${RKHTMPVAR}"
+			done
+		fi
+	done
+
+	IFS=$RKHIFS
+
+	test $FOUND -eq 1 && exit 1
+
+	return
+}
+
+
 get_fname_from_rkh() {
 
 	#
@@ -22287,18 +22348,29 @@ fi
 # First we set whether we should be displaying anything on the
 # screen or not.
 #
+
 test $CRONJOB -eq 1 -o $QUIET -eq 1 && NOTTY=1
 
+
 #
-# Next we get the message types and results from the language file,
+# Before using the language files to display or log anything,
+# we need to validate the data as best we can.
+#
+
+check_lang_files
+
+
+#
+# Now we can get the message types and results from the language file,
 # and set them to variables. We have to look in the English file since
 # that is the definitive one. We then look for the corresponding keyword
 # in the actual language file. This allows the language files to work
 # even if we add or remove any of the TYPE or RESULT keywords.
 #
+
 IFS=$IFSNL
 
-for LINE in `egrep '^MSG_(TYPE|RESULT)_' "${DB_PATH}/i18n/en" 2>/dev/null`; do
+for LINE in `egrep '^MSG_(TYPE|RESULT)_[A-Z][A-Z_]*:' "${DB_PATH}/i18n/en" 2>/dev/null`; do
 	TYPE=`echo "${LINE}" | cut -d: -f1`
 
 	if [ "${LANGUAGE}" != "en" ]; then
