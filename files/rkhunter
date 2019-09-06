@@ -12300,26 +12300,6 @@ ${RKHLINE}"
 
 
 					#
-					# Check the file inode number.
-					#
-
-					if [ $PRELINKED -eq 0 ]; then
-						RKH_CC2=`expr $RKH_CC + 1`
-
-						RKHINODE=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
-						SYSINODE=`echo ${FDATA} | cut -d: -f1`
-
-						if [ $SKIP_INODE_CHECK -eq 0 ]; then
-							if [ -n "${RKHINODE}" ]; then
-								test "${RKHINODE}" != "${SYSINODE}" && TEST_RESULT="${TEST_RESULT} inodechanged"
-							else
-								TEST_RESULT="${TEST_RESULT} norkhinode"
-							fi
-						fi
-					fi
-
-
-					#
 					# Check the file size.
 					#
 
@@ -12363,6 +12343,35 @@ ${RKHLINE}"
 							test "${RKHDTM}" != "${SYSDTM}" && TEST_RESULT="${TEST_RESULT} dtmchanged"
 						else
 							TEST_RESULT="${TEST_RESULT} norkhdtm"
+						fi
+					fi
+
+
+					#
+					# Check the file inode number.
+					#
+					# It is possible for the inode number alone to change. This
+					# can occur during updates, but since the file contents, as
+					# well as other properties, may not have changed then it would
+					# be a false-positive if we reported it. So, we perform this
+					# check relatively last, and only report the inode having
+					# changed if some other attribute has also changed.
+					#
+
+					if [ $PRELINKED -eq 0 ]; then
+						RKH_CC2=`expr $RKH_CC + 1`
+
+						RKHINODE=`echo ${RKHLINE} | cut -d: -f$RKH_CC2`
+						SYSINODE=`echo ${FDATA} | cut -d: -f1`
+
+						if [ $SKIP_INODE_CHECK -eq 0 ]; then
+							if [ -n "${RKHINODE}" ]; then
+								if [ "${RKHINODE}" != "${SYSINODE}" -a -n "${TEST_RESULT}" ]; then
+									TEST_RESULT="${TEST_RESULT} inodechanged"
+								fi
+							else
+								TEST_RESULT="${TEST_RESULT} norkhinode"
+							fi
 						fi
 					fi
 

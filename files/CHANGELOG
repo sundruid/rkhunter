@@ -144,6 +144,9 @@
    The hex string is removed.
  - The '--propupd' option was not handling links at all if it was
    specified on the command-line. (For example, '--propupd <link>')
+ - It is possible for a file inode to change but no other attribute.
+   A changed inode is now only reported if some other attribute has
+   also changed.
 
  --
 
