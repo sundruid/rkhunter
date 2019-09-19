@@ -17477,8 +17477,15 @@ do_network_interface_checks() {
 				NAME=`grep '^Name:.' /proc/$PID/status | sed -e 's/^Name:.//'`
 			fi
 
-
 			test -z "${NAME}" && continue
+
+			#
+			# Remove any hex characters from the end of the process name.
+			# These seem to indicate that the relevant file has been recently updated.
+			# The hex value seems to be the epoch time the package/file was updated.
+			#
+
+			NAME=`echo "${NAME}" | sed -e 's/;[0-9a-fA-F][0-9a-fA-F]*$//'`
 
 			FNAMEGREP=`echo "${NAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
