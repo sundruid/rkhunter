@@ -146,7 +146,7 @@ A.   The RKH source contains an rkhunter.spec file which will
      be found in '/usr/src/redhat/RPMS/noarch'.
 
      NOTE: The RKH development team do not support any third-party
-     RPM files. However, the rkhunter.spec file will be maintained. 
+     RPM files. However, the rkhunter.spec file will be maintained.
 
 
 ===========================================================
@@ -166,7 +166,7 @@ A.   Prior to any incident it is recommended that you have read
      If you are unsure as to whether your system is compromised,
      you can get a second opinion from sources such as the
      rkhunter-users mailing list, the Linux-oriented forum
-     LinuxQuestions.org, or even IRC. Please note you need to 
+     LinuxQuestions.org, or even IRC. Please note you need to
      subscribe before posting to the rkhunter-users mailing list.
 
      If a file property check fails, then it is possible you have
@@ -614,18 +614,23 @@ A.   The '--versioncheck' option checks the version of the rkhunter
 ========================
 
 6.1) After Rootkit Hunter has run you may encounter items in the log
-     file you would like to whitelist. First verify that the entries
-     are safe to add. The results of running these commands can be
-     added to your 'rkhunter.conf.local' configuration file. Please
-     adjust the commands, and the location of your 'rkhunter.log' log
-     file, and verify the results before adding them. Do not automate
-     adding whitelist entries to your configuration file.
+     file that you would like to whitelist. First verify that the
+     entries are safe to add. Below are some examples of commands that
+     may be used to create the required configuration file entries for
+     whitelisting. The results of running these commands can be added
+     to your 'rkhunter.conf.local' configuration file. Please adjust
+     the commands, and the location of your 'rkhunter.log' log file,
+     accordingly, and verify the results before adding them. Do not
+     automate adding whitelist entries to your configuration file.
 
      Allow script replacements ("properties" test):
      awk -F"'" '/replaced by a script/ {print "SCRIPTWHITELIST="$2}' rkhunter.log
 
      Allow processes using deleted files ("deleted_files" test):
-     awk '/Process: / {print "ALLOWPROCDELFILE="$3}' rkhunter.log | sort -u
+     awk '/Process: .*File: / {print "ALLOWPROCDELFILE="$3}' rkhunter.log | sort -u
+
+     Allow processes using suspicious (large) shared memory segments ("ipc_shared_mem" test):
+     awk '/Process: .*Owner: .* Size: / {print "ALLOWIPCPROCFILE="$3}' rkhunter.log | sort -u
 
      Allow Xinetd services:
      awk '/Found enabled xinetd service/ {print $NF}' rkhunter.log |\
@@ -639,10 +644,10 @@ A.   The '--versioncheck' option checks the version of the rkhunter
       awk '{print "ALLOWDEVFILE="$2}' | sed -e "s|:$||g"
 
      Allow hidden directories ("filesystem" test):
-     awk '/Warning: Hidden directory/ {print "ALLOWHIDDENDIR="$6}' rkhunter.log
+     awk '/Warning: Hidden directory/ {print "ALLOWHIDDENDIR="$NF}' rkhunter.log
 
      Allow hidden files ("filesystem" test):
-     awk '/Warning: Hidden file/ {print "ALLOWHIDDENFILE="$6}' rkhunter.log |\
+     awk '/Warning: Hidden file/ {print "ALLOWHIDDENFILE="$NF}' rkhunter.log |\
       sed -e "s|:$||g"
 
 
