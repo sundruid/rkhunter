@@ -7,7 +7,7 @@ See the LICENSE file for conditions of use and distribution.
 
 It is recommended that all users of RootKit Hunter (RKH) join the
 rkhunter-users mailing list. Subscribing to the list can be done via
-the RKH website at http://rkhunter.sourceforge.net
+the RKH website at https://rkhunter.sourceforge.io
 
 A copy of the RKH FAQ is also available from the web site.
 
@@ -193,14 +193,17 @@ is created, and then change to that directory. For example:
 It is now necessary to either copy or download a tarball of the version of
 rkhunter that you want to test. (Since you are reading this file, we assume
 you have already downloaded the relevant version.) For users wishing to try
-the latest development version, it is possible to download a tarball:
+the latest development version, it is possible to download a snapshot from:
 
-       wget http://rkhunter.sourceforge.net/rkhunter-dev.tar.gz
+       https://sourceforge.net/p/rkhunter/rkh_code/ci/develop/tree/
+		(then click on 'Download Snapshot')
 
 Next, it is necessary to extract the files from the tarball. The simplest
 way is to use the 'tar' command, such as:
 
        tar xzf rkhunter-dev.tar.gz
+
+Or use 'unzip' if the snapshot was downloaded.
 
 Obviously, for official releases, you will need to use the correct tarball
 name. For example:
@@ -623,11 +626,11 @@ RKH development team, and, where appropriate, a solution posted on the
 mailing list. Hence the mailing list archives may well contain a
 solution to the problem.
 
-Additionally, users should check the RKH tracker system (available at
-http://sourceforge.net/tracker/?group_id=155034). It is quite
+Additionally, users should check the RKH ticket system (available at
+https://sourceforge.net/p/rkhunter/_list/tickets). It is quite
 possible that the problem has already been reported to us as a bug or
 support request. It is also possible that a fix for the problem has
-been provided in the tracker log.
+been provided in the relevant bug log.
 
 Depending upon the nature of the problem it may be worthwhile trying
 an Internet search (for example using google), to see if anyone else

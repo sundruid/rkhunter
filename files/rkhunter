@@ -8070,7 +8070,7 @@ download_file() {
 
 			if [ -z "${MIRROR}" ]; then
 				if [ $MIRRORS_MODE -eq 0 -o $MIRRORS_MODE -eq 2 ]; then
-					MIRROR="http://rkhunter.sourceforge.net"
+					MIRROR="https://rkhunter.sourceforge.io"
 					display --to LOG --type INFO MIRRORS_SF_DEFAULT "${MIRROR}"
 				else
 					DNLOADERR=1
@@ -8084,7 +8084,7 @@ download_file() {
 			# mirror URL, unless we are doing a version check.
 			#
 
-			if [ $DOING_VERS_CHK -eq 0 -a "${MIRROR}" = "http://rkhunter.sourceforge.net" ]; then
+			if [ $DOING_VERS_CHK -eq 0 -a "${MIRROR}" = "https://rkhunter.sourceforge.io" ]; then
 				MIRROR="${MIRROR}/${RKH_VER_MAJ}.${RKH_VER_MIN}"
 			fi
 		fi
@@ -15383,7 +15383,7 @@ ${RKHTMPVAR}:${FNAME}"
 				ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 				SEEN=1
-				FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|http:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
+				FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|https?:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
 
 				if [ -z "${FOUND_PROCS}" ]; then
 					# Nothing found.
@@ -20857,7 +20857,7 @@ This software was developed by the ${PROGRAM_NAME} project team.
 Please review your rkhunter configuration files before using.
 Please review the documentation before posting bug reports or questions.
 To report bugs, provide patches or comments, please go to:
-http://rkhunter.sourceforge.net
+https://rkhunter.sourceforge.io
 
 To ask questions about rkhunter, please use the rkhunter-users mailing list.
 Note this is a moderated list: please subscribe before posting.

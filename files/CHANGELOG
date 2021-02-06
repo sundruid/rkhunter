@@ -18,7 +18,7 @@
 
  -- 
 
- * 1.4.7 (xx/xx/2019)
+ * 1.4.7 (xx/xx/2021)
 
  New:
  - Added further checks on the shell being used. If neither bash
@@ -95,11 +95,12 @@
    could be a lot higher.) The numbers now reported will include any
    symbolic links pointing to the relevant type. That is, a symlink
    pointing to a file will be counted as a file and so on.
- - Added verificaton of the language file contents. This is to try
+ - Added verification of the language file contents. This is to try
    and prevent subversion of the files by causing them to execute
    commands. The check is invoked whenever rkhunter runs a check,
    or uses the '--update' or '--propupd' options. The program will
    exit if anything suspicious is found in any of the files.
+ - Modified code to use HTTPS with the Sourceforge web site.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option

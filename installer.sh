@@ -11,13 +11,13 @@
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
-INSTALLER_VERSION="1.2.22"
+INSTALLER_VERSION="1.2.23"
 INSTALLER_COPYRIGHT="Copyright 2018, Michael Boelen"
 INSTALLER_LICENSE="
 
 This software was developed by the Rootkit Hunter project team.
 For reporting bugs, patches, comments and questions, please go to:
-http://rkhunter.sourceforge.net
+https://rkhunter.sourceforge.io
 
 Rootkit Hunter comes with ABSOLUTELY NO WARRANTY. This is free
 software, and you are welcome to redistribute it under the terms
