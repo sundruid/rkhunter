@@ -5599,8 +5599,7 @@ get_mirror_options() {
 
 				if [ $QUIET_CONFIG -eq 0 ]; then
 					echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
-					echo "Run 'rkhunter --update'" to restore the default mirrors file.
-					echo "The default mirror will be used."
+					echo "Run 'rkhunter --update' to restore the default mirrors file."
 				fi
 			fi
 		else
@@ -5609,7 +5608,7 @@ get_mirror_options() {
 				LEAVE=1
 				if [ $QUIET_CONFIG -eq 0 ]; then
 					echo "The mirrors file does not exist or is empty: ${DB_PATH}/mirrors.dat"
-					echo "Run 'rkhunter --update'" to restore the default mirrors file.
+					echo "Run 'rkhunter --update' to restore the default mirrors file."
 				fi
 			elif [ ! -w "${DB_PATH}/mirrors.dat" ]; then
 				LEAVE=1
@@ -8084,7 +8083,7 @@ download_file() {
 			# mirror URL, unless we are doing a version check.
 			#
 
-			if [ $DOING_VERS_CHK -eq 0 -a "${MIRROR}" = "https://rkhunter.sourceforge.io" ]; then
+			if [ $DOING_VERS_CHK -eq 0 -a \( "${MIRROR}" = "https://rkhunter.sourceforge.io" -o "${MIRROR}" = "http://rkhunter.sourceforge.net" \) ]; then
 				MIRROR="${MIRROR}/${RKH_VER_MAJ}.${RKH_VER_MIN}"
 			fi
 		fi
