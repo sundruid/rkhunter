@@ -3,16 +3,16 @@
 ################################################################################
 #
 #  Rootkit Hunter installer
-# --------------------------
+# -------------------------
 #
-# Copyright Michael Boelen ( michael AT rootkit DOT nl )
-# See LICENSE file for use of this software
+# Copyright (C) 2003-2021 Michael Boelen ( michael AT rootkit DOT nl )
+# See the LICENSE file for use of this software.
 #
 ################################################################################
 
 INSTALLER_NAME="Rootkit Hunter installer"
 INSTALLER_VERSION="1.2.23"
-INSTALLER_COPYRIGHT="Copyright 2018, Michael Boelen"
+INSTALLER_COPYRIGHT="Copyright 2003-2021 Michael Boelen"
 INSTALLER_LICENSE="
 
 This software was developed by the Rootkit Hunter project team.
@@ -21,7 +21,7 @@ https://rkhunter.sourceforge.io
 
 Rootkit Hunter comes with ABSOLUTELY NO WARRANTY. This is free
 software, and you are welcome to redistribute it under the terms
-of the GNU General Public License. See LICENSE for details.
+of the GNU General Public License. See the LICENSE file for details.
 "
 
 APPNAME="rkhunter"

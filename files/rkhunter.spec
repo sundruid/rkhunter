@@ -25,7 +25,7 @@ Summary: %{name} scans for rootkits, backdoors and local exploits
 Version: %{ver}
 Release: %{rel}
 Epoch: %{epoch}
-License: GPL
+License: GPLv3+
 Group: Applications/System
 Source0: %{name}-%{version}.tar.gz
 BuildArch: noarch
@@ -47,7 +47,7 @@ exploits by running tests like:
 	- Software version checks
 	- Application tests
 
-Rootkit Hunter is released as a GPL licensed project and free for everyone to use.
+Rootkit Hunter is released as a GNU GPL licensed project and free for everyone to use.
 
 
 %prep
