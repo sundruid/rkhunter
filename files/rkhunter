@@ -9345,7 +9345,7 @@ do_system_check_initialisation() {
 	LOCKIT_FILES="/usr/lib/libmen.oo/.LJK2/ssh_config
 		      /usr/lib/libmen.oo/.LJK2/ssh_host_key
 		      /usr/lib/libmen.oo/.LJK2/ssh_host_key.pub
-		      /usr/lib/libmen.oo/.LJK2/ssh_random_seed*
+		      /usr/lib/libmen.oo/.LJK2/ssh_random_seed
 		      /usr/lib/libmen.oo/.LJK2/sshd_config
 		      /usr/lib/libmen.oo/.LJK2/backdoor/RK1bd
 		      /usr/lib/libmen.oo/.LJK2/backup/du
@@ -9939,18 +9939,25 @@ do_system_check_initialisation() {
 		    /dev/.lib/lib/lib/tfn
 		    /dev/.lib/lib/lib/name
 		    /dev/.lib/lib/lib/getip.sh
+		    /dev/.lib/lib/scan/1i0n.sh
+		    /dev/.lib/lib/scan/hack.sh
+		    /dev/.lib/lib/scan/bind
+		    /dev/.lib/lib/scan/pscan
+		    /dev/.lib/lib/scan/bindx.sh
+		    /dev/.lib/lib/scan/scan.sh
+		    /dev/.lib/lib/scan/star.sh
 		    /usr/info/.torn/sh*
 		    /usr/src/.puta/.1addr
 		    /usr/src/.puta/.1file
 		    /usr/src/.puta/.1proc
-		    /usr/src/.puta/.1logz
-		    /usr/info/.t0rn"
+		    /usr/src/.puta/.1logz"
 	TORN_DIRS="/dev/.lib
 		   /dev/.lib/lib
 		   /dev/.lib/lib/lib
 		   /dev/.lib/lib/lib/dev
 		   /dev/.lib/lib/scan
 		   /usr/src/.puta
+		   /usr/info/.t0rn
 		   /usr/man/man1/man1
 		   /usr/man/man1/man1/lib
 		   /usr/man/man1/man1/lib/.lib
@@ -10430,10 +10437,6 @@ do_system_check_initialisation() {
 		  file:/usr/share/sshd.sync:Trojaned SSH daemon
 		  file:/bin/zcut:Trojaned SSH daemon
 		  file:/usr/bin/zmuie:Trojaned SSH daemon
-		  file:/lib/libkeyutils.so.1.9:Sniffer component
-		  file:/lib64/libkeyutils.so.1.9:Sniffer component
-		  file:/usr/lib/libkeyutils.so.1.9:Sniffer component
-		  file:/usr/lib64/libkeyutils.so.1.9:Sniffer component
 		  file:/IptabLes:Malware component
 		  file:/.IptabLex:Malware component
 		  file:/boot/.IptabLex:Malware component
@@ -10639,7 +10642,6 @@ do_system_check_initialisation() {
 			 ssh-scan:Port scanner
 			 atac:Port scanner component
 			 \[pdflush\]:IRC bot
-			 libkeyutils.so.1.9:Spam tool component
 			 .IptabLex:Malware component
 			 .IptabLes:Malware component
 			 .flush:Malware component

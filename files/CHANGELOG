@@ -152,6 +152,8 @@
  - It is possible for a file inode to change but no other attribute.
    A changed inode is now only reported if some other attribute has
    also changed.
+ - (SF bug #170) Removed references to 'libkeyutils.so.1.9' files as
+   these are now part of a legitimate package.
 
  --
 
