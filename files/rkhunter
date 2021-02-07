@@ -15833,9 +15833,17 @@ ${FOUND_PROCS}"
 
 					display --to LOG --type WARNING ROOTKIT_MALWARE_IPCS_FOUND
 
+					SHMS_SEEN=
+
 					IFS=$IFSNL
 					for SHM_LINE in ${SEGS_FOUND}; do
 						test -z "${SHM_LINE}" && continue
+
+						# To prevent the same line being logged more than once we check if it has already been seen.
+						test -n "`echo \"${SHMS_SEEN}\" | grep \"^${SHM_LINE}$\"`" && continue
+
+						SHMS_SEEN="${SHMS_SEEN}
+${SHM_LINE}"
 
 						ROOTKIT_FAILED_COUNT=`expr $ROOTKIT_FAILED_COUNT + 1`
 
