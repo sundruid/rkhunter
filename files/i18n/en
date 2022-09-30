@@ -1,4 +1,4 @@
-Version:2019082801
+Version:2021021401
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -271,7 +271,7 @@ FILE_PROP_SKIP_ATTR:Unable to find the 'stat' command - all file attribute check
 FILE_PROP_SKIP_ATTR_DISABLED:The 'stat' command has been disabled - all file attribute checks will be skipped.
 FILE_PROP_SKIP_HASH:All file hash checks will be skipped because:
 FILE_PROP_SKIP_HASH_FUNC:The current hash function ($1) or package manager ($2) is incompatible with the hash function ($3) or package manager ($4) used to store the values.
-FILE_PROP_SKIP_HASH_PRELINK:Unable to find 'prelink' command.
+FILE_PROP_SKIP_HASH_PRELINK:Unable to find the 'prelink' command.
 FILE_PROP_SKIP_HASH_SHA1:This system uses prelinking, but the hash function command does not look like SHA1 or MD5.
 FILE_PROP_SKIP_HASH_LIBSAFE:Libsafe was found, which can cause errors. If possible, disable libsafe and then run the prelink command. Finally, recreate the hash values using 'rkhunter --propupd'.
 FILE_PROP_SKIP_IMMUT:Unable to find the 'lsattr' command - all file immutable-bit checks will be skipped.
@@ -404,9 +404,9 @@ ROOTKIT_ADD_SUCKIT_LINK_DISABLED:Checking '/sbin/init' link count: the 'stat' co
 ROOTKIT_ADD_SUCKIT_LINK_FOUND:Checking '/sbin/init' link count: count is $1, it should be 1
 ROOTKIT_ADD_SUCKIT_EXT:Checking for hidden file extensions
 ROOTKIT_ADD_SUCKIT_EXT_FOUND:Checking for hidden file extensions: found: $1
-ROOTKIT_ADD_SUCKIT_SKDET:Running skdet command
-ROOTKIT_ADD_SUCKIT_SKDET_FOUND:Running skdet command: found: $1
-ROOTKIT_ADD_SUCKIT_SKDET_VER:Running skdet command: unknown version: $1
+ROOTKIT_ADD_SUCKIT_SKDET:Running the 'skdet' command
+ROOTKIT_ADD_SUCKIT_SKDET_FOUND:Running the 'skdet' command: found: $1
+ROOTKIT_ADD_SUCKIT_SKDET_VER:Running the 'skdet' command: unknown version: $1
 
 ROOTKIT_POSS_FILES_DIRS:Checking for possible rootkit files and directories
 ROOTKIT_POSS_FILES_DIRS_LOG:Performing check of possible rootkit files and directories
@@ -469,8 +469,8 @@ ROOTKIT_TROJAN_APACHE_FOUND:Apache backdoor module 'mod_rootme' found: $1
 
 ROOTKIT_OS_START:Performing $1 specific checks
 ROOTKIT_OS_SKIPPED:No specific tests available
-ROOTKIT_OS_BSD_SOCKNET:Checking sockstat and netstat commands
-ROOTKIT_OS_BSD_SOCKNET_FOUND:Differences found between sockstat and netstat output:
+ROOTKIT_OS_BSD_SOCKNET:Checking 'sockstat' and 'netstat' commands
+ROOTKIT_OS_BSD_SOCKNET_FOUND:Differences found between 'sockstat' and 'netstat' output:
 ROOTKIT_OS_BSD_SOCKNET_OUTPUT:$1 output (ports in use): $2
 ROOTKIT_OS_FREEBSD_KLD:Checking for KLD backdoors
 ROOTKIT_OS_FREEBSD_KLD_FOUND:Found possible FreeBSD KLD backdoor. 'kldstat -v' command shows string '$1'
@@ -480,9 +480,9 @@ ROOTKIT_OS_FREEBSD_PKGDB_NOTOK:This may not be a security issue, but running 'pk
 ROOTKIT_OS_DFLY_PKGDB_NOTOK:The package database seems to have inconsistencies.
 ROOTKIT_OS_DFLY_PKGDB_NOTOK:This may not be a security issue, but running 'pkg_admin check' may help diagnose the problem.
 ROOTKIT_OS_LINUX_LKM:Checking loaded kernel modules
-ROOTKIT_OS_LINUX_LKM_FOUND:Differences found between the lsmod command and the /proc/modules file:
+ROOTKIT_OS_LINUX_LKM_FOUND:Differences found between the 'lsmod' command and the '/proc/modules' file:
 ROOTKIT_OS_LINUX_LKM_OUTPUT:$1 output: $2
-ROOTKIT_OS_LINUX_LKM_EMPTY:No output found from the lsmod command or the /proc/modules file:
+ROOTKIT_OS_LINUX_LKM_EMPTY:No output found from the 'lsmod' command or the '/proc/modules' file:
 ROOTKIT_OS_LINUX_LKM_MOD_MISSING:The modules file '$1' is missing.
 ROOTKIT_OS_LINUX_LKMNAMES:Checking kernel module names
 ROOTKIT_OS_LINUX_LKMNAMES_PATH:Using modules pathname of '$1'
@@ -605,7 +605,7 @@ NETWORK_PORTS_FILE_MISSING:The file of known backdoor ports is missing or empty:
 NETWORK_PORTS_FILE_MISSING:Run 'rkhunter --update' to restore the default file.
 NETWORK_PORTS_FILE_NOTAFILE:The file of known backdoor ports is not a file: $1
 NETWORK_PORTS_UNKNOWN_NETSTAT:All backdoor port checks skipped.
-NETWORK_PORTS_UNKNOWN_NETSTAT:Unknown netstat command format with this O/S.
+NETWORK_PORTS_UNKNOWN_NETSTAT:Unknown 'netstat' command format with this O/S.
 NETWORK_PORTS_ENABLE_TRUSTED:Trusted pathnames are enabled for port whitelisting.
 NETWORK_PORTS_BACKDOOR_CHK:Checking for $1 port $2
 NETWORK_PORTS_PATH_WHITELIST:Network $1 port $2 is being used by $3: the pathname is whitelisted.

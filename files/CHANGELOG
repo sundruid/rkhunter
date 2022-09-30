@@ -156,6 +156,8 @@
    these are now part of a legitimate package.
  - (SF bug #168) The IPCS shared memory segment test was logging
    lines that were exactly the same. This has now been corrected.
+ - Where possible the SSH configuration file checks will now cater
+   for configuration file sub-directories, as well as 'Match' clauses.
 
  --
 

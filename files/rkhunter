@@ -18422,20 +18422,49 @@ do_system_config_files_check() {
 
 
 			#
+			# Where possible we will use the 'sshd -T' command to obtain SSH
+			# configuration values. The command will handle any configuration
+			# sub-directories as well as 'Match' clauses. If the command is
+			# not available, then we simply use the old method of checking
+			# the main configuration file.
+			#
+
+			USE_SSHDT=0
+			SSHD_CMD=`find_cmd sshd`
+
+			if [ -n "${SSHD_CMD}" ]; then
+				${SSHD_CMD} -T >/dev/null 2>&1
+				test $? -eq 0 && USE_SSHDT=1
+			fi
+
+			if [ $USE_SSHDT -eq 1 ]; then
+				display --to LOG --type INFO FOUND_CMD 'sshd' "${SSHD_CMD} -T"
+			fi
+
+			#
 			# Now we check some of the configuration options.
 			#
 			# First we check for allowed root access.
 			#
 
-			RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+			RKHTMPVAR=""
+			RKHTMPVAR2=""
 
-			if [ -n "${RKHTMPVAR}" ]; then
-				#
-				# Get the value that has been set.
-				#
+			if [ $USE_SSHDT -eq 1 ]; then
+				RKHTMPVAR2=`${SSHD_CMD} -T -C user=root,host=* 2>/dev/null | ${AWK_CMD} '{ IGNORECASE=1; if (/^PermitRootLogin /) print tolower($2); }' 2>/dev/null`
+			else
+				RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
 
-				RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[:upper:]' '[:lower:]'`
+				if [ -n "${RKHTMPVAR}" ]; then
+					#
+					# Get the value that has been set.
+					#
 
+					RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/' | tr '[:upper:]' '[:lower:]'`
+				fi
+			fi
+
+			if [ -n "${RKHTMPVAR2}" ]; then
 				if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
 					test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
 					display --to SCREEN+LOG --type PLAIN --result ${RKHTMPVAR} --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
@@ -18458,6 +18487,7 @@ do_system_config_files_check() {
 			# Next we check to see if protocol version 1 is allowed.
 			#
 
+#jh
 			RKHTMPVAR=`grep -i '^[ 	]*Protocol[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
 
 			if [ -n "${RKHTMPVAR}" ]; then
@@ -21050,6 +21080,8 @@ UPDT_ON_OS_CHANGE=0
 ALLOW_SSH_PROT_V1=0
 ALLOW_SSH_ROOT_USER=""
 SSH_CONFIG_DIR=""
+# This SSH option is only set within the program.
+USE_SSHDT=0
 
 # These syslog options can only be set in the configuration file.
 ALLOW_SYSLOG_REMOTE_LOGGING=0
