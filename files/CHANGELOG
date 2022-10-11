@@ -111,6 +111,9 @@
    overridden if 'Match' blocks are used.
  - The SSH root access test will now show a 'With key' result if
    root access is allowed but only when used with a shared key.
+ - The default value of the ALLOW_SSH_PROT_V1 option has now
+   changed from 0 to 2. The use of the SSH configuration
+   'Protocol' option is now deprecated.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
