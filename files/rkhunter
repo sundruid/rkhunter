@@ -18392,10 +18392,10 @@ do_system_config_files_check() {
 		display --to LOG --type INFO --nl STARTING_TEST system_configs_ssh
 
 		#
-		# First find out where the SSH configuration file is located.
+		# First find out where the SSH configuration files are located.
 		#
 
-		SSH_CONFIG_FILE=""
+		SSH_CONFIG_FILES=""
 
 		if [ -n "${SSH_CONFIG_DIR}" ]; then
 			RKHTMPVAR="${SSH_CONFIG_DIR}"
@@ -18405,16 +18405,32 @@ do_system_config_files_check() {
 
 		for DIR in ${RKHTMPVAR}; do
 			if [ -f "${DIR}/sshd_config" ]; then
-				SSH_CONFIG_FILE="${DIR}/sshd_config"
+				SSH_CONFIG_FILES="${DIR}/sshd_config"
+
+				if [ -d "${DIR}/sshd_config.d" ]; then
+					RKHTMPVAR3=`ls ${DIR}/sshd_config.d/*.conf 2>/dev/null`
+					RKHTMPVAR2=$?
+
+					if [ $RKHTMPVAR2 -eq 0 ]; then
+						SSH_CONFIG_FILES="${SSH_CONFIG_FILES} `echo ${RKHTMPVAR3}`"
+					fi
+				fi
+
 				break
 			fi
 		done
 
-		if [ -n "${SSH_CONFIG_FILE}" ]; then
+		#
+		# Now we can run the SSH tests.
+		#
+
+		if [ -n "${SSH_CONFIG_FILES}" ]; then
 			display --to SCREEN+LOG --type PLAIN --result FOUND --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE_SSH
 
 			if [ $VERBOSE_LOGGING -eq 1 ]; then
-				display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND 'an' 'SSH' "${SSH_CONFIG_FILE}"
+				test -z "`echo ${SSH_CONFIG_FILES} | grep ' '`" && RKHTMPVAR='an' || RKHTMPVAR='more than one'
+
+				display --to LOG --type INFO SYSTEM_CONFIGS_FILE_FOUND "${RKHTMPVAR}" 'SSH' "${SSH_CONFIG_FILES}"
 
 				display --to LOG --type INFO CONFIG_SSH_ROOT "${ALLOW_SSH_ROOT_USER}"
 				display --to LOG --type INFO CONFIG_SSH_PROTV1 $ALLOW_SSH_PROT_V1
@@ -18424,8 +18440,8 @@ do_system_config_files_check() {
 			#
 			# Where possible we will use the 'sshd -T' command to obtain SSH
 			# configuration values. The command will handle any configuration
-			# sub-directories as well as 'Match' clauses. If the command is
-			# not available, then we simply use the old method of checking
+			# sub-directories as well as some 'Match' clauses. If the command
+			# is not available, then we simply use the old method of checking
 			# the main configuration file.
 			#
 
@@ -18451,9 +18467,9 @@ do_system_config_files_check() {
 			RKHTMPVAR2=""
 
 			if [ $USE_SSHDT -eq 1 ]; then
-				RKHTMPVAR2=`${SSHD_CMD} -T -C user=root,host=* 2>/dev/null | ${AWK_CMD} '{ IGNORECASE=1; if (/^PermitRootLogin /) print tolower($2); }' 2>/dev/null`
+				RKHTMPVAR2=`${SSHD_CMD} -T 2>/dev/null | ${AWK_CMD} '{ IGNORECASE=1; if (/^PermitRootLogin /) print tolower($2); }' 2>/dev/null`
 			else
-				RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+				RKHTMPVAR=`grep -i '^[ 	]*PermitRootLogin[ 	=]' ${SSH_CONFIG_FILES} 2>/dev/null | tail ${TAIL_OPT}1`
 
 				if [ -n "${RKHTMPVAR}" ]; then
 					#
@@ -18466,7 +18482,14 @@ do_system_config_files_check() {
 
 			if [ -n "${RKHTMPVAR2}" ]; then
 				if [ "${RKHTMPVAR2}" = "${ALLOW_SSH_ROOT_USER}" ]; then
-					test "${RKHTMPVAR2}" = "no" && RKHTMPVAR="NOT_ALLOWED" || RKHTMPVAR="ALLOWED"
+					if [ "${RKHTMPVAR2}" = "no" ]; then
+						RKHTMPVAR="NOT_ALLOWED"
+					elif [ "${RKHTMPVAR2}" = "prohibit-password" -o "${RKHTMPVAR2}" = "forced-commands-only" -o "${RKHTMPVAR2}" = "without-password" ]; then
+						RKHTMPVAR="WITH_KEY"
+					elif [ "${RKHTMPVAR2}" = "yes" ]; then
+						RKHTMPVAR="ALLOWED"
+					fi
+
 					display --to SCREEN+LOG --type PLAIN --result ${RKHTMPVAR} --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
 				else
 					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_ROOT
@@ -18487,26 +18510,34 @@ do_system_config_files_check() {
 			# Next we check to see if protocol version 1 is allowed.
 			#
 
-#jh
-			RKHTMPVAR=`grep -i '^[ 	]*Protocol[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+			RKHTMPVAR=""
+
+			if [ $USE_SSHDT -eq 1 ]; then
+				RKHTMPVAR=`${SSHD_CMD} -T 2>/dev/null | ${AWK_CMD} '{ IGNORECASE=1; if (/^Protocol /) print $2; }' 2>/dev/null`
+			else
+				RKHTMPVAR2=`grep -i '^Protocol[ 	=]' ${SSH_CONFIG_FILES} 2>/dev/null | tail ${TAIL_OPT}1`
+
+				if [ -n "${RKHTMPVAR2}" ]; then
+					RKHTMPVAR=`echo ${RKHTMPVAR2} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/'`
+				fi
+			fi
 
 			if [ -n "${RKHTMPVAR}" ]; then
 				#
-				# See if the set protocol versions includes '1'.
+				# See if the protocol version is '1'.
 				#
 
-				RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/'`
-				RKHTMPVAR3=`echo "${RKHTMPVAR2}" | grep '1'`
+				RKHTMPVAR2=`echo "${RKHTMPVAR}" | grep '1'`
 
-				if [ -z "${RKHTMPVAR3}" -a $ALLOW_SSH_PROT_V1 -eq 0 ]; then
+				if [ -z "${RKHTMPVAR2}" -a $ALLOW_SSH_PROT_V1 -eq 0 ]; then
 					display --to SCREEN+LOG --type PLAIN --result NOT_ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
-				elif [ -n "${RKHTMPVAR3}" -a \( $ALLOW_SSH_PROT_V1 -eq 1 -o $ALLOW_SSH_PROT_V1 -eq 2 \) ]; then
+				elif [ -n "${RKHTMPVAR2}" -a \( $ALLOW_SSH_PROT_V1 -eq 1 -o $ALLOW_SSH_PROT_V1 -eq 2 \) ]; then
 					display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
 				else
 					display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SSH_PROTO
 
 					display --to LOG --type WARNING SYSTEM_CONFIGS_SSH_ROOT_FOUND
-					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF1 "`name2text \"${RKHTMPVAR2}\"`"
+					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF1 "`name2text \"${RKHTMPVAR}\"`"
 					display --to LOG --type PLAIN --log-indent 9 SYSTEM_CONFIGS_SSH_PROTO_DIFF2 "`name2text \"${ALLOW_SSH_PROT_V1}\"`"
 				fi
 			elif [ $ALLOW_SSH_PROT_V1 -eq 2 ]; then
@@ -18528,15 +18559,11 @@ do_system_config_files_check() {
 			# First check for the Ebury backdoor.
 			#
 
-			RKHTMPVAR=`grep -i '^[ 	]*AuthorizedKeysFile[ 	=]' "${SSH_CONFIG_FILE}" 2>/dev/null | tail ${TAIL_OPT}1`
+			RKHTMPVAR=`grep -i '^[ 	]*AuthorizedKeysFile[ 	=].*/proc/self/environ' ${SSH_CONFIG_FILES} 2>/dev/null`
 
 			if [ -n "${RKHTMPVAR}" ]; then
-				RKHTMPVAR2=`echo ${RKHTMPVAR} | sed -e 's/^[^ 	=]*[ 	]*=*[ 	]*\([^ 	#]*\).*$/\1/'`
-
-				if [ "${RKHTMPVAR2}" = "/proc/self/environ" ]; then
-					FOUND=1
-					FOUNDNAMES="${FOUNDNAMES} ebury"
-				fi
+				FOUND=1
+				FOUNDNAMES="${FOUNDNAMES} ebury"
 			fi
 
 			#

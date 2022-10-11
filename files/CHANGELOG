@@ -105,6 +105,12 @@
  - Updated the GNU GPL 'LICENSE' file to version 3. Modified
    copyright notices for minor changes; and the RPM spec file
    for the license version.
+ - The SSH configuration file tests will now use the 'sshd -T'
+   command if it is recognized. This makes checking the default
+   value for configuration options easier, but they can still be
+   overridden if 'Match' blocks are used.
+ - The SSH root access test will now show a 'With key' result if
+   root access is allowed but only when used with a shared key.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
@@ -156,8 +162,9 @@
    these are now part of a legitimate package.
  - (SF bug #168) The IPCS shared memory segment test was logging
    lines that were exactly the same. This has now been corrected.
- - Where possible the SSH configuration file checks will now cater
-   for configuration file sub-directories, as well as 'Match' clauses.
+ - The SSH configuration checks will now cater for a configuration
+   file sub-directory if it exists. Any found configuration files
+   are logged.
 
  --
 
