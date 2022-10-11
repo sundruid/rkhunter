@@ -15760,11 +15760,18 @@ ${FOUND_PROCS}"
 								RKH_SHM_PATH=`${READLINK_CMD} ${READLINK_OPT} /proc/${RKH_SHM_CPID}/exe`
 							else
 								# Make an attempt to get the pathname using the 'ls' command.
-								RKH_SHM_PATH=`ls -l /proc/${RKH_SHM_CPID}/exe | ${AWK_CMD} '{ print $NF }'`
+								RKH_SHM_PATH=`ls -l /proc/${RKH_SHM_CPID}/exe 2>/dev/null | ${AWK_CMD} '{ print $NF }'`
 							fi
 
+							#
 							# Strip off the '(deleted)' part from the pathname if present.
-							RKH_SHM_PATH_STRIPPED=`echo "${RKH_SHM_PATH}" | sed -e 's/ (dele.*$//'`
+							#
+
+							RKH_SHM_PATH_STRIPPED=""
+
+							if [ -n "${RKH_SHM_PATH}" ]; then
+								RKH_SHM_PATH_STRIPPED=`echo "${RKH_SHM_PATH}" | sed -e 's/ (dele.*$//'`
+							fi
 
 							#
 							# First check to see if this segment is whitelisted.
