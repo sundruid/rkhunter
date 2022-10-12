@@ -175,6 +175,17 @@ file or directory, but one, or both, can be created by the user if required.
 If a directory is used, then within the directory any file ending in \fI.conf\fP
 will be treated as a local configuration file.
 
+The configuration files are processed in the order of the \fIrkhunter.conf\fP file,
+then the \fIrkhunter.conf.local\fP file if it exists, and finally the \fIrkhunter.d\fP
+directory if it exists. Configuration files within the \fIrkhunter.d\fP directory
+are processed in an alphanumerical order.
+
+For single value options, the last one seen is taken as the configuration value.
+For space-separated lists and multiline options, that is, options which may be specified
+more than once, the option values are, in effect, concatenated together. To reset
+a list, or multiline option, to the null value, and so cause any previous values to
+be ignored, simply provide the option with no value (that is, a null string).
+
 Some options can also be specified on the command\-line, and these will
 override the equivalent configuration file options. The configuration file options are well
 documented within the main configuration file itself. The following are the
