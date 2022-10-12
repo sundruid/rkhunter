@@ -22035,18 +22035,23 @@ if [ -d "${RKHTMPVAR}/rkhunter.d" ]; then
 	for FNAME in ${LOCALCONFIGDIR}/*.conf; do
 		ERRMSG=""
 
-		if [ -h "${FNAME}" ]; then
-			LEAVE=1
-			ERRMSG="The local configuration file cannot be a link: ${FNAME}"
-		elif [ ! -f "${FNAME}" ]; then
-			LEAVE=1
-			ERRMSG="The local configuration file is not a file: ${FNAME}"
-		elif [ ! -r "${FNAME}" ]; then
-			LEAVE=1
-			ERRMSG="The local configuration file is not readable: ${FNAME}"
+		# First check to see if there are any config files at all.
+		if [ "${FNAME}" = "${LOCALCONFIGDIR}/*.conf" ]; then
+			LOCALCONFDIRCOUNT=0
 		else
-			LOCALCONFDIRCOUNT=`expr $LOCALCONFDIRCOUNT + 1`
-			LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
+			if [ -h "${FNAME}" ]; then
+				LEAVE=1
+				ERRMSG="The local configuration file cannot be a link: ${FNAME}"
+			elif [ ! -f "${FNAME}" ]; then
+				LEAVE=1
+				ERRMSG="The local configuration file is not a file: ${FNAME}"
+			elif [ ! -r "${FNAME}" ]; then
+				LEAVE=1
+				ERRMSG="The local configuration file is not readable: ${FNAME}"
+			else
+				LOCALCONFDIRCOUNT=`expr $LOCALCONFDIRCOUNT + 1`
+				LOCALCONFDIRFILES="${LOCALCONFDIRFILES} ${FNAME}"
+			fi
 		fi
 
 		test -n "${ERRMSG}" -a $QUIET_CONFIG -eq 0 && echo "${ERRMSG}"
