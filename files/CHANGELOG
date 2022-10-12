@@ -46,7 +46,9 @@
  - Added the '--shell' command-line option to prevent rkhunter
    switching to a bash or Korn shell. This allows users with no such
    shells to try and use a different shell.
- - Added a (very) minor test for BPFDoor malware.
+ - Added (very) minor tests for BPFDoor, Syslogk, Symbiote,
+   OrBit, Lightning Framework, HiddenWasp and the Bitspin and
+   Shikitega malware.
 
  Changes:
  - The installer test to ensure that the rkhunter command is in

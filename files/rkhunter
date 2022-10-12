@@ -10541,6 +10541,46 @@ do_system_check_initialisation() {
 		  file:/etc/cron.d/sysstat2:Malware component
 		  file:/dev/shm/kdmtmpflush:BPFDoor malware component
 		  file:/proc/syslogk:Syslogk malware component
+		  file:/usr/include/certbot.h:Symbiote malware component
+		  file:/lib/libntpVnQE6mk/.l:OrBit malware component
+		  file:/lib/libntpVnQE6mk/.backup_ld.so:OrBit malware component
+		  file:/lib/libntpVnQE6mk/.logpam:OrBit malware component
+		  file:/lib/libntpVnQE6mk/sshpass.txt:OrBit malware component
+		  file:/lib/libntpVnQE6mk/sshpass2.txt:OrBit malware component
+		  file:/lib/libntpVnQE6mk/.ports:OrBit malware component
+		  file:/lib/libntpVnQE6mk/.profile:OrBit malware component
+		  file:/lib/libntpVnQE6mk/bin/escalator:OrBit malware component
+		  file:/lib/libntpVnQE6mk/libdl.so:OrBit malware component
+		  file:/lib/libntpVnQE6mk/.sys/.dmesg:OrBit malware component
+		  file:/dev/shm/ldx/.l:OrBit malware component
+		  file:/dev/shm/ldx/.backup_ld.so:OrBit malware component
+		  file:/dev/shm/ldx/.logpam:OrBit malware component
+		  file:/dev/shm/ldx/sshpass.txt:OrBit malware component
+		  file:/dev/shm/ldx/sshpass2.txt:OrBit malware component
+		  file:/dev/shm/ldx/.ports:OrBit malware component
+		  file:/dev/shm/ldx/.profile:OrBit malware component
+		  file:/dev/shm/ldx/bin/escalator:OrBit malware component
+		  file:/dev/shm/ldx/libdl.so:OrBit malware component
+		  file:/dev/shm/ldx/.sys/.dmesg:OrBit malware component
+		  file:/lib/libse1inux:HiddenWasp malware component
+		  file:/lib/libse1inux.a:HiddenWasp malware component
+		  file:/lib/libse1inux.so:HiddenWasp malware component
+		  file:/tmp/libse1inux.0:HiddenWasp malware component
+		  file:/sbin/.ifup-local:HiddenWasp malware component
+		  file:/proc/y.y:Lightning Framework malware component
+		  file:/usr/lib64/seahorses/kbioset:Lightning Framework malware component
+		  file:/usr/lib64/seahorses/kkdmflush:Lightning Framework malware component
+		  file:/usr/lib64/seahorses/soss:Lightning Framework malware component
+		  file:/usr/lib64/seahorses/nethoogs:Lightning Framework malware component
+		  file:/etc/rc.d/init.d/elastisearch:Lightning Framework malware component
+		  file:/tmp/bitnow:Bitspin-Shikitega malware-cryptominer component
+		  file:/var/tmp/bitnow:Bitspin-Shikitega malware-cryptominer component
+		  file:/tmp/incbit:Bitspin-Shikitega malware-cryptominer component
+		  file:/var/tmp/incbit:Bitspin-Shikitega malware-cryptominer component
+		  file:/tmp/lushput:Bitspin-Shikitega malware-cryptominer component
+		  file:/var/tmp/lushput:Bitspin-Shikitega malware-cryptominer component
+		  file:/tmp/seasbit:Bitspin-Shikitega malware-cryptominer component
+		  file:/var/tmp/seasbit:Bitspin-Shikitega malware-cryptominer component
 		  dir:/dev/ptyas:Langsuir installation directory
 		  dir:/usr/bin/take:Trojaned SSH daemon
 		  dir:/usr/src/.lib:Rootkit component
@@ -10581,7 +10621,10 @@ do_system_check_initialisation() {
 		  dir:/usr/share/locale/jp/.%:IRC bot
 		  dir:/usr/share/.sqe:IRC bot
 		  dir:/opt/yam:Cryptominer component
-		  dir:/root/yam-*-linux64-generic:Cryptominer component"
+		  dir:/root/yam-*-linux64-generic:Cryptominer component
+		  dir:/lib/libntpVnQE6mk:OrBit malware component
+		  dir:/dev/shm/ldx/.sys:OrBit malware component
+		  dir:/dev/shm/ldx/bin:OrBit malware component"
 
 
 	# Evil strings for FreeBSD KLD (Dynamic Kernel Linker modules)
@@ -10699,7 +10742,8 @@ do_system_check_initialisation() {
 		      xC.o
 		      strings.o
 		      wkmr26.ko
-		      diamorphine.ko"
+		      diamorphine.ko
+		      elastisearch.ko"
 
 	return
 }
