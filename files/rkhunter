@@ -12640,9 +12640,9 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 						test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 						if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i -v '(shell|/bin/sh) script( |,|$)'`
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep ${GREP_OPT} -i -v '(shell|/bin/sh) script( |,|$)'`
 						else
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep -i ' script( |,|$)'`
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep ${GREP_OPT} -i ' script( |,|$)'`
 						fi
 
 						test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
@@ -13276,7 +13276,7 @@ suspscan() {
 				# Finally, test the file type.
 				#
 
-				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
+				FTYPE=`${FILE_CMD} "${SUSPSCAN_ITEM}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
 
 				#
 				# We need to check errors from the file command, but not
@@ -18857,20 +18857,9 @@ do_dev_whitelist_check() {
 	# top-level file check, the other is more thorough and does a
 	# complete 'find' on the /dev directory. However, the check on
 	# whether the given file is whitelisted is the same for both
-	# methods. As such, it makes sense to use a function rather than
-	# repeating the code for each method.
+	# methods. As such, it makes sense to use this function rather
+	# than repeating the code for each method.
 	#
-
-
-	FTYPE=`${FILE_CMD} "${RKHTMPVAR}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
-
-	if [ $MACOSX -eq 1 -a -n "`echo \"${FTYPE}\" | grep 'universal binary'`" ]; then
-		FTYPE=`echo "${FTYPE}" | tail ${TAIL_OPT}1`
-	fi
-
-	if [ -z "`echo \"${FTYPE}\" | egrep -v '(character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|/MAKEDEV:)'`" ]; then
-		return
-	fi
 
 	#
 	# Not sure why but '?' doesn't seem to need to be escaped. Neither do parentheses or braces.
@@ -18884,9 +18873,20 @@ do_dev_whitelist_check() {
 			display --to LOG --type INFO FILESYSTEM_DEV_FILE_WL "`name2text \"${RKHTMPVAR}\"`"
 		fi
 	else
+		FTYPE=`${FILE_CMD} "${RKHTMPVAR}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
+
+		if [ $MACOSX -eq 1 -a -n "`echo \"${FTYPE}\" | grep 'universal binary'`" ]; then
+			FTYPE=`echo "${FTYPE}" | tail ${TAIL_OPT}1`
+		fi
+
+		if [ -z "`echo \"${FTYPE}\" | egrep -v '(character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|/MAKEDEV:)'`" ]; then
+			return
+		fi
+
 		FOUNDFILES="${FOUNDFILES}
 ${RKHTMPVAR}: ${FTYPE}"
 	fi
+
 
 	return
 }
@@ -19104,18 +19104,18 @@ ${RKHTMPVAR}"
 			test -n "`echo \"${FNAME}/\" | grep '^/dev/fd/[0-9][0-9]*'`" && continue
 		fi
 
-		FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
-
-		test -n "`echo \"${FTYPE}\" | egrep '(character special|block special|empty)'`" && continue
+		test -c "${FNAME}" -o -b "${FNAME}" -o ! -s "${FNAME}" && continue
 
 		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-		if [ -n "`echo \"${FTYPE}\" | grep 'directory'`" ]; then
+		if [ -d "${FNAME}" ]; then
 			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
 					display --to LOG --type INFO FILESYSTEM_HIDDEN_DIR_WL "`name2text \"${FNAME}\"`"
 				fi
 			else
+				FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
+
 				FOUNDDIRS="${FOUNDDIRS}
 ${FNAME}: ${FTYPE}"
 			fi
@@ -19125,6 +19125,8 @@ ${FNAME}: ${FTYPE}"
 					display --to LOG --type INFO FILESYSTEM_HIDDEN_FILE_WL "`name2text \"${FNAME}\"`"
 				fi
 			else
+				FTYPE=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | ${AWK_CMD} -F':' '{ print $NF }' | cut -c2-`
+
 				FOUNDFILES="${FOUNDFILES}
 ${FNAME}: ${FTYPE}"
 			fi

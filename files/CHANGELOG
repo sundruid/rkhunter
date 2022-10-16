@@ -117,6 +117,8 @@
  - The default value of the ALLOW_SSH_PROT_V1 option has now
    changed from 0 to 2. The use of the SSH configuration
    'Protocol' option is now deprecated.
+ - The 'filesystem' check now checks for whitelisted items before
+   they are subjected to the 'file' command.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
