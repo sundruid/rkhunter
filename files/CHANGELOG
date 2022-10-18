@@ -119,6 +119,11 @@
    'Protocol' option is now deprecated.
  - The 'filesystem' check now checks for whitelisted items before
    they are subjected to the 'file' command.
+ - Removed 'egrep' as a required command, and changed occurrences
+   of 'egrep' to 'grep -E'. Added test that 'grep -E' is recognized.
+ - Any missing required commands, or command options, now stop
+   rkhunter immediately. Previously it would try and push on
+   checking configuration options.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option

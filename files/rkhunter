@@ -248,6 +248,10 @@ fi
 # We also need to run a test to see if POSIX grep is being
 # used. If it is, then some typical grep tests will fail.
 #
+# (Oct 2022) - really not sure what this is doing! I can't see
+# how the grep regex would work given the string it is provided.
+# Even so, setting grep to 'grep -E' should not really be a problem.
+#
 
 if [ "`echo \"rkh-grep-test\" | grep '^\+'`" = "rkh-grep-test" ]; then
 	alias grep='grep -E'
@@ -1016,9 +1020,9 @@ check_paths() {
 		#
 
 		if [ "${OPT_NAME}" = "SHARED_LIB_WHITELIST" ]; then
-			RKHTMPVAR=`echo "${OPT_VALUE}" | egrep '(^|[^\\])[][?*]'`
+			RKHTMPVAR=`echo "${OPT_VALUE}" | grep -E '(^|[^\\])[][?*]'`
 		else
-			RKHTMPVAR=`echo "${OPT_VALUE}" | egrep '(^|[^\\])[][?*{}]'`
+			RKHTMPVAR=`echo "${OPT_VALUE}" | grep -E '(^|[^\\])[][?*{}]'`
 		fi
 
 		if [ -n "${RKHTMPVAR}" ]; then
@@ -1053,7 +1057,7 @@ check_paths() {
 		# Also check that '/' has not been set.
 		#
 
-		if [ -n "`echo \"${FNAME}\" | egrep '(^[./]*$)|[;&]|/\.\./'`" ]; then
+		if [ -n "`echo \"${FNAME}\" | grep -E '(^[./]*$)|[;&]|/\.\./'`" ]; then
 			ERRCODE=1
 
 			test $QUIET_CONFIG -eq 0 && echo "Invalid ${OPT_NAME} configuration option: Invalid pathname: ${FNAM}"
@@ -1232,7 +1236,7 @@ check_paths() {
 				#
 
 				if [ "${OPT_NAME}" = "SHARED_LIB_WHITELIST" ]; then
-					if [ -n "`echo \"${FNAME}\" | egrep '\\$\\{?(ORIGIN|LIB|PLATFORM)\\}?'`" ]; then
+					if [ -n "`echo \"${FNAME}\" | grep -E '\\$\\{?(ORIGIN|LIB|PLATFORM)\\}?'`" ]; then
 						continue
 					fi
 				fi
@@ -1857,17 +1861,32 @@ check_required_commands() {
 
 		if [ $SEEN -eq 0 ]; then
 			LEAVE=1
-			test $QUIET_CONFIG -eq 0 && echo "The command '${CMD}' must be present on the system in order to run rkhunter."
+
+			if [ $QUIET_CONFIG -eq 0 ]; then
+				echo "The command '${CMD}' must be present on the system in order to run rkhunter."
+				echo "    (using PATH: ${CMDDIR})"
+			fi
+		elif [ "${CMD}" = "grep" ]; then
+			#
+			# Although the 'grep' command is required, we must also ensure
+			# that the '-E' option is recognized. We use 'grep -E' instead
+			# of the deprecated 'egrep' command.
+			#
+
+			if [ "`echo 'rkh-grep-test' | grep -E '^.+' 2>/dev/null`" != "rkh-grep-test" ]; then
+				LEAVE=1
+
+				if [ $QUIET_CONFIG -eq 0 ]; then
+					echo "The 'grep' command '-E' option must be supported in order to run rkhunter."
+					echo "    (using PATH: ${CMDDIR})"
+				fi
+			fi
 		fi
 	done
 
 
 	if [ $LEAVE -eq 1 ]; then
-		if [ $CONFIG_CHECK -eq 0 ]; then
-			exit 1
-		else
-			RET_CODE=1
-		fi
+		exit 1
 	fi
 
 	return
@@ -4027,7 +4046,7 @@ get_port_options() {
 		for RKHTMPVAR2 in ${RKHTMPVAR}; do
 			ERRMSG=""
 
-			if [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
+			if [ -n "`echo \"${RKHTMPVAR2}\" | grep -E -i '^(TCP|UDP):[1-9][0-9]*$'`" ]; then
 				PROTO=`echo ${RKHTMPVAR2} | cut -d: -f1 | tr '[:lower:]' '[:upper:]'`
 				PORT=`echo ${RKHTMPVAR2} | cut -d: -f2`
 
@@ -4080,7 +4099,7 @@ ${PROTO}:${PORT}"
 				PROTO=""
 
 				# Dig out the protocol and port number, if present.
-				if [ -n "`echo \"${RKHTMPVAR2}\" | egrep -i '.:(TCP|UDP):[1-9][0-9]*$'`" ]; then
+				if [ -n "`echo \"${RKHTMPVAR2}\" | grep -E -i '.:(TCP|UDP):[1-9][0-9]*$'`" ]; then
 					PROTO=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([a-zA-Z]*\):[1-9][0-9]*$/\1/'`
 					PORT=`echo "${RKHTMPVAR2}" | sed -e 's/^.*:\([1-9][0-9]*\)$/\1/'`
 
@@ -5020,7 +5039,7 @@ get_hash_function() {
 		fi
 	fi
 
-	if [ -n "`echo \"${HASH_FUNC}\" | egrep -i '^(MD5|SHA1|SHA224|SHA256|SHA384|SHA512|RIPEMD160|WHIRLPOOL|NONE)$'`" ]; then
+	if [ -n "`echo \"${HASH_FUNC}\" | grep -E -i '^(MD5|SHA1|SHA224|SHA256|SHA384|SHA512|RIPEMD160|WHIRLPOOL|NONE)$'`" ]; then
 		HASH_FUNC=`echo "${HASH_FUNC}" | tr '[:lower:]' '[:upper:]'`
 	fi
 
@@ -6079,7 +6098,7 @@ ${FNAME}"
 							else
 								COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-								RKHTMPVAR=`egrep "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+								RKHTMPVAR=`grep -E "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 							fi
 
 							if [ -n "${RKHTMPVAR}" ]; then
@@ -6796,7 +6815,7 @@ rkh_dat_get_os_info() {
 		OSNAME="${OSNAME} `sw_vers 2>/dev/null | grep '^ProductVersion:' | sed -e 's/ProductVersion:[ 	]*//'`"
 #		OSNAME="${OSNAME} `sysctl kern.version 2>/dev/null | sed -e 's/^kern.version = //' | cut -d: -f1`"
 
-		if [ -n "`sysctl -a 2>/dev/null | egrep '^(hw\.optional\.x86_64|hw\.optional\.64bitops|hw\.cpu64bit_capable).*1$'`" ]; then
+		if [ -n "`sysctl -a 2>/dev/null | grep -E '^(hw\.optional\.x86_64|hw\.optional\.64bitops|hw\.cpu64bit_capable).*1$'`" ]; then
 			OSNAME="${OSNAME} (64-bit capable)"
 		fi
 		;;
@@ -7180,7 +7199,7 @@ ${DIR}:1"
 						# this is what RPM does).
 						#
 
-						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | egrep ':(x86_64|ia64):' 2>/dev/null | tail ${TAIL_OPT}1`
+						RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | grep -E ':(x86_64|ia64):' 2>/dev/null | tail ${TAIL_OPT}1`
 
 						test -z "${RPM_QUERY_RESULT}" && RPM_QUERY_RESULT=`echo "${RPM_QUERY_RESULT_ARCH}" | tail ${TAIL_OPT}1`
 
@@ -7367,7 +7386,7 @@ ${DIR}:1"
 					if [ -n "${PKGNAME}" ]; then
 						if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
 							FNGREP=`echo "${FNAME}" | sed -e 's:^/::; s/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-							SYSHASH=`egrep "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" 2>/dev/null | cut -d' ' -f1`
+							SYSHASH=`grep -E "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" 2>/dev/null | cut -d' ' -f1`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
 					fi
@@ -7410,7 +7429,7 @@ ${DIR}:1"
 
 					RKHTMPVAR=`${HASH_CMD} "${FNAME}" 2>&1`
 
-					if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+					if [ -n "`echo \"${RKHTMPVAR}\" | grep -E 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 						DEPENDENCY_ERR=1
 						RKHTMPVAR=`echo "${RKHTMPVAR}" | tr '\n' ':' | sed -e 's/:$//'`
 					else
@@ -7894,13 +7913,13 @@ get_next_mirror() {
 
 	case $MIRRORS_MODE in
 	0)
-		MIRROR=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
+		MIRROR=`grep -E -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
 		;;
 	1)
-		MIRROR=`egrep -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
+		MIRROR=`grep -E -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
 		;;
 	2)
-		MIRROR=`egrep -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
+		MIRROR=`grep -E -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}1`
 		;;
 	esac
 
@@ -7920,13 +7939,13 @@ get_next_mirror() {
 
 		case $MIRRORS_MODE in
 		0)
-			MIRROR=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`grep -E -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		1)
-			MIRROR=`egrep -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`grep -E -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		2)
-			MIRROR=`egrep -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
+			MIRROR=`grep -E -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" 2>/dev/null | head ${HEAD_OPT}$N | tail ${TAIL_OPT}1 | cut -d= -f2-`
 			;;
 		esac
 
@@ -7953,7 +7972,7 @@ get_next_mirror() {
 	# Next get the remaining mirrors.
 	#
 
-	OTHERMIRRORS=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | grep -v "^${MIRROR}\$"`
+	OTHERMIRRORS=`grep -E -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | grep -v "^${MIRROR}\$"`
 
 
 	#
@@ -8042,13 +8061,13 @@ download_file() {
 
 		case $MIRRORS_MODE in
 		0)
-			MIRROR_COUNT=`egrep -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
+			MIRROR_COUNT=`grep -E -i '^(local|remote|mirror)=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		1)
-			MIRROR_COUNT=`egrep -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
+			MIRROR_COUNT=`grep -E -i '^local=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		2)
-			MIRROR_COUNT=`egrep -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
+			MIRROR_COUNT=`grep -E -i '^remote=https?://[-A-Za-z0-9\+@#/%=_:,.]*[-A-Za-z0-9\+@#/%=_]$' "${DB_PATH}/mirrors.dat" | wc -l | tr -d ' '`
 			;;
 		esac
 
@@ -8581,7 +8600,7 @@ do_config_file_check() {
 	# Now check to see if any unknown options have been configured.
 	#
 
-	RKHTMPVAR=`egrep -h -v '^[ 	]*(#|$)' ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`
+	RKHTMPVAR=`grep -E -h -v '^[ 	]*(#|$)' ${CONFIGFILE} ${LOCALCONFIGFILE} ${LOCALCONFDIRFILES}`
 
 	IFS=$IFSNL
 
@@ -11432,7 +11451,7 @@ file_properties_check() {
 		done
 
 
-		if [ -n "`echo \"${RKHTMPVAR}\" | egrep 'libsafe|missing|empty'`" ]; then
+		if [ -n "`echo \"${RKHTMPVAR}\" | grep -E 'libsafe|missing|empty'`" ]; then
 			display --to LOG --type WARNING --nl PROPUPD_WARN
 		fi
 
@@ -11570,7 +11589,7 @@ file_properties_check() {
 			else
 				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-				RKHLINE=`egrep "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+				RKHLINE=`grep -E "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 			fi
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
@@ -11640,7 +11659,7 @@ ${RKHLINE}"
 
 							FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-							RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+							RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
 
 							if [ "${RKHTMPVAR2}" = "Dir" ]; then
 								PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
@@ -11738,7 +11757,7 @@ ${RKHLINE}"
 
 						FILE_IS_PKGD=1
 
-						PKGNAME=`echo "${PKGNAME_ARCH}" | egrep '\.(x86_64|ia64)$' 2>/dev/null | tail ${TAIL_OPT}1`
+						PKGNAME=`echo "${PKGNAME_ARCH}" | grep -E '\.(x86_64|ia64)$' 2>/dev/null | tail ${TAIL_OPT}1`
 
 						test -z "${PKGNAME}" && PKGNAME=`echo "${PKGNAME_ARCH}" | tail ${TAIL_OPT}1`
 
@@ -11954,7 +11973,7 @@ ${RKHLINE}"
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
 						FNGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::'`
 
-						SYSHASH=`egrep "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" | cut -d' ' -f1`
+						SYSHASH=`grep -E "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" | cut -d' ' -f1`
 
 						if [ -n "${SYSHASH}" ]; then
 							FILE_IS_PKGD=1
@@ -11963,7 +11982,7 @@ ${RKHLINE}"
 							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 								PKGMGR_VERIFY_RESULT="5"
 
-								if [ -n "`${PKGMGR_MD5_HASH} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${PKGMGR_MD5_HASH} "${FNAME}" 2>&1 | grep -E 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 							fi
@@ -12012,7 +12031,7 @@ ${RKHLINE}"
 							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 								PKGMGR_VERIFY_RESULT="5"
 
-								if [ -n "`${PKGMGR_MD5_HASH} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${PKGMGR_MD5_HASH} "${FNAME}" 2>&1 | grep -E 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 							fi
@@ -12043,7 +12062,7 @@ ${RKHLINE}"
 							if [ "${RKHTMPVAR}" != "${SYSHASH}" ]; then
 								PKGMGR_VERIFY_RESULT="5"
 
-								if [ -n "`${PKGMGR_SHA_HASH} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${PKGMGR_SHA_HASH} "${FNAME}" 2>&1 | grep -E 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									DEPENDENCY_ERR=1
 								fi
 							fi
@@ -12086,7 +12105,7 @@ ${RKHLINE}"
 						fi
 					fi
 
-					if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep '5|(^..\?)'`" ]; then
+					if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep -E '5|(^..\?)'`" ]; then
 						HASH_TEST_PASSED=1
 					else
 						TEST_RESULT="${TEST_RESULT} verify:hashchanged"
@@ -12146,7 +12165,7 @@ ${RKHLINE}"
 
 								FNGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-								RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+								RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
 
 								if [ "${RKHTMPVAR2}" = "Dir" ]; then
 									if [ $RKHTMPVAR -eq 0 ]; then
@@ -12174,7 +12193,7 @@ ${RKHLINE}"
 							SYSHASH=`${HASH_CMD} "${FNAME}" 2>/dev/null | cut -d' ' -f $HASH_FLD_IDX`
 
 							if [ -z "${SYSHASH}" ]; then
-								if [ -n "`${HASH_CMD} "${FNAME}" 2>&1 | egrep 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
+								if [ -n "`${HASH_CMD} "${FNAME}" 2>&1 | grep -E 'prelink.* (dependenc|adjusting unfinished)'`" ]; then
 									if [ "${RKHHASH}" = "ignore-prelink-dep-err" ]; then
 										SYSHASH="${RKHHASH}"
 										display --to LOG --type INFO FILE_PROP_IGNORE_PRELINK_DEP_ERR "`name2text \"${FNAME}\"`"
@@ -12225,7 +12244,7 @@ ${RKHLINE}"
 
 								FNGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-								RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+								RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
 
 								if [ "${RKHTMPVAR2}" = "Dir" ]; then
 									PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
@@ -12290,7 +12309,7 @@ ${RKHLINE}"
 					#
 
 					if [ $FILE_IS_PKGD -eq 1 ]; then
-						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'M|(^.\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
+						echo "${PKGMGR_VERIFY_RESULT}" | grep -E 'M|(^.\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:permchanged"
 					else
 						RKH_CC2=`expr $RKH_CC + 2`
 
@@ -12310,7 +12329,7 @@ ${RKHLINE}"
 					#
 
 					if [ $FILE_IS_PKGD -eq 1 ]; then
-						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'U|(^.....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
+						echo "${PKGMGR_VERIFY_RESULT}" | grep -E 'U|(^.....\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:uidchanged"
 					else
 						RKH_CC2=`expr $RKH_CC + 3`
 
@@ -12330,7 +12349,7 @@ ${RKHLINE}"
 					#
 
 					if [ $FILE_IS_PKGD -eq 1 ]; then
-						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'G|(^......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
+						echo "${PKGMGR_VERIFY_RESULT}" | grep -E 'G|(^......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:gidchanged"
 					else
 						RKH_CC2=`expr $RKH_CC + 4`
 
@@ -12350,7 +12369,7 @@ ${RKHLINE}"
 					#
 
 					if [ $FILE_IS_PKGD -eq 1 ]; then
-						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep 'S|(^\?)'`" ]; then
+						if [ -z "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep -E 'S|(^\?)'`" ]; then
 							SIZE_TEST_PASSED=1
 						else
 							TEST_RESULT="${TEST_RESULT} verify:sizechanged"
@@ -12378,7 +12397,7 @@ ${RKHLINE}"
 					#
 
 					if [ $FILE_IS_PKGD -eq 1 ]; then
-						echo "${PKGMGR_VERIFY_RESULT}" | egrep 'T|(^.......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
+						echo "${PKGMGR_VERIFY_RESULT}" | grep -E 'T|(^.......\?)' >/dev/null && TEST_RESULT="${TEST_RESULT} verify:dtmchanged"
 					elif [ $PRELINKED -eq 0 -o $FILE_IS_PKGD -eq 0 ]; then
 						RKH_CC2=`expr $RKH_CC + 6`
 
@@ -12440,7 +12459,7 @@ ${RKHLINE}"
 
 					if [ $IS_A_LINK -eq 1 ]; then
 						if [ $FILE_IS_PKGD -eq 1 ]; then
-							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | egrep 'L|(^....\?)'`" ]; then
+							if [ -n "`echo \"${PKGMGR_VERIFY_RESULT}\" | grep -E 'L|(^....\?)'`" ]; then
 								if [ $HAVE_READLINK -eq 1 ]; then
 									# Check the link target to see if it is whitelisted.
 
@@ -12586,9 +12605,9 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					fi
 				else
 					if [ $IS_A_DIR -eq 1 ]; then
-						RKHTMPVAR=`ls -ldno "${FNAME}" 2>/dev/null | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+						RKHTMPVAR=`ls -ldno "${FNAME}" 2>/dev/null | ${AWK_CMD} '{ print $5 }' | grep -E 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 					else
-						RKHTMPVAR=`ls -lno "${FNAME}" 2>/dev/null | ${AWK_CMD} '{ print $5 }' | egrep 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
+						RKHTMPVAR=`ls -lno "${FNAME}" 2>/dev/null | ${AWK_CMD} '{ print $5 }' | grep -E 'uchg|schg|sappnd|uappnd|sunlnk|sunlink|schange|simmutable|sappend|uappend|uchange|uimmutable'`
 					fi
 				fi
 
@@ -12640,9 +12659,9 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 						test -n "${BASENAME_CMD}" && RKHTMPVAR=`${BASENAME_CMD} "${FNAME}"` || RKHTMPVAR=`echo "${FNAME}" | sed -e 's:^.*/::'`
 
 						if [ "${RKHTMPVAR}" = "rkhunter" ]; then
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep ${GREP_OPT} -i -v '(shell|/bin/sh) script( |,|$)'`
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | grep -E ${GREP_OPT} -i -v '(shell|/bin/sh) script( |,|$)'`
 						else
-							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | egrep ${GREP_OPT} -i ' script( |,|$)'`
+							SYSSCRIPT=`${FILE_CMD} "${FNAME}" 2>&1 | tr -d '\n' | tr '[:cntrl:]' '?' | grep -E ${GREP_OPT} -i ' script( |,|$)'`
 						fi
 
 						test -n "${SYSSCRIPT}" && TEST_RESULT="${TEST_RESULT} script"
@@ -12682,7 +12701,7 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 
 					FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-					RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+					RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
 
 					if [ "${RKHTMPVAR2}" = "Dir" ]; then
 						DIR_BL=${RKHTMPVAR}
@@ -13025,7 +13044,7 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 	if [ $USE_DAT_FILE -eq 1 ]; then
 		IFS=$IFSNL
 
-		for RKHTMPVAR in `egrep '^(File|Link|Dir):' "${RKHDAT_FILE}" 2>/dev/null`; do
+		for RKHTMPVAR in `grep -E '^(File|Link|Dir):' "${RKHDAT_FILE}" 2>/dev/null`; do
 			FNAME=`get_fname_from_rkh "${RKHTMPVAR}"`
 
 			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
@@ -13068,7 +13087,7 @@ ${FTYPE}:${RKH_CC}:${FNAME}:.*"
 
 						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-						RKHTMPVAR2=`egrep "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+						RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
 
 						if [ "${RKHTMPVAR2}" = "Dir" ]; then
 							PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
@@ -13286,10 +13305,10 @@ suspscan() {
 				test ! -e "${SUSPSCAN_ITEM}" && continue
 
 				#
-				# Adding "text" to the egrep below widens the scope at the expense of more false-positives and extending the run time.
+				# Adding "text" to the grep below widens the scope at the expense of more false-positives and extending the run time.
 				#
 
-				if [ -n "`echo \"${FTYPE}\" | grep -v -i 'compres' | egrep -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
+				if [ -n "`echo \"${FTYPE}\" | grep -v -i 'compres' | grep -E -i 'execu|reloc|shell|libr|data|obj|text'`" ]; then
 					FOUND=1
 					SUSPSCAN_NUM=1; SUSPSCAN_SCORE=0; SUSPSCAN_HITCOUNT=0
 					SUSPSCAN_STRINGS=""
@@ -14225,7 +14244,7 @@ rootkit_file_dir_checks() {
 	FOUND=0
 
 	if [ -n "${KSYMS_FILE}" ]; then
-		egrep -i 'adore|sebek' "${KSYMS_FILE}" >/dev/null 2>&1 && FOUND=1
+		grep -E -i 'adore|sebek' "${KSYMS_FILE}" >/dev/null 2>&1 && FOUND=1
 	fi
 
 	if [ $FOUND -eq 0 ]; then
@@ -15046,7 +15065,7 @@ malware_checks() {
 				FNAME=`echo "${LINE}" | cut -d' ' -f2`
 
 				# Skip any shared memory files (since they are not really files).
-				test -n "`echo \"${FNAME}\" | egrep '^(/memfd:|/dev/shm/)'`" && continue
+				test -n "`echo \"${FNAME}\" | grep -E '^(/memfd:|/dev/shm/)'`" && continue
 
 				#
 				# Now we try and get the running process name.
@@ -15122,7 +15141,7 @@ malware_checks() {
 
 							FNAMEGREP=`echo "${FNAMEGREP}" | sed -e 's/^|//;'`
 
-							if [ -n "`echo \"${FNAME}\" | egrep \"^(${FNAMEGREP})$\"`" ]; then
+							if [ -n "`echo \"${FNAME}\" | grep -E \"^(${FNAMEGREP})$\"`" ]; then
 								PROCWHITELISTED=1
 							fi
 						else
@@ -15429,7 +15448,7 @@ ${RKHTMPVAR}:${FNAME}"
 				ROOTKIT_COUNT=`expr $ROOTKIT_COUNT + 1`
 
 				SEEN=1
-				FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | egrep -v '^(Unhide |yjesus@|https?:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
+				FOUND_PROCS=`${UNHIDE_CMD} ${UNHIDE_OPTS} ${RKHTMPVAR} 2>&1 | grep -E -v '^(Unhide |yjesus@|https?:|Copyright |License |NOTE :|Used options:|\[\*\]|$)'`
 
 				if [ -z "${FOUND_PROCS}" ]; then
 					# Nothing found.
@@ -16025,7 +16044,7 @@ xinetd_include() {
 			IFS=$IFSNL
 
 			# Get the default enabled services.
-			for LINE in `egrep '^[ 	]*enabled[ 	]*\+?=' "${FILENAME}"`; do
+			for LINE in `grep -E '^[ 	]*enabled[ 	]*\+?=' "${FILENAME}"`; do
 				SEEN=1
 
 				RKHTMPVAR=`echo "${LINE}" | sed -e 's/^.*=//' | tr -s '	' ' '`
@@ -16043,7 +16062,7 @@ xinetd_include() {
 
 
 			# Get the default disabled services.
-			for LINE in `egrep '^[ 	]*disabled[ 	]*\+?=' "${FILENAME}"`; do
+			for LINE in `grep -E '^[ 	]*disabled[ 	]*\+?=' "${FILENAME}"`; do
 				RKHTMPVAR=`echo "${LINE}" | sed -e 's/^.*=//' | tr -s '	' ' '`
 
 				XINETD_DFLTS_DISABLED="${XINETD_DFLTS_DISABLED} ${RKHTMPVAR}"
@@ -16092,14 +16111,14 @@ xinetd_include() {
 			#
 
 			if [ -n "${XINETD_DFLTS_ENABLED}" ]; then
-				if [ -n "`echo \"${XINETD_DFLTS_ENABLED}\" | egrep \"${SVCID}\"`" ]; then
-					if [ -z "`echo \"${XINETD_DFLTS_DISABLED}\" | egrep \"${SVCID}\"`" ]; then
+				if [ -n "`echo \"${XINETD_DFLTS_ENABLED}\" | grep -E \"${SVCID}\"`" ]; then
+					if [ -z "`echo \"${XINETD_DFLTS_DISABLED}\" | grep -E \"${SVCID}\"`" ]; then
 						SEEN=1
 						IFS=$IFSNL
 						break
 					fi
 				fi
-			elif [ -n "`echo \"${XINETD_DFLTS_DISABLED}\" | egrep \"${SVCID}\"`" ]; then
+			elif [ -n "`echo \"${XINETD_DFLTS_DISABLED}\" | grep -E \"${SVCID}\"`" ]; then
 				:
 			elif [ -z "`echo $DATA | grep 'disable = yes'`" ]; then
 				SEEN=1
@@ -16437,7 +16456,7 @@ trojan_checks() {
 
 			for FNAME in ${DIR}/httpd.conf ${DIR}/apache2.conf; do
 				if [ -f "${FNAME}" ]; then
-					if [ -n "`egrep 'mod_rootme2?\.so' \"${FNAME}\"`" ]; then
+					if [ -n "`grep -E 'mod_rootme2?\.so' \"${FNAME}\"`" ]; then
 						FOUNDFILES="${FOUNDFILES} ${FNAME}"
 					fi
 				fi
@@ -16741,7 +16760,7 @@ linux_avail_modules() {
 		${FIND_CMD} "${LKM_PATH}" -type f -a \( -name "*.o" -o -name "*.ko" -o -name "*.ko.xz" \) >"${TEMPFILE}" 2>/dev/null
 
 		for RKHTMPVAR in ${LKM_NAMES}; do
-			if [ -n "`egrep \"/${RKHTMPVAR}(\.xz)?$\" "${TEMPFILE}"`" ]; then
+			if [ -n "`grep -E \"/${RKHTMPVAR}(\.xz)?$\" "${TEMPFILE}"`" ]; then
 				FOUND=1
 				FOUNDFILES="${FOUNDFILES} ${RKHTMPVAR}"
 			fi
@@ -16891,10 +16910,10 @@ check_port_wl() {
 			if [ -n "`echo \"${LSOFLINE}\" | grep \" ${PROTO} \*:${PORT} \"`" ]; then
 				# Process listening for connections from anywhere.
 				PID=`echo "${LSOFLINE}" | ${AWK_CMD} '{ print $2 }'`
-			elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:${PORT}[ -]\"`" ]; then
+			elif [ -n "`echo \"${LSOFLINE}\" | grep -E \" ${PROTO} [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:${PORT}[ -]\"`" ]; then
 				# Established or listening process using IPv4 address.
 				PID=`echo "${LSOFLINE}" | ${AWK_CMD} '{ print $2 }'`
-			elif [ -n "`echo \"${LSOFLINE}\" | egrep \" ${PROTO} \[[:0-9a-fA-F]+\]:${PORT}[ -]\"`" ]; then
+			elif [ -n "`echo \"${LSOFLINE}\" | grep -E \" ${PROTO} \[[:0-9a-fA-F]+\]:${PORT}[ -]\"`" ]; then
 				# Established or listening process using IPv6 address.
 				PID=`echo "${LSOFLINE}" | ${AWK_CMD} '{ print $2 }'`
 			else
@@ -16956,7 +16975,7 @@ check_port_wl() {
 			if [ "${PROTO}" = "UDP" ]; then
 				FOUND=`${NETSTAT_CMD} -an | grep -i "^udp.*\.${PORT} " | ${AWK_CMD} '{ print $4 }' | grep "\.${PORT}$"`
 			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | egrep -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | ${AWK_CMD} '{ print $4 }' | grep "\.${PORT}$"`
+				FOUND=`${NETSTAT_CMD} -an | grep -E -i "^tcp.*\.${PORT} .*(BOUND|ESTABLISH|LISTEN)" | ${AWK_CMD} '{ print $4 }' | grep "\.${PORT}$"`
 			fi
 			;;
 		SunOS)
@@ -16967,10 +16986,10 @@ check_port_wl() {
 					FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^UDP: IPv6/, /^$/ { print $1 }' | grep "\.${PORT}$"`
 				fi
 			elif [ "${PROTO}" = "TCP" ]; then
-				FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^TCP: IPv4/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | ${AWK_CMD} '{ print $1 }' | grep "\.${PORT}$"`
+				FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^TCP: IPv4/, /^$/ { print $0 }' | grep -E 'BOUND|ESTABLISH|LISTEN' | ${AWK_CMD} '{ print $1 }' | grep "\.${PORT}$"`
 
 				if [ -z "${FOUND}" ]; then
-					FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^TCP: IPv6/, /^$/ { print $0 }' | egrep 'BOUND|ESTABLISH|LISTEN' | ${AWK_CMD} '{ print $1 }' | grep "\.${PORT}$"`
+					FOUND=`${NETSTAT_CMD} -an | ${AWK_CMD} '/^TCP: IPv6/, /^$/ { print $0 }' | grep -E 'BOUND|ESTABLISH|LISTEN' | ${AWK_CMD} '{ print $1 }' | grep "\.${PORT}$"`
 				fi
 			fi
 			;;
@@ -17505,7 +17524,7 @@ do_network_interface_checks() {
 	WHITEPROC=""
 	BLACKPROC=""
 
-	LIBPCAPRES=`egrep -v '(^sk | 888e )' /proc/net/packet 2>/dev/null | head ${HEAD_OPT}1`
+	LIBPCAPRES=`grep -E -v '(^sk | 888e )' /proc/net/packet 2>/dev/null | head ${HEAD_OPT}1`
 
 	if [ -n "${LIBPCAPRES}" ]; then
 		ALLOWPROCLISTENERS=""
@@ -17521,7 +17540,7 @@ do_network_interface_checks() {
 
 		INODE_LIST=""
 
-		for INODE in `egrep -v '(^sk | 888e )' /proc/net/packet | ${AWK_CMD} '{ print $9 }'`; do
+		for INODE in `grep -E -v '(^sk | 888e )' /proc/net/packet | ${AWK_CMD} '{ print $9 }'`; do
 			INODE_LIST="${INODE_LIST}|$INODE"
 		done
 
@@ -17529,7 +17548,7 @@ do_network_interface_checks() {
 		test -z "${INODE_LIST}" && INODE_LIST="RKHunterPktCapture"
 
 
-		for PID in `${LSOF_CMD} -lMnPw -d 1-20 2>/dev/null | egrep "[ 	](pack[ 	]+(${INODE_LIST})|sock[ 	]+[^ 	]+[ 	]+[^ 	]+[ 	]+(${INODE_LIST}))[ 	]" | ${AWK_CMD} '{ print $2 }'`; do
+		for PID in `${LSOF_CMD} -lMnPw -d 1-20 2>/dev/null | grep -E "[ 	](pack[ 	]+(${INODE_LIST})|sock[ 	]+[^ 	]+[ 	]+[^ 	]+[ 	]+(${INODE_LIST}))[ 	]" | ${AWK_CMD} '{ print $2 }'`; do
 			NAME=""
 
 			if [ -h "/proc/$PID/exe" -a $HAVE_READLINK -eq 1 ]; then
@@ -18028,7 +18047,7 @@ do_group_accounts_check() {
 			if [ -n "${DSCL_CMD}" ]; then
 				display --to LOG --type INFO FOUND_CMD 'dscl' "${DSCL_CMD}"
 
-				RKHTMPVAR2=`${DSCL_CMD} . search /Users uid 0 | egrep '^[^ 	)]' | cut -d'	' -f1`
+				RKHTMPVAR2=`${DSCL_CMD} . search /Users uid 0 | grep -E '^[^ 	)]' | cut -d'	' -f1`
 			else
 				display --to LOG --type INFO NOT_FOUND_CMD 'dscl'
 			fi
@@ -18660,7 +18679,7 @@ do_system_config_files_check() {
 
 			test $SUNOS -eq 1 -o $IRIXOS -eq 1 && PS_ARGS="-ef"
 
-			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep '(syslogd|syslog-ng)( |$)' | grep -v 'egrep'`
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | grep -E '(syslogd|syslog-ng)( |$)' | grep -v 'grep -E'`
 
 			if [ -n "${RKHTMPVAR}" ]; then
 				SYSLOG_SEEN=1
@@ -18680,7 +18699,7 @@ do_system_config_files_check() {
 				TITLE_SHOWN=1
 			fi
 
-			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'systemd-journald( |$)' | grep -v 'egrep'`
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | grep -E 'systemd-journald( |$)' | grep -v 'grep'`
 
 			if [ -n "${RKHTMPVAR}" ]; then
 				SYSTEMD_SEEN=1
@@ -18696,7 +18715,7 @@ do_system_config_files_check() {
 				TITLE_SHOWN=1
 			fi
 
-			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'metalog( |$)' | grep -v 'egrep'`
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | grep -E 'metalog( |$)' | grep -v 'grep'`
 
 			if [ -n "${RKHTMPVAR}" ]; then
 				METALOG_SEEN=1
@@ -18712,7 +18731,7 @@ do_system_config_files_check() {
 				TITLE_SHOWN=1
 			fi
 
-			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | egrep 'socklog( |$)' | grep -v 'egrep'`
+			RKHTMPVAR=`${PS_CMD} ${PS_ARGS} | grep -E 'socklog( |$)' | grep -v 'grep'`
 
 			if [ -n "${RKHTMPVAR}" ]; then
 				SOCKLOG_SEEN=1
@@ -18773,7 +18792,7 @@ do_system_config_files_check() {
 					RKHTMPVAR="an"
 				elif [ -n "`echo \"${FNAME}\" | grep '/syslog-ng\.conf$'`" ]; then
 					FTYPE="syslog-ng"
-				elif [ -n "`echo \"${FNAME}\" | egrep '/(systemd-)?journald\.conf$'`" ]; then
+				elif [ -n "`echo \"${FNAME}\" | grep -E '/(systemd-)?journald\.conf$'`" ]; then
 					FTYPE="systemd"
 				else
 					FTYPE="syslog"
@@ -18791,15 +18810,15 @@ do_system_config_files_check() {
 				if [ "${FTYPE}" != "systemd" ]; then
 					RKHTMPVAR=""
 
-					if [ -n "`echo \"${FNAME}\" | egrep '/r?syslog\.conf$'`" ]; then
-						RKHTMPVAR=`egrep -i '^[^#].*[ 	](@|:omrelp:).' "${FNAME}" | egrep -i -v '(@|:omrelp:)127\.'`
+					if [ -n "`echo \"${FNAME}\" | grep -E '/r?syslog\.conf$'`" ]; then
+						RKHTMPVAR=`grep -E -i '^[^#].*[ 	](@|:omrelp:).' "${FNAME}" | grep -E -i -v '(@|:omrelp:)127\.'`
 					else
 						#
 						# For syslog-ng we must look for a destination
 						# block which uses TCP or UDP.
 						#
 
-						RKHTMPVAR=`${AWK_CMD} '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' "${FNAME}" | egrep -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | egrep -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
+						RKHTMPVAR=`${AWK_CMD} '/^[ 	]*destination( |	|$)/, /}/ { print $0 }' "${FNAME}" | grep -E -i '( |	|\{|^)(tcp|udp)6?( |	|\(|$)' | grep -E -v -i '(tcp|udp)6?[ 	]*\([ 	]*("[ 	]*)?127\.'`
 					fi
 
 					if [ -n "${RKHTMPVAR}" ]; then
@@ -18815,7 +18834,7 @@ do_system_config_files_check() {
 			# that the warnings are shown before anything else.
 			#
 
-			if [ $SYSLOG_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
+			if [ $SYSLOG_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | grep -E ' (syslog|rsyslog|syslog-ng) '`" ]; then
 				display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_FILE
 				display --to LOG --type WARNING SYSTEM_CONFIGS_SYSLOG_NO_FILE 'syslog'
 			elif [ $SYSTEMD_SEEN -eq 1 -a -z "`echo \"${FILEFOUND}\" | grep ' systemd '`" ]; then
@@ -18831,7 +18850,7 @@ do_system_config_files_check() {
 			# We only display the remote logging result if a configuration file was found.
 			#
 
-			if [ -n "`echo \"${FILEFOUND}\" | egrep ' (syslog|rsyslog|syslog-ng) '`" ]; then
+			if [ -n "`echo \"${FILEFOUND}\" | grep -E ' (syslog|rsyslog|syslog-ng) '`" ]; then
 				if [ $ALLOW_SYSLOG_REMOTE_LOGGING -eq 1 ]; then
 					display --to SCREEN+LOG --type PLAIN --result ALLOWED --color GREEN --log-indent 2 --screen-indent 4 SYSTEM_CONFIGS_SYSLOG_REMOTE
 				elif [ $REM_LOGGING_FOUND -eq 0 ]; then
@@ -18879,7 +18898,7 @@ do_dev_whitelist_check() {
 			FTYPE=`echo "${FTYPE}" | tail ${TAIL_OPT}1`
 		fi
 
-		if [ -z "`echo \"${FTYPE}\" | egrep -v '(character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|/MAKEDEV:)'`" ]; then
+		if [ -z "`echo \"${FTYPE}\" | grep -E -v '(character special|block special|socket|fifo \(named pipe\)|symbolic link to|empty|directory|/MAKEDEV:)'`" ]; then
 			return
 		fi
 
@@ -18966,7 +18985,7 @@ do_filesystem_check() {
 			RKHTMPVAR=`find_cmd mount`
 
 			if [ -n "${RKHTMPVAR}" ]; then
-				test -n "`${RKHTMPVAR} 2>/dev/null | egrep '^fdesc(fs)? .*(type fdesc|\(fdescfs\))'`" && FDESCFS=1
+				test -n "`${RKHTMPVAR} 2>/dev/null | grep -E '^fdesc(fs)? .*(type fdesc|\(fdescfs\))'`" && FDESCFS=1
 			else
 				display --to LOG --type INFO NOT_FOUND_CMD 'mount'
 			fi
@@ -19064,7 +19083,7 @@ do_filesystem_check() {
 
 	for DIR in ${SHORTSEARCHDIRS}; do
 		if [ -d "${DIR}" ]; then
-			RKHTMPVAR=`ls -1d ${DIR}/.* 2>/dev/null | egrep -v '/\.\.?$'`
+			RKHTMPVAR=`ls -1d ${DIR}/.* 2>/dev/null | grep -E -v '/\.\.?$'`
 			test -n "${RKHTMPVAR}" && LOOKINDIRS="${LOOKINDIRS}
 ${RKHTMPVAR}"
 		fi
@@ -19449,7 +19468,7 @@ ${APPLICATION}%${APPLICATION_DESC}%0%-2"
 				;;
 			named)
 				WHOLE_VERSION=`${APP_CMD_FOUND} -v 2>/dev/null`
-				VERSION=`echo "${WHOLE_VERSION}" | egrep '^(named|BIND)[ 	][ 	]*[0-9]' | grep -v '/' | ${AWK_CMD} '{ print $2 }'`
+				VERSION=`echo "${WHOLE_VERSION}" | grep -E '^(named|BIND)[ 	][ 	]*[0-9]' | grep -v '/' | ${AWK_CMD} '{ print $2 }'`
 
 				if [ -n "`echo \"${VERSION}\" | grep '^[^-]*\.[0-9][0-9]*-P[^-]*-'`" ]; then
 					VERSION=`echo "${VERSION}" | cut -d'-' -f1-2`
@@ -19513,7 +19532,7 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 			if [ -n "`echo \"${APP_WHITELIST}\" | grep -i \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
 				APP_RESULTS="${APP_RESULTS}
 ${APPLICATION}%${APPLICATION_DESC}%${VERSION}%-1"
-			elif [ -n "`egrep -i \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" \"${DB_PATH}/programs_bad.dat\" 2>&1`" ]; then
+			elif [ -n "`grep -E -i \"^${APPLICATION}:.* ${RKHTMPVAR}( |$)\" \"${DB_PATH}/programs_bad.dat\" 2>&1`" ]; then
 				APPS_FAILED_COUNT=`expr $APPS_FAILED_COUNT + 1`
 
 				APP_RESULTS="${APP_RESULTS}
@@ -20779,7 +20798,7 @@ check_lang_files() {
 		if [ "${FNAME}" = "zh" ]; then
 			LINE=`grep ${GREP_OPT} '\\$[^{1-9]' "${FILENAMES}" 2>/dev/null`
 		else
-			LINE=`egrep ${GREP_OPT} '(\`|\\$[^{1-9])' "${FILENAMES}" 2>/dev/null`
+			LINE=`grep -E ${GREP_OPT} '(\`|\\$[^{1-9])' "${FILENAMES}" 2>/dev/null`
 		fi
 
 		if [ -n "${LINE}" ]; then
@@ -21206,8 +21225,8 @@ CMDLIST="basename diff dirname file find ifconfig ip ipcs ldd lsattr lsmod lsof 
 # required commands are tested early on using just the root PATH. Then
 # BINDIR is checked, and finally the rest of the commands are then
 # checked using the new PATH from BINDIR.
-ABSOLUTELY_REQUIRED_CMDS="cut egrep grep sed tail tr"
-REQCMDS="awk cat chmod chown cp cut date egrep grep head ls mv sed sort tail touch tr uname uniq wc"
+ABSOLUTELY_REQUIRED_CMDS="cut grep sed tail tr"
+REQCMDS="awk cat chmod chown cp cut date grep head ls mv sed sort tail touch tr uname uniq wc"
 
 # This will be set to a list of commands that have been disabled.
 DISABLED_CMDS=""
@@ -21919,26 +21938,6 @@ fi
 
 
 #
-# We need to see if we are to run a check before we get to the
-# configuration file processing code. Basically if either of the
-# '--enable' or '--disable' options are used, then we will do a
-# check.
-#
-
-if [ $ENDIS_OPT -eq 1 ]; then
-	CL_ENABLE_TESTS=`echo ${CL_ENABLE_TESTS} | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '[:upper:]' '[:lower:]'`
-
-	CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS} | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '[:upper:]' '[:lower:]'`
-	CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
-
-	# The '--nocf' option is only for disabled tests.
-	test -z "${CL_DISABLE_TESTS}" && USECF=1
-else
-	USECF=1
-fi
-
-
-#
 # See if only the '--update' option has been used.
 #
 
@@ -21964,6 +21963,26 @@ test $CONFIG_CHECK -eq 1 -a $QUIET -eq 1 && QUIET_CONFIG=1
 #
 
 check_required_commands 1
+
+
+#
+# We need to see if we are to run a check before we get to the
+# configuration file processing code. Basically if either of the
+# '--enable' or '--disable' options are used, then we will do a
+# check.
+#
+
+if [ $ENDIS_OPT -eq 1 ]; then
+	CL_ENABLE_TESTS=`echo ${CL_ENABLE_TESTS} | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '[:upper:]' '[:lower:]'`
+
+	CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS} | tr -d '"' | tr -d "'" | tr ',' ' ' | tr '[:upper:]' '[:lower:]'`
+	CL_DISABLE_TESTS=`echo ${CL_DISABLE_TESTS}`
+
+	# The '--nocf' option is only for disabled tests.
+	test -z "${CL_DISABLE_TESTS}" && USECF=1
+else
+	USECF=1
+fi
 
 
 ######################################################################
@@ -22268,7 +22287,7 @@ ${PATHNAME}"
 
 							IFS=$IFSNL
 
-							for RKHLINE in `egrep "^(File|Link|Dir):[0-9]*:${FNAMEGREP}[/:]" "${RKHDAT_FILE}" 2>/dev/null`; do
+							for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:${FNAMEGREP}[/:]" "${RKHDAT_FILE}" 2>/dev/null`; do
 								PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 								PATHS="${PATHS}
@@ -22315,7 +22334,7 @@ ${RKHTMPVAR2}"
 
 					IFS=$IFSNL
 
-					for RKHLINE in `egrep "^(File|Link|Dir):[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
+					for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
 						PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 						PATHS="${PATHS}
@@ -22336,7 +22355,7 @@ ${PATHNAME}"
 
 						IFS=$IFSNL
 
-						for RKHLINE in `egrep "^(File|Link|Dir):[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
+						for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
 							PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 							PATHS="${PATHS}
@@ -22392,10 +22411,10 @@ if [ $PROP_UPDATE -eq 1 -a $PRELINKED -eq 1 -a -z "${PKGMGR}" -a "${HASH_FUNC}" 
 	#
 
 	if [ -z "${PRELINK_HASH}" ]; then
-		if [ -z "`echo \"${HASH_FUNC}\" | egrep '(/filehashsha\.pl Digest::MD5|/filehashsha\.pl .* 1$|shasum -a 1$)'`" ]; then
+		if [ -z "`echo \"${HASH_FUNC}\" | grep -E '(/filehashsha\.pl Digest::MD5|/filehashsha\.pl .* 1$|shasum -a 1$)'`" ]; then
 			RKHTMPVAR=`echo "${HASH_FUNC}" | cut -d' ' -f1`
 
-			if [ -z "`echo ${RKHTMPVAR} | egrep -i 'sha1|md5'`" ]; then
+			if [ -z "`echo ${RKHTMPVAR} | grep -E -i 'sha1|md5'`" ]; then
 				if [ $HASH_OPT -eq 1 ]; then
 					echo "This system uses prelinking, but the '--hash' option (${HASH_FUNC}) does not look like SHA1 or MD5."
 				else
@@ -22514,7 +22533,7 @@ check_lang_files
 
 IFS=$IFSNL
 
-for LINE in `egrep '^MSG_(TYPE|RESULT)_[A-Z][A-Z_]*:' "${DB_PATH}/i18n/en" 2>/dev/null`; do
+for LINE in `grep -E '^MSG_(TYPE|RESULT)_[A-Z][A-Z_]*:' "${DB_PATH}/i18n/en" 2>/dev/null`; do
 	TYPE=`echo "${LINE}" | cut -d: -f1`
 
 	if [ "${LANGUAGE}" != "en" ]; then
@@ -22723,7 +22742,7 @@ if [ $PROP_UPDATE -eq 1 -o $HASH_CHECK_ENABLED -eq 1 ]; then
 			fi
 		elif [ -n "${PRELINK_HASH}" ]; then
 			display --to LOG --type INFO HASH_FUNC_PRELINK "${PRELINK_HASH}"
-		elif [ -z "`echo \"${HASH_FUNC}\" | egrep -i 'sha1|md5'`" ]; then
+		elif [ -z "`echo \"${HASH_FUNC}\" | grep -E -i 'sha1|md5'`" ]; then
 			SKIP_HASH_MSG=1
 		else
 			display --to LOG --type INFO HASH_FUNC "${HASH_FUNC}"
