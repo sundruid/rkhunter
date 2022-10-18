@@ -178,6 +178,9 @@
  - The SSH configuration checks will now cater for a configuration
    file sub-directory if it exists. Any found configuration files
    are logged.
+ - The check to see if grep provides the '-a/--text' option is now
+   carried out regardless of the O/S being used. Previously it was
+   only set for specific O/S's.
 
  --
 

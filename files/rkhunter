@@ -21137,8 +21137,13 @@ AWK_CMD='awk'
 # Set if we don't want to wait for a keypress after each test.
 SKIP_KEY_PRESS=0
 
-# Does 'grep' need an extra option to check binary files?
-GREP_OPT=""
+# Run a quick check to see if the 'grep' command recognizes the '-a' option
+# for use with binary files.
+if [ "`echo 'rkh-grep-test' | grep -a '^.*' 2>/dev/null`" = "rkh-grep-test" ]; then
+	GREP_OPT="-a"
+else
+	GREP_OPT=""
+fi
 
 # Set the O/S type if necessary.
 BSDOS=0
@@ -21150,12 +21155,10 @@ LINUXOS=0
 case "${OPERATING_SYSTEM}" in
 Linux)
 	LINUXOS=1
-	GREP_OPT="-a"
 	;;
 *BSD|DragonFly)
 	BSDOS=1
 	HASH_FLD_IDX=4
-	GREP_OPT="-a"
 	;;
 SunOS)
 	SUNOS=1
