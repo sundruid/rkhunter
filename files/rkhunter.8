@@ -4,7 +4,7 @@
 .SH NAME
 rkhunter \- RootKit Hunter
 .SH SYNOPSIS
-\fBrkhunter\fP {--check | --unlock | --update | --versioncheck |
+\fBrkhunter\fP {--check | --unlock | --update | --version\-check |
           --propupd [{filename | directory | package name},...] |
           --list [tests | {lang | languages} | rootkits | perl |
                   propfiles] |
@@ -103,7 +103,7 @@ has changed, and the \fB\-\-propupd\fP command option is used, then
 
 .IP
 
-.IP \fB\-\-versioncheck\fP
+.IP \fB\-\-version\-check\fP
 This command option causes \fBrkhunter\fP to check if there is a later version
 of the program. A command\-line web browser must be present on the system when
 using this option.
@@ -241,7 +241,7 @@ The installation process will automatically configure where the data files are
 stored for \fBrkhunter\fP. However, if necessary, this option can be used
 to specify a different directory. The directory can be read-only, after installation,
 provided that neither of the \fB\-\-update\fP or \fB\-\-propupd\fP options are
-specified, and that the \fB\-\-versioncheck\fP option is not specified if
+specified, and that the \fB\-\-version\-check\fP option is not specified if
 ROTATE_MIRRORS is set to 1 in the configuration file.
 
 .IP \fB\-\-debug\fP
@@ -475,7 +475,7 @@ The \fB\-\-update\fP command option will set an exit status of 2 if there was no
 error but updates were installed. An exit status of 0 means that there was no error
 and no updates required.
 
-The \fB\-\-versioncheck\fP command option will set an exit status of 2 if there
+The \fB\-\-version\-check\fP command option will set an exit status of 2 if there
 was no error but a new version is available. An exit status of 0 means that there
 was no error and no new version available.
 

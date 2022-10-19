@@ -20880,7 +20880,7 @@ help() {
 	#
 
 	echo $ECHOOPT ""
-	echo $ECHOOPT "Usage: rkhunter {--check | --unlock | --update | --versioncheck |"
+	echo $ECHOOPT "Usage: rkhunter {--check | --unlock | --update | --version-check |"
 	echo $ECHOOPT "                 --propupd [{filename | directory | package name},...] |"
 	echo $ECHOOPT "                 --list [{tests | {lang | languages} | rootkits | perl | propfiles}] |"
 	echo $ECHOOPT "                 --config-check | --version | --help} [options]"
@@ -20944,7 +20944,7 @@ help() {
 	echo $ECHOOPT "                                          (Note: This option does NOT update the rkhunter command)"
 	echo $ECHOOPT "        -V, --version                     Display the version number, then exit"
 	echo $ECHOOPT "      --vl, --verbose-logging             Use verbose logging (on by default)"
-	echo $ECHOOPT "            --versioncheck                Check for latest version of program"
+	echo $ECHOOPT "            --version-check               Check for the latest version of the program"
 	echo $ECHOOPT "        -x, --autox                       Automatically detect if X is in use"
 	echo $ECHOOPT "        -X, --no-autox                    Do not automatically detect if X is in use"
 	echo $ECHOOPT ""
@@ -21235,7 +21235,7 @@ REQCMDS="awk cat chmod chown cp cut date grep head ls mv sed sort tail touch tr 
 DISABLED_CMDS=""
 
 # List of commands used to download files from the web. This list is 
-# used by the '--update' and '--versioncheck' options. Preferred commands
+# used by the '--update' and '--version-check' options. Preferred commands
 # are listed first. This can be overridden by the config file.
 WEBCMDLIST="wget curl elinks links lynx bget GET"
 
@@ -21247,7 +21247,7 @@ HOST_NAME=""
 
 # This is the return code for the program actions - update, check, etc.
 # Its value may either be 0 (no error) or 1 (an error occurred).
-# The '--versioncheck' option may set the return code to 2 to
+# The '--version-check' option may set the return code to 2 to
 # indicate that an update is available.
 # The '--update' option may set the return code to 2 to
 # indicate that an update occurred.
@@ -21869,7 +21869,7 @@ while [ $# -ge 1 ]; do
 		echo "${PROGRAM_blurb}"
 		exit 0
 		;;
-	--versioncheck | --version-check)
+	--version-check | --versioncheck | --check-version | --checkversion)
 		VERSIONCHECK=1
 		;;
 	-x | --autox)
@@ -22432,7 +22432,7 @@ fi
 
 
 #
-# For the update and versioncheck options, we need to make sure
+# For the update and version-check options, we need to make sure
 # we have a command capable of downloading files from the web.
 # The first command found is used, unless it has been set in
 # the configuration file.
@@ -22474,7 +22474,7 @@ if [ $UPDATE -eq 1 -o $VERSIONCHECK -eq 1 ]; then
 		done
 
 		if [ $FOUND -eq 0 ]; then
-			echo "The '--update' and '--versioncheck' options require a command able to"
+			echo "The '--update' and '--version-check' options require a command able to"
 			echo "download files from the web. No such command can be found on the system."
 			echo "Examples of commands that could be used are: ${WEBCMDLIST}"
 			exit 1

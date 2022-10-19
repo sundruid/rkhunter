@@ -67,7 +67,7 @@ The latest version of this FAQ can be found on the RKH web site.
    5.1) Rootkit Hunter tells me that I have multiple versions
         installed. How it this possible?
    5.2) Can I be notified when a new release will be available?
-   5.3) I ran 'rkhunter --update' but the '--versioncheck' option
+   5.3) I ran 'rkhunter --update' but the '--version-check' option
         still says that there is a newer version. Why?
 
 
@@ -431,7 +431,7 @@ A.   Your system probably uses prelinking (the log file will say if
 3.9) I run rkhunter in cron and in the emailed output I get some strange
      characters. Why is this?
 
-A.   The problem only occurs when the '--update' or '--versioncheck'
+A.   The problem only occurs when the '--update' or '--version-check'
      options are used, and does not occur when rkhunter is run from
      the command-line. It also does not occur if the '--cronjob' or
      '--quiet' options are used in cron.
@@ -594,14 +594,14 @@ A.   Usually you install a tool and upgrade it later. Sometimes
 A.   Yes, you can join the rkhunter-announce mailing list. This is
      a low volume list. Details can be found on the RKH web site.
 
-     Additionally, the '--versioncheck' option of rkhunter itself
+     Additionally, the '--version-check' option of rkhunter itself
      will indicate if a new version is available.
 
 
-5.3) I ran 'rkhunter --update' but the '--versioncheck' option
+5.3) I ran 'rkhunter --update' but the '--version-check' option
      still says that there is a newer version. Why?
 
-A.   The '--versioncheck' option checks the version of the rkhunter
+A.   The '--version-check' option checks the version of the rkhunter
      command. However, the '--update' option ONLY updates the data
      files used by rkhunter. It does NOT update the rkhunter command.
      To update the rkhunter command you must either download the

@@ -467,7 +467,7 @@ report on changes, but not on what has caused the change.
 USING LOCAL MIRRORS
 ===================
 
-When the '--update' or '--versioncheck' options are used, rkhunter uses
+When the '--update' or '--version-check' options are used, rkhunter uses
 a mirror site from the mirrors.dat file to obtain the required information.
 By default rkhunter will use any mirror listed in the file, and it will
 then rotate the list of mirrors. At the time of writing the supplied
@@ -525,7 +525,7 @@ to this:
                cn  en  i18n.ver   cn  en  i18n.ver   cn  en  i18n.ver
 
 
-Finally, if the '--versioncheck' option is to be supported with the local
+Finally, if the '--version-check' option is to be supported with the local
 mirror, then the directory, 'rkhunter_data' in the above example, must
 contain a file called 'rkhunter_latest.dat'. This file must contain the
 current rkhunter version number (for example, '1.4.0') and no other text.
@@ -557,7 +557,7 @@ option has a default value of one, indicating that the mirrors.dat file should
 be updated. Set this option to zero to disable this feature.
 
 The second option is 'ROTATE_MIRRORS'. This tells rkhunter whether it should
-rotate the list of mirrors whenever the '--update' or '--versioncheck' options
+rotate the list of mirrors whenever the '--update' or '--version-check' options
 are used. Again, with local mirrors you may want these accessed in a specific
 order, rather than rotated each time. The option has a default value of one
 indicating that the mirrors should be rotated. Set this option to zero to

@@ -124,6 +124,9 @@
  - Any missing required commands, or command options, now stop
    rkhunter immediately. Previously it would try and push on
    checking configuration options.
+ - Changed the '--versioncheck' command-line option name to
+   '--version-check' to bring it inline with the '--config-check'
+   option. The old name is still recognized.
 
  Bugfixes:
  - Entries used with the EXCLUDE_USER_FILEPROP_FILES_DIRS option
