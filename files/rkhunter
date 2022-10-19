@@ -80,7 +80,7 @@ esac
 # We must check very early on to see if an unknown shell is to be accepted.
 #
 
-if [ -n "`echo \"$*\" | grep '\-\-shell'`" ]; then
+if [ -n "`echo \"$*\" | grep -- '--shell'`" ]; then
 	UNKNOWNSH=0
 	UNKSHELL_OPT=1
 
@@ -131,7 +131,7 @@ LC_COLLATE=C
 # we exec to log everything to the debug file.
 #
 
-if [ -n "`echo \"$*\" | grep '\-\-debug'`" ]; then
+if [ -n "`echo \"$*\" | grep -- '--debug'`" ]; then
 	RKHDEBUGFILE=""
 	RKHDEBUGBASE="/tmp/rkhunter-debug"
 
@@ -249,11 +249,11 @@ fi
 # used. If it is, then some typical grep tests will fail.
 #
 # (Oct 2022) - really not sure what this is doing! I can't see
-# how the grep regex would work given the string it is provided.
+# how the grep regex could work given the string it is provided.
 # Even so, setting grep to 'grep -E' should not really be a problem.
 #
 
-if [ "`echo \"rkh-grep-test\" | grep '^\+'`" = "rkh-grep-test" ]; then
+if [ "`echo \"rkh-grep-test\" | grep '^+'`" = "rkh-grep-test" ]; then
 	alias grep='grep -E'
 fi
 
@@ -2683,7 +2683,7 @@ get_bindir_option() {
 		PREPEND_PATHS=""
 
 		for DIR in ${BINPATHS}; do
-			if [ -n "`echo ${DIR} | grep '^\+'`" ]; then
+			if [ -n "`echo ${DIR} | grep '^+'`" ]; then
 				DIR=`echo ${DIR} | cut -c2-`
 				PREPEND_PATHS="${PREPEND_PATHS} ${DIR}"
 			fi
@@ -2693,7 +2693,7 @@ get_bindir_option() {
 
 
 		for DIR in ${PREPEND_PATHS} ${RKHROOTPATH} ${BINPATHS}; do
-			if [ -n "`echo ${DIR} | grep '^\+'`" ]; then
+			if [ -n "`echo ${DIR} | grep '^+'`" ]; then
 				# These will already be in PREPEND_PATHS.
 				continue
 			elif [ -z "`echo ${DIR} | grep '^/'`" ]; then
@@ -5929,7 +5929,7 @@ ${RKHTMPVAR}"
 				# Next we check to see if it is a simple file name.
 				#
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 					# Check that the file name hasn't already been set. If it has, then we just ignore it.
