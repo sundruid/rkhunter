@@ -1241,7 +1241,7 @@ check_paths() {
 					fi
 				fi
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -z "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					ERRCODE=1
@@ -1695,7 +1695,7 @@ ${FNAME}"
 					# with spaces, but without causing problems for our space-delimited test.
 					#
 
-					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+					FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -1734,7 +1734,7 @@ ${RKHTMPVAR}"
 			# names with spaces, but without causing problems for our space-delimited test.
 			#
 
-			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${RKHTMPVAR2}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -5929,7 +5929,7 @@ ${RKHTMPVAR}"
 				# Next we check to see if it is a simple file name.
 				#
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -z "`echo \"${FNAME}\" | grep '^/'`" ]; then
 					# Check that the file name hasn't already been set. If it has, then we just ignore it.
@@ -5971,7 +5971,7 @@ ${FNAME}"
 							RKHTMPVAR=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 							if [ -n "${RKHTMPVAR}" ]; then
-								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 								if [ -z "`echo \"${USER_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 									FNAME="${FNAME}
@@ -6037,7 +6037,8 @@ ${FNAME}"
 							test -z "`echo \"${USER_FILEPROP_OPTS}\" | grep \"^${FNAMEGREP}$\"`" && continue
 
 							# The user requested this directory. Remove it from the file list.
-							USER_FILEPROP_OPTS=`echo "${USER_FILEPROP_OPTS}" | sed -e "/^${FNAMEGREP}$/d"`
+							RKHTMPVAR3=`echo "${FNAMEGREP}" | sed -e 's:/:\\\\/:g'`
+							USER_FILEPROP_OPTS=`echo "${USER_FILEPROP_OPTS}" | sed -e "/^${RKHTMPVAR3}$/d"`
 						fi
 
 						if [ -h "${FNAME}" -a $HAVE_READLINK -eq 1 ]; then
@@ -6048,7 +6049,7 @@ ${FNAME}"
 								test $QUIET_CONFIG -eq 0 && echo "Invalid ${WHICH_OPT} configuration option: Invalid pathname: `name2text \"${FNAME}\"` -> /"
 								continue
 							elif [ -n "${RKHTMPVAR}" ]; then
-								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+								FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\/]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 								# Remove the target name from the file list (just in case it is there).
 								USER_FILEPROP_OPTS=`echo "${USER_FILEPROP_OPTS}" | sed -e "/^${FNAMEGREP}$/d"`
@@ -6098,7 +6099,9 @@ ${FNAME}"
 							else
 								COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-								RKHTMPVAR=`grep -E "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+								FNGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+								RKHTMPVAR=`grep -E "^(File|Link|Dir):${COLON_COUNT}:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 							fi
 
 							if [ -n "${RKHTMPVAR}" ]; then
@@ -7025,7 +7028,7 @@ ${DIR}:0"
 
 		COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 
 		if [ -h "${FNAME}" ]; then
@@ -7185,7 +7188,9 @@ ${DIR}:1"
 
 					if [ $ERRCODE -eq 1 -a $HAVE_READLINK -eq 1 ]; then
 						RKHTMPVAR3=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
-						RKHTMPVAR4=`echo "${RKHTMPVAR3}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+						RKHTMPVAR4=`echo "${RKHTMPVAR3}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
 						RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{=ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' "${FNAME}" 2>/dev/null | grep ":${RKHTMPVAR4}\$"`
 						ERRCODE=$?
 					fi
@@ -7386,6 +7391,7 @@ ${DIR}:1"
 					if [ -n "${PKGNAME}" ]; then
 						if [ -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
 							FNGREP=`echo "${FNAME}" | sed -e 's:^/::; s/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
 							SYSHASH=`grep -E "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" 2>/dev/null | cut -d' ' -f1`
 							test -n "${SYSHASH}" && FILE_IS_PKGD=1
 						fi
@@ -7447,7 +7453,7 @@ ${DIR}:1"
 							SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 
 							RKHTMPVAR="${SYSLNK}"
-							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+							RKHTMPVAR2=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 						else
 							RKHTMPVAR=""
 							RKHTMPVAR2=""
@@ -7549,7 +7555,7 @@ ${DIR}:1"
 		#
 
 		if [ -h "${RKHTMPVAR}" ]; then
-			FNGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${USER_CMD_DIR_LIST}\" | grep \"^${FNGREP}$\"`" ]; then
 				continue
@@ -7688,7 +7694,7 @@ create_rkh_file_prop_list() {
 			# We must exclude any user requested files or directories.
 			#
 
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ $USE_EXCLUDE -eq 1 ]; then
 				grep "^${FNAMEGREP}$" "${RKH_FILEPROP_EXCLUDE}" >/dev/null 2>&1 && continue
@@ -10874,7 +10880,7 @@ shared_libs_check() {
 		FOUND=0
 
 		for FNAME in ${VARNAME_VALUE}; do
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				FOUND=1
@@ -10921,8 +10927,7 @@ ${VARNAME}=\"${VARNAME_VALUE_ORIG}\""
 
 		for FNAME in `grep -v '^#' "${PRELOAD_FILE}"`; do
 			FOUND=1
-
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`echo \"${SHARED_LIB_WHITELIST}\" | grep \" ${FNAMEGREP} \"`" ]; then
 				RKHLIBLIST="${RKHLIBLIST} ${FNAME}"
@@ -11582,14 +11587,16 @@ file_properties_check() {
 		fi
 
 		if [ $USE_DAT_FILE -eq 1 ]; then
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ $FMTVERSION -eq 0 ]; then
 				RKHLINE=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 			else
 				COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-				RKHLINE=`grep -E "^(File|Link|Dir):${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+				FNGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				RKHLINE=`grep -E "^(File|Link|Dir):${COLON_COUNT}:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
 			fi
 
 			if [ $FILE_EXISTS -eq 1 -a -z "${RKHLINE}" ]; then
@@ -11657,9 +11664,9 @@ ${RKHLINE}"
 							# file for the link target.
 							#
 
-							FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+							FNGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-							RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+							RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
 
 							if [ "${RKHTMPVAR2}" = "Dir" ]; then
 								PROP_DIR_LIST_COUNT=`expr $PROP_DIR_LIST_COUNT + 1`
@@ -11678,7 +11685,7 @@ ${RKHLINE}"
 			fi
 		elif [ $FILE_EXISTS -eq 1 ]; then
 			RKHLINE=""
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 		else
 			IFS=$IFSNL
 			continue
@@ -11779,6 +11786,7 @@ ${RKHLINE}"
 									DEPENDENCY_ERR=1
 								fi
 
+#jh - we should be checking for a missing file here or at least the return code (1): missing     /usr/bin/xscreensaver-demo
 								PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FNAMEGREP}\$" | cut -d' ' -f1`
 							fi
 						fi
@@ -11821,7 +11829,8 @@ ${RKHLINE}"
 
 						if [ $ERRCODE -eq 1 -a $HAVE_READLINK -eq 1 ]; then
 							RKHTMPVAR3=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
-							RKHTMPVAR4=`echo "${RKHTMPVAR3}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+							RKHTMPVAR4=`echo "${RKHTMPVAR3}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
 							RPM_QUERY_RESULT_ARCH=`${RPM_CMD} -qf --queryformat '[%{FILEMODES:octal}:%{FILEUSERNAME}:%{FILEGROUPNAME}:%{FILESIZES}:%{FILEMTIMES}:%{FILEMD5S}:%{=ARCH}:%{FILELINKTOS}:%{FILENAMES}\n]' "${FNAME}" 2>/dev/null | grep ":${RKHTMPVAR4}\$"`
 							ERRCODE=$?
 						fi
@@ -11971,7 +11980,7 @@ ${RKHLINE}"
 					fi
 
 					if [ -n "${PKGNAME}" -a -f "/var/lib/dpkg/info/${PKGNAME}.md5sums" ]; then
-						FNGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::'`
+						FNGREP=`echo "${FNAMEGREP}" | sed -e 's:^/::; s:\([?+{}]\):\\\\\1:g'`
 
 						SYSHASH=`grep -E "( |\./)${FNGREP}\$" "/var/lib/dpkg/info/${PKGNAME}.md5sums" | cut -d' ' -f1`
 
@@ -12146,7 +12155,7 @@ ${RKHLINE}"
 										SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 									fi
 
-									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										RKHTMPVAR=1
@@ -12223,7 +12232,7 @@ ${RKHLINE}"
 										SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 									fi
 
-									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										RKHTMPVAR=1
@@ -12467,7 +12476,7 @@ ${RKHLINE}"
 										SYSLNK=`${READLINK_CMD} ${READLINK_OPT} "${FNAME}"`
 									fi
 
-									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -12490,7 +12499,7 @@ ${RKHLINE}"
 
 							if [ -n "${RKHLNK}" ]; then
 								if [ "${RKHLNK}" != "${SYSLNK}" ]; then
-									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+									FNGREP=`echo "${SYSLNK}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 									if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNGREP}$\"`" ]; then
 										if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -12684,13 +12693,13 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 				PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
 			elif [ "${OLD_FTYPE}" = "Link" ]; then
 				# Get the link target.
-				RKHTMPVAR=`get_lname_from_rkh "${RKHLINE}"`
+				LNKTGT=`get_lname_from_rkh "${RKHLINE}"`
 
-				if [ -z "${RKHTMPVAR}" ]; then
+				if [ -z "${LNKTGT}" ]; then
 					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
-				elif [ -f "${RKHTMPVAR}" ]; then
+				elif [ -f "${LNKTGT}" ]; then
 					PROP_FILE_FAILED_COUNT=`expr $PROP_FILE_FAILED_COUNT + 1`
-				elif [ -d "${RKHTMPVAR}" ]; then
+				elif [ -d "${LNKTGT}" ]; then
 					PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
 				else
 					#
@@ -12699,11 +12708,11 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 					# file for the link target.
 					#
 
-					FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+					FNAMEGREP=`echo "${LNKTGT}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
-					RKHTMPVAR2=`grep -E "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
+					RKHTMPVAR=`grep -E "^(File|Dir):[0-9]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f1`
 
-					if [ "${RKHTMPVAR2}" = "Dir" ]; then
+					if [ "${RKHTMPVAR}" = "Dir" ]; then
 						DIR_BL=${RKHTMPVAR}
 						PROP_DIR_FAILED_COUNT=`expr $PROP_DIR_FAILED_COUNT + 1`
 					else
@@ -12717,6 +12726,8 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 			RKHTMPVAR2=0
 			RKHTMPVAR3=0
 
+			TEST_RESULT=`echo "${TEST_RESULT}" | sed -e 's/^ //'`
+
 			for RKHTMPVAR in ${TEST_RESULT}; do
 				case "${RKHTMPVAR}" in
 				ftypechanged|hashchanged|permchanged|uidchanged|gidchanged|inodechanged|sizechanged|dtmchanged|linkchanged)
@@ -12724,8 +12735,13 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 						RKHTMPVAR2=1
 
 						if [ "${OLD_FTYPE}" = "Link" ]; then
-							display --to LOG --type WARNING FILE_PROP_CHANGED_LINK
-							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED3 "`name2text \"${FNAME}\"`"
+							if [ "${TEST_RESULT}" = "hashchanged" ]; then
+								display --to LOG --type WARNING FILE_PROP_CHANGED_LINK_TGT
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED3_WITH_TGT "`name2text \"${FNAME}\"`" "`name2text \"${LNKTGT}\"`"
+							else
+								display --to LOG --type WARNING FILE_PROP_CHANGED_LINK
+								display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED3 "`name2text \"${FNAME}\"`"
+							fi
 						elif [ "${OLD_FTYPE}" = "Dir" ]; then
 							display --to LOG --type WARNING FILE_PROP_CHANGED_DIR
 							display --to LOG --type PLAIN --log-indent 9 FILE_PROP_CHANGED4 "`name2text \"${FNAME}\"`"
@@ -13047,7 +13063,7 @@ ${FTYPE}:${RKH_CC}:${FNAME}:${SYSHASH}:${SYSINODE}:${SYSPERM}:${SYSUID}:${SYSGID
 		for RKHTMPVAR in `grep -E '^(File|Link|Dir):' "${RKHDAT_FILE}" 2>/dev/null`; do
 			FNAME=`get_fname_from_rkh "${RKHTMPVAR}"`
 
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -z "`grep \"^${FNAMEGREP}$\" \"${RKH_FILEPROP_LIST}\"`" ]; then
 				if [ -n "`echo \"${EXISTWHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -13262,7 +13278,7 @@ suspscan() {
 				# Ignore any whitelisted files.
 				#
 
-				FNAMEGREP=`echo "${SUSPSCAN_ITEM}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${SUSPSCAN_ITEM}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${SUSPSCAN_WHITELIST}\" | grep \"^${SUSPSCAN_ITEM}$\"`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -14316,7 +14332,7 @@ rootkit_file_dir_checks() {
 				FOUNDINDIR="NOT_FOUND"
 
 				for FNAME in `${FIND_CMD} "${DIR}" -type f -name "*[sS][iI][nN][aA][rR]*" 2>/dev/null`; do
-					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -14620,11 +14636,11 @@ possible_rootkit_file_dir_checks() {
 
 		FNAME=`echo "${FILE}" | tr '%' ' '`
 
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
 		case "${TYPE}" in
 		dir)
 			if [ -d "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
 						display --to LOG --type INFO FILE_PROP_WL_DIR "`name2text \"${FNAME}\"`" 'possible_rkt_files'
@@ -14645,8 +14661,6 @@ ${FNAME}:${INFO}"
 			;;
 		file)
 			if [ -f "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
-
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
 						display --to LOG --type INFO FILE_PROP_WL "`name2text \"${FNAME}\"`" 'possible_rkt_files'
@@ -14867,7 +14881,7 @@ possible_rootkit_string_checks() {
 			STRINGGREP=`echo ${FILESTRING} | cut -c 2-`
 			FILESTRING="${STRINGGREP}"
 		else
-			STRINGGREP=`echo ${FILESTRING} | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			STRINGGREP=`echo ${FILESTRING} | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 		fi
 
 		INFO=`echo ${RKHTMPVAR} | cut -d: -f3`
@@ -14879,7 +14893,7 @@ possible_rootkit_string_checks() {
 				FOUNDSTRING=`${STRINGS_CMD} -n 3 -a "${FNAME}" | grep -v '^[ 	]*#' | grep "${STRINGGREP}"`
 
 				if [ -n "${FOUNDSTRING}" ]; then
-					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+					FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
 						if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -14917,7 +14931,7 @@ ${FNAME}:${FILESTRING}:${INFO}"
 					FOUNDSTRING=`${STRINGS_CMD} -n 3 -a "${FNAME}" | grep "${STRINGGREP}"`
 
 					if [ -n "${FOUNDSTRING}" ]; then
-						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}:${STRINGGREP}$\"`" ]; then
 							if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -15265,7 +15279,7 @@ ${PROC} ${PID} ${FNAME}"
 
 				FNAME=`echo "${RKHTMPVAR}" | cut -d: -f1`
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				FOUNDFILES=`grep "/${FNAMEGREP}$" "${RKHLSOF_FILE}"`
 
@@ -15294,7 +15308,8 @@ ${PROC} ${PID} ${FNAME}"
 						#
 
 						FILENAME=`echo "${FNAME}" | sed -e 's/^.*[ 	]\([^ 	][^ 	]*\)$/\1/'`
-						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+						FNAMEGREP=`echo "${FILENAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 							if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -15557,7 +15572,7 @@ ${FOUND_PROCS}"
 
 		for FNAME in ${LOGIN_BACKDOOR_FILES}; do
 			if [ -e "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -15611,7 +15626,7 @@ ${FOUND_PROCS}"
 
 		for FNAME in ${SNIFFER_FILES}; do
 			if [ -f "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_FILE_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -15699,7 +15714,7 @@ ${FOUND_PROCS}"
 
 		for DIR in ${SUSPICIOUS_DIRS}; do
 			if [ -d "${DIR}" ]; then
-				FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${DIR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${RTKT_DIR_WHITELIST}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 					if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -15844,7 +15859,7 @@ ${FOUND_PROCS}"
 							FOUND=0
 
 							if [ -n "${RKH_SHM_PATH}" ]; then
-								FNAMEGREP=`echo "${RKH_SHM_PATH_STRIPPED}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+								FNAMEGREP=`echo "${RKH_SHM_PATH_STRIPPED}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 								if [ -n "`echo \"${ALLOWIPCPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 									FOUND=1
@@ -15960,7 +15975,7 @@ ${SHM_LINE}"
 				if [ $VERBOSE_LOGGING -eq 1 ]; then
 					FOUND=""
 					for FNAME in ${SHM_WL_LIST_PATH}; do
-						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+						FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 						if [ -z "`echo \"${FOUND}\" | grep \" ${FNAMEGREP} \"`" ]; then
 							FOUND="${FOUND} ${FNAME} "
@@ -16775,9 +16790,9 @@ linux_avail_modules() {
 			display --to SCREEN+LOG --type PLAIN --result WARNING --color RED --log-indent 4 --screen-indent 4 ROOTKIT_OS_LINUX_LKMNAMES
 
 			for RKHTMPVAR in ${FOUNDFILES}; do
-				RKHTMPVAR=`echo "${RKHTMPVAR}" | sed -e 's/\\\([.$*?+{}\\/]\)/\1/g; s/\\\[/[/g; s/\\\]/]/g'`
+				FNGREP=`echo "${RKHTMPVAR}" | sed -e 's/\\\([.$*?+{}\\/]\)/\1/g; s/\\\[/[/g; s/\\\]/]/g'`
 
-				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_FOUND "${LKM_PATH}" "${RKHTMPVAR}"
+				display --to LOG --type WARNING ROOTKIT_OS_LINUX_LKMNAMES_FOUND "${LKM_PATH}" "${FNGREP}"
 			done
 		fi
 	fi
@@ -17006,7 +17021,7 @@ check_port_wl() {
 
 		if [ -n "${LSOF_CMD}" ]; then
 			if [ -n "${FNAME}" ]; then
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ -n "`echo \"${PORT_WHITELIST}\" | grep \"^${FNAMEGREP}:${PROTO}:${PORT}$\"`" ]; then
 					RKHTMPVAR2=1
@@ -17567,7 +17582,7 @@ do_network_interface_checks() {
 
 			NAME=`echo "${NAME}" | sed -e 's/;[0-9a-fA-F][0-9a-fA-F]*$//'`
 
-			FNAMEGREP=`echo "${NAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${NAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${ALLOWPROCLISTENERS}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 				if [ -z "`echo \"${WHITEPROC}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -17765,7 +17780,7 @@ ${STRING}:${INFO}"
 	for FNAME in ${RC_PATHS}; do
 		IFS=$IFSNL
 
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 		for STR in ${RCSTRINGS}; do
 			STRING=`echo ${STR} | cut -d: -f1`
@@ -18885,7 +18900,7 @@ do_dev_whitelist_check() {
 	# Also, cannot get the '[]' characters to work in the bracket expression. So these are handled individually.
 	#
 
-	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+	FNAMEGREP=`echo "${RKHTMPVAR}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 	if [ -n "`echo \"${ALLOWDEVFILES}\" | grep \"^${FNAMEGREP}$\"`" ]; then
 		if [ $VERBOSE_LOGGING -eq 1 ]; then
@@ -19125,7 +19140,7 @@ ${RKHTMPVAR}"
 
 		test -c "${FNAME}" -o -b "${FNAME}" -o ! -s "${FNAME}" && continue
 
-		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+		FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 		if [ -d "${FNAME}" ]; then
 			if [ -n "`echo \"${ALLOWHIDDENDIRS}\" | grep \"^${FNAMEGREP}$\"`" ]; then
@@ -19527,7 +19542,7 @@ ${APPLICATION}%${APPLICATION_DESC}%%0%${WHOLE_VERSION}"
 			# Now see if the application version is known to be bad.
 			#
 
-			RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			RKHTMPVAR=`echo "${VERSION}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			if [ -n "`echo \"${APP_WHITELIST}\" | grep -i \" ${APPLICATION}:${RKHTMPVAR} \"`" ]; then
 				APP_RESULTS="${APP_RESULTS}
@@ -20232,7 +20247,7 @@ ${LINKDIR}"
 		IFS=$IFSNL
 
 		for FNAME in ${USER_SIMPLE_FILE_LIST}; do
-			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+			FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 			test -z "`echo \"${PROP_FILE_LIST}\" | grep \"^${FNAMEGREP}$\"`" && RKHTMPVAR="${RKHTMPVAR}
 ${FNAME}"
@@ -20294,7 +20309,7 @@ ${LINKDIR}"
 
 					LINKFNAME=`echo "${RKHTMPVAR}" | sed -e 's:^.*/::'`
 
-					FNAMEGREP=`echo "${LINKFNAME}" | sed -e 's/\([.$*?\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+					FNAMEGREP=`echo "${LINKFNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 					#
 					# And finally check if we already have it listed.
@@ -22233,6 +22248,8 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 		IFS=$IFSNL
 
 		for FNAM in ${PROPUPD_OPT}; do
+			NOT_EXIST=0
+
 			if [ -n "`echo \"${FNAM}\" | grep '^[^/].*/'`" ]; then
 				# Filename is relative
 				LEAVE=1
@@ -22254,16 +22271,23 @@ if [ $CHECK -eq 1 -o $PROP_UPDATE -eq 1 ]; then
 					FTYPE="Dir"
 				else
 					FTYPE="File"
+					test ! -e "${FNAME}" && NOT_EXIST=1
 				fi
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ $FMTVERSION -eq 0 ]; then
 					RKHTMPVAR2=`grep "^File:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
 				else
 					COLON_COUNT=`echo "${FNAME}" | tr -c -d ':' | wc -c | tr -d ' '`
 
-					RKHTMPVAR2=`grep "^${FTYPE}:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+					if [ $NOT_EXIST -eq 1 ]; then
+						RKHTMPVAR2=`grep "^[^:][^:]*:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+						test -n "${RKHTMPVAR2}" && FTYPE=`echo "${RKHTMPVAR2}" | cut -d: -f1`
+					else
+						RKHTMPVAR2=`grep "^${FTYPE}:${COLON_COUNT}:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`
+					fi
+
 					test -n "${RKHTMPVAR2}" && RKHTMPVAR2="${FNAME}"
 				fi
 
@@ -22290,7 +22314,9 @@ ${PATHNAME}"
 
 							IFS=$IFSNL
 
-							for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:${FNAMEGREP}[/:]" "${RKHDAT_FILE}" 2>/dev/null`; do
+							FNGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+							for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:${FNGREP}[/:]" "${RKHDAT_FILE}" 2>/dev/null`; do
 								PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 								PATHS="${PATHS}
@@ -22314,7 +22340,7 @@ ${RKHTMPVAR2}"
 						echo "Link is not in the \"rkhunter.dat\" file: ${FNAM}"
 					else
 						LEAVE=1
-						echo "File is not in the \"rkhunter.dat\" file: ${FNAM}"
+						echo "${FTYPE} is not in the \"rkhunter.dat\" file: ${FNAM}"
 					fi
 				else
 					RKHTMPVAR="${RKHTMPVAR}
@@ -22328,7 +22354,9 @@ ${RKHTMPVAR2}"
 
 				FNAME="${FNAM}"
 
-				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+				FNGREP=`echo "${FNAME}" | sed -e 's/\([.$*?+{}\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
+
+				FNAMEGREP=`echo "${FNAME}" | sed -e 's/\([.$*\\]\)/\\\\\1/g; s/\[/\\\\[/g; s/\]/\\\\]/g'`
 
 				if [ $FMTVERSION -eq 0 ]; then
 					RKHTMPVAR2=`grep "^File:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null | cut -d: -f2`
@@ -22337,7 +22365,7 @@ ${RKHTMPVAR2}"
 
 					IFS=$IFSNL
 
-					for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNAMEGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
+					for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:.*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:${FNGREP}:" "${RKHDAT_FILE}" 2>/dev/null`; do
 						PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 						PATHS="${PATHS}
@@ -22358,7 +22386,7 @@ ${PATHNAME}"
 
 						IFS=$IFSNL
 
-						for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:.*/${FNAMEGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
+						for RKHLINE in `grep -E "^(File|Link|Dir):[0-9]*:.*/${FNGREP}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:" "${RKHDAT_FILE}" 2>/dev/null`; do
 							PATHNAME=`get_fname_from_rkh "${RKHLINE}"`
 
 							PATHS="${PATHS}

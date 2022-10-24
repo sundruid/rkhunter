@@ -184,6 +184,9 @@
  - The check to see if grep provides the '-a/--text' option is now
    carried out regardless of the O/S being used. Previously it was
    only set for specific O/S's.
+ - Corrected several uses of regex with grep, egrep and sed commands.
+ - If only a link hash value changes then state that it is the link
+   target that has changed, not the link itself.
 
  --
 

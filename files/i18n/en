@@ -1,4 +1,4 @@
-Version:2022101201
+Version:2022102001
 #
 # We start with the definitions of the message types and results. There
 # are very few of these, so including these and all the parts of each
@@ -301,9 +301,11 @@ FILE_PROP_NO_RKH_REC_DIR:The directory '$1' exists on the system, but it is not 
 FILE_PROP_NO_RKH_REC_LNK:The link '$1' exists on the system, but it is not present in the 'rkhunter.dat' file.
 FILE_PROP_CHANGED:The file properties have changed:
 FILE_PROP_CHANGED_LINK:The link properties have changed:
+FILE_PROP_CHANGED_LINK_TGT:The link target properties have changed:
 FILE_PROP_CHANGED_DIR:The directory properties have changed:
 FILE_PROP_CHANGED2:File: $1
 FILE_PROP_CHANGED3:Link: $1
+FILE_PROP_CHANGED3_WITH_TGT:Link: $1 -> $2
 FILE_PROP_CHANGED4:Directory: $1
 FILE_PROP_NO_PKGMGR_FILE:File '$1' hash value skipped: file does not belong to a package
 FILE_PROP_NO_SYSHASH:No hash value found for file '$1'
