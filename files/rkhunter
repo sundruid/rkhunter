@@ -11786,7 +11786,6 @@ ${RKHLINE}"
 									DEPENDENCY_ERR=1
 								fi
 
-#jh - we should be checking for a missing file here or at least the return code (1): missing     /usr/bin/xscreensaver-demo
 								PKGMGR_VERIFY_RESULT=`echo "${PKGMGR_VERIFY_RESULT}" | grep " ${FNAMEGREP}\$" | cut -d' ' -f1`
 							fi
 						fi
