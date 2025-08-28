@@ -2614,7 +2614,19 @@ get_scriptdir_option() {
 	#
 
 	if [ $LEAVE -eq 1 ]; then
-		:
+		# Try to autodetect a valid script directory for common platforms
+		for CAND in \
+			"/usr/lib/rkhunter/scripts" \
+			"/usr/local/lib/rkhunter/scripts" \
+			"/usr/share/rkhunter/scripts" \
+			"/usr/libexec/rkhunter/scripts"
+		do
+			if [ -d "${CAND}" -a -r "${CAND}" ]; then
+				SCRIPT_PATH="${CAND}"
+				LEAVE=0
+				break
+			fi
+		done
 	elif [ ! -r "${SCRIPT_PATH}" ]; then
 		LEAVE=1
 		echo "Script directory is not readable: ${SCRIPT_PATH}"
