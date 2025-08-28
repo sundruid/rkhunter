@@ -60,7 +60,7 @@ fi
 echo "=======Updating=================================" >> $LOGFILE
 /bin/date >> $LOGFILE
 $RKHUNTER --update 2>&1 >> $TMPLOGFILE1
-if egrep -q "(Error|outdated)" $TMPLOGFILE1 ; then
+if grep -E -q "(Error|outdated)" $TMPLOGFILE1 ; then
 	echo . >> $TMPLOGFILE1
 	echo "WARNING: rkhunter couldn't update its hashes which will" >> $TMPLOGFILE1
 	echo "most likely lead to errors now." >> $TMPLOGFILE1
